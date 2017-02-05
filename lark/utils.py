@@ -49,3 +49,23 @@ except NameError:   # Python 3
 Str = type(u'')
 
 
+import functools
+import types
+def inline_args(f):
+    # print '@@', f.__name__, type(f), isinstance(f, types.FunctionType), isinstance(f, types.TypeType), isinstance(f, types.BuiltinFunctionType)
+    if isinstance(f, types.FunctionType):
+        @functools.wraps(f)
+        def _f_func(self, args):
+            return f(self, *args)
+        return _f_func
+    elif isinstance(f, (types.TypeType, types.BuiltinFunctionType)):
+        @functools.wraps(f)
+        def _f_builtin(self, args):
+            return f(*args)
+        return _f_builtin
+    else:
+        @functools.wraps(f)
+        def _f(self, args):
+            return f.__func__(self, *args)
+        return _f
+

@@ -3,7 +3,7 @@ from lexer import Lexer, Token
 from grammar_analysis import GrammarAnalyzer
 from parser import Parser
 
-from tree import Tree as T, Transformer, Visitor
+from tree import Tree as T, Transformer, InlineTransformer, Visitor
 
 _TOKEN_NAMES = {
     ':' : 'COLON',
@@ -186,7 +186,7 @@ class SaveDefinitions(object):
     def item(self, *x): pass
 
 
-class EBNF_to_BNF(Transformer):
+class EBNF_to_BNF(InlineTransformer):
     def __init__(self):
         self.new_rules = {}
         self.prefix = 'anon'
@@ -285,7 +285,6 @@ def inline_args(f):
     def _f(self, args):
         return f(*args)
     return _f
-
 
 class GrammarLoader:
     def __init__(self):

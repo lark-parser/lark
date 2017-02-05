@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 
-from .utils import STRING_TYPE
+import functools
+import types
+
+from .utils import STRING_TYPE, inline_args
 from .load_grammar import load_grammar
 from .tree import Tree, Transformer
 
@@ -36,6 +39,10 @@ class LarkOptions(object):
         self.parser = o.pop('parser', 'earley')
         self.transformer = o.pop('transformer', None)
 
+        assert self.parser in ENGINE_DICT
+        if self.parser == 'earley' and self.transformer:
+            raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm. Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
+
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
 
@@ -45,11 +52,11 @@ class Callback(object):
 
 
 class RuleTreeToText(Transformer):
-    def expansions(self, *x):
+    def expansions(self, x):
         return x
-    def expansion(self, *symbols):
+    def expansion(self, symbols):
         return [sym.value for sym in symbols], None
-    def alias(self, (expansion, _alias), alias):
+    def alias(self, ((expansion, _alias), alias)):
         assert _alias is None, (alias, expansion, '-', _alias)
         return expansion, alias.value
 
@@ -78,12 +85,6 @@ def create_expand1_tree_builder_function(tree_builder):
             return tree_builder(children)
     return f
 
-def create_rule_inline(f):
-    def _f(children):
-        return f(*children)
-    return _f
-
-
 class LALR:
     def build_parser(self, rules, callback):
         ga = GrammarAnalyzer(rules)
@@ -109,6 +110,7 @@ class EarleyParser:
         return res[0]
 
 
+ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }
 
 class Lark:
     def __init__(self, grammar, **options):
@@ -144,10 +146,7 @@ class Lark:
 
         self.lexer = self._build_lexer()
         if not self.options.only_lex:
-            self.parser_engine = {
-                    'lalr': LALR,
-                    'earley': Earley,
-                }[self.options.parser]()
+            self.parser_engine = ENGINE_DICT[self.options.parser]()
             self.parser = self._build_parser()
 
     def _build_lexer(self):
@@ -171,27 +170,25 @@ class Lark:
                     raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases" % origin)
 
                 expand1 = origin.startswith('?')
-                inline_args = origin.startswith('*') or (alias and alias.startswith('*'))
                 _origin = origin.lstrip('?*')
                 if alias:
                     alias = alias.lstrip('*')
                 _alias = 'autoalias_%s_%s' % (_origin, '_'.join(expansion))
 
-                assert not hasattr(callback, _alias)
-                f = getattr(transformer, alias or _origin, None)
-                if f is None:
+                try:
+                    f = transformer._get_func(alias or _origin)
+                    # f = getattr(transformer, alias or _origin)
+                except AttributeError:
                     if alias:
                         f = self._create_tree_builder_function(alias)
                     else:
                         f = self._create_tree_builder_function(_origin)
                         if expand1:
                             f = create_expand1_tree_builder_function(f)
-                else:
-                    if inline_args:
-                        f = create_rule_inline(f)
 
                 alias_handler = create_rule_handler(expansion, f)
 
+                assert not hasattr(callback, _alias)
                 setattr(callback, _alias, alias_handler)
 
                 rules.append((_origin, expansion, _alias))

@@ -105,41 +105,37 @@ class State(object):
 
 class Parser(object):
     def __init__(self, rules, start=None):
-        self.table = [[]]
         self.rules = [Rule(r['name'], r['symbols'], r.get('postprocess', None)) for r in rules]
         self.rules_by_name = classify(self.rules, lambda r: r.name)
         self.start = start or self.rules[0].name
+
+    def advance_to(self, table, n, added_rules):
+        for w, s in enumerate(table[n]):
+            s.process(n, w, table, self.rules_by_name, added_rules)
+
+    def parse(self, stream):
         initial_rules = set(self.rules_by_name[self.start])
-        self.table[0] += [State(r, 0, 0) for r in initial_rules]
-        self.advance_to(0, initial_rules)
-        self.current = 0
+        table = [[State(r, 0, 0) for r in initial_rules]]
+        self.advance_to(table, 0, initial_rules)
 
-    def advance_to(self, n, added_rules):
-        for w, s in enumerate(self.table[n]):
-            s.process(n, w, self.table, self.rules_by_name, added_rules)
+        for pos, token in enumerate(stream):
+            table.append([])
 
-    def parse(self, chunk):
-        chunk_pos = 0
-        for chunk_pos, chunk_item in enumerate(chunk):
-            self.table.append([])
-
-            for s in self.table[self.current + chunk_pos]:
-                x = s.consume_terminal(chunk_item)
+            for s in table[pos]:
+                x = s.consume_terminal(token)
                 if x:
-                    self.table[self.current + chunk_pos + 1].append(x)
+                    table[pos + 1].append(x)
 
 
-            added_rules = set()
-            self.advance_to(self.current + chunk_pos + 1, added_rules)
+            self.advance_to(table, pos + 1, set())
 
-            if not self.table[-1]:
-                raise Exception('Error at line {t.line}:{t.column}'.format(t=chunk[chunk_pos]))
+            if not table[-1]:
+                raise Exception('Error at line {t.line}:{t.column}'.format(t=stream[pos]))
 
-        self.current += chunk_pos
-        return list(self.finish())
+        return list(self.finish(table))
 
-    def finish(self):
-        for t in self.table[-1]:
+    def finish(self, table):
+        for t in table[-1]:
             if (t.rule.name == self.start
                 and t.expect == len(t.rule.symbols)
                 and t.reference == 0

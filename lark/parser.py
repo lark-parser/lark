@@ -4,7 +4,7 @@ class ParseError(Exception):
     pass
 
 class Parser(object):
-    def __init__(self, ga, callback, temp=False):
+    def __init__(self, ga, callback):
         self.ga = ga
         self.callbacks = {rule: getattr(callback, rule.alias or rule.origin, None)
                           for rule in ga.rules}

@@ -33,6 +33,7 @@ LIMIT = 50 # Stupid named groups limit in python re
 class Lexer(object):
     def __init__(self, tokens, callbacks, ignore=()):
         self.ignore = ignore
+        self.newline_char = '\n'
 
         # Sanitization
         token_names = {t[0] for t in tokens}
@@ -60,6 +61,8 @@ class Lexer(object):
 
     def lex(self, stream):
         lex_pos = 0
+        line = 0
+        col_start_pos = 0
         while True:
             i = 0
             for mre in self.mres:
@@ -67,11 +70,17 @@ class Lexer(object):
                 if m:
                     value = m.group(0)
                     type_ = self.name_from_index[i][m.lastindex]
-                    t = Token(type_, value, lex_pos)
-                    if t.type in self.callbacks:
-                        self.callbacks[t.type](t)
-                    if t.type not in self.ignore:
+                    if type_ not in self.ignore:
+                        t = Token(type_, value, lex_pos)
+                        t.line = line
+                        t.column = lex_pos - col_start_pos
+                        if t.type in self.callbacks:
+                            t = self.callbacks[t.type](t)
                         yield t
+                    newlines = value.count(self.newline_char)
+                    if newlines:
+                        line += newlines
+                        col_start_pos = lex_pos + value.rindex(self.newline_char)
                     lex_pos += len(value)
                     break
                 i += 1

@@ -23,7 +23,7 @@ class LarkOptions(object):
         only_lex - Don't build a parser. Useful for debugging (default: False)
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: True)
         cache_grammar - Cache the Lark grammar (Default: False)
-        ignore_postproc - Don't call the post-processing function (default: False)
+        postlex - Lexer post-processing (Default: None)
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -34,7 +34,7 @@ class LarkOptions(object):
         self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
         self.tree_class = o.pop('tree_class', Tree)
         self.cache_grammar = o.pop('cache_grammar', False)
-        self.ignore_postproc = bool(o.pop('ignore_postproc', False))
+        self.postlex = o.pop('postlex', None)
         self.parser = o.pop('parser', 'earley')
         self.transformer = o.pop('transformer', None)
 
@@ -206,7 +206,11 @@ class Lark:
         return f
 
     def lex(self, text):
-        return self.lexer.lex(text)
+        stream = self.lexer.lex(text)
+        if self.options.postlex:
+            return self.options.postlex.process(stream)
+        else:
+            return stream
 
     def parse(self, text):
         assert not self.options.only_lex

@@ -152,12 +152,12 @@ class Lark:
 
     def _build_lexer(self):
         ignore_tokens = []
-        tokens = {}
-        for name, (value, flags) in self.tokens.items():
+        tokens = []
+        for name, (value, flags) in self.tokens:
             if 'ignore' in flags:
                 ignore_tokens.append(name)
-            tokens[name] = value
-        return Lexer(tokens.items(), {}, ignore=ignore_tokens)
+            tokens.append((name, value))
+        return Lexer(tokens, {}, ignore=ignore_tokens)
 
 
     def _build_parser(self):

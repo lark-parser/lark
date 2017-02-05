@@ -1,9 +1,13 @@
 import re
+import codecs
+
 from lexer import Lexer, Token
 from grammar_analysis import GrammarAnalyzer
 from parser import Parser
 
 from tree import Tree as T, Transformer, InlineTransformer, Visitor
+
+unicode_escape = codecs.getdecoder('unicode_escape')
 
 _TOKEN_NAMES = {
     ':' : 'COLON',
@@ -143,26 +147,18 @@ class SaveDefinitions(object):
             raise ValueError("Token '%s' defined more than once" % name)
 
         if len(x) == 4:
-            self.tokens[name] = x[2][1], []
+            self.tokens[name] = x[2], []
         else:
-            self.tokens[name] = x[3][1], x[1].children
+            self.tokens[name] = x[3], x[1].children
 
     def tokenvalue(self, tokenvalue):
-        value = tokenvalue.value[1:-1]
-        import codecs
-        decoder = codecs.getdecoder('unicode_escape')
-        if '\u' in value:
-            # XXX for now, you can't mix unicode escaping and unicode characters at the same token
-            value = decoder(value)[0]
+        return tokenvalue
 
-        if tokenvalue.type == 'STRING':
-            value = re.escape(value)
-        return tokenvalue, value
-
-    def anontoken(self, (token, value)):
+    def anontoken(self, token):
         if token.type == 'STRING':
+            value = token.value[1:-1]
             try:
-                token_name = _TOKEN_NAMES[token.value[1:-1]]
+                token_name = _TOKEN_NAMES[value]
             except KeyError:
                 if value.isalnum() and value[0].isalpha():
                     token_name = value.upper()
@@ -178,7 +174,7 @@ class SaveDefinitions(object):
             assert False, x
 
         if token_name not in self.tokens:
-            self.tokens[token_name] = value, []
+            self.tokens[token_name] = token, []
 
         return Token('TOKEN', token_name, -1)
 
@@ -312,6 +308,27 @@ class GrammarLoader:
         p = Parser(self.ga, c)
         p.parse( list(self.lexer.lex(grammar_text+"\n")) )
 
+        # Tokens
+        re_tokens = []
+        str_tokens = []
+        for name, (token, flags) in sd.tokens.items():
+            value = token.value[1:-1]
+            if '\u' in value:
+                # XXX for now, you can't mix unicode escaping and unicode characters at the same token
+                value = unicode_escape(value)[0]
+
+            if token.type == 'STRING':
+                value = re.escape(value)
+                str_tokens.append((name, (value, flags)))
+            else:
+                assert token.type == 'REGEXP'
+                re_tokens.append((name, (value, flags)))
+
+        str_tokens.sort(key=lambda x:len(x[1][0]), reverse=True)
+        re_tokens.sort(key=lambda x:len(x[1][0]), reverse=True)
+        tokens = str_tokens + re_tokens # Order is important!
+
+        # Rules
         ebnf_to_bnf = EBNF_to_BNF()
 
         rules = {name: ebnf_to_bnf.transform(r) for name, r in sd.rules.items()}
@@ -320,7 +337,7 @@ class GrammarLoader:
         for r in rules.values():
             self.simplify_rule.visit(r)
 
-        return sd.tokens, rules
+        return tokens, rules
 
 load_grammar = GrammarLoader().load_grammar
 

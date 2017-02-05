@@ -48,7 +48,7 @@ class Lexer(object):
         self.tokens = tokens
         self.callbacks = callbacks
 
-        self.tokens.sort(key=lambda x:len(x[1]), reverse=True)
+        # self.tokens.sort(key=lambda x:len(x[1]), reverse=True)
 
         self.mres = []
         self.name_from_index = []

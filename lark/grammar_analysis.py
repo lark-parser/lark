@@ -15,7 +15,6 @@ class Rule(object):
         expansion : a list of symbols
     """
     def __init__(self, origin, expansion, alias=None):
-        assert expansion, "No support for empty rules"
         self.origin = origin
         self.expansion = expansion
         self.alias = alias
@@ -91,9 +90,10 @@ class GrammarAnalyzer(object):
                 init_ptr = RulePtr(r, 0)
                 init_ptrs.add(init_ptr)
 
-                new_r = init_ptr.next
-                if not is_terminal(new_r):
-                    yield new_r
+                if r.expansion: # if not empty rule
+                    new_r = init_ptr.next
+                    if not is_terminal(new_r):
+                        yield new_r
 
         _ = list(bfs([rule], _expand_rule))
 

@@ -32,7 +32,6 @@ class LarkOptions(object):
         self.debug = bool(o.pop('debug', False))
         self.only_lex = bool(o.pop('only_lex', False))
         self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
-        self.keep_empty_trees = bool(o.pop('keep_empty_trees', True))
         self.tree_class = o.pop('tree_class', Tree)
         self.cache_grammar = o.pop('cache_grammar', False)
         self.ignore_postproc = bool(o.pop('ignore_postproc', False))
@@ -42,6 +41,8 @@ class LarkOptions(object):
         assert self.parser in ENGINE_DICT
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm. Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
+        if self.keep_all_tokens:
+            raise NotImplementedError("Not implemented yet!")
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())

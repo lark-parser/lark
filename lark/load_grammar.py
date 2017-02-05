@@ -74,7 +74,7 @@ RULES = [
     ('expansion', ['_expansion']),
     ('expansion', ['_expansion', 'TO', 'RULE']),
 
-    ('_expansion', ['expr']),
+    ('_expansion', []),
     ('_expansion', ['_expansion', 'expr']),
 
     ('expr', ['atom']),
@@ -149,6 +149,12 @@ class SaveDefinitions(object):
 
     def tokenvalue(self, tokenvalue):
         value = tokenvalue.value[1:-1]
+        import codecs
+        decoder = codecs.getdecoder('unicode_escape')
+        if '\u' in value:
+            # XXX for now, you can't mix unicode escaping and unicode characters at the same token
+            value = decoder(value)[0]
+
         if tokenvalue.type == 'STRING':
             value = re.escape(value)
         return tokenvalue, value

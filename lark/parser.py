@@ -26,8 +26,11 @@ class Parser(object):
                 raise ParseError("Unexpected input %r.\nExpected: %s\nContext: %s" % (key, expected, context))
 
         def reduce(rule):
-            s = stack[-len(rule.expansion):]
-            del stack[-len(rule.expansion):]
+            if rule.expansion:
+                s = stack[-len(rule.expansion):]
+                del stack[-len(rule.expansion):]
+            else:
+                s = []
 
             res = self.callbacks[rule]([x[0] for x in s])
 

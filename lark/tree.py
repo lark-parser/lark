@@ -1,3 +1,4 @@
+from copy import deepcopy
 from utils import inline_args
 
 class Tree(object):
@@ -29,6 +30,8 @@ class Tree(object):
             kid = self.children[i]
             self.children[i:i+1] = kid.children
 
+    def __eq__(self, other):
+        return self.data == other.data and self.children == other.children
 
     # def find_path(self, pred):
     #     if pred(self):
@@ -49,8 +52,12 @@ class Tree(object):
     #     x = self.follow_path(path[:-1])
     #     x.children[path[-1]] = value
 
-    def clone(self):
-        return Tree(self.data, [c.clone() if isinstance(c, Tree) else c for c in self.children])
+    # def clone(self):
+    #     return Tree(self.data, [c.clone() if isinstance(c, Tree) else c for c in self.children])
+
+    def __deepcopy__(self, memo):
+        return type(self)(self.data, deepcopy(self.children, memo))
+
 
 
 class Transformer(object):

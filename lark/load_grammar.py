@@ -58,7 +58,7 @@ TOKENS = {
     'REGEXP': r"/(.|\n)*?[^\\]/",
     'NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
-    'COMMENT': r'#[^\n]*\n',
+    'COMMENT': r'//[^\n]*\n',
     'TO': '->'
 }
 
@@ -106,7 +106,8 @@ RULES = [
 class SaveDefinitions(object):
     def __init__(self):
         self.rules = {}
-        self.tokens = {}
+        self.token_set = set()
+        self.tokens = []
         self.i = 0
 
 
@@ -143,13 +144,14 @@ class SaveDefinitions(object):
 
     def token(self, *x):
         name = x[0].value
-        if name in self.tokens:
+        if name in self.token_set:
             raise ValueError("Token '%s' defined more than once" % name)
+        self.token_set.add(name)
 
         if len(x) == 4:
-            self.tokens[name] = x[2], []
+            self.tokens.append((name, x[2], []))
         else:
-            self.tokens[name] = x[3], x[1].children
+            self.tokens.append((name, x[3], x[1].children))
 
     def tokenvalue(self, tokenvalue):
         return tokenvalue
@@ -173,8 +175,9 @@ class SaveDefinitions(object):
         else:
             assert False, x
 
-        if token_name not in self.tokens:
-            self.tokens[token_name] = token, []
+        if token_name not in self.token_set:
+            self.token_set.add(token_name)
+            self.tokens.append((token_name, token, []))
 
         return Token('TOKEN', token_name, -1)
 
@@ -191,14 +194,19 @@ class SaveDefinitions(object):
 class EBNF_to_BNF(InlineTransformer):
     def __init__(self):
         self.new_rules = {}
+        self.rules_by_expr = {}
         self.prefix = 'anon'
         self.i = 0
 
     def _add_recurse_rule(self, type_, expr):
+        if expr in self.rules_by_expr:
+            return self.rules_by_expr[expr]
+
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
         t = Token('RULE', new_name, -1)
         self.new_rules[new_name] = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])])
+        self.rules_by_expr[expr] = t
         return t
 
     def expr(self, rule, op):
@@ -309,9 +317,10 @@ class GrammarLoader:
         p.parse( list(self.lexer.lex(grammar_text+"\n")) )
 
         # Tokens
+        token_ref = {}
         re_tokens = []
         str_tokens = []
-        for name, (token, flags) in sd.tokens.items():
+        for name, token, flags in sd.tokens:
             value = token.value[1:-1]
             if '\u' in value:
                 # XXX for now, you can't mix unicode escaping and unicode characters at the same token
@@ -319,13 +328,19 @@ class GrammarLoader:
 
             if token.type == 'STRING':
                 value = re.escape(value)
-                str_tokens.append((name, (value, flags)))
+                str_tokens.append((name, value, flags))
             else:
                 assert token.type == 'REGEXP'
-                re_tokens.append((name, (value, flags)))
+                sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], value)
+                if sp:
+                    value = ''.join(token_ref[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
+                                    for x in sp)
 
-        str_tokens.sort(key=lambda x:len(x[1][0]), reverse=True)
-        re_tokens.sort(key=lambda x:len(x[1][0]), reverse=True)
+                re_tokens.append((name, value, flags))
+                token_ref[name] = value
+
+        str_tokens.sort(key=lambda x:len(x[1]), reverse=True)
+        re_tokens.sort(key=lambda x:len(x[1]), reverse=True)
         tokens = str_tokens + re_tokens # Order is important!
 
         # Rules

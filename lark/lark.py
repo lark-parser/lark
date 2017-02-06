@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
-import functools
-import types
+import os
 
 from .utils import STRING_TYPE, inline_args
 from .load_grammar import load_grammar
@@ -153,7 +152,7 @@ class Lark:
     def _build_lexer(self):
         ignore_tokens = []
         tokens = []
-        for name, (value, flags) in self.tokens:
+        for name, value, flags in self.tokens:
             if 'ignore' in flags:
                 ignore_tokens.append(name)
             tokens.append((name, value))

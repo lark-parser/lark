@@ -1,13 +1,8 @@
 from collections import defaultdict, deque
 from utils import classify, classify_bool, bfs, fzset
+from common import GrammarError, is_terminal
 
 ACTION_SHIFT = 0
-
-class GrammarError(Exception):
-    pass
-
-def is_terminal(sym):
-    return sym.isupper() or sym[0] == '$'
 
 class Rule(object):
     """
@@ -61,9 +56,10 @@ def update_set(set1, set2):
     return set1 != copy
 
 class GrammarAnalyzer(object):
-    def __init__(self, rule_tuples):
+    def __init__(self, rule_tuples, start_symbol):
+        self.start_symbol = start_symbol
         rule_tuples = list(rule_tuples)
-        rule_tuples.append(('$root', ['start', '$end']))
+        rule_tuples.append(('$root', [start_symbol, '$end']))
         rule_tuples = [(t[0], t[1], None) if len(t)==2 else t for t in rule_tuples]
 
         self.rules = set()
@@ -78,7 +74,7 @@ class GrammarAnalyzer(object):
                 if not (is_terminal(sym) or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym)
 
-        self.init_state = self.expand_rule('start')
+        self.init_state = self.expand_rule(start_symbol)
 
     def expand_rule(self, rule):
         "Returns all init_ptrs accessible by rule (recursive)"

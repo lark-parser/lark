@@ -7,8 +7,8 @@ from .load_grammar import load_grammar
 from .tree import Tree, Transformer
 
 from .lexer import Lexer
-from .grammar_analysis import GrammarAnalyzer, is_terminal
-from . import parser, earley
+from .parse_tree_builder import ParseTreeBuilder
+from .parser_frontends import ENGINE_DICT
 
 class LarkOptions(object):
     """Specifies the options for Lark
@@ -23,6 +23,7 @@ class LarkOptions(object):
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: True)
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None)
+        start - The start symbol (Default: start)
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -36,6 +37,7 @@ class LarkOptions(object):
         self.postlex = o.pop('postlex', None)
         self.parser = o.pop('parser', 'earley')
         self.transformer = o.pop('transformer', None)
+        self.start = o.pop('start', 'start')
 
         assert self.parser in ENGINE_DICT
         if self.parser == 'earley' and self.transformer:
@@ -47,70 +49,7 @@ class LarkOptions(object):
             raise ValueError("Unknown options: %s" % o.keys())
 
 
-class Callback(object):
-    pass
 
-
-class RuleTreeToText(Transformer):
-    def expansions(self, x):
-        return x
-    def expansion(self, symbols):
-        return [sym.value for sym in symbols], None
-    def alias(self, ((expansion, _alias), alias)):
-        assert _alias is None, (alias, expansion, '-', _alias)
-        return expansion, alias.value
-
-
-
-def create_rule_handler(expansion, usermethod):
-    to_include = [(i, sym.startswith('_')) for i, sym in enumerate(expansion)
-                  if not (is_terminal(sym) and sym.startswith('_'))]
-
-    def _build_ast(match):
-        children = []
-        for i, to_expand in to_include:
-            if to_expand:
-                children += match[i].children
-            else:
-                children.append(match[i])
-
-        return usermethod(children)
-    return _build_ast
-
-def create_expand1_tree_builder_function(tree_builder):
-    def f(children):
-        if len(children) == 1:
-            return children[0]
-        else:
-            return tree_builder(children)
-    return f
-
-class LALR:
-    def build_parser(self, rules, callback):
-        ga = GrammarAnalyzer(rules)
-        ga.analyze()
-        return parser.Parser(ga, callback)
-
-class Earley:
-    @staticmethod
-    def _process_expansion(x):
-        return [{'literal': s} if is_terminal(s) else s for s in x]
-
-    def build_parser(self, rules, callback):
-        rules = [{'name':n, 'symbols': self._process_expansion(x), 'postprocess':getattr(callback, a)} for n,x,a in rules]
-        return EarleyParser(earley.Parser(rules, 'start'))
-
-class EarleyParser:
-    def __init__(self, parser):
-        self.parser = parser
-
-    def parse(self, text):
-        res = self.parser.parse(text)
-        assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
-        return res[0]
-
-
-ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }
 
 class Lark:
     def __init__(self, grammar, **options):
@@ -147,6 +86,7 @@ class Lark:
         self.lexer = self._build_lexer()
         if not self.options.only_lex:
             self.parser_engine = ENGINE_DICT[self.options.parser]()
+            self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
             self.parser = self._build_parser()
 
     def _build_lexer(self):
@@ -160,49 +100,11 @@ class Lark:
 
 
     def _build_parser(self):
-        transformer = self.options.transformer
-        callback = Callback()
-        rules = []
-        rule_tree_to_text = RuleTreeToText()
-        for origin, tree in self.rules.items():
-            for expansion, alias in rule_tree_to_text.transform(tree):
-                if alias and origin.startswith('_'):
-                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases" % origin)
-
-                expand1 = origin.startswith('?')
-                _origin = origin.lstrip('?*')
-                if alias:
-                    alias = alias.lstrip('*')
-                _alias = 'autoalias_%s_%s' % (_origin, '_'.join(expansion))
-
-                try:
-                    f = transformer._get_func(alias or _origin)
-                    # f = getattr(transformer, alias or _origin)
-                except AttributeError:
-                    if alias:
-                        f = self._create_tree_builder_function(alias)
-                    else:
-                        f = self._create_tree_builder_function(_origin)
-                        if expand1:
-                            f = create_expand1_tree_builder_function(f)
-
-                alias_handler = create_rule_handler(expansion, f)
-
-                assert not hasattr(callback, _alias)
-                setattr(callback, _alias, alias_handler)
-
-                rules.append((_origin, expansion, _alias))
-
-        return self.parser_engine.build_parser(rules, callback)
+        rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
+        return self.parser_engine.build_parser(rules, callback, self.options.start)
 
 
     __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
-
-    def _create_tree_builder_function(self, name):
-        tree_class = self.options.tree_class
-        def f(children):
-            return tree_class(name, children)
-        return f
 
     def lex(self, text):
         stream = self.lexer.lex(text)

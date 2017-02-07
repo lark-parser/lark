@@ -34,7 +34,7 @@ class Parser(object):
 
             res = self.callbacks[rule]([x[0] for x in s])
 
-            if rule.origin == 'start':
+            if rule.origin == self.ga.start_symbol and len(stack) == 1:
                 return res
 
             _action, new_state = get_action(rule.origin)

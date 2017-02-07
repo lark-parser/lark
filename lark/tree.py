@@ -33,6 +33,19 @@ class Tree(object):
     def __eq__(self, other):
         return self.data == other.data and self.children == other.children
 
+    def find_pred(self, pred):
+        if pred(self):
+            yield self
+        else:
+            for i, c in enumerate(self.children):
+                if isinstance(c, Tree):
+                    for t in c.find_pred(pred):
+                        yield t
+
+    def find_data(self, data):
+        return self.find_pred(lambda t: t.data == data)
+
+
     # def find_path(self, pred):
     #     if pred(self):
     #         yield []

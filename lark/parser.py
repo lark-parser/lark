@@ -1,4 +1,4 @@
-from grammar_analysis import ACTION_SHIFT
+from .grammar_analysis import ACTION_SHIFT
 
 class ParseError(Exception):
     pass

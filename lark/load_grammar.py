@@ -185,7 +185,7 @@ class SimplifyRule_Visitor(Visitor):
     expansions = _flatten
 
 def dict_update_safe(d1, d2):
-    for k, v in d2.iteritems():
+    for k, v in d2.items():
         assert k not in d1
         d1[k] = v
 
@@ -195,7 +195,8 @@ class RuleTreeToText(Transformer):
         return x
     def expansion(self, symbols):
         return [sym.value for sym in symbols], None
-    def alias(self, ((expansion, _alias), alias)):
+    def alias(self, x):
+        (expansion, _alias), alias = x
         assert _alias is None, (alias, expansion, '-', _alias)
         return expansion, alias.value
 
@@ -294,7 +295,7 @@ class GrammarLoader:
         tokens2 = []
         for name, token, flags in tokens:
             value = token.value[1:-1]
-            if '\u' in value:
+            if r'\u' in value:
                 # XXX for now, you can't mix unicode escaping and unicode characters at the same token
                 value = unicode_escape(value)[0]
             tokens2.append((name, token.type, value, flags))
@@ -406,7 +407,7 @@ def test():
     d: "+" | "-"
     """
     # print load_grammar(g)
-    print GrammarLoader().load_grammar2(g)
+    print(GrammarLoader().load_grammar2(g))
 
 
 if __name__ == '__main__':

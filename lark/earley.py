@@ -1,6 +1,11 @@
 "My name is Earley"
 
-from .utils import classify
+from .utils import classify, STRING_TYPE
+
+try:
+    xrange
+except NameError:
+    xrange = range
 
 class MatchFailed(object):
     pass
@@ -27,7 +32,7 @@ class State(object):
             self.is_literal = isinstance(self.expect_symbol, dict)
             if self.is_literal:
                 self.expect_symbol = self.expect_symbol['literal']
-            assert isinstance(self.expect_symbol, (str, unicode)), self.expect_symbol
+            assert isinstance(self.expect_symbol, STRING_TYPE), self.expect_symbol
 
     def next_state(self, data):
         return State(self.rule, self.expect+1, self.reference, self.data + [data])
@@ -139,6 +144,6 @@ class Parser(object):
             if (t.rule.name == self.start
                 and t.expect == len(t.rule.symbols)
                 and t.reference == 0
-                and t.data != MatchFailed):
+                and t.data is not MatchFailed):
                 yield t.data
 

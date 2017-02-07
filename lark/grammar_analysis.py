@@ -1,6 +1,7 @@
 from collections import defaultdict, deque
-from utils import classify, classify_bool, bfs, fzset
-from common import GrammarError, is_terminal
+
+from .utils import classify, classify_bool, bfs, fzset
+from .common import GrammarError, is_terminal
 
 ACTION_SHIFT = 0
 
@@ -105,7 +106,7 @@ class GrammarAnalyzer(object):
         """Calculate FOLLOW sets.
 
         Adapted from: http://lara.epfl.ch/w/cc09:algorithm_for_first_and_follow_sets"""
-        symbols = {sym for rule in self.rules for sym in rule.expansion}
+        symbols = {sym for rule in self.rules for sym in rule.expansion} | {rule.origin for rule in self.rules}
         symbols.add('$root')    # what about other unused rules?
 
         # foreach grammar rule X ::= Y(1) ... Y(k)

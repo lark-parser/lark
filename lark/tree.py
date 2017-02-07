@@ -1,5 +1,6 @@
 from copy import deepcopy
-from utils import inline_args
+
+from .utils import inline_args
 
 class Tree(object):
     def __init__(self, data, children):

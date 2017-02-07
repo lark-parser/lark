@@ -1,5 +1,6 @@
 ## Lexer Implementation
-from utils import Str
+
+from .utils import Str
 
 class LexError(Exception):
     pass
@@ -52,7 +53,7 @@ class Lexer(object):
 
         self.mres = []
         self.name_from_index = []
-        x = tokens
+        x = list(tokens)
         while x:
             mre =  re.compile(u'|'.join(u'(?P<%s>%s)'%t for t in x[:LIMIT]))
             self.mres.append(mre)

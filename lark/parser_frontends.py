@@ -1,5 +1,5 @@
 from .grammar_analysis import GrammarAnalyzer
-from common import is_terminal
+from .common import is_terminal
 from . import parser, earley
 
 class LALR:

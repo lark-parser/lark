@@ -61,7 +61,7 @@ class Lexer(object):
 
     def lex(self, stream):
         lex_pos = 0
-        line = 0
+        line = 1
         col_start_pos = 0
         while True:
             i = 0
@@ -87,7 +87,7 @@ class Lexer(object):
             else:
                 if lex_pos < len(stream):
                     context = stream[lex_pos:lex_pos+5]
-                    raise LexError("No token defined for: '%s' in %s" % (stream[lex_pos], context))
+                    raise LexError("No token defined for: '%s' in %s at line %d" % (stream[lex_pos], context, line))
                 break
 
 

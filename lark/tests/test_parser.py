@@ -267,6 +267,8 @@ class TestLalr(unittest.TestCase):
                 """, parser='lalr')
         x = g.parse('Hello World')
         self.assertSequenceEqual(x.children, ['World'])
+        x = g.parse('HelloWorld')
+        self.assertSequenceEqual(x.children, ['HelloWorld'])
 
     def test_undefined_rule(self):
         self.assertRaises(GrammarError, Lark, """start: a""", parser='lalr')

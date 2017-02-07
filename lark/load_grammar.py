@@ -231,6 +231,7 @@ class ExtractAnonTokens(InlineTransformer):
         self.tokens = tokens
         self.token_set = token_set
         self.token_reverse = {value[1:-1]: name for name, value, _flags in tokens}
+        self.i = 0
 
     def anontoken(self, token):
         if token.type == 'STRING':

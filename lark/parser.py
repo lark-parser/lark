@@ -22,8 +22,11 @@ class Parser(object):
                 return states_idx[state][key]
             except KeyError:
                 expected = states_idx[state].keys()
-                context = ' '.join(['%s(%r)' % (t.type, t.value) for t in seq[i:i+5]])
-                raise ParseError("Unexpected input %r.\nExpected: %s\nContext: %s" % (key, expected, context))
+                context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[i:i+5]])
+                token = seq[i]
+                raise ParseError("Unexpected input %r at line %d, column %d.\n"
+                                 "Expected: %s\n"
+                                 "Context: %s" % (token.value, token.line, token.column, expected, context))
 
         def reduce(rule):
             if rule.expansion:

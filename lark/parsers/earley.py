@@ -1,6 +1,7 @@
 "My name is Earley"
 
-from .utils import classify, STRING_TYPE
+from ..utils import classify, STRING_TYPE
+from ..common import ParseError
 
 try:
     xrange
@@ -135,7 +136,7 @@ class Parser(object):
             self.advance_to(table, pos + 1, set())
 
             if not table[-1]:
-                raise Exception('Error at line {t.line}:{t.column}'.format(t=stream[pos]))
+                raise ParseError('Error at line {t.line}:{t.column}'.format(t=stream[pos]))
 
         return list(self.finish(table))
 

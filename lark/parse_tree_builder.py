@@ -1,4 +1,4 @@
-from .grammar_analysis import is_terminal
+from .common import is_terminal
 
 class Callback(object):
     pass

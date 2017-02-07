@@ -1,12 +1,12 @@
-from .grammar_analysis import GrammarAnalyzer
+from .parsers.lalr_analysis import GrammarAnalyzer
 from .common import is_terminal
-from . import parser, earley
+from .parsers import lalr_parser, earley
 
 class LALR:
     def build_parser(self, rules, callback, start):
         ga = GrammarAnalyzer(rules, start)
         ga.analyze()
-        return parser.Parser(ga, callback)
+        return lalr_parser.Parser(ga, callback)
 
 class Earley:
     @staticmethod

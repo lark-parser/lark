@@ -17,8 +17,7 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.grammar_analysis import GrammarError
-from lark.parser import ParseError
+from lark.common import GrammarError, ParseError
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):

@@ -33,6 +33,8 @@ class Tree(object):
 
     def __eq__(self, other):
         return self.data == other.data and self.children == other.children
+    def __hash__(self):
+        return hash((self.data, tuple(self.children)))
 
     def find_pred(self, pred):
         if pred(self):
@@ -45,26 +47,6 @@ class Tree(object):
 
     def find_data(self, data):
         return self.find_pred(lambda t: t.data == data)
-
-
-    # def find_path(self, pred):
-    #     if pred(self):
-    #         yield []
-    #     else:
-    #         for i, c in enumerate(self.children):
-    #             if isinstance(c, Tree):
-    #                 for path in c.find_path(pred):
-    #                     yield [i] + path
-
-    # def follow_path(self, path):
-    #     x = self
-    #     for step in path:
-    #         x = x.children[step]
-    #     return x
-
-    # def set_at_path(self, path, value):
-    #     x = self.follow_path(path[:-1])
-    #     x.children[path[-1]] = value
 
     # def clone(self):
     #     return Tree(self.data, [c.clone() if isinstance(c, Tree) else c for c in self.children])

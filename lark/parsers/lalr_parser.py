@@ -1,7 +1,5 @@
-from .grammar_analysis import ACTION_SHIFT
-
-class ParseError(Exception):
-    pass
+from .lalr_analysis import ACTION_SHIFT
+from ..common import ParseError
 
 class Parser(object):
     def __init__(self, ga, callback):

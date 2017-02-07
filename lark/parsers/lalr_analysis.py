@@ -1,7 +1,7 @@
 from collections import defaultdict, deque
 
-from .utils import classify, classify_bool, bfs, fzset
-from .common import GrammarError, is_terminal
+from ..utils import classify, classify_bool, bfs, fzset
+from ..common import GrammarError, is_terminal
 
 ACTION_SHIFT = 0
 

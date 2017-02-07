@@ -26,8 +26,9 @@ Lark can automagically build an AST from your grammar, without any more code on 
  - EBNF grammar with a little extra
  - Earley & LALR(1)
  - Builds an AST automagically based on the grammar
+ - Automatic token collision resolution (unless both tokens are regexps)
  - Python 2 & 3 compatible
- - Supports unicode
+ - Unicode fully supported
 
 ## License
 

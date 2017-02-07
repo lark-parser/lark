@@ -138,7 +138,10 @@ class Parser(object):
             if not table[-1]:
                 raise ParseError('Error at line {t.line}:{t.column}'.format(t=stream[pos]))
 
-        return list(self.finish(table))
+        res = list(self.finish(table))
+        if not res:
+            raise ParseError('Incomplete parse')
+        return res
 
     def finish(self, table):
         for t in table[-1]:

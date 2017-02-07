@@ -56,7 +56,7 @@ class Parser(object):
             else:
                 reduce(arg)
 
-        while len(stack) > 1:
+        while stack:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
             res = reduce(rule)

@@ -1,4 +1,5 @@
 from .parsers.lalr_analysis import GrammarAnalyzer
+
 from .common import is_terminal
 from .parsers import lalr_parser, earley
 

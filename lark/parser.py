@@ -23,7 +23,11 @@ class Parser(object):
             except KeyError:
                 expected = states_idx[state].keys()
                 context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[i:i+5]])
-                token = seq[i]
+                try:
+                    token = seq[i]
+                except IndexError:
+                    assert key == '$end'
+                    token = seq[-1]
                 raise ParseError("Unexpected input %r at line %d, column %d.\n"
                                  "Expected: %s\n"
                                  "Context: %s" % (token.value, token.line, token.column, expected, context))

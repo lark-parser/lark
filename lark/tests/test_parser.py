@@ -323,6 +323,11 @@ class TestLalr(unittest.TestCase):
         x = g.parse('aa')
         x = g.parse('aaa')
 
+    def test_alias(self):
+        g = Lark("""start: "a" -> b """, parser='lalr')
+        x = g.parse('a')
+        self.assertEqual(x.data, "b")
+
 if __name__ == '__main__':
     unittest.main()
 

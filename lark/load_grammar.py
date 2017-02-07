@@ -50,14 +50,14 @@ TOKENS = {
     '_RPAR': '\)',
     '_LBRA': '\[',
     '_RBRA': '\]',
-    'OP': '[+*?]',
+    'OP': '[+*?](?![a-z])',
     '_COLON': ':',
     '_OR': '\|',
     '_DOT': '\.',
     'RULE': '[_?*]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'".*?[^\\]"',
-    'REGEXP': r"/(.|\n)*?[^\\]/",
+    'REGEXP': r"/(?!/).*?[^\\]/",
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*\n',
@@ -70,12 +70,12 @@ RULES = {
     'item':  ['rule', 'token', '_NL'],
 
     'rule': ['RULE _COLON expansions _NL'],
-    'expansions': ['expansion',
-                   'expansions _OR expansion',
-                   'expansions _NL _OR expansion'],
+    'expansions': ['alias',
+                   'expansions _OR alias',
+                   'expansions _NL _OR alias'],
 
-    'expansion': ['_expansion',
-                   '_expansion _TO RULE'],
+    '?alias':     ['expansion _TO RULE', 'expansion'],
+    'expansion': ['_expansion'],
 
     '_expansion': ['', '_expansion expr'],
 
@@ -321,13 +321,13 @@ class GrammarLoader:
             for str_name, str_value, _sf in str_tokens:
                 m = re.match(re_value, str_value)
                 if m and m.group(0) == str_value:
-                    embedded_strs.add(str_name)
                     assert not _sf, "You just broke Lark! Please email me with your grammar"
+                    embedded_strs.add(str_name)
                     unless[str_value] = str_name
             if unless:
                 re_flags.append(('unless', unless))
 
-        str_tokens = [(n, re.escape(v), f) for n, v, f in str_tokens if name not in embedded_strs]
+        str_tokens = [(n, re.escape(v), f) for n, v, f in str_tokens if n not in embedded_strs]
 
         str_tokens.sort(key=lambda x:len(x[1]), reverse=True)
         re_tokens.sort(key=lambda x:len(x[1]), reverse=True)

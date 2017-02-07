@@ -291,20 +291,22 @@ class GrammarLoader:
         extract_anon = ExtractAnonTokens(tokens, token_set)
         tree = extract_anon.transform(tree) # Adds to tokens
 
-        token_ref = {}
-        re_tokens = []
-        str_tokens = []
+        tokens2 = []
         for name, token, flags in tokens:
             value = token.value[1:-1]
             if '\u' in value:
                 # XXX for now, you can't mix unicode escaping and unicode characters at the same token
                 value = unicode_escape(value)[0]
+            tokens2.append((name, token.type, value, flags))
 
-            if token.type == 'STRING':
-                value = re.escape(value)
+        token_ref = {}
+        re_tokens = []
+        str_tokens = []
+        for name, type_, value, flags in tokens2:
+            if type_ == 'STRING':
                 str_tokens.append((name, value, flags))
             else:
-                assert token.type == 'REGEXP'
+                assert type_ == 'REGEXP'
                 sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], value)
                 if sp:
                     value = ''.join(token_ref[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
@@ -312,6 +314,20 @@ class GrammarLoader:
 
                 re_tokens.append((name, value, flags))
                 token_ref[name] = value
+
+        embedded_strs = set()
+        for re_name, re_value, re_flags in re_tokens:
+            unless = {}
+            for str_name, str_value, _sf in str_tokens:
+                m = re.match(re_value, str_value)
+                if m and m.group(0) == str_value:
+                    embedded_strs.add(str_name)
+                    assert not _sf, "You just broke Lark! Please email me with your grammar"
+                    unless[str_value] = str_name
+            if unless:
+                re_flags.append(('unless', unless))
+
+        str_tokens = [(n, re.escape(v), f) for n, v, f in str_tokens if name not in embedded_strs]
 
         str_tokens.sort(key=lambda x:len(x[1]), reverse=True)
         re_tokens.sort(key=lambda x:len(x[1]), reverse=True)
@@ -339,7 +355,6 @@ class GrammarLoader:
 
         rules = {origin: self.rule_tree_to_text.transform(tree) for origin, tree in rules.items()}
 
-            
         # ====================
         #  Verify correctness
         # ====================

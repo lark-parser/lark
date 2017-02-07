@@ -5,6 +5,7 @@ import os
 from .utils import STRING_TYPE, inline_args
 from .load_grammar import load_grammar
 from .tree import Tree, Transformer
+from .common import GrammarError
 
 from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder
@@ -89,14 +90,31 @@ class Lark:
             self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
             self.parser = self._build_parser()
 
+    def _create_unless_callback(self, strs):
+        def f(t):
+            if t in strs:
+                t.type = strs[t]
+            return t
+        return f
+
     def _build_lexer(self):
         ignore_tokens = []
         tokens = []
+        callbacks = {}
         for name, value, flags in self.tokens:
-            if 'ignore' in flags:
-                ignore_tokens.append(name)
+            for flag in flags:
+                if flag == 'ignore':
+                    ignore_tokens.append(name)
+                elif flag == 'newline':
+                    pass    # TODO
+                elif isinstance(flag, tuple) and flag[0] == 'unless':
+                    _, strs = flag
+                    callbacks[name] = self._create_unless_callback(strs)
+                else:
+                    raise GrammarError("No such flag: %s" % flag)
+
             tokens.append((name, value))
-        return Lexer(tokens, {}, ignore=ignore_tokens)
+        return Lexer(tokens, callbacks, ignore=ignore_tokens)
 
 
     def _build_parser(self):

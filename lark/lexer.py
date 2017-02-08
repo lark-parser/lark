@@ -21,7 +21,7 @@ class Token(Str):
 
 
     def __repr__(self):
-        return 'Token(%s, %s, %s)' % (self.type, self.value, self.pos_in_stream)
+        return 'Token(%s, %s)' % (self.type, self.value)
 
 class Regex:
     def __init__(self, pattern, flags=()):

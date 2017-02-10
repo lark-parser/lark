@@ -101,7 +101,7 @@ Tokens that *will* appear in the tree are:
 
 ## Shaping the tree
 
-1. Rules whose name begins with an underscore will be inlined into their containing rule.
+a. Rules whose name begins with an underscore will be inlined into their containing rule.
 
 Example:
 
@@ -115,7 +115,7 @@ Lark will parse "(hello world)" as:
         "world"
 
 
-2. Rules that recieve a question mark (?) at the beginning of their definition, will be inlined if they have a single child.
+b. Rules that recieve a question mark (?) at the beginning of their definition, will be inlined if they have a single child.
 
 Example:
 
@@ -131,7 +131,7 @@ Lark will parse "hello world (planet)" as:
             "world"
         "planet"
 
-3. Aliases - options in a rule can receive an alias. It will be then used as the branch name for the option.
+c. Aliases - options in a rule can receive an alias. It will be then used as the branch name for the option.
 
 Example:
 

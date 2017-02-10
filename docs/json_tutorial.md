@@ -411,6 +411,8 @@ I measured memory consumption using a little script called [memusg](https://gist
 
 I added PyParsing for comparison. It fairs pretty well in its memory usage, but it can't compete with the run-time speed of LALR(1).
 
+These benchmarks are for Lark's alpha version. I already have several optimizations planned that will significantly improve run-time speed.
+
 Once again, shout-out to PyPy for being so effective.
 
 ## Afterword

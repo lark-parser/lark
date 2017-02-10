@@ -11,6 +11,8 @@ class Indenter:
         if (self.paren_level > 0):
             return
 
+        yield token
+
         indent_str = token.rsplit('\n', 1)[1] # Tabs and spaces
         indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
 
@@ -20,18 +22,18 @@ class Indenter:
         else:
             while indent < self.indent_level[-1]:
                 self.indent_level.pop()
-                yield Token(self.DEDENT_type, indent_str)
+                yield Token.new_borrow_pos(self.DEDENT_type, indent_str, token)
 
             assert indent == self.indent_level[-1], '%s != %s' % (indent, self.indent_level[-1])
 
 
     def process(self, stream):
         for token in stream:
-            yield token
-
             if token.type == self.NL_type:
                 for t in self.handle_NL(token):
                     yield t
+            else:
+                yield token
 
             if token.type in self.OPEN_PAREN_types:
                 self.paren_level += 1

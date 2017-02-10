@@ -26,9 +26,12 @@ class Parser(object):
                 except IndexError:
                     assert key == '$end'
                     token = seq[-1]
-                raise ParseError("Unexpected input %r at line %d, column %d.\n"
+                raise ParseError("Unexpected input %r at line %s, column %s.\n"
                                  "Expected: %s\n"
-                                 "Context: %s" % (token.value, token.line, token.column, expected, context))
+                                 "Context: %s" % (token.value, 
+                                        getattr(token, 'line', '?'),
+                                        getattr(token, 'column', '?'), 
+                                        expected, context))
 
         def reduce(rule):
             if rule.expansion:

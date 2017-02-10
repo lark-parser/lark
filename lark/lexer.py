@@ -15,6 +15,13 @@ class Token(Str):
         inst.value = value
         return inst
 
+    @classmethod
+    def new_borrow_pos(cls, type, value, borrow_t):
+        inst = cls(type, value, borrow_t.pos_in_stream)
+        inst.line = borrow_t.line
+        inst.column = borrow_t.column
+        return inst
+
     def __repr__(self):
         return 'Token(%s, %s)' % (self.type, self.value)
 
@@ -46,7 +53,7 @@ class Lexer(object):
         self.token_types = list(token_names)
         self.type_index = {name:i for i,name in enumerate(self.token_types)}
 
-        self.newline_types = [self.type_index[t[0]] for t in tokens if '\n' in t[1] or '\\n' in t[1]]
+        self.newline_types = [self.type_index[t[0]] for t in tokens if '\n' in t[1] or '\\n' in t[1] or '(?s)' in t[1]]
         self.ignore_types = [self.type_index[t] for t in ignore]
 
         self.mres = self._build_mres(tokens, len(tokens))

@@ -334,6 +334,13 @@ def _make_parser_test(PARSER):
             x = g.parse('a')
             self.assertEqual(x.data, "b")
 
+        def test_lexer_token_limit(self):
+            "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
+            tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
+            g = _Lark("""start: %s
+                      %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
+
+
     _NAME = "Test" + PARSER.capitalize()
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser

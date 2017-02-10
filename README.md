@@ -1,13 +1,13 @@
-# Lark - a modern pure-Python parsing library
+# Lark - a modern parsing library
 
-Lark is a modern general-purpose Python parsing library, that focuses on simplicity and power.
+Lark is a modern general-purpose parsing library for Python.
 
-Lark accepts grammars as EBNF and lets you choose between two parsing algorithms:
+Lark focuses on simplicity and power. It lets you choose between two parsing algorithms:
 
- - Earley : Parses all context-free grammars (even ambiguous ones)!
+ - Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
  - LALR(1): Only LR grammars. Outperforms PLY and most if not all other pure-python parsing libraries.
 
-Both algorithms are pure-python implementations and can be used interchangably (aside for algorithmic restrictions).
+Both algorithms are written in Python and can be used interchangably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
 
 Lark can automagically build an AST from your grammar, without any more code on your part.
 
@@ -41,10 +41,12 @@ Tree(start, [Token(WORD, Hello), Token(WORD, World)])
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
 
-To learn more about Lark:
- - Learn how to parse json at the [tutorial](/docs/json_tutorial.md)
+## Learn more about using Lark
 
-## Features
+ - Read the [tutorial](/docs/json_tutorial.md), which shows how to write a JSON parser in Lark.
+ - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
+
+## List of Features
 
  - EBNF grammar with a little extra
  - Earley & LALR(1)

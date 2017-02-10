@@ -27,7 +27,7 @@ Lark accepts its grammars in a format called [EBNF](https://www.wikiwand.com/en/
 
 (*a token is a string or a regular expression*)
 
-How to structure those rules is beyond the scope of this tutorial, but it's often enough to follow one's intuition.
+How to structure those rules is beyond the scope of this tutorial, but often it's enough to follow one's intuition.
 
 In the case of JSON, the structure is simple: A json document is either a list, or a dictionary, or a string/number/etc.
 
@@ -37,14 +37,14 @@ Let's write this structure in EBNF form:
 
     value: dict
          | list
-         | string
-         | number
+         | STRING
+         | NUMBER
          | "true" | "false" | "null"
 
     list : "[" [value ("," value)*] "]"
 
     dict : "{" [pair ("," pair)*] "}"
-    pair : string ":" value
+    pair : STRING ":" value
 
 
 A quick explanation of the syntax:
@@ -52,16 +52,18 @@ A quick explanation of the syntax:
  - rule\* means *any amount*. That means, zero or more instances of that rule.
  - [rule] means *optional*. That means zero or one instance of that rule.
 
-Lark also supports the rule+ operator, meaning one or more instances.
+Lark also supports the rule+ operator, meaning one or more instances. It also supports the rule? operator which is another way to say *optional*.
 
-Of course, we still haven't defined "string" and "number".
+Of course, we still haven't defined "STRING" and "NUMBER".
 
 We'll do that now, and also take care of the white-space, which is part of the text.
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/
+    NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+    STRING : /".*?(?<!\\)"/
 
     WS.ignore: /[ \t\n]+/
+
+Upper-case names signify tokens, while lower-case names signify rules. Rules can contain other rules and tokens, while tokens can only contain a single value.
 
 These regular-expressions are a bit complex, but there's no simple way around it. We want to match "3.14" and also "-2e10", and that's just how it's done.
 
@@ -78,17 +80,17 @@ from lark import Lark
 json_parser = Lark(r"""
     value: dict
          | list
-         | string
-         | number
+         | STRING
+         | NUMBER
          | "true" | "false" | "null"
 
     list : "[" [value ("," value)*] "]"
 
     dict : "{" [pair ("," pair)*] "}"
-    pair : string ":" value
+    pair : STRING ":" value
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/
+    NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+    STRING : /".*?(?<!\\)"/
 
     WS.ignore: /[ \t\n]+/
 
@@ -100,20 +102,17 @@ It's that simple! Let's test it out:
 ```python
 >>> text = '{"key": ["item0", "item1", 3.14]}'
 >>> json_parser.parse(text)
-Tree(value, [Tree(dict, [Tree(pair, [Tree(string, [Token(ANONRE_1, "key")]), Tree(value, [Tree(list, [Tree(value, [Tree(string, [Token(ANONRE_1, "item0")])]), Tree(value, [Tree(string, [Token(ANONRE_1, "item1")])]), Tree(value, [Tree(number, [Token(ANONRE_0, 3.14)])])])])])])])
+Tree(value, [Tree(dict, [Tree(pair, [Token(STRING, "key"), Tree(value, [Tree(list, [Tree(value, [Token(STRING, "item0")]), Tree(value, [Token(STRING, "item1")]), Tree(value, [Token(NUMBER, 3.14)])])])])])])
 >>> print( _.pretty() )
 value
   dict
     pair
-      string	"key"
+      "key"
       value
         list
-          value
-            string	"item0"
-          value
-            string	"item1"
-          value
-            number	3.14
+          value	"item0"
+          value	"item1"
+          value	3.14
 ```
 
 As promised, Lark automagically creates a tree that represents the parsed text.
@@ -124,8 +123,6 @@ Lark automatically filters out tokens from the tree, based on the following crit
 
 - Filter out string tokens without a name, or with a name that starts with an underscore.
 - Keep regex tokens, even unnamed ones, unless their name starts with an underscore.
-
-This tutorial won't give an example of named tokens, but you can find such use in the [calculator example](/examples/calc.py).
 
 Unfortunately, this means that it will also filter out tokens like "true" and "false", and we will lose that information. The next section, "Shaping the tree" deals with this issue, and others.
 
@@ -146,9 +143,16 @@ I'll present the solution, and then explain it:
           | "false"            -> false
           | "null"             -> null
 
+    ...
+
+    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+    string : /".*?(?<!\\)"/ 
+
 1. Those little arrows signify *aliases*. An alias is a name for a specific part of the rule. In this case, we will name *true/false/null* matches, and this way we won't lose the information.
 
 2. The question mark prefixing *value* ("?value") tells the tree-builder to inline this branch if it has only one member. In this case, *value* will always have only one member.
+
+3. We turned the *string* and *number* tokens into rules containing anonymous tokens. This way they will appear in the tree as a branch. You will see why that's useful in the next part of the tutorial. Note that these anonymous tokens won't get filtered out, because they are regular expressions.
 
 Here is the new grammar:
 
@@ -397,9 +401,9 @@ I measured memory consumption using a little script called [memusg](https://gist
 
 | Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
 |:-----|:-------------|:------------|:----------|:---------
-| Lark - Earley  | 36s | 4s | 6.2M | 1.2M |
-| Lark - LALR(1) | 7.2s | 1.3s | 0.6M | 0.3M |
-| Lark - LALR(1) tree-less | 4.3s | 1.2s | 0.4M | 0.3M |
+| Lark - Earley  | 36s | 4.3s | 6.2M | 1.2M |
+| Lark - LALR(1) | 7s | 1.3s | 0.6M | 0.3M |
+| Lark - LALR(1) tree-less | 4.2s | 1.1s | 0.4M | 0.3M |
 | PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 4.1s | 0.4M | 0.2M |
 
 I added PyParsing for comparison. It fairs pretty well in its memory usage, but it can't compete with the run-time speed of LALR(1).

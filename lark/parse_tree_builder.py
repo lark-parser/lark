@@ -16,15 +16,19 @@ def create_rule_handler(expansion, usermethod):
     to_include = [(i, sym.startswith('_')) for i, sym in enumerate(expansion)
                   if not (is_terminal(sym) and sym.startswith('_'))]
 
-    def _build_ast(match):
-        children = []
-        for i, to_expand in to_include:
-            if to_expand:
-                children += match[i].children
-            else:
-                children.append(match[i])
+    if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
+        def _build_ast(match):
+            children = []
+            for i, to_expand in to_include:
+                if to_expand:
+                    children += match[i].children
+                else:
+                    children.append(match[i])
 
-        return usermethod(children)
+            return usermethod(children)
+    else:
+        _build_ast = usermethod
+
     return _build_ast
 
 

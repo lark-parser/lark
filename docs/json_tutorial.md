@@ -20,12 +20,15 @@ Knowledge assumed:
 
 Lark accepts its grammars in a format called [EBNF](https://www.wikiwand.com/en/Extended_Backus%E2%80%93Naur_form). It basically looks like this:
 
-    rule_name: some rules and TOKENS
-             | or others
+    rule_name : list of rules and TOKENS to match
+              | another possible list of items
+              | etc.
 
     TOKEN: "some text to match"
 
 (*a token is a string or a regular expression*)
+
+The parser will try to match each rule (left-part) by matching its items (right-part) sequentially, trying each alternative (In practice, the parser is predictive so we don't have to try every alternative).
 
 How to structure those rules is beyond the scope of this tutorial, but often it's enough to follow one's intuition.
 
@@ -393,7 +396,7 @@ PyPy is awesome!
 
 ### Conclusion
 
-We've brought the run-time down from 36 seconds to 1.4 seconds, in a series of small and simple steps.
+We've brought the run-time down from 36 seconds to 1.1 seconds, in a series of small and simple steps.
 
 Now let's compare the benchmarks in a nicely organized table.
 

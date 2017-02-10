@@ -21,10 +21,11 @@ class LarkOptions(object):
         transformer - Applies the transformer to every parse tree
         debug - Affects verbosity (default: False)
         only_lex - Don't build a parser. Useful for debugging (default: False)
-        keep_all_tokens - Don't automagically remove "punctuation" tokens (default: True)
+        keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None)
         start - The start symbol (Default: start)
+        profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -39,7 +40,7 @@ class LarkOptions(object):
         self.parser = o.pop('parser', 'earley')
         self.transformer = o.pop('transformer', None)
         self.start = o.pop('start', 'start')
-        self.profile = o.pop('profile', False)  # XXX new
+        self.profile = o.pop('profile', False)
 
         assert self.parser in ENGINE_DICT
         if self.parser == 'earley' and self.transformer:

@@ -45,6 +45,7 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 
  - Read the [tutorial](/docs/json_tutorial.md), which shows how to write a JSON parser in Lark.
  - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
+ - Read the [reference](/docs/reference.md)
 
 ## List of Features
 

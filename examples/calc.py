@@ -1,5 +1,4 @@
-from lark.tree import InlineTransformer
-from lark.lark import Lark
+from lark import Lark, InlineTransformer
 
 calc_grammar = """
     ?start: sum

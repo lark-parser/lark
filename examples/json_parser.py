@@ -1,6 +1,6 @@
 import sys
-from lark.lark import Lark, inline_args
-from lark.tree import Transformer
+
+from lark import Lark, inline_args, Transformer
 
 json_grammar = r"""
     ?start: value

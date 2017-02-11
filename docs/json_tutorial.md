@@ -234,7 +234,7 @@ This is pretty close. Let's write a full transformer that can handle the tokens 
 Also, our definitions of list and dict are a bit verbose. We can do better:
 
 ```python
-from lark.tree import Transformer
+from lark import Transformer
 
 class TreeToJson(Transformer):
     def string(self, (s,)):

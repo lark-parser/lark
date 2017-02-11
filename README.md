@@ -73,7 +73,7 @@ These features are planned to be implemented in the near future:
 
 ## Comparison to other parsers
 
-This is a feature comparison. For benchmarks vs pyparsing, check out the [JSON tutorial](/docs/json_tutorial.md#conclusion).
+This is a feature comparison. For benchmarks vs other parsers, check out the [JSON tutorial](/docs/json_tutorial.md#conclusion).
 
 | Library | Algorithm | LOC | Grammar | Builds tree?
 |:--------|:----------|:----|:--------|:------------

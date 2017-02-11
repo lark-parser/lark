@@ -261,6 +261,7 @@ class ExtractAnonTokens(InlineTransformer):
 
         elif token.type == 'REGEXP':
             token_name = 'ANONRE_%d' % self.i
+            value = token.value
             self.i += 1
         else:
             assert False, x
@@ -268,6 +269,8 @@ class ExtractAnonTokens(InlineTransformer):
         if token_name not in self.token_set:
             self.token_set.add(token_name)
             self.tokens.append((token_name, token, []))
+            assert value not in self.token_reverse
+            self.token_reverse[value] = token_name
 
         return Token('TOKEN', token_name, -1)
 

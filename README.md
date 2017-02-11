@@ -91,7 +91,7 @@ Lark offers both Earley and LALR(1), which means you can choose between the most
 
 ## License
 
-Lark uses the GPL3 license.
+Lark uses the MIT license.
 
 ## Contact
 

@@ -27,12 +27,12 @@ class Parser(object):
     def parse(self, seq):
         states_idx = self.ga.states_idx
 
-        stack = [(None, self.ga.init_state_idx)]
+        state_stack = [self.ga.init_state_idx]
+        value_stack = []
         i = 0
-        res = None
 
         def get_action(key):
-            state = stack[-1][1]
+            state = state_stack[-1]
             try:
                 return states_idx[state][key]
             except KeyError:
@@ -47,38 +47,40 @@ class Parser(object):
 
         def reduce(rule):
             if rule.expansion:
-                s = stack[-len(rule.expansion):]
-                del stack[-len(rule.expansion):]
+                s = value_stack[-len(rule.expansion):]
+                del state_stack[-len(rule.expansion):]
+                del value_stack[-len(rule.expansion):]
             else:
                 s = []
 
-            res = self.callbacks[rule]([x[0] for x in s])
+            res = self.callbacks[rule](s)
 
-            if rule.origin == self.ga.start_symbol and len(stack) == 1:
+            if len(state_stack) == 1 and rule.origin == self.ga.start_symbol:
                 return res
 
             _action, new_state = get_action(rule.origin)
             assert _action == ACTION_SHIFT
-            stack.append((res, new_state))
+            state_stack.append(new_state)
+            value_stack.append(res)
 
         # Main LALR-parser loop
         while i < len(seq):
             action, arg = get_action(seq[i].type)
 
             if action == ACTION_SHIFT:
-                stack.append((seq[i], arg))
+                state_stack.append(arg)
+                value_stack.append(seq[i])
                 i+= 1
             else:
                 reduce(arg)
 
-        while stack:
+        while True:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
             res = reduce(rule)
             if res:
-                break
+                assert state_stack == [self.ga.init_state_idx] and not value_stack, len(state_stack)
+                return res
 
-        assert stack == [(None, self.ga.init_state_idx)], len(stack)
-        return res
 
 

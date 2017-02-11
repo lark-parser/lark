@@ -45,11 +45,11 @@ class Parser(object):
 
                 raise UnexpectedToken(token, expected, seq, i)
 
-        def reduce(rule):
-            if rule.expansion:
-                s = value_stack[-len(rule.expansion):]
-                del state_stack[-len(rule.expansion):]
-                del value_stack[-len(rule.expansion):]
+        def reduce(rule, size):
+            if size:
+                s = value_stack[-size:]
+                del state_stack[-size:]
+                del value_stack[-size:]
             else:
                 s = []
 
@@ -72,12 +72,12 @@ class Parser(object):
                 value_stack.append(seq[i])
                 i+= 1
             else:
-                reduce(arg)
+                reduce(*arg)
 
         while True:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
-            res = reduce(rule)
+            res = reduce(*rule)
             if res:
                 assert state_stack == [self.ga.init_state_idx] and not value_stack, len(state_stack)
                 return res

@@ -196,7 +196,9 @@ class GrammarAnalyzer(object):
         self.states_idx = {}
 
         for s, la in self.states.items():
-            la = {k:(ACTION_SHIFT, self.enum_rev[v[1]]) if v[0]=='shift' else v for k,v in la.items()}
+            la = {k:(ACTION_SHIFT, self.enum_rev[v[1]]) if v[0]=='shift'
+                    else (v[0], (v[1], len(v[1].expansion)))    # Reduce
+                  for k,v in la.items()}
             self.states_idx[ self.enum_rev[s] ] = la
 
 

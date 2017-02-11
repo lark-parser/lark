@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict, deque
 
 from ..utils import classify, classify_bool, bfs, fzset
@@ -57,8 +58,9 @@ def update_set(set1, set2):
     return set1 != copy
 
 class GrammarAnalyzer(object):
-    def __init__(self, rule_tuples, start_symbol):
+    def __init__(self, rule_tuples, start_symbol, debug=False):
         self.start_symbol = start_symbol
+        self.debug = debug
         rule_tuples = list(rule_tuples)
         rule_tuples.append(('$root', [start_symbol, '$end']))
         rule_tuples = [(t[0], t[1], None) if len(t)==2 else t for t in rule_tuples]
@@ -177,6 +179,8 @@ class GrammarAnalyzer(object):
 
             for k, v in lookahead.items():
                 if len(v) > 1:
+                    if self.debug:
+                        logging.warn("Shift/reduce conflict for %s: %s. Resolving as shift.", k, v)
                     for x in v:
                         # XXX resolving shift/reduce into shift, like PLY
                         # Give a proper warning

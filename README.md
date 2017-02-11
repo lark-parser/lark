@@ -75,13 +75,13 @@ These features are planned to be implemented in the near future:
 
 This is a feature comparison. For benchmarks vs pyparsing, check out the [JSON tutorial](/docs/json_tutorial.md#conclusion).
 
-| Library | Algorithm | LOC | Grammar | Builds AST
+| Library | Algorithm | LOC | Grammar | Builds tree?
 |:--------|:----------|:----|:--------|:------------
 | Lark | Earley/LALR(1) | 0.5K | EBNF+ | Yes! |
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | 4.6K | Yacc-like BNF | No |
 | [PyParsing](http://pyparsing.wikispaces.com/) | PEG | 5.7K | Parser combinators | No |
 | [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | 3.3K | EBNF-like | No |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No | [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | ? | EBNF | Yes |
 
 (*LOC measures lines of code of the parsing algorithm(s), without accompanying files*)
 

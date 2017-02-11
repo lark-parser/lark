@@ -407,10 +407,12 @@ I measured memory consumption using a little script called [memusg](https://gist
 | Lark - Earley  | 36s | 4.3s | 6.2M | 1.2M |
 | Lark - LALR(1) | 7s | 1.3s | 0.6M | 0.3M |
 | Lark - LALR(1) tree-less | 4.2s | 1.1s | 0.4M | 0.3M |
+|:-----|:-------------|:------------|:----------|:---------
 | PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 4.1s | 0.4M | 0.2M |
-| funcparselibr ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 11s | 1.9s | 0.5M | 0.3M |
+| funcparserlib ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 11s | 1.9s | 0.5M | 0.3M |
+| Parsimonious ([Parser](https://gist.githubusercontent.com/reclosedev/5222560/raw/5e97cf7eb62c3a3671885ec170577285e891f7d5/parsimonious_json.py)) | ? | 7s | ? | 1.4M |
 
-I added PyParsing and funcparselib for comparison. They fair pretty well in their memory usage (they don't build a tree), but they can't compete with the run-time speed of LALR(1).
+I added a few other parsers for comparison. PyParsing and funcparselib fair pretty well in their memory usage (they don't build a tree), but they can't compete with the run-time speed of LALR(1).
 
 These benchmarks are for Lark's alpha version. I already have several optimizations planned that will significantly improve run-time speed.
 

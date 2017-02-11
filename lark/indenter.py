@@ -18,7 +18,7 @@ class Indenter:
 
         if indent > self.indent_level[-1]:
             self.indent_level.append(indent)
-            yield Token(self.INDENT_type, indent_str)
+            yield Token.new_borrow_pos(self.INDENT_type, indent_str, token)
         else:
             while indent < self.indent_level[-1]:
                 self.indent_level.pop()

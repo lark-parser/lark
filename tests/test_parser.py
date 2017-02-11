@@ -340,6 +340,17 @@ def _make_parser_test(PARSER):
             g = _Lark("""start: %s
                       %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
 
+        def test_float_without_lexer(self):
+            g = _Lark("""start: ["+"|"-"] float
+                         float: digit* "." digit+ exp?
+                              | digit+ exp
+                         exp: ("e"|"E") ["+"|"-"] digit+
+                         digit: "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"
+                      """)
+            g.parse("1.2")
+            g.parse("-.2e9")
+            g.parse("+2e-9")
+            self.assertRaises(ParseError, g.parse, "+2e-9e")
 
     _NAME = "Test" + PARSER.capitalize()
     _TestParser.__name__ = _NAME

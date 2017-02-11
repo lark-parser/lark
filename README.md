@@ -63,6 +63,7 @@ Lark has no dependencies.
  - Automatic token collision resolution (unless both tokens are regexps)
  - Python 2 & 3 compatible
  - Unicode fully supported
+ - Extensive test suite
 
 ## Coming soon
 

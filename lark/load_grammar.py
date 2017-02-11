@@ -252,8 +252,8 @@ class ExtractAnonTokens(InlineTransformer):
                 try:
                     token_name = _TOKEN_NAMES[value]
                 except KeyError:
-                    if value.isalnum() and value[0].isalpha():
-                        token_name = value.upper()
+                    if value.isalnum() and value[0].isalpha() and ('__'+value.upper()) not in self.token_set:
+                        token_name = value.upper()  # This can create name duplications for unidentical tokens
                     else:
                         token_name = 'ANONSTR_%d' % self.i
                         self.i += 1

@@ -48,7 +48,7 @@ class ParseTreeBuilder:
         new_rules = []
         for origin, expansions in rules.items():
             expand1 = origin.startswith('?')
-            _origin = origin.lstrip('?*')
+            _origin = origin.lstrip('?')
 
             for expansion, alias in expansions:
                 if alias and origin.startswith('_'):

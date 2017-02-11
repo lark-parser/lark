@@ -23,7 +23,7 @@ class Token(Str):
         return inst
 
     def __repr__(self):
-        return 'Token(%s, %s)' % (self.type, self.value)
+        return 'Token(%s, %r)' % (self.type, self.value)
 
 class Regex:
     def __init__(self, pattern, flags=()):

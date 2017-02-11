@@ -4,6 +4,8 @@
 
 Lark is a general-purpose parsing library. It's written in Python, and supports two parsing algorithms: Earley (default) and LALR(1).
 
+Lark is a re-write of my previous parsing library, [PlyPlus](https://github.com/erezsh/plyplus).
+
 ## Grammar
 
 Lark accepts its grammars in [EBNF](https://www.wikiwand.com/en/Extended_Backus%E2%80%93Naur_form) form.

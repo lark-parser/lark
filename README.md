@@ -36,7 +36,7 @@ print( l.parse("Hello, World!") )
 And the output is:
 
 ```python
-Tree(start, [Token(WORD, Hello), Token(WORD, World)])
+Tree(start, [Token(WORD, 'Hello'), Token(WORD, 'World')])
 ```
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
@@ -44,8 +44,15 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 ## Learn more about using Lark
 
  - Read the [tutorial](/docs/json_tutorial.md), which shows how to write a JSON parser in Lark.
- - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
  - Read the [reference](/docs/reference.md)
+ - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
+ - Check out the [tests](/tests/test_parser.py) for more examples.
+
+## Install Lark
+
+    $ pip install lark-parser
+
+Lark has no dependencies.
 
 ## List of Features
 
@@ -74,7 +81,7 @@ This is a feature comparison. For benchmarks vs pyparsing, check out the [JSON t
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | 4.6K | Yacc-like BNF | No |
 | [PyParsing](http://pyparsing.wikispaces.com/) | PEG | 5.7K | Parser combinators | No |
 | [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | 3.3K | EBNF-like | No |
-| [funcparselib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No |
 
 (*LOC measures lines of code of the parsing algorithm(s), without accompanying files*)
 

@@ -7,6 +7,17 @@ from .utils import Str
 class LexError(Exception):
     pass
 
+class UnexpectedInput(LexError):
+    def __init__(self, seq, lex_pos, line, column):
+        context = seq[lex_pos:lex_pos+5]
+        message = "No token defined for: '%s' in %r at line %d" % (seq[lex_pos], context, line)
+
+        super(LexError, self).__init__(message)
+
+        self.line = line
+        self.column = column
+        self.context = context
+
 class Token(Str):
     def __new__(cls, type, value, pos_in_stream=None):
         inst = Str.__new__(cls, value)
@@ -103,8 +114,7 @@ class Lexer(object):
                     break
             else:
                 if lex_pos < len(stream):
-                    context = stream[lex_pos:lex_pos+5]
-                    raise LexError("No token defined for: '%s' in %s at line %d" % (stream[lex_pos], context, line))
+                    raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
                 break
 
 

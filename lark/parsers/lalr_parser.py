@@ -1,6 +1,23 @@
 from .lalr_analysis import ACTION_SHIFT
 from ..common import ParseError
 
+class UnexpectedToken(ParseError):
+    def __init__(self, token, expected, seq, index):
+        self.token = token
+        self.expected = expected
+        self.line = getattr(token, 'line', '?')
+        self.column = getattr(token, 'column', '?')
+
+        context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])
+        message = ("Unexpected input %r at line %s, column %s.\n"
+                   "Expected: %s\n"
+                   "Context: %s" % (token.value, self.line, self.column, expected, context))
+
+        super(ParseError, self).__init__(message)
+
+
+
+
 class Parser(object):
     def __init__(self, ga, callback):
         self.ga = ga
@@ -20,18 +37,13 @@ class Parser(object):
                 return states_idx[state][key]
             except KeyError:
                 expected = states_idx[state].keys()
-                context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[i:i+5]])
                 try:
                     token = seq[i]
                 except IndexError:
                     assert key == '$end'
                     token = seq[-1]
-                raise ParseError("Unexpected input %r at line %s, column %s.\n"
-                                 "Expected: %s\n"
-                                 "Context: %s" % (token.value, 
-                                        getattr(token, 'line', '?'),
-                                        getattr(token, 'column', '?'), 
-                                        expected, context))
+
+                raise UnexpectedToken(token, expected, seq, i)
 
         def reduce(rule):
             if rule.expansion:

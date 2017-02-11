@@ -1,10 +1,11 @@
 import re
 import codecs
 
-from .lexer import Lexer, Token
+from .lexer import Lexer, Token, UnexpectedInput
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
+from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
@@ -285,9 +286,19 @@ class GrammarLoader:
         self.rule_tree_to_text = RuleTreeToText()
 
     def load_grammar(self, grammar_text):
+        try:
+            token_stream = list(self.lexer.lex(grammar_text+"\n"))
+        except UnexpectedInput as e:
+            raise GrammarError("Unexpected input %r at line %d column %d" % (e.context, e.line, e.column))
 
-        token_stream = list(self.lexer.lex(grammar_text+"\n"))
-        tree = self.simplify_tree.transform( self.parser.parse(token_stream) )
+        try:
+            tree = self.simplify_tree.transform( self.parser.parse(token_stream) )
+        except UnexpectedToken as e:
+            if '_COLON' in e.expected:
+                raise GrammarError("Missing colon at line %s column %s" % (e.line, e.column))
+            elif 'tokenvalue' in e.expected:
+                raise GrammarError("Expecting a value at line %s column %s" % (e.line, e.column))
+            raise
 
         # =================
         #  Process Tokens

@@ -1,4 +1,4 @@
-from .common import is_terminal
+from .common import is_terminal, GrammarError
 
 class Callback(object):
     pass
@@ -70,7 +70,8 @@ class ParseTreeBuilder:
 
                 alias_handler = create_rule_handler(expansion, f)
 
-                assert not hasattr(callback, _alias)
+                if hasattr(callback, _alias):
+                    raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
                 setattr(callback, _alias, alias_handler)
 
                 new_rules.append(( _origin, expansion, _alias ))

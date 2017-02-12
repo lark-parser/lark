@@ -2,10 +2,10 @@
 
 Lark is a modern general-purpose parsing library for Python.
 
-Lark focuses on simplicity and power. It lets you choose between two parsing algorithms:
+Lark focuses on simplicity, power, and speed. It lets you choose between two parsing algorithms:
 
  - Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
- - LALR(1): Only LR grammars. Outperforms PLY and most if not all other pure-python parsing libraries.
+ - LALR(1): Only LR grammars. Outperforms PLY and most (if not all) other pure-python parsing libraries.
 
 Both algorithms are written in Python and can be used interchangably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
 
@@ -71,6 +71,7 @@ These features are planned to be implemented in the near future:
 
  - Grammar composition (in cases that the tokens can reliably signify a grammar change)
  - Parser generator - create a small parser, indepdendent of Lark, to embed in your project.
+ - Optimizations in both the parsers and the lexer
 
 ## Comparison to other parsers
 

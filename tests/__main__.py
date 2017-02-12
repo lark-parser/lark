@@ -5,7 +5,7 @@ import logging
 
 from .test_trees import TestTrees
 # from .test_selectors import TestSelectors
-from .test_parser import TestLalr, TestEarley, TestParsers
+from .test_parser import TestLalr, TestEarley, TestLalr_contextual_lexer, TestParsers
 # from .test_grammars import TestPythonG, TestConfigG
 
 logging.basicConfig(level=logging.INFO)

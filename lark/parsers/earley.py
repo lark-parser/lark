@@ -1,7 +1,7 @@
 "My name is Earley"
 
 from ..utils import classify, STRING_TYPE
-from ..common import ParseError
+from ..common import ParseError, UnexpectedToken
 
 try:
     xrange
@@ -13,6 +13,7 @@ class MatchFailed(object):
 
 class AbortParseMatch(Exception):
     pass
+
 
 class Rule(object):
     def __init__(self, name, symbols, postprocess):
@@ -34,6 +35,8 @@ class State(object):
             if self.is_literal:
                 self.expect_symbol = self.expect_symbol['literal']
             assert isinstance(self.expect_symbol, STRING_TYPE), self.expect_symbol
+        else:
+            self.is_literal = False
 
     def next_state(self, data):
         return State(self.rule, self.expect+1, self.reference, self.data + [data])
@@ -136,7 +139,8 @@ class Parser(object):
             self.advance_to(table, pos + 1, set())
 
             if not table[-1]:
-                raise ParseError('Error at line {t.line}:{t.column}'.format(t=stream[pos]))
+                expected = {s.expect_symbol for s in table[-2] if s.is_literal}
+                raise UnexpectedToken(stream[pos], expected, stream, pos)
 
         res = list(self.finish(table))
         if not res:

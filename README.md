@@ -43,7 +43,7 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 
 ## Learn more about using Lark
 
- - Read the [tutorial](/docs/json_tutorial.md), which shows how to write a JSON parser in Lark.
+ - **Read the [tutorial](/docs/json_tutorial.md)**, which shows how to write a JSON parser in Lark.
  - Read the [reference](/docs/reference.md)
  - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
  - Check out the [tests](/tests/test_parser.py) for more examples.
@@ -72,6 +72,7 @@ These features are planned to be implemented in the near future:
  - Grammar composition (in cases that the tokens can reliably signify a grammar change)
  - Parser generator - create a small parser, indepdendent of Lark, to embed in your project.
  - Optimizations in both the parsers and the lexer
+ - Better handling of ambiguity
 
 ## Comparison to other parsers
 

@@ -22,7 +22,7 @@ calc_grammar = """
 """
 
 class CalculateTree(InlineTransformer):
-    from operator import add, sub, mul, div, neg
+    from operator import add, sub, mul, truediv as div, neg
     number = float
 
     def __init__(self):
@@ -50,8 +50,8 @@ def main():
 
 def test():
     # print calc("a=(1+2)")
-    print calc("a = 1+2")
-    print calc("1+a*-3")
+    print(calc("a = 1+2"))
+    print(calc("1+a*-3"))
 
 if __name__ == '__main__':
     test()

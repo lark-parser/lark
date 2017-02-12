@@ -53,12 +53,12 @@ def test():
     '''
 
     j = parse(test_json)
-    print j
+    print(j)
     import json
     assert j == json.loads(test_json)
 
 if __name__ == '__main__':
     test()
     with open(sys.argv[1]) as f:
-        print parse(f.read())
+        print(parse(f.read()))
 

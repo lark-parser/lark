@@ -7,15 +7,17 @@ It is crucial for the indenter that the NL_type matches the spaces (and tabs) af
 from lark.lark import Lark
 from lark.indenter import Indenter
 
-tree_grammar = """
+tree_grammar = r"""
     ?start: _NL* tree
 
-    tree: /\w+/ _NL [_INDENT tree+ _DEDENT]
+    tree: NAME _NL [_INDENT tree+ _DEDENT]
 
     NAME: /\w+/
 
     WS.ignore: /\s+/
-    _NL.newline: /(\r?\n[\t ]*)+/
+    _NL: /(\r?\n[\t ]*)+/
+    _INDENT: "<INDENT>"
+    _DEDENT: "<DEDENT>"
 """
 
 class TreeIndenter(Indenter):
@@ -39,7 +41,7 @@ a
 """
 
 def test():
-    print parser.parse(test_tree).pretty()
+    print(parser.parse(test_tree).pretty())
 
 if __name__ == '__main__':
     test()

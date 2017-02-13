@@ -37,4 +37,3 @@ class ParserConf:
         self.rules = rules
         self.callback = callback
         self.start = start
-

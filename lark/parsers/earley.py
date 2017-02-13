@@ -89,7 +89,6 @@ class State(object):
                         new_copy = self.consume_nonterminal(r.name)
                         if r.postprocess:
                             new_copy.data[-1] = r.postprocess([])
-                            # new_copy.data[-1] = r.postprocess([], self.reference)
                         else:
                             new_copy.data[-1] = []
 
@@ -154,4 +153,3 @@ class Parser(object):
                 and t.reference == 0
                 and t.data is not MatchFailed):
                 yield t.data
-

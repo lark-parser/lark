@@ -5,12 +5,12 @@ class Callback(object):
 
 
 def create_expand1_tree_builder_function(tree_builder):
-    def f(children):
+    def expand1(children):
         if len(children) == 1:
             return children[0]
         else:
             return tree_builder(children)
-    return f
+    return expand1
 
 def create_rule_handler(expansion, usermethod):
     to_include = [(i, sym.startswith('_')) for i, sym in enumerate(expansion)
@@ -38,9 +38,10 @@ class ParseTreeBuilder:
 
     def _create_tree_builder_function(self, name):
         tree_class = self.tree_class
-        def f(children):
+        def tree_builder_f(children):
             return tree_class(name, children)
-        return f
+        return tree_builder_f
+
 
 
     def create_tree_builder(self, rules, transformer):
@@ -77,5 +78,3 @@ class ParseTreeBuilder:
                 new_rules.append(( _origin, expansion, _alias ))
 
         return new_rules, callback
-
-

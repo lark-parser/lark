@@ -40,16 +40,13 @@ class Tree(object):
         if pred(self):
             yield self
         else:
-            for i, c in enumerate(self.children):
+            for c in self.children:
                 if isinstance(c, Tree):
                     for t in c.find_pred(pred):
                         yield t
 
     def find_data(self, data):
         return self.find_pred(lambda t: t.data == data)
-
-    # def clone(self):
-    #     return Tree(self.data, [c.clone() if isinstance(c, Tree) else c for c in self.children])
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo))
@@ -69,7 +66,6 @@ class Transformer(object):
         else:
             return f(items)
 
-
     def __default__(self, data, children):
         return Tree(data, children)
 
@@ -77,7 +73,6 @@ class Transformer(object):
 class InlineTransformer(Transformer):
     def _get_func(self, name):
         return inline_args(getattr(self, name)).__get__(self)
-
 
 
 class Visitor(object):
@@ -92,5 +87,3 @@ class Visitor(object):
 
     def __default__(self, tree):
         pass
-
-

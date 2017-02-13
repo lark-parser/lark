@@ -192,7 +192,8 @@ class GrammarAnalyzer(object):
 
             self.states[state] = {k:v[0] for k, v in lookahead.items()}
 
-        x = list(bfs([self.init_state], step))
+        for _ in bfs([self.init_state], step):
+            pass
 
         # --
         self.enum = list(self.states)
@@ -207,4 +208,3 @@ class GrammarAnalyzer(object):
 
 
         self.init_state_idx = self.enum_rev[self.init_state]
-

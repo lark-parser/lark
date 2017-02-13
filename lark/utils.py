@@ -1,3 +1,5 @@
+import functools
+import types
 from collections import deque
 
 class fzset(frozenset):
@@ -49,8 +51,6 @@ except NameError:   # Python 3
 Str = type(u'')
 
 
-import functools
-import types
 def inline_args(f):
     # print '@@', f.__name__, type(f), isinstance(f, types.FunctionType), isinstance(f, types.TypeType), isinstance(f, types.BuiltinFunctionType)
     if isinstance(f, types.FunctionType):

@@ -52,4 +52,3 @@ class Earley(WithLexer):
 
 
 ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }
-

@@ -1,10 +1,12 @@
 from __future__ import absolute_import
 
 import os
+import time
+from collections import defaultdict
 
-from .utils import STRING_TYPE, inline_args
+from .utils import STRING_TYPE
 from .load_grammar import load_grammar
-from .tree import Tree, Transformer
+from .tree import Tree
 from .common import GrammarError, LexerConf, ParserConf
 
 from .lexer import Lexer
@@ -44,7 +46,8 @@ class LarkOptions(object):
 
         assert self.parser in ENGINE_DICT
         if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm. Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
+            raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm.'
+                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
         if self.keep_all_tokens:
             raise NotImplementedError("Not implemented yet!")
 
@@ -52,8 +55,6 @@ class LarkOptions(object):
             raise ValueError("Unknown options: %s" % o.keys())
 
 
-import time
-from collections import defaultdict
 class Profiler:
     def __init__(self):
         self.total_time = defaultdict(float)
@@ -67,7 +68,7 @@ class Profiler:
         self.cur_section = name
 
     def make_wrapper(self, name, f):
-        def _f(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             last_section = self.cur_section
             self.enter_section(name)
             try:
@@ -75,7 +76,7 @@ class Profiler:
             finally:
                 self.enter_section(last_section)
 
-        return _f
+        return wrapper
 
 
 class Lark:

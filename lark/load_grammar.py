@@ -53,14 +53,14 @@ _TOKEN_NAMES = {
 
 # Grammar Parser
 TOKENS = {
-    '_LPAR': '\(',
-    '_RPAR': '\)',
-    '_LBRA': '\[',
-    '_RBRA': '\]',
+    '_LPAR': r'\(',
+    '_RPAR': r'\)',
+    '_LBRA': r'\[',
+    '_RBRA': r'\]',
     'OP': '[+*?](?![a-z])',
     '_COLON': ':',
-    '_OR': '\|',
-    '_DOT': '\.',
+    '_OR': r'\|',
+    '_DOT': r'\.',
     'RULE': '[_?*]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'".*?[^\\]"',
@@ -99,7 +99,7 @@ RULES = {
 
     'maybe': ['_LBRA expansions _RBRA'],
 
-    'token': ['TOKEN _COLON tokenvalue _NL', 
+    'token': ['TOKEN _COLON tokenvalue _NL',
               'TOKEN tokenmods _COLON tokenvalue _NL'],
 
     '?tokenvalue': ['REGEXP', 'STRING'],
@@ -264,7 +264,7 @@ class ExtractAnonTokens(InlineTransformer):
             value = token.value
             self.i += 1
         else:
-            assert False, x
+            assert False, token
 
         if token_name not in self.token_set:
             self.token_set.add(token_name)
@@ -373,41 +373,3 @@ class GrammarLoader:
         return tokendefs, rules
 
 load_grammar = GrammarLoader().load_grammar
-
-
-
-def test():
-    g = """
-    start: add
-
-    // Rules
-    add: mul
-       | add _add_sym mul
-
-    mul: [mul _add_mul] _atom
-
-    _atom: "-" _atom -> neg
-         | NUMBER
-         | "(" add ")"
-
-    // Tokens
-    NUMBER: /[\d.]+/
-    _add_sym: "+" | "-"
-    _add_mul: "*" | "/"
-
-    WS.ignore.newline: /\s+/
-    """
-
-    g2 = """
-    start: a
-    a: "a" (b*|(c d)+) "b"?
-    b: "b"
-    c: "c"
-    d: "+" | "-"
-    """
-    # print load_grammar(g)
-    print(GrammarLoader().load_grammar2(g))
-
-
-if __name__ == '__main__':
-    test()

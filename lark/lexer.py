@@ -13,7 +13,7 @@ class TokenDef(object):
         self.value = value
 
     def __repr__(self):
-        return ('%s(%r, %r)' % (type(self).__name__, self.name, self.value))
+        return '%s(%r, %r)' % (type(self).__name__, self.name, self.value)
 
 class TokenDef__Str(TokenDef):
     def to_regexp(self):
@@ -40,16 +40,16 @@ class UnexpectedInput(LexError):
         self.context = context
 
 class Token(Str):
-    def __new__(cls, type, value, pos_in_stream=None):
+    def __new__(cls, type_, value, pos_in_stream=None):
         inst = Str.__new__(cls, value)
-        inst.type = type
+        inst.type = type_
         inst.pos_in_stream = pos_in_stream
         inst.value = value
         return inst
 
     @classmethod
-    def new_borrow_pos(cls, type, value, borrow_t):
-        inst = cls(type, value, borrow_t.pos_in_stream)
+    def new_borrow_pos(cls, type_, value, borrow_t):
+        inst = cls(type_, value, borrow_t.pos_in_stream)
         inst.line = borrow_t.line
         inst.column = borrow_t.column
         return inst
@@ -66,11 +66,11 @@ def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
 
 def _create_unless_callback(strs):
-    def f(t):
+    def unless_callback(t):
         if t in strs:
             t.type = strs[t]
         return t
-    return f
+    return unless_callback
 
 def _create_unless(tokens):
     tokens_by_type = classify(tokens, type)
@@ -169,4 +169,3 @@ class Lexer(object):
                 if lex_pos < len(stream):
                     raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
                 break
-

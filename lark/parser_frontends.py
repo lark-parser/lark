@@ -1,3 +1,5 @@
+import re
+
 from .lexer import Lexer
 from .parsers.lalr_analysis import GrammarAnalyzer
 
@@ -33,11 +35,18 @@ class Earley(WithLexer):
         WithLexer.__init__(self, lexer_conf)
 
         rules = [{'name':n,
-                  'symbols': self._process_expansion(x),
+                  'symbols': list(self._prepare_expansion(x)),
                   'postprocess': getattr(parser_conf.callback, a)}
                   for n,x,a in parser_conf.rules]
 
         self.parser = earley.Parser(rules, parser_conf.start)
+
+    def _prepare_expansion(self, expansion):
+        for sym in expansion:
+            if is_terminal(sym):
+                yield sym, None
+            else:
+                yield sym
 
     def parse(self, text):
         tokens = list(self.lex(text))
@@ -45,10 +54,27 @@ class Earley(WithLexer):
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
-    @staticmethod
-    def _process_expansion(x):
-        return [{'literal': s} if is_terminal(s) else s for s in x]
+class Earley2:
+    def __init__(self, lexer_conf, parser_conf):
+        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
+        rules = [{'name':n,
+                  'symbols': list(self._prepare_expansion(x)),
+                  'postprocess': getattr(parser_conf.callback, a)}
+                  for n,x,a in parser_conf.rules]
 
+        self.parser = earley.Parser(rules, parser_conf.start)
+
+    def _prepare_expansion(self, expansion):
+        for sym in expansion:
+            if is_terminal(sym):
+                yield sym, re.compile(self.token_by_name[sym].to_regexp())
+            else:
+                yield sym
+
+    def parse(self, text):
+        res = self.parser.parse(text)
+        assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
+        return res[0]             
 
 ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }

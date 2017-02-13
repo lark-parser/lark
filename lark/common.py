@@ -25,3 +25,16 @@ class UnexpectedToken(ParseError):
 def is_terminal(sym):
     return sym.isupper() or sym[0] == '$'
 
+
+class LexerConf:
+    def __init__(self, tokens, ignore, postlex):
+        self.tokens = tokens
+        self.ignore = ignore
+        self.postlex = postlex
+
+class ParserConf:
+    def __init__(self, rules, callback, start):
+        self.rules = rules
+        self.callback = callback
+        self.start = start
+

@@ -6,7 +6,7 @@ from .lexer import Lexer, Token, UnexpectedInput, TokenDef__Str, TokenDef__Regex
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
-from .common import is_terminal, GrammarError
+from .common import is_terminal, GrammarError, LexerConf, ParserConf
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 
@@ -279,11 +279,12 @@ class ExtractAnonTokens(InlineTransformer):
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef__Regexp(name, value) for name, value in TOKENS.items()]
-        self.lexer = Lexer(tokens, ignore=['WS', 'COMMENT'])
 
         d = {r: [(x.split(), None) for x in xs] for r, xs in RULES.items()}
         rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
-        self.parser = LALR().build_parser(rules, callback, 'start')
+        lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'], None)
+        parser_conf = ParserConf(rules, callback, 'start')
+        self.parser = LALR(lexer_conf, parser_conf)
 
         self.simplify_tree = SimplifyTree()
         self.simplify_rule = SimplifyRule_Visitor()
@@ -291,12 +292,9 @@ class GrammarLoader:
 
     def load_grammar(self, grammar_text):
         try:
-            token_stream = list(self.lexer.lex(grammar_text+"\n"))
+            tree = self.simplify_tree.transform( self.parser.parse(grammar_text+'\n') )
         except UnexpectedInput as e:
             raise GrammarError("Unexpected input %r at line %d column %d" % (e.context, e.line, e.column))
-
-        try:
-            tree = self.simplify_tree.transform( self.parser.parse(token_stream) )
         except UnexpectedToken as e:
             if '_COLON' in e.expected:
                 raise GrammarError("Missing colon at line %s column %s" % (e.line, e.column))

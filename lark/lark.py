@@ -5,7 +5,7 @@ import os
 from .utils import STRING_TYPE, inline_args
 from .load_grammar import load_grammar
 from .tree import Tree, Transformer
-from .common import GrammarError
+from .common import GrammarError, LexerConf, ParserConf
 
 from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder
@@ -105,45 +105,46 @@ class Lark:
 
         assert isinstance(grammar, STRING_TYPE)
 
-        if self.options.cache_grammar:
+        if self.options.cache_grammar or self.options.keep_all_tokens:
             raise NotImplementedError("Not available yet")
 
+        assert not self.options.profile, "Feature temporarily disabled"
         self.profiler = Profiler() if self.options.profile else None
 
-        self.tokens, self.rules = load_grammar(grammar)
+        tokens, self.rules = load_grammar(grammar)
+        self.ignore_tokens = []
+        for tokendef, flags in tokens:
+            for flag in flags:
+                if flag == 'ignore':
+                    self.ignore_tokens.append(tokendef.name)
+                else:
+                    raise GrammarError("No such flag: %s" % flag)
+
+        self.lexer_conf = LexerConf([t[0] for t in tokens], self.ignore_tokens, self.options.postlex)
 
         if not self.options.only_lex:
-            self.parser_engine = ENGINE_DICT[self.options.parser]()
-            self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
             self.parser = self._build_parser()
-
-        self.lexer = self._build_lexer()
+        else:
+            self.lexer = self._build_lexer()
 
         if self.profiler: self.profiler.enter_section('outside_lark')
 
     __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
-        ignore_tokens = []
-        tokens = []
-        for tokendef, flags in self.tokens:
-            for flag in flags:
-                if flag == 'ignore':
-                    ignore_tokens.append(tokendef.name)
-                else:
-                    raise GrammarError("No such flag: %s" % flag)
-
-            tokens.append(tokendef)
-
-        return Lexer(tokens, ignore=ignore_tokens)
+        return Lexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore)
 
     def _build_parser(self):
+        self.parser_class = ENGINE_DICT[self.options.parser]
+        self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
         rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
         if self.profiler:
             for f in dir(callback):
-                if not f.startswith('__'):
+                if not (f.startswith('__') and f.endswith('__')):
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
-        return self.parser_engine.build_parser(rules, callback, self.options.start)
+        parser_conf = ParserConf(rules, callback, self.options.start)
+
+        return self.parser_class(self.lexer_conf, parser_conf)
 
 
     def lex(self, text):
@@ -156,15 +157,17 @@ class Lark:
     def parse(self, text):
         assert not self.options.only_lex
 
-        if self.profiler:
-            self.profiler.enter_section('lex')
-            l = list(self.lex(text))
-            self.profiler.enter_section('parse')
-            try:
-                return self.parser.parse(l)
-            finally:
-                self.profiler.enter_section('outside_lark')
-        else:
-            l = list(self.lex(text))
-            return self.parser.parse(l)
+        return self.parser.parse(text)
+
+        # if self.profiler:
+        #     self.profiler.enter_section('lex')
+        #     l = list(self.lex(text))
+        #     self.profiler.enter_section('parse')
+        #     try:
+        #         return self.parser.parse(l)
+        #     finally:
+        #         self.profiler.enter_section('outside_lark')
+        # else:
+        #     l = list(self.lex(text))
+        #     return self.parser.parse(l)
 

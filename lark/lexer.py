@@ -79,7 +79,7 @@ class Lexer(object):
             try:
                 mre = re.compile(u'|'.join(u'(?P<%s>%s)'%t for t in tokens[:max_size]))
             except AssertionError:  # Yes, this is what Python provides us.. :/
-                return self._build_mres(tokens, max_size/2)
+                return self._build_mres(tokens, max_size//2)
 
             mres.append((mre, {i:self.type_index[n] for n,i in mre.groupindex.items()} ))
             tokens = tokens[max_size:]

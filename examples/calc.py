@@ -17,7 +17,7 @@ calc_grammar = """
          | NAME             -> var
          | "(" sum ")"
 
-    NAME: /\w+/
+    NAME: /[a-zA-Z]\w*/
     WS.ignore: /\s+/
 """
 

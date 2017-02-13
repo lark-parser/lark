@@ -112,39 +112,30 @@ class Lark:
 
         self.tokens, self.rules = load_grammar(grammar)
 
-        self.lexer = self._build_lexer()
         if not self.options.only_lex:
             self.parser_engine = ENGINE_DICT[self.options.parser]()
             self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
             self.parser = self._build_parser()
 
+        self.lexer = self._build_lexer()
+
         if self.profiler: self.profiler.enter_section('outside_lark')
 
-
-    def _create_unless_callback(self, strs):
-        def f(t):
-            if t in strs:
-                t.type = strs[t]
-            return t
-        return f
+    __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
         ignore_tokens = []
         tokens = []
-        callbacks = {}
-        for name, value, flags in self.tokens:
+        for tokendef, flags in self.tokens:
             for flag in flags:
                 if flag == 'ignore':
-                    ignore_tokens.append(name)
-                elif isinstance(flag, tuple) and flag[0] == 'unless':
-                    _, strs = flag
-                    callbacks[name] = self._create_unless_callback(strs)
+                    ignore_tokens.append(tokendef.name)
                 else:
                     raise GrammarError("No such flag: %s" % flag)
 
-            tokens.append((name, value))
-        return Lexer(tokens, callbacks, ignore=ignore_tokens)
+            tokens.append(tokendef)
 
+        return Lexer(tokens, ignore=ignore_tokens)
 
     def _build_parser(self):
         rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
@@ -154,8 +145,6 @@ class Lark:
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
         return self.parser_engine.build_parser(rules, callback, self.options.start)
 
-
-    __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def lex(self, text):
         stream = self.lexer.lex(text)

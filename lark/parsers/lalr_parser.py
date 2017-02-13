@@ -3,15 +3,15 @@ from ..common import ParseError, UnexpectedToken
 
 
 class Parser(object):
-    def __init__(self, ga, callback):
-        self.ga = ga
+    def __init__(self, analysis, callback):
+        self.analysis = analysis
         self.callbacks = {rule: getattr(callback, rule.alias or rule.origin, None)
-                          for rule in ga.rules}
+                          for rule in analysis.rules}
 
     def parse(self, seq):
-        states_idx = self.ga.states_idx
+        states_idx = self.analysis.states_idx
 
-        state_stack = [self.ga.init_state_idx]
+        state_stack = [self.analysis.init_state_idx]
         value_stack = []
         i = 0
 
@@ -39,7 +39,7 @@ class Parser(object):
 
             res = self.callbacks[rule](s)
 
-            if len(state_stack) == 1 and rule.origin == self.ga.start_symbol:
+            if len(state_stack) == 1 and rule.origin == self.analysis.start_symbol:
                 return res
 
             _action, new_state = get_action(rule.origin)
@@ -63,7 +63,7 @@ class Parser(object):
             assert _action == 'reduce'
             res = reduce(*rule)
             if res:
-                assert state_stack == [self.ga.init_state_idx] and not value_stack, len(state_stack)
+                assert state_stack == [self.analysis.init_state_idx] and not value_stack, len(state_stack)
                 return res
 
 

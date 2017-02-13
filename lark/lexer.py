@@ -2,10 +2,31 @@
 
 import re
 
-from .utils import Str
+from .utils import Str, classify
 
 class LexError(Exception):
     pass
+
+class TokenDef(object):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return ('%s(%r, %r)' % (type(self).__name__, self.name, self.value))
+
+class TokenDef__Str(TokenDef):
+    def to_regexp(self):
+        return re.escape(self.value)
+
+    priority = 0
+
+class TokenDef__Regexp(TokenDef):
+    def to_regexp(self):
+        return self.value
+
+    priority = 1
+
 
 class UnexpectedInput(LexError):
     def __init__(self, seq, lex_pos, line, column):
@@ -41,31 +62,63 @@ class Regex:
         self.pattern = pattern
         self.flags = flags
 
+def _regexp_has_newline(r):
+    return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
+
+def _create_unless_callback(strs):
+    def f(t):
+        if t in strs:
+            t.type = strs[t]
+        return t
+    return f
+
+def _create_unless(tokens):
+    tokens_by_type = classify(tokens, type)
+    assert len(tokens_by_type) <= 2, tokens_by_type.keys()
+    embedded_strs = set()
+    callback = {}
+    for retok in tokens_by_type.get(TokenDef__Regexp, []):
+        unless = {}
+        for strtok in tokens_by_type.get(TokenDef__Str, []):
+            m = re.match(retok.value, strtok.value)
+            if m and m.group(0) == strtok.value:
+                embedded_strs.add(strtok.name)
+                unless[strtok.value] = strtok.name
+        if unless:
+            callback[retok.name] = _create_unless_callback(unless)
+
+    tokens = [t for t in tokens if t.name not in embedded_strs]
+    return tokens, callback
+
 
 class Lexer(object):
-    def __init__(self, tokens, callbacks, ignore=()):
+    def __init__(self, tokens, ignore=()):
+        assert all(isinstance(t, TokenDef) for t in tokens)
+
         self.ignore = ignore
         self.newline_char = '\n'
         tokens = list(tokens)
 
         # Sanitization
-        token_names = {t[0] for t in tokens}
         for t in tokens:
             try:
-                re.compile(t[1])
+                re.compile(t.to_regexp())
             except:
                 raise LexError("Cannot compile token: %s: %s" % t)
+
+        token_names = {t.name for t in tokens}
         assert all(t in token_names for t in ignore)
 
         # Init
+        self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.to_regexp())]
+        self.ignore_types = [t for t in ignore]
+
+        tokens, self.callback = _create_unless(tokens)
+        assert all(self.callback.values())
+
+        tokens.sort(key=lambda x:(x.priority, len(x.value)), reverse=True)
+
         self.tokens = tokens
-        self.callbacks = callbacks
-
-        self.token_types = list(token_names)
-        self.type_index = {name:i for i,name in enumerate(self.token_types)}
-
-        self.newline_types = [self.type_index[t[0]] for t in tokens if '\n' in t[1] or '\\n' in t[1] or '(?s)' in t[1]]
-        self.ignore_types = [self.type_index[t] for t in ignore]
 
         self.mres = self._build_mres(tokens, len(tokens))
 
@@ -77,11 +130,11 @@ class Lexer(object):
         mres = []
         while tokens:
             try:
-                mre = re.compile(u'|'.join(u'(?P<%s>%s)'%t for t in tokens[:max_size]))
+                mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.to_regexp()) for t in tokens[:max_size]))
             except AssertionError:  # Yes, this is what Python provides us.. :/
                 return self._build_mres(tokens, max_size//2)
 
-            mres.append((mre, {i:self.type_index[n] for n,i in mre.groupindex.items()} ))
+            mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
             tokens = tokens[max_size:]
         return mres
 
@@ -96,16 +149,16 @@ class Lexer(object):
                 m = mre.match(stream, lex_pos)
                 if m:
                     value = m.group(0)
-                    type_num = type_from_index[m.lastindex]
-                    if type_num not in ignore_types:
-                        t = Token(self.token_types[type_num], value, lex_pos)
+                    type_ = type_from_index[m.lastindex]
+                    if type_ not in ignore_types:
+                        t = Token(type_, value, lex_pos)
                         t.line = line
                         t.column = lex_pos - col_start_pos
-                        if t.type in self.callbacks:
-                            t = self.callbacks[t.type](t)
+                        if t.type in self.callback:
+                            t = self.callback[t.type](t)
                         yield t
 
-                    if type_num in newline_types:
+                    if type_ in newline_types:
                         newlines = value.count(self.newline_char)
                         if newlines:
                             line += newlines
@@ -116,5 +169,4 @@ class Lexer(object):
                 if lex_pos < len(stream):
                     raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
                 break
-
 

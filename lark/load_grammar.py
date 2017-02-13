@@ -1,7 +1,7 @@
 import re
 import codecs
 
-from .lexer import Lexer, Token, UnexpectedInput
+from .lexer import Lexer, Token, UnexpectedInput, TokenDef__Str, TokenDef__Regexp
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
@@ -278,7 +278,8 @@ class ExtractAnonTokens(InlineTransformer):
 
 class GrammarLoader:
     def __init__(self):
-        self.lexer = Lexer(TOKENS.items(), {}, ignore=['WS', 'COMMENT'])
+        tokens = [TokenDef__Regexp(name, value) for name, value in TOKENS.items()]
+        self.lexer = Lexer(tokens, ignore=['WS', 'COMMENT'])
 
         d = {r: [(x.split(), None) for x in xs] for r, xs in RULES.items()}
         rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
@@ -312,47 +313,27 @@ class GrammarLoader:
         extract_anon = ExtractAnonTokens(tokens, token_set)
         tree = extract_anon.transform(tree) # Adds to tokens
 
-        tokens2 = []
+        token_ref = {}
+        tokendefs = []
         for name, token, flags in tokens:
             value = token.value[1:-1]
             if r'\u' in value:
                 # XXX for now, you can't mix unicode escaping and unicode characters at the same token
                 value = unicode_escape(value)[0]
-            tokens2.append((name, token.type, value, flags))
 
-        token_ref = {}
-        re_tokens = []
-        str_tokens = []
-        for name, type_, value, flags in tokens2:
-            if type_ == 'STRING':
-                str_tokens.append((name, value, flags))
-            else:
-                assert type_ == 'REGEXP'
+            if token.type == 'REGEXP':
                 sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], value)
                 if sp:
                     value = ''.join(token_ref[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
                                     for x in sp)
 
-                re_tokens.append((name, value, flags))
                 token_ref[name] = value
+                tokendef = TokenDef__Regexp(name, value)
+            else:
+                assert token.type == 'STRING'
+                tokendef = TokenDef__Str(name, value)
 
-        embedded_strs = set()
-        for re_name, re_value, re_flags in re_tokens:
-            unless = {}
-            for str_name, str_value, _sf in str_tokens:
-                m = re.match(re_value, str_value)
-                if m and m.group(0) == str_value:
-                    assert not _sf, "You just broke Lark! Please email me with your grammar"
-                    embedded_strs.add(str_name)
-                    unless[str_value] = str_name
-            if unless:
-                re_flags.append(('unless', unless))
-
-        str_tokens = [(n, re.escape(v), f) for n, v, f in str_tokens if n not in embedded_strs]
-
-        str_tokens.sort(key=lambda x:len(x[1]), reverse=True)
-        re_tokens.sort(key=lambda x:len(x[1]), reverse=True)
-        tokens = str_tokens + re_tokens # Order is important!
+            tokendefs.append((tokendef, flags))
 
         # =================
         #  Process Rules
@@ -391,7 +372,7 @@ class GrammarLoader:
                 if sym not in rule_set:
                     raise GrammarError("Rule '%s' used but not defined" % sym)
 
-        return tokens, rules
+        return tokendefs, rules
 
 load_grammar = GrammarLoader().load_grammar
 

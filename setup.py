@@ -6,7 +6,7 @@ __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read(
 setup(
     name = "lark-parser",
     version = __version__,
-    packages = ['lark', 'tests', 'lark.parsers', 'examples', 'docs'],
+    packages = ['lark', 'lark.parsers'],
 
     requires = [],
     install_requires = [],

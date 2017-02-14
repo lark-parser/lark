@@ -75,6 +75,6 @@ class Earley2:
     def parse(self, text):
         res = self.parser.parse(text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
-        return res[0]             
+        return res[0]
 
 ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }

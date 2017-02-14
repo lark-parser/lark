@@ -43,9 +43,11 @@ class State(object):
             # PORT: originally tests regexp
 
             if self.expect_symbol[1] is not None:
-                match = self.expect_symbol[1].match(stream, pos)
+                match = self.expect_symbol[1].match(inp)
+                if match:
+                    return self.next_state(inp)
 
-            if self.expect_symbol[0] == inp.type:
+            elif self.expect_symbol[0] == inp.type:
                 return self.next_state(inp)
 
     def consume_nonterminal(self, inp):

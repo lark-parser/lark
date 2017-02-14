@@ -1,9 +1,10 @@
 import re
+import sre_parse
 
 from .lexer import Lexer
 from .parsers.lalr_analysis import GrammarAnalyzer
 
-from .common import is_terminal
+from .common import is_terminal, GrammarError
 from .parsers import lalr_parser, earley
 
 class WithLexer:
@@ -54,7 +55,7 @@ class Earley(WithLexer):
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
-class Earley2:
+class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
@@ -68,7 +69,11 @@ class Earley2:
     def _prepare_expansion(self, expansion):
         for sym in expansion:
             if is_terminal(sym):
-                yield sym, re.compile(self.token_by_name[sym].to_regexp())
+                regexp = self.token_by_name[sym].to_regexp()
+                width = sre_parse.parse(regexp).getwidth()
+                if not width == (1,1):
+                    raise GrammarError('Dynamic lexing requires all tokens have the width 1 (%s is %s)' % (regexp, width))
+                yield sym, re.compile(regexp)
             else:
                 yield sym
 
@@ -77,4 +82,4 @@ class Earley2:
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
-ENGINE_DICT = { 'lalr': LALR, 'earley': Earley }
+ENGINE_DICT = { 'lalr': LALR, 'earley': Earley, 'earley_nolex': Earley_NoLex }

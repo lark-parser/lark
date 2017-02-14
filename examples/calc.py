@@ -1,3 +1,7 @@
+#
+# This example shows how to write a basic calculator with variables.
+#
+
 from lark import Lark, InlineTransformer
 
 calc_grammar = """

@@ -1,8 +1,12 @@
-"""This example demonstrates usage of the Indenter class.
-
-Since indentation is context-sensitive, a postlex stage is introduced to manufacture INDENT/DEDENT tokens.
-It is crucial for the indenter that the NL_type matches the spaces (and tabs) after the newline.
-"""
+#
+# This example demonstrates usage of the Indenter class.
+#
+# Since indentation is context-sensitive, a postlex stage is introduced to
+# manufacture INDENT/DEDENT tokens.
+#
+# It is crucial for the indenter that the NL_type matches
+# the spaces (and tabs) after the newline.
+#
 
 from lark.lark import Lark
 from lark.indenter import Indenter

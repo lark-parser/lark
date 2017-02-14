@@ -1,3 +1,9 @@
+#
+# This example shows how to write a basic JSON parser
+#
+# The code is short and clear, but has good performance.
+#
+
 import sys
 
 from lark import Lark, inline_args, Transformer

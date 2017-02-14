@@ -219,7 +219,6 @@ class SimplifyTree(InlineTransformer):
         return tokenmods + [value]
 
 def get_tokens(tree, token_set):
-    tokens = []
     for t in tree.find_data('token'):
         x = t.children
         name = x[0].value
@@ -266,10 +265,13 @@ class ExtractAnonTokens(InlineTransformer):
         else:
             assert False, token
 
+        if value in self.token_reverse: # Kind of a wierd placement
+            token_name = self.token_reverse[value]
+
         if token_name not in self.token_set:
             self.token_set.add(token_name)
             self.tokens.append((token_name, token, []))
-            assert value not in self.token_reverse
+            assert value not in self.token_reverse, value
             self.token_reverse[value] = token_name
 
         return Token('TOKEN', token_name, -1)

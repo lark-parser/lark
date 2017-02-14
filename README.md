@@ -7,7 +7,7 @@ Lark focuses on simplicity, power, and speed. It lets you choose between two par
  - Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
  - LALR(1): Only LR grammars. Outperforms PLY and most (if not all) other pure-python parsing libraries.
 
-Both algorithms are written in Python and can be used interchangably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
+Both algorithms are written in Python and can be used interchangeably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
 
 Lark can automagically build an AST from your grammar, without any more code on your part.
 
@@ -108,7 +108,7 @@ These features are planned to be implemented in the near future:
 
  - Standard library of tokens (string, int, name, etc.)
  - Contextual lexing for LALR (already working, needs some finishing touches)
- - Parser generator - create a small parser, indepdendent of Lark, to embed in your project.
+ - Parser generator - create a small parser, independent of Lark, to embed in your project.
  - Grammar composition (in cases that the tokens can reliably signify a grammar change)
  - Optimizations in both the parsers and the lexer
  - Better handling of ambiguity

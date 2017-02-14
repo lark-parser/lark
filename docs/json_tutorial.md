@@ -76,7 +76,7 @@ Notice that WS, which matches whitespace, gets flagged with "ignore". This tells
 
 Once we have our grammar, creating the parser is very simple.
 
-We simply instanciate Lark, and tell it to accept a "value":
+We simply instantiate Lark, and tell it to accept a "value":
 
 ```python
 from lark import Lark
@@ -272,7 +272,7 @@ Now, of course there are JSON libraries for Python written in C, and we can neve
 
 The first step for optimizing is to have a benchmark. For this benchmark I'm going to take data from [json-generator.com/](http://www.json-generator.com/). I took their default suggestion and changed it to 5000 objects. The result is a 6.6MB sparse JSON file.
 
-Our first program is going to be just a concatanation of everything we've done so far:
+Our first program is going to be just a concatenation of everything we've done so far:
 
 ```python
 import sys
@@ -348,7 +348,7 @@ json_parser = Lark(json_grammar, start='value', parser='lalr')
     user	0m7.504s
     sys 	0m0.175s
 
-Ah, that's much better. The resulting JSON is of course exactly the same. You can run it for yourself an see.
+Ah, that's much better. The resulting JSON is of course exactly the same. You can run it for yourself and see.
 
 It's important to note that not all grammars are LR-compatible, and so you can't always switch to LALR(1). But there's no harm in trying! If Lark lets you build the grammar, it means you're good to go.
 

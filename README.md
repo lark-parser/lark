@@ -41,6 +41,42 @@ Tree(start, [Token(WORD, 'Hello'), Token(WORD, 'World')])
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
 
+## Tiny Calculator
+
+```python
+from lark import Lark, InlineTransformer
+parser = Lark('''?sum: product
+                     | sum "+" product   -> add
+                     | sum "-" product   -> sub
+
+                 ?product: item
+                     | product "*" item  -> mul
+                     | product "/" item  -> div
+
+                 ?item: /[\d.]+/         -> number
+                      | "-" item         -> neg
+                      | "(" sum ")"
+
+                 SPACE.ignore: /\s+/
+         ''', start='sum')
+
+class CalculateTree(InlineTransformer):
+    from operator import add, sub, mul, truediv as div, neg
+    number = float
+
+def calc(expr):
+    return CalculateTree().transform( parser.parse(expr) )
+```
+
+In the grammar, we shape the resulting tree. The '->' operator renames branches, and the '?' prefix tells Lark to inline single values. (see the [tutorial](/docs/json_tutorial.md) for a more in-depth explanation)
+
+Then, the transformer calculates the tree and returns a number:
+
+```python
+>>> calc("(200 + 3*-3) * 7")
+1337.0
+```
+
 ## Learn more about using Lark
 
  - **Read the [tutorial](/docs/json_tutorial.md)**, which shows how to write a JSON parser in Lark.
@@ -59,8 +95,9 @@ Lark has no dependencies.
  - EBNF grammar with a little extra
  - Earley & LALR(1)
  - Builds an AST automagically based on the grammar
- - Automatic line & column tracking
- - Automatic token collision resolution (unless both tokens are regexps)
+ - Optional Lexer
+     - Automatic line & column tracking
+     - Automatic token collision resolution (unless both tokens are regexps)
  - Python 2 & 3 compatible
  - Unicode fully supported
  - Extensive test suite
@@ -69,8 +106,10 @@ Lark has no dependencies.
 
 These features are planned to be implemented in the near future:
 
- - Grammar composition (in cases that the tokens can reliably signify a grammar change)
+ - Standard library of tokens (string, int, name, etc.)
+ - Contextual lexing for LALR (already working, needs some finishing touches)
  - Parser generator - create a small parser, indepdendent of Lark, to embed in your project.
+ - Grammar composition (in cases that the tokens can reliably signify a grammar change)
  - Optimizations in both the parsers and the lexer
  - Better handling of ambiguity
 

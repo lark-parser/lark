@@ -113,11 +113,11 @@ def test():
     %}
     """
     converted_grammar = nearley_to_lark(css_example_grammar)
-    print converted_grammar
+    print(converted_grammar)
 
     l = Lark(converted_grammar, start='csscolor', parser='earley_nolex')
-    print l.parse('#a199ff').pretty()
-    print l.parse('rgb(255, 70%, 3)').pretty()
+    print(l.parse('#a199ff').pretty())
+    print(l.parse('rgb(255, 70%, 3)').pretty())
 
 
 if __name__ == '__main__':

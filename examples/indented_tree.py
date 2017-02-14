@@ -8,6 +8,7 @@
 # the spaces (and tabs) after the newline.
 #
 
+from __future__ import print_function
 from lark.lark import Lark
 from lark.indenter import Indenter
 
@@ -49,4 +50,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-

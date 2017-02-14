@@ -2,7 +2,10 @@
 # This example shows how to write a basic calculator with variables.
 #
 
+from __future__ import print_function
+from builtins import input
 from lark import Lark, InlineTransformer
+
 
 calc_grammar = """
     ?start: sum
@@ -47,7 +50,7 @@ calc = calc_parser.parse
 def main():
     while True:
         try:
-            s = raw_input('> ')
+            s = input('> ')
         except EOFError:
             break
         print(calc(s))
@@ -60,4 +63,3 @@ def test():
 if __name__ == '__main__':
     test()
     # main()
-

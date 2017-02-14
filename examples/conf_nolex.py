@@ -8,6 +8,7 @@
 # Future versions of lark will make it easier to write these kinds of grammars.
 #
 
+from __future__ import print_function
 from lark import Lark, Transformer
 
 parser = Lark(r"""

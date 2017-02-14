@@ -5,7 +5,7 @@
 #
 
 import sys
-
+from __future__ import print_function
 from lark import Lark, inline_args, Transformer
 
 json_grammar = r"""
@@ -67,4 +67,3 @@ if __name__ == '__main__':
     test()
     with open(sys.argv[1]) as f:
         print(parse(f.read()))
-

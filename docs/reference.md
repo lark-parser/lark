@@ -117,7 +117,7 @@ Lark will parse "(hello world)" as:
         "world"
 
 
-b. Rules that recieve a question mark (?) at the beginning of their definition, will be inlined if they have a single child.
+b. Rules that receive a question mark (?) at the beginning of their definition, will be inlined if they have a single child.
 
 Example:
 
@@ -157,7 +157,7 @@ When initializing the Lark object, you can provide it with keyword options:
 - transformer - Applies the transformer to every parse tree (only allowed with parser="lalr")
 - only\_lex - Don't build a parser. Useful for debugging (default: False)
 - postlex - Lexer post-processing (Default: None)
-- profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)  
+- profile - Measure run-time usage in Lark. Read results from the profiler property (Default: False)  
 
 To be supported:
 

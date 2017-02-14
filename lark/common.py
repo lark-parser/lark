@@ -13,10 +13,13 @@ class UnexpectedToken(ParseError):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
 
-        context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])
+        try:
+            context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])
+        except AttributeError:
+            context = seq[index:index+5]
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected: %s\n"
-                   "Context: %s" % (token.value, self.line, self.column, expected, context))
+                   "Context: %s" % (token, self.line, self.column, expected, context))
 
         super(ParseError, self).__init__(message)
 

@@ -7,13 +7,15 @@ class Parser(object):
         self.analysis = analysis
         self.callbacks = {rule: getattr(callback, rule.alias or rule.origin, None)
                           for rule in analysis.rules}
+        self.state = self.analysis.init_state_idx
 
-    def parse(self, seq):
+    def parse(self, seq, set_state=False):
+        i = 0
+        stream = iter(seq)
         states_idx = self.analysis.states_idx
 
         state_stack = [self.analysis.init_state_idx]
         value_stack = []
-        i = 0
 
         def get_action(key):
             state = state_stack[-1]
@@ -21,11 +23,6 @@ class Parser(object):
                 return states_idx[state][key]
             except KeyError:
                 expected = states_idx[state].keys()
-                try:
-                    token = seq[i]
-                except IndexError:
-                    assert key == '$end'
-                    token = seq[-1]
 
                 raise UnexpectedToken(token, expected, seq, i)
 
@@ -48,15 +45,22 @@ class Parser(object):
             value_stack.append(res)
 
         # Main LALR-parser loop
-        while i < len(seq):
-            action, arg = get_action(seq[i].type)
+        try:
+            token = next(stream)
+            i += 1
+            while True:
+                action, arg = get_action(token.type)
 
-            if action == ACTION_SHIFT:
-                state_stack.append(arg)
-                value_stack.append(seq[i])
-                i+= 1
-            else:
-                reduce(*arg)
+                if action == ACTION_SHIFT:
+                    state_stack.append(arg)
+                    value_stack.append(token)
+                    if set_state: self.state = arg
+                    token = next(stream)
+                    i += 1
+                else:
+                    reduce(*arg)
+        except StopIteration:
+            pass
 
         while True:
             _action, rule = get_action('$end')

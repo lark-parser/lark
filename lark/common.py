@@ -17,6 +17,8 @@ class UnexpectedToken(ParseError):
             context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])
         except AttributeError:
             context = seq[index:index+5]
+        except TypeError:
+            context = "<no context>"
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected: %s\n"
                    "Context: %s" % (token, self.line, self.column, expected, context))

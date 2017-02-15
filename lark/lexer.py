@@ -3,6 +3,7 @@
 import re
 
 from .utils import Str, classify
+from .common import is_terminal
 
 class LexError(Exception):
     pass
@@ -169,3 +170,64 @@ class Lexer(object):
                 if lex_pos < len(stream):
                     raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
                 break
+
+
+class ContextualLexer:
+    def __init__(self, tokens, states, ignore=(), always_accept=()):
+        tokens_by_name = {}
+        for t in tokens:
+            assert t.name not in tokens_by_name
+            tokens_by_name[t.name] = t
+
+        lexer_by_tokens = {}
+        self.lexers = {}
+        for state, accepts in states.items():
+            key = frozenset(accepts)
+            try:
+                lexer = lexer_by_tokens[key]
+            except KeyError:
+                accepts = set(accepts) # For python3
+                accepts |= set(ignore)
+                accepts |= set(always_accept)
+                state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$end']
+                lexer = Lexer(state_tokens, ignore=ignore)
+                lexer_by_tokens[key] = lexer
+
+            self.lexers[state] = lexer
+
+        self.root_lexer = Lexer(tokens, ignore=ignore)
+
+    def lex(self, stream, parser):
+        lex_pos = 0
+        line = 1
+        col_start_pos = 0
+        newline_types = list(self.root_lexer.newline_types)
+        ignore_types = list(self.root_lexer.ignore_types)
+        while True:
+            lexer = self.lexers[parser.state]
+            for mre, type_from_index in lexer.mres:
+                m = mre.match(stream, lex_pos)
+                if m:
+                    value = m.group(0)
+                    type_ = type_from_index[m.lastindex]
+                    if type_ not in ignore_types:
+                        t = Token(type_, value, lex_pos)
+                        t.line = line
+                        t.column = lex_pos - col_start_pos
+                        if t.type in lexer.callback:
+                            t = lexer.callback[t.type](t)
+                        yield t
+
+                    if type_ in newline_types:
+                        newlines = value.count(lexer.newline_char)
+                        if newlines:
+                            line += newlines
+                            col_start_pos = lex_pos + value.rindex(lexer.newline_char)
+                    lex_pos += len(value)
+                    break
+            else:
+                if lex_pos < len(stream):
+                    print("Allowed tokens:", lexer.tokens)
+                    raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
+                break
+

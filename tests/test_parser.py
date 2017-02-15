@@ -356,9 +356,8 @@ def _make_parser_test(PARSER):
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser
 
-for PARSER in ['lalr', 'earley']:
+for PARSER in ['lalr', 'earley', 'lalr_contextual_lexer']:
     _make_parser_test(PARSER)
-
 
 
 if __name__ == '__main__':

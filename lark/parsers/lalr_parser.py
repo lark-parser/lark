@@ -9,8 +9,9 @@ class Parser(object):
                           for rule in analysis.rules}
         self.state = self.analysis.init_state_idx
 
-    def parse(self, stream, set_state=False):    # XXX no set_state
-        stream = iter(stream)
+    def parse(self, seq, set_state=False):
+        i = 0
+        stream = iter(seq)
         states_idx = self.analysis.states_idx
 
         state_stack = [self.analysis.init_state_idx]
@@ -23,7 +24,7 @@ class Parser(object):
             except KeyError:
                 expected = states_idx[state].keys()
 
-                raise UnexpectedToken(token, expected, [], 0)
+                raise UnexpectedToken(token, expected, seq, i)
 
         def reduce(rule, size):
             if size:
@@ -46,6 +47,7 @@ class Parser(object):
         # Main LALR-parser loop
         try:
             token = next(stream)
+            i += 1
             while True:
                 action, arg = get_action(token.type)
 
@@ -54,6 +56,7 @@ class Parser(object):
                     value_stack.append(token)
                     if set_state: self.state = arg
                     token = next(stream)
+                    i += 1
                 else:
                     reduce(*arg)
         except StopIteration:

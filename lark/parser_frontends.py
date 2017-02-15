@@ -22,6 +22,7 @@ class WithLexer:
 class LALR(WithLexer):
     def __init__(self, lexer_conf, parser_conf):
         WithLexer.__init__(self, lexer_conf)
+        self.parser_conf = parser_conf
 
         analyzer = GrammarAnalyzer(parser_conf.rules, parser_conf.start)
         analyzer.analyze()
@@ -95,7 +96,7 @@ class Earley_NoLex:
                 regexp = self.token_by_name[sym].to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
                 if not width == (1,1):
-                    raise GrammarError('Dynamic lexing requires all tokens have the width 1 (%s is %s)' % (regexp, width))
+                    raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
                 yield sym, re.compile(regexp)
             else:
                 yield sym

@@ -34,4 +34,4 @@ a=Hello
 this="that",4
 """
 
-print parser.parse(sample_conf).pretty()
+print(parser.parse(sample_conf).pretty())

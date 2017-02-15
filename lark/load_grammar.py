@@ -61,7 +61,7 @@ TOKENS = {
     '_COLON': ':',
     '_OR': r'\|',
     '_DOT': r'\.',
-    'RULE': '[_?*]?[a-z][_a-z0-9]*',
+    'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'".*?[^\\]"',
     'REGEXP': r"/(?!/).*?[^\\]/",
@@ -302,6 +302,8 @@ class GrammarLoader:
                 raise GrammarError("Missing colon at line %s column %s" % (e.line, e.column))
             elif 'tokenvalue' in e.expected:
                 raise GrammarError("Expecting a value at line %s column %s" % (e.line, e.column))
+            elif e.expected == ['_OR']:
+                raise GrammarError("Newline without starting a new option (Expecting '|') at line %s column %s" % (e.line, e.column))
             raise
 
         # =================
@@ -363,7 +365,7 @@ class GrammarLoader:
         used_symbols = {symbol for expansions in rules.values()
                                for expansion, _alias in expansions
                                for symbol in expansion}
-        rule_set = {r.lstrip('?') for r in rules}
+        rule_set = {r.lstrip('!').lstrip('?') for r in rules}
         for sym in used_symbols:
             if is_terminal(sym):
                 if sym not in token_set:

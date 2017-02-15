@@ -12,24 +12,25 @@ def create_expand1_tree_builder_function(tree_builder):
             return tree_builder(children)
     return expand1
 
-def create_rule_handler(expansion, usermethod):
-    to_include = [(i, sym.startswith('_')) for i, sym in enumerate(expansion)
-                  if not (is_terminal(sym) and sym.startswith('_'))]
+def create_rule_handler(expansion, usermethod, keep_all_tokens):
+    if not keep_all_tokens:
+        to_include = [(i, sym.startswith('_')) for i, sym in enumerate(expansion)
+                      if not (is_terminal(sym) and sym.startswith('_'))]
 
-    if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
-        def _build_ast(match):
-            children = []
-            for i, to_expand in to_include:
-                if to_expand:
-                    children += match[i].children
-                else:
-                    children.append(match[i])
+        if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
+            def _build_ast(match):
+                children = []
+                for i, to_expand in to_include:
+                    if to_expand:
+                        children += match[i].children
+                    else:
+                        children.append(match[i])
 
-            return usermethod(children)
-    else:
-        _build_ast = usermethod
+                return usermethod(children)
+            return _build_ast
 
-    return _build_ast
+    # else, if no filtering required..
+    return usermethod
 
 
 class ParseTreeBuilder:
@@ -48,6 +49,11 @@ class ParseTreeBuilder:
         callback = Callback()
         new_rules = []
         for origin, expansions in rules.items():
+            keep_all_tokens = False
+            if origin.startswith('!'):
+                origin=origin.lstrip('!')
+                keep_all_tokens = True
+
             expand1 = origin.startswith('?')
             _origin = origin.lstrip('?')
 
@@ -69,7 +75,7 @@ class ParseTreeBuilder:
                         if expand1:
                             f = create_expand1_tree_builder_function(f)
 
-                alias_handler = create_rule_handler(expansion, f)
+                alias_handler = create_rule_handler(expansion, f, keep_all_tokens)
 
                 if hasattr(callback, _alias):
                     raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))

@@ -26,7 +26,6 @@ class Indenter:
 
             assert indent == self.indent_level[-1], '%s != %s' % (indent, self.indent_level[-1])
 
-
     def process(self, stream):
         for token in stream:
             if token.type == self.NL_type:
@@ -37,7 +36,7 @@ class Indenter:
 
             if token.type in self.OPEN_PAREN_types:
                 self.paren_level += 1
-            if token.type in self.CLOSE_PAREN_types:
+            elif token.type in self.CLOSE_PAREN_types:
                 self.paren_level -= 1
                 assert self.paren_level >= 0
 
@@ -47,3 +46,7 @@ class Indenter:
 
         assert self.indent_level == [0], self.indent_level
 
+    # XXX Hack for ContextualLexer. Maybe there's a more elegant solution?
+    @property
+    def always_accept(self):
+        return (self.NL_type,)

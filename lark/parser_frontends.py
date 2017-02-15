@@ -40,13 +40,17 @@ class LALR_ContextualLexer:
         self.analyzer.analyze()
 
         d = {idx:t.keys() for idx, t in self.analyzer.states_idx.items()}
-        self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore)
+        self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore,
+                                     always_accept=lexer_conf.postlex.always_accept
+                                                   if lexer_conf.postlex else ())
 
 
     def parse(self, text):
         parser = lalr_parser.Parser(self.analyzer, self.parser_conf.callback)
-        l = self.lexer.lex(text, parser)
-        return parser.parse(l, True)
+        tokens = self.lexer.lex(text, parser)
+        if self.lexer_conf.postlex:
+            tokens = self.lexer_conf.postlex.process(tokens)
+        return parser.parse(tokens, True)
 
 
 

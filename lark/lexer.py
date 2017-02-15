@@ -173,7 +173,7 @@ class Lexer(object):
 
 
 class ContextualLexer:
-    def __init__(self, tokens, states, ignore=()):
+    def __init__(self, tokens, states, ignore=(), always_accept=()):
         tokens_by_name = {}
         for t in tokens:
             assert t.name not in tokens_by_name
@@ -186,10 +186,9 @@ class ContextualLexer:
             try:
                 lexer = lexer_by_tokens[key]
             except KeyError:
-                accepts = list(accepts) # For python3
-                accepts += ignore
-                # if '_NEWLINE' in tokens_by_name and '_NEWLINE' not in accepts:
-                #     accepts.append('_NEWLINE')  # XXX hack for now
+                accepts = set(accepts) # For python3
+                accepts |= set(ignore)
+                accepts |= set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$end']
                 lexer = Lexer(state_tokens, ignore=ignore)
                 lexer_by_tokens[key] = lexer
@@ -228,6 +227,7 @@ class ContextualLexer:
                     break
             else:
                 if lex_pos < len(stream):
+                    print("Allowed tokens:", lexer.tokens)
                     raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
                 break
 

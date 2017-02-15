@@ -4,6 +4,12 @@
 
 from lark import Lark, InlineTransformer
 
+try:
+    input = raw_input
+except NameError:
+    pass
+
+
 calc_grammar = """
     ?start: sum
           | NAME "=" sum    -> assign_var
@@ -47,7 +53,7 @@ calc = calc_parser.parse
 def main():
     while True:
         try:
-            s = raw_input('> ')
+            s = input('> ')
         except EOFError:
             break
         print(calc(s))
@@ -58,6 +64,6 @@ def test():
     print(calc("1+a*-3"))
 
 if __name__ == '__main__':
-    test()
-    # main()
+    # test()
+    main()
 

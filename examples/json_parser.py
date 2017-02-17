@@ -2,6 +2,7 @@
 # This example shows how to write a basic JSON parser
 #
 # The code is short and clear, but has good performance.
+# For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
 #
 
 import sys

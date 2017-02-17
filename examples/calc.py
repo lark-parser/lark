@@ -59,7 +59,6 @@ def main():
         print(calc(s))
 
 def test():
-    # print calc("a=(1+2)")
     print(calc("a = 1+2"))
     print(calc("1+a*-3"))
 

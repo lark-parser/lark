@@ -3,7 +3,7 @@
 #
 # The tokens NAME and VALUE match the same input. A regular lexer would arbitrarily
 # choose one over the other, which would lead to a (confusing) parse error.
-# However, due to the unambiguous structure of the grammar, the LALR(1) algorithm knows 
+# However, due to the unambiguous structure of the grammar, the LALR(1) algorithm knows
 # which one of them to expect at each point during the parse.
 # The lexer then only matches the tokens that the parser expects.
 # The result is a correct parse, something that is impossible with a regular lexer.

@@ -1,3 +1,10 @@
+#
+# This example demonstrates an experimental feature: Text reconstruction
+# The Reconstructor takes a parse tree (already filtered from punctuation, of course),
+# and reconstructs it into correct text, that can be parsed correctly.
+# It can be useful for creating "hooks" to alter data before handing it to other parsers. You can also use it to generate samples from scratch.
+#
+
 import json
 from .json_parser import json_grammar
 

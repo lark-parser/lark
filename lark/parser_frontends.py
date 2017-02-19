@@ -2,7 +2,6 @@ import re
 import sre_parse
 
 from .lexer import Lexer, ContextualLexer
-from .parsers.lalr_analysis import LALR_Analyzer
 
 from .common import is_terminal, GrammarError
 from .parsers import lalr_parser, earley
@@ -22,11 +21,9 @@ class WithLexer:
 class LALR(WithLexer):
     def __init__(self, lexer_conf, parser_conf):
         WithLexer.__init__(self, lexer_conf)
-        self.parser_conf = parser_conf
 
-        analyzer = LALR_Analyzer(parser_conf.rules, parser_conf.start)
-        analyzer.compute_lookahead()
-        self.parser = lalr_parser.Parser(analyzer, parser_conf.callback)
+        self.parser_conf = parser_conf
+        self.parser = lalr_parser.Parser(parser_conf)
 
     def parse(self, text):
         tokens = list(self.lex(text))
@@ -37,21 +34,19 @@ class LALR_ContextualLexer:
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf
 
-        self.analyzer = LALR_Analyzer(parser_conf.rules, parser_conf.start)
-        self.analyzer.compute_lookahead()
+        self.parser = lalr_parser.Parser(parser_conf)
 
-        d = {idx:t.keys() for idx, t in self.analyzer.states_idx.items()}
+        d = {idx:t.keys() for idx, t in self.parser.analysis.states_idx.items()}
         self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore,
                                      always_accept=lexer_conf.postlex.always_accept
                                                    if lexer_conf.postlex else ())
 
 
     def parse(self, text):
-        parser = lalr_parser.Parser(self.analyzer, self.parser_conf.callback)
-        tokens = self.lexer.lex(text, parser)
+        tokens = self.lexer.lex(text)
         if self.lexer_conf.postlex:
             tokens = self.lexer_conf.postlex.process(tokens)
-        return parser.parse(tokens, True)
+        return self.parser.parse(tokens, self.lexer.set_parser_state)
 
 
 

@@ -1,6 +1,6 @@
-from .lalr_analysis import ACTION_SHIFT
 from ..common import ParseError, UnexpectedToken
 
+from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
 
 class Parser(object):
     def __init__(self, analysis, callback):

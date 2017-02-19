@@ -2,7 +2,7 @@ import re
 import sre_parse
 
 from .lexer import Lexer, ContextualLexer
-from .parsers.lalr_analysis import GrammarAnalyzer
+from .parsers.lalr_analysis import LALR_Analyzer
 
 from .common import is_terminal, GrammarError
 from .parsers import lalr_parser, earley
@@ -24,8 +24,8 @@ class LALR(WithLexer):
         WithLexer.__init__(self, lexer_conf)
         self.parser_conf = parser_conf
 
-        analyzer = GrammarAnalyzer(parser_conf.rules, parser_conf.start)
-        analyzer.analyze()
+        analyzer = LALR_Analyzer(parser_conf.rules, parser_conf.start)
+        analyzer.compute_lookahead()
         self.parser = lalr_parser.Parser(analyzer, parser_conf.callback)
 
     def parse(self, text):
@@ -37,8 +37,8 @@ class LALR_ContextualLexer:
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf
 
-        self.analyzer = GrammarAnalyzer(parser_conf.rules, parser_conf.start)
-        self.analyzer.analyze()
+        self.analyzer = LALR_Analyzer(parser_conf.rules, parser_conf.start)
+        self.analyzer.compute_lookahead()
 
         d = {idx:t.keys() for idx, t in self.analyzer.states_idx.items()}
         self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore,

@@ -1,5 +1,5 @@
 from ..common import ParseError, UnexpectedToken, is_terminal
-from lalr_analysis import GrammarAnalyzer
+from grammar_analysis import GrammarAnalyzer
 
 from ..tree import Tree
 

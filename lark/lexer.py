@@ -197,14 +197,19 @@ class ContextualLexer:
 
         self.root_lexer = Lexer(tokens, ignore=ignore)
 
-    def lex(self, stream, parser):
+        self.set_parser_state(None) # Needs to be set on the outside
+
+    def set_parser_state(self, state):
+        self.parser_state = state
+
+    def lex(self, stream):
         lex_pos = 0
         line = 1
         col_start_pos = 0
         newline_types = list(self.root_lexer.newline_types)
         ignore_types = list(self.root_lexer.ignore_types)
         while True:
-            lexer = self.lexers[parser.state]
+            lexer = self.lexers[self.parser_state]
             for mre, type_from_index in lexer.mres:
                 m = mre.match(stream, lex_pos)
                 if m:

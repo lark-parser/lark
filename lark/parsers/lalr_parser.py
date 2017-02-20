@@ -1,21 +1,23 @@
-from .lalr_analysis import ACTION_SHIFT
 from ..common import ParseError, UnexpectedToken
 
+from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
 
 class Parser(object):
-    def __init__(self, analysis, callback):
-        self.analysis = analysis
-        self.callbacks = {rule: getattr(callback, rule.alias or rule.origin, None)
-                          for rule in analysis.rules}
-        self.state = self.analysis.init_state_idx
+    def __init__(self, parser_conf):
+        self.analysis = LALR_Analyzer(parser_conf.rules, parser_conf.start)
+        self.analysis.compute_lookahead()
+        self.callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
+                          for rule in self.analysis.rules}
 
-    def parse(self, seq, set_state=False):
+    def parse(self, seq, set_state=None):
         i = 0
         stream = iter(seq)
         states_idx = self.analysis.states_idx
 
         state_stack = [self.analysis.init_state_idx]
         value_stack = []
+
+        if set_state: set_state(self.analysis.init_state_idx)
 
         def get_action(key):
             state = state_stack[-1]
@@ -54,7 +56,7 @@ class Parser(object):
                 if action == ACTION_SHIFT:
                     state_stack.append(arg)
                     value_stack.append(token)
-                    if set_state: self.state = arg
+                    if set_state: set_state(arg)
                     token = next(stream)
                     i += 1
                 else:

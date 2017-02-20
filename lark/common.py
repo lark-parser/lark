@@ -28,7 +28,7 @@ class UnexpectedToken(ParseError):
 
 
 def is_terminal(sym):
-    return sym.isupper() or sym[0] == '$'
+    return isinstance(sym, tuple) or sym.isupper() or sym[0] == '$'
 
 
 class LexerConf:

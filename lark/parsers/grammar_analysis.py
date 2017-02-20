@@ -133,7 +133,7 @@ class GrammarAnalyzer(object):
         "Returns all init_ptrs accessible by rule (recursive)"
         init_ptrs = set()
         def _expand_rule(rule):
-            assert not is_terminal(rule)
+            assert not is_terminal(rule), rule
 
             for r in self.rules_by_origin[rule]:
                 init_ptr = RulePtr(r, 0)

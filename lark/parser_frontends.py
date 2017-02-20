@@ -3,8 +3,9 @@ import sre_parse
 
 from .lexer import Lexer, ContextualLexer
 
-from .common import is_terminal, GrammarError
-from .parsers import lalr_parser, earley
+from .common import is_terminal, GrammarError, ParserConf
+from .parsers import lalr_parser, earley, earley2
+from .parsers.grammar_analysis import Rule
 
 class WithLexer:
     def __init__(self, lexer_conf):
@@ -50,7 +51,7 @@ class LALR_ContextualLexer:
 
 
 
-class Earley(WithLexer):
+class Nearley(WithLexer):
     def __init__(self, lexer_conf, parser_conf):
         WithLexer.__init__(self, lexer_conf)
 
@@ -73,6 +74,26 @@ class Earley(WithLexer):
         res = self.parser.parse(tokens)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
+
+
+class MyEarley(WithLexer):
+    def __init__(self, lexer_conf, parser_conf):
+        WithLexer.__init__(self, lexer_conf)
+
+        rules = [(n, self._prepare_expansion(x), a)
+                 for n,x,a in parser_conf.rules]
+
+        self.parser = earley2.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
+
+    def _prepare_expansion(self, expansion):
+        return [(sym,) if is_terminal(sym) else sym for sym in expansion]
+
+    def parse(self, text):
+        tokens = list(self.lex(text))
+        res = self.parser.parse(tokens)
+        assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
+        return res[0]
+
 
 class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
@@ -101,4 +122,35 @@ class Earley_NoLex:
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
-ENGINE_DICT = { 'lalr': LALR, 'earley': Earley, 'earley_nolex': Earley_NoLex, 'lalr_contextual_lexer': LALR_ContextualLexer }
+
+class MyEarley_NoLex:
+    def __init__(self, lexer_conf, parser_conf):
+        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+
+        rules = [(n, list(self._prepare_expansion(x)), a)
+                 for n,x,a in parser_conf.rules]
+
+        self.parser = earley2.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
+
+    def _prepare_expansion(self, expansion):
+        for sym in expansion:
+            if is_terminal(sym):
+                regexp = self.token_by_name[sym].to_regexp()
+                width = sre_parse.parse(regexp).getwidth()
+                if not width == (1,1):
+                    raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
+                yield re.compile(regexp).match
+            else:
+                yield sym
+
+    def parse(self, text):
+        res = self.parser.parse(text)
+        assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
+        return res[0]
+
+ENGINE_DICT = {
+    'lalr': LALR,
+    'earley': MyEarley,
+    'earley_nolex': Earley_NoLex,
+    'lalr_contextual_lexer': LALR_ContextualLexer
+}

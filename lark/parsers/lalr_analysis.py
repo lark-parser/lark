@@ -4,7 +4,7 @@ from collections import defaultdict
 from ..utils import classify, classify_bool, bfs, fzset
 from ..common import GrammarError, is_terminal
 
-from grammar_analysis import GrammarAnalyzer
+from .grammar_analysis import GrammarAnalyzer
 
 ACTION_SHIFT = 0
 

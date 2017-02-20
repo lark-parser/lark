@@ -1,8 +1,6 @@
 from ..common import ParseError, UnexpectedToken, is_terminal
 from .grammar_analysis import GrammarAnalyzer
 
-# is_terminal = callable
-
 class Item:
     def __init__(self, rule, ptr, start, data):
         self.rule = rule
@@ -47,7 +45,6 @@ class Parser:
             return {Item(rule, index, i, []) for rule, index in self.predictions[symbol]}
 
         def complete(item, table):
-            #item.data = (item.rule_ptr.rule, item.data)
             item.data = self.postprocess[item.rule](item.data)
             return {old_item.advance(item.data) for old_item in table[item.start]
                     if not old_item.is_complete and old_item.expect == item.rule.origin}
@@ -84,7 +81,6 @@ class Parser:
             table.append(next_set)
 
         # Main loop starts
-
         table = [predict(self.start, 0)]
 
         for i, char in enumerate(stream):
@@ -100,44 +96,3 @@ class Parser:
             raise ParseError('Incomplete parse: Could not find a solution to input')
 
         return solutions
-        #return map(self.reduce_solution, solutions)
-
-    def reduce_solution(self, solution):
-        rule, children = solution
-        children = [self.reduce_solution(c) if isinstance(c, tuple) else c for c in children]
-        return self.postprocess[rule](children)
-
-
-
-from ..common import ParserConf
-# A = 'A'.__eq__
-# rules = [
-#     ('a', ['a', A], None),
-#     ('a', ['a', A, 'a'], None),
-#     ('a', ['a', A, A, 'a'], None),
-#     ('a', [A], None),
-# ]
-
-# p = Parser(ParserConf(rules, None, 'a'))
-# for x in p.parse('AAAA'):
-#     print '->'
-#     print x.pretty()
-
-# import re
-# NUM = re.compile('[0-9]').match
-# ADD = re.compile('[+-]').match
-# MUL = re.compile('[*/]').match
-# rules = [
-#     ('sum', ['sum', ADD, 'product'], None),
-#     ('sum', ['product'], None),
-#     ('product', ['product', MUL, 'factor'], None),
-#     ('product', ['factor'], None),
-#     ('factor', ['('.__eq__, 'sum', ')'.__eq__], None),
-#     ('factor', ['number'], None),
-#     ('number', [NUM, 'number'], None),
-#     ('number', [NUM], None),
-# ]
-
-# p = Parser(ParserConf(rules, None, 'sum'))
-# # print p.parse('NALNMNANR')
-# print p.parse('1+(2*3-4)')[0].pretty()

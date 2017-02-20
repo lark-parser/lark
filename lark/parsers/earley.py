@@ -1,155 +1,143 @@
-"My name is Earley"
+from ..common import ParseError, UnexpectedToken, is_terminal
+from .grammar_analysis import GrammarAnalyzer
 
-from ..utils import classify, STRING_TYPE
-from ..common import ParseError, UnexpectedToken
+# is_terminal = callable
 
-try:
-    xrange
-except NameError:
-    xrange = range
-
-class MatchFailed(object):
-    pass
-
-class AbortParseMatch(Exception):
-    pass
-
-
-class Rule(object):
-    def __init__(self, name, symbols, postprocess):
-        self.name = name
-        self.symbols = symbols
-        self.postprocess = postprocess
-
-class State(object):
-    def __init__(self, rule, expect, reference, data=None):
+class Item:
+    def __init__(self, rule, ptr, start, data):
         self.rule = rule
-        self.expect = expect
-        self.reference = reference
-        self.data = data or []
+        self.ptr = ptr
+        self.start = start
+        self.data = data
 
-        self.is_complete = (self.expect == len(self.rule.symbols))
-        if not self.is_complete:
-            self.expect_symbol = self.rule.symbols[self.expect]
-            self.is_terminal = isinstance(self.expect_symbol, tuple)
-        else:
-            self.is_terminal = False
+    @property
+    def expect(self):
+        return self.rule.expansion[self.ptr]
 
-    def next_state(self, data):
-        return State(self.rule, self.expect+1, self.reference, self.data + [data])
+    @property
+    def is_complete(self):
+        return self.ptr == len(self.rule.expansion)
 
-    def consume_terminal(self, inp):
-        if not self.is_complete and self.is_terminal:
-            # PORT: originally tests regexp
+    def advance(self, data):
+        return Item(self.rule, self.ptr+1, self.start, self.data + [data])
 
-            if self.expect_symbol[1] is not None:
-                match = self.expect_symbol[1].match(inp)
-                if match:
-                    return self.next_state(inp)
-
-            elif self.expect_symbol[0] == inp.type:
-                return self.next_state(inp)
-
-    def consume_nonterminal(self, inp):
-        if not self.is_complete and not self.is_terminal:
-
-            if self.expect_symbol == inp:
-                return self.next_state(inp)
-
-    def process(self, location, ind, table, rules, added_rules):
-
-        if self.is_complete:
-            # Completed a rule
-            if self.rule.postprocess:
-                try:
-                    self.data = self.rule.postprocess(self.data)
-                except AbortParseMatch:
-                    self.data = MatchFailed
-
-            if self.data is not MatchFailed:
-                for s in table[self.reference]:
-                    x = s.consume_nonterminal(self.rule.name)
-                    if x:
-                        x.data[-1] = self.data
-                        x.epsilon_closure(location, ind, table)
-
-        else:
-            exp = self.rule.symbols[self.expect]
-            if isinstance(exp, tuple):
-                return
-
-            for r in rules[exp]:
-                assert r.name == exp
-                if r not in added_rules:
-                    if r.symbols:
-                        added_rules.add(r)
-                        State(r, 0, location).epsilon_closure(location, ind, table)
-                    else:
-                        # Empty rule
-                        new_copy = self.consume_nonterminal(r.name)
-                        new_copy.data[-1] = r.postprocess([]) if r.postprocess else []
-
-                        new_copy.epsilon_closure(location, ind, table)
-
-    def epsilon_closure(self, location, ind, table):
-        col = table[location]
-        col.append(self)
-
-        if not self.is_complete:
-            for i in xrange(ind):
-                state = col[i]
-                if state.is_complete and state.reference == location:
-                    x = self.consume_nonterminal(state.rule.name)
-                    if x:
-                        x.data[-1] = state.data
-                        x.epsilon_closure(location, ind, table)
+    def __eq__(self, other):
+        return self.start == other.start and self.ptr == other.ptr and self.rule == other.rule
+    def __hash__(self):
+        return hash((self.rule, self.ptr, self.start))
 
 
-class Parser(object):
-    def __init__(self, rules, start=None):
-        self.rules = [Rule(r['name'], r['symbols'], r.get('postprocess', None)) for r in rules]
-        self.rules_by_name = classify(self.rules, lambda r: r.name)
-        self.start = start or self.rules[0].name
+class Parser:
+    def __init__(self, parser_conf):
+        self.analysis = GrammarAnalyzer(parser_conf.rules, parser_conf.start)
+        self.start = parser_conf.start
 
-    def advance_to(self, table, added_rules):
-        n = len(table)-1
-        for w, s in enumerate(table[n]):
-            s.process(n, w, table, self.rules_by_name, added_rules)
+        self.postprocess = {}
+        self.predictions = {}
+        for rule in self.analysis.rules:
+            if rule.origin != '$root':  # XXX kinda ugly
+                self.postprocess[rule] = getattr(parser_conf.callback, rule.alias)
+                self.predictions[rule.origin] = [(x.rule, x.index) for x in self.analysis.expand_rule(rule.origin)]
 
     def parse(self, stream):
-        initial_rules = set(self.rules_by_name[self.start])
-        table = [[State(r, 0, 0) for r in initial_rules]]
-        self.advance_to(table, initial_rules)
+        # Define parser functions
 
-        i = 0
+        def predict(symbol, i):
+            assert not is_terminal(symbol), symbol
+            return {Item(rule, index, i, []) for rule, index in self.predictions[symbol]}
 
-        while i < len(stream):
-            col = []
+        def complete(item, table):
+            #item.data = (item.rule_ptr.rule, item.data)
+            item.data = self.postprocess[item.rule](item.data)
+            return {old_item.advance(item.data) for old_item in table[item.start]
+                    if not old_item.is_complete and old_item.expect == item.rule.origin}
 
-            token = stream[i]
-            for s in table[-1]:
-                x = s.consume_terminal(token)
-                if x:
-                    col.append(x)
+        def process_column(i, term):
+            assert i == len(table)-1
+            cur_set = table[i]
+            next_set = set()
 
-            if not col:
-                expected = {s.expect_symbol for s in table[-1] if s.is_terminal}
-                raise UnexpectedToken(stream[i], expected, stream, i)
+            to_process = cur_set
+            while to_process:
+                new_items = set()
+                for item in to_process:
+                    if item.is_complete:
+                        new_items |= complete(item, table)
+                    else:
+                        if is_terminal(item.expect):
+                            # scan
+                            match = item.expect[0](term) if callable(item.expect[0]) else item.expect[0] == term
+                            if match:
+                                next_set.add(item.advance(stream[i]))
+                        else:
+                            if item.ptr: # part of an already predicted batch
+                                new_items |= predict(item.expect, i)
 
-            table.append(col)
-            self.advance_to(table, set())
+                to_process = new_items - cur_set    # TODO: is this precaution necessary?
+                cur_set |= to_process
 
-            i += 1
 
-        res = list(self.finish(table))
-        if not res:
-            raise ParseError('Incomplete parse')
-        return res
+            if not next_set and term != '$end':
+                expect = filter(is_terminal, [x.expect for x in cur_set if not x.is_complete])
+                raise UnexpectedToken(term, expect, stream, i)
 
-    def finish(self, table):
-        for t in table[-1]:
-            if (t.rule.name == self.start
-                and t.expect == len(t.rule.symbols)
-                and t.reference == 0
-                and t.data is not MatchFailed):
-                yield t.data
+            table.append(next_set)
+
+        # Main loop starts
+
+        table = [predict(self.start, 0)]
+
+        for i, char in enumerate(stream):
+            process_column(i, char.type)
+
+        process_column(len(stream), '$end')
+
+        # Parse ended. Now build a parse tree
+        solutions = [n.data for n in table[len(stream)]
+                     if n.is_complete and n.rule.origin==self.start and n.start==0]
+
+        if not solutions:
+            raise ParseError('Incomplete parse: Could not find a solution to input')
+
+        return solutions
+        #return map(self.reduce_solution, solutions)
+
+    def reduce_solution(self, solution):
+        rule, children = solution
+        children = [self.reduce_solution(c) if isinstance(c, tuple) else c for c in children]
+        return self.postprocess[rule](children)
+
+
+
+from ..common import ParserConf
+# A = 'A'.__eq__
+# rules = [
+#     ('a', ['a', A], None),
+#     ('a', ['a', A, 'a'], None),
+#     ('a', ['a', A, A, 'a'], None),
+#     ('a', [A], None),
+# ]
+
+# p = Parser(ParserConf(rules, None, 'a'))
+# for x in p.parse('AAAA'):
+#     print '->'
+#     print x.pretty()
+
+# import re
+# NUM = re.compile('[0-9]').match
+# ADD = re.compile('[+-]').match
+# MUL = re.compile('[*/]').match
+# rules = [
+#     ('sum', ['sum', ADD, 'product'], None),
+#     ('sum', ['product'], None),
+#     ('product', ['product', MUL, 'factor'], None),
+#     ('product', ['factor'], None),
+#     ('factor', ['('.__eq__, 'sum', ')'.__eq__], None),
+#     ('factor', ['number'], None),
+#     ('number', [NUM, 'number'], None),
+#     ('number', [NUM], None),
+# ]
+
+# p = Parser(ParserConf(rules, None, 'sum'))
+# # print p.parse('NALNMNANR')
+# print p.parse('1+(2*3-4)')[0].pretty()

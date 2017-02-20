@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 
 from .tree import Tree
-from .common import is_terminal
+from .common import is_terminal, ParserConf
 from .lexer import Token, TokenDef__Str
 from .parsers import earley
 from .lark import Lark
@@ -29,12 +29,15 @@ class Reconstructor:
                 self.data = data
 
         class MatchTerminal(MatchData):
-            def match(self, other):
+            def __call__(self, other):
                 return token_res[self.data].match(other) is not None
 
         class MatchTree(MatchData):
-            def match(self, other):
-                return self.data == other.data
+            def __call__(self, other):
+                try:
+                    return self.data == other.data
+                except AttributeError:
+                    return False
 
         class WriteTokens:
             def __init__(self, name, expansion):
@@ -80,20 +83,17 @@ class Reconstructor:
         for name, expansions in d.items():
             for expansion in expansions:
                 reduced = [sym if sym.startswith('_') or sym in expand1s else
-                           (sym, MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym))
+                           (MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym),)
                            for sym in expansion if not is_discarded_terminal(sym)]
 
                 name = name.lstrip('!').lstrip('?')
 
-                rules.append({'name': name,
-                              'symbols': reduced,
-                              'postprocess': WriteTokens(name, expansion).f
-                              })
+                rules.append((name, reduced, WriteTokens(name, expansion).f))
         self.rules = rules
 
 
     def _reconstruct(self, tree):
-        parser = earley.Parser(self.rules, tree.data)
+        parser = earley.Parser(ParserConf(self.rules, {}, tree.data))
 
         res ,= parser.parse(tree.children)  # XXX ambiguity?
         for item in res:

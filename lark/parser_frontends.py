@@ -140,7 +140,7 @@ class Earley_NoLex:
                 yield sym
 
     def parse(self, text):
-        res = self.parser.parse([Token(x,x) for x in text]) # A little hacky perhaps!
+        res = self.parser.parse(text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 

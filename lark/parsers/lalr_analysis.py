@@ -1,3 +1,11 @@
+"""This module builds a LALR(1) transition-table for lalr_parser.py
+
+For now, shift/reduce conflicts are automatically resolved as shifts.
+"""
+
+# Author: Erez Shinan (2017)
+# Email : erezshin@gmail.com
+
 import logging
 from collections import defaultdict
 

@@ -1,10 +1,20 @@
+"This module implements an Earley Parser"
+
+# The algorithm keeps track of each state set, using a corresponding Column instance.
+# Column keeps track of new items using NewsList instances.
+#
+# Author: Erez Shinan (2017)
+# Email : erezshin@gmail.com
+
 from ..common import ParseError, UnexpectedToken, is_terminal
 from .grammar_analysis import GrammarAnalyzer
 
-class EndToken(str):
+class EndToken:
     type = '$end'
 
-class Item:
+END_TOKEN = EndToken()
+
+class Item(object):
     def __init__(self, rule, ptr, start, data):
         self.rule = rule
         self.ptr = ptr
@@ -34,6 +44,8 @@ class Item:
 
 
 class NewsList(list):
+    "Keeps track of newly added items (append-only)"
+
     def __init__(self, initial=None):
         list.__init__(self, initial or [])
         self.last_iter = 0
@@ -45,22 +57,39 @@ class NewsList(list):
 
 
 class Column:
+    "An entry in the table, aka Earley Chart"
     def __init__(self):
         self.to_reduce = NewsList()
         self.to_predict = NewsList()
         self.to_scan = NewsList()
         self.item_count = 0
 
+        self.added = set()
+
     def add(self, items):
-        self.item_count += len(items)
+        """Sort items into scan/predict/reduce newslists
+
+        Makes sure only unique items are added.
+        """
+
+        added = self.added
         for item in items:
+
             if item.is_complete:
-                if item not in self.to_reduce:  # Avoid infinite loop
-                    self.to_reduce.append(item)
-            elif is_terminal(item.expect):
-                self.to_scan.append(item)
+                if item in added:
+                    continue
+                self.to_reduce.append(item)
+                added.add(item)
             else:
-                self.to_predict.append(item)
+                if is_terminal(item.expect):
+                    self.to_scan.append(item)
+                else:
+                    if item in added:
+                        continue
+                    self.to_predict.append(item)
+                    added.add(item)
+
+            self.item_count += 1    # Only count if actually added
 
     def __nonzero__(self):
         return bool(self.item_count)
@@ -78,8 +107,9 @@ class Parser:
                 self.postprocess[rule] = a if callable(a) else getattr(parser_conf.callback, a)
                 self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
-    def parse(self, stream):
+    def parse(self, stream, start=None):
         # Define parser functions
+        start = start or self.start
 
         def predict(nonterm, i):
             assert not is_terminal(nonterm), nonterm
@@ -88,8 +118,7 @@ class Parser:
         def complete(item, table):
             name = item.rule.origin
             item.data = self.postprocess[item.rule](item.data)
-            return [i.advance(item.data) for i in table[item.start].to_predict
-                    if i.expect == name]
+            return [i.advance(item.data) for i in table[item.start].to_predict if i.expect == name]
 
         def process_column(i, token):
             assert i == len(table)-1
@@ -109,29 +138,30 @@ class Parser:
                     cur_set.add( complete(item, table) )
 
 
-            for item in cur_set.to_scan.get_news():
-                match = item.expect[0](token) if callable(item.expect[0]) else item.expect[0] == token.type
-                if match:
-                    next_set.add([item.advance(stream[i])])
+            if token is not END_TOKEN:
+                for item in cur_set.to_scan.get_news():
+                    match = item.expect[0](token) if callable(item.expect[0]) else item.expect[0] == token.type
+                    if match:
+                        next_set.add([item.advance(stream[i])])
 
-            if not next_set and token.type != '$end':
-                expect = [i.expect for i in cur_set.to_scan]
+            if not next_set and token is not END_TOKEN:
+                expect = {i.expect for i in cur_set.to_scan}
                 raise UnexpectedToken(token, expect, stream, i)
 
             table.append(next_set)
 
         # Main loop starts
         table = [Column()]
-        table[0].add(predict(self.start, 0))
+        table[0].add(predict(start, 0))
 
         for i, char in enumerate(stream):
             process_column(i, char)
 
-        process_column(len(stream), EndToken())
+        process_column(len(stream), END_TOKEN)
 
         # Parse ended. Now build a parse tree
         solutions = [n.data for n in table[len(stream)].to_reduce
-                     if n.rule.origin==self.start and n.start==0]
+                     if n.rule.origin==start and n.start==0]
 
         if not solutions:
             raise ParseError('Incomplete parse: Could not find a solution to input')

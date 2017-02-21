@@ -1,3 +1,8 @@
+"""This module implements a LALR(1) Parser
+"""
+# Author: Erez Shinan (2017)
+# Email : erezshin@gmail.com
+
 from ..common import ParseError, UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT

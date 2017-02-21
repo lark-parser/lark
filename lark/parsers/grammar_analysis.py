@@ -13,7 +13,7 @@ class Rule(object):
         self.alias = alias
 
     def __repr__(self):
-        return '<%s : %s>' % (self.origin, ' '.join(self.expansion))
+        return '<%s : %s>' % (self.origin, ' '.join(map(unicode,self.expansion)))
 
 class RulePtr(object):
     def __init__(self, rule, index):

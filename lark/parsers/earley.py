@@ -57,11 +57,10 @@ class Column:
             if item.is_complete:
                 if item not in self.to_reduce:  # Avoid infinite loop
                     self.to_reduce.append(item)
+            elif is_terminal(item.expect):
+                self.to_scan.append(item)
             else:
-                if is_terminal(item.expect):
-                    self.to_scan.append(item)
-                else:
-                    self.to_predict.append(item)
+                self.to_predict.append(item)
 
     def __nonzero__(self):
         return bool(self.item_count)

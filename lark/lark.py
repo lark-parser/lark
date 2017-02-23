@@ -112,16 +112,11 @@ class Lark:
         assert not self.options.profile, "Feature temporarily disabled"
         self.profiler = Profiler() if self.options.profile else None
 
-        tokens, self.rules = load_grammar(grammar)
-        self.ignore_tokens = []
-        for tokendef, flags in tokens:
-            for flag in flags:
-                if flag == 'ignore':
-                    self.ignore_tokens.append(tokendef.name)
-                else:
-                    raise GrammarError("No such flag: %s" % flag)
+        self.grammar = load_grammar(grammar)
+        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=True)
+        self.ignore_tokens = self.grammar.extra['ignore']
 
-        self.lexer_conf = LexerConf([t[0] for t in tokens], self.ignore_tokens, self.options.postlex)
+        self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
 
         if not self.options.only_lex:
             self.parser = self._build_parser()

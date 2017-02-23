@@ -269,7 +269,7 @@ def _make_parser_test(PARSER):
         def test_token_collision(self):
             g = _Lark("""start: "Hello" NAME
                         NAME: /\w+/
-                        WS.ignore: /\s+/
+                        %ignore " "
                     """)
             x = g.parse('Hello World')
             self.assertSequenceEqual(x.children, ['World'])
@@ -303,6 +303,14 @@ def _make_parser_test(PARSER):
                         """)
             x = g.parse('aababc')
 
+        def test_token_embed(self):
+            g = _Lark("""start: A B C
+                        A: "a"
+                        B: A "b"
+                        C: B "c"
+                        """)
+            x = g.parse('aababc')
+
         def test_token_not_anon(self):
             """Tests that "a" is matched as A, rather than an anonymous token.
 
@@ -333,6 +341,19 @@ def _make_parser_test(PARSER):
             g = _Lark("""start: "a" -> b """)
             x = g.parse('a')
             self.assertEqual(x.data, "b")
+
+        def test_token_ebnf(self):
+            g = _Lark("""start: A
+                      A: "a"* ("b"? "c".."e")+
+                      """)
+            x = g.parse('abcde')
+            x = g.parse('dd')
+
+        # def test_token_recurse(self):
+        #     g = _Lark("""start: A
+        #                  A: B
+        #                  B: A
+        #               """)
 
         def test_lexer_token_limit(self):
             "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"

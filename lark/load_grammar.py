@@ -1,3 +1,4 @@
+from itertools import chain
 import re
 import codecs
 
@@ -61,20 +62,21 @@ TOKENS = {
     '_COLON': ':',
     '_OR': r'\|',
     '_DOT': r'\.',
+    '_PERCENT': r'%',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'".*?[^\\]"',
     'REGEXP': r"/(?!/).*?[^\\]/",
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
-    'COMMENT': r'//[^\n]*\n',
+    'COMMENT': r'//[^\n]*',
     '_TO': '->'
 }
 
 RULES = {
-    'start': ['list'],
-    'list':  ['item', 'list item'],
-    'item':  ['rule', 'token', '_NL'],
+    'start': ['_list'],
+    '_list':  ['_item', '_list _item'],
+    '_item':  ['rule', 'token', 'statement', '_NL'],
 
     'rule': ['RULE _COLON expansions _NL'],
     'expansions': ['alias',
@@ -93,17 +95,16 @@ RULES = {
              'maybe',
              'RULE',
              'TOKEN',
-             'anontoken'],
-
-    'anontoken': ['tokenvalue'],
+             'tokenvalue',
+             'range'],
 
     'maybe': ['_LBRA expansions _RBRA'],
+    'range': ['STRING _DOT _DOT STRING'],
 
-    'token': ['TOKEN _COLON tokenvalue _NL',
-              'TOKEN tokenmods _COLON tokenvalue _NL'],
+    'token': ['TOKEN _COLON expansions _NL'],
+    'statement': ['_PERCENT RULE expansions _NL'],
 
-    '?tokenvalue': ['REGEXP', 'STRING'],
-    'tokenmods':  ['_DOT RULE', 'tokenmods _DOT RULE'],
+    'tokenvalue': ['REGEXP', 'STRING'],
 }
 
 
@@ -218,29 +219,14 @@ class SimplifyTree(InlineTransformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-def get_tokens(tree, token_set):
-    for t in tree.find_data('token'):
-        x = t.children
-        name = x[0].value
-        assert not name.startswith('__'), 'Names starting with double-underscore are reserved (Error at %s)' % name
-        if name in token_set:
-            raise ValueError("Token '%s' defined more than once" % name)
-        token_set.add(name)
-
-        if len(x) == 2:
-            yield name, x[1], []
-        else:
-            assert len(x) == 3
-            yield name, x[2], x[1]
-
 class ExtractAnonTokens(InlineTransformer):
     def __init__(self, tokens, token_set):
         self.tokens = tokens
         self.token_set = token_set
-        self.token_reverse = {value[1:-1]: name for name, value, _flags in tokens}
+        self.token_reverse = {td.value: td.name for td in tokens}
         self.i = 0
 
-    def anontoken(self, token):
+    def tokenvalue(self, token):
         if token.type == 'STRING':
             value = token.value[1:-1]
             try:
@@ -270,11 +256,165 @@ class ExtractAnonTokens(InlineTransformer):
 
         if token_name not in self.token_set:
             self.token_set.add(token_name)
-            self.tokens.append((token_name, token, []))
+            if token.type == 'STRING':
+                self.tokens.append(TokenDef__Str(token_name, token[1:-1]))
+            else:
+                self.tokens.append(TokenDef__Regexp(token_name, token[1:-1]))
             assert value not in self.token_reverse, value
             self.token_reverse[value] = token_name
 
         return Token('TOKEN', token_name, -1)
+
+
+class TokenValue(object):
+    def __init__(self, value):
+        self.value = value
+
+class TokenValue__Str(TokenValue):
+    def to_regexp(self):
+        return re.escape(self.value)
+
+class TokenValue__Regexp(TokenValue):
+    def to_regexp(self):
+        return self.value
+
+class TokenTreeToRegexp(Transformer):
+    def tokenvalue(self, tv):
+        tv ,= tv
+        value = tv.value[1:-1]
+
+        if r'\u' in value:
+            # XXX for now, you can't mix unicode escaping and unicode characters at the same token
+            value = unicode_escape(value)[0]
+
+        if tv.type == 'REGEXP':
+            return TokenValue__Regexp(value)
+        elif tv.type == 'STRING':
+            return TokenValue__Str(value)
+
+        assert False
+
+    def expansion(self, items):
+        if len(items) == 1:
+            return items[0]
+        return TokenValue__Regexp(''.join(i.to_regexp() for i in items))
+    def expansions(self, exps):
+        if len(exps) == 1:
+            return exps[0]
+        return TokenValue__Regexp('%s' % ('|'.join(i.to_regexp() for i in exps)))
+    def range(self, items):
+        assert all(i.type=='STRING' for i in items)
+        items = [i[1:-1] for i in items]
+        start, end = items
+        assert len(start) == len(end) == 1, (start, end)
+        return TokenValue__Regexp('[%s-%s]' % (start, end))
+
+    def expr(self, args):
+        inner, op = args
+        return TokenValue__Regexp('(?:%s)%s' % (inner.to_regexp(), op))
+
+class Grammar:
+    def __init__(self, ruledefs, tokendefs, extra):
+        self.tokendefs = tokendefs
+        self.ruledefs = ruledefs
+        self.extra = extra
+
+    def compile(self, lexer=False):
+        assert lexer
+
+        tokendefs = [(name.value, t) for name, t in self.tokendefs]
+
+        ignore = []
+        for i, t in enumerate(self.extra['ignore']):
+            name = '__IGNORE_%d'%i
+            tokendefs.append((name, t))
+            ignore.append(name)
+        self.extra['ignore'] = ignore
+
+        # =================
+        #  Compile Tokens
+        # =================
+        token_to_regexp = TokenTreeToRegexp()
+        token_dict = dict(tokendefs)
+        assert len(token_dict) == len(tokendefs), "Same name defined twice?"
+
+        #  Resolve token assignments
+        while True:
+            changed = False
+            for name, token_tree in tokendefs:
+                for exp in chain(token_tree.find_data('expansion'), token_tree.find_data('expr')):
+                    for i, item in enumerate(exp.children):
+                        if isinstance(item, Token):
+                            assert item.type != 'RULE', "Rules aren't allowed inside tokens"
+                            if item.type == 'TOKEN':
+                                exp.children[i] = token_dict[item]
+                                changed = True
+            if not changed:
+                break
+
+        # Convert tokens to strings/regexps
+        tokens = []
+        for name, token_tree in tokendefs:
+            regexp = token_to_regexp.transform(token_tree)
+            if isinstance(regexp, TokenValue__Str):
+                tokendef = TokenDef__Str(name, regexp.value)
+            else:
+                tokendef = TokenDef__Regexp(name, regexp.to_regexp())
+            tokens.append(tokendef)
+
+        #  Resolve regexp assignments of the form /..${X}../ 
+        # Not sure this is even important, since you can express most regexps with EBNF
+        # TODO a nicer implementation of this
+        token_dict = {td.name: td.to_regexp() for td in tokens}
+        while True:
+            changed = False
+            for t in tokens:
+                if isinstance(t, TokenDef__Regexp):
+                    sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], t.value)
+                    if sp:
+                        value = ''.join(token_dict[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
+                                        for x in sp)
+                        if value != t.value:
+                            t.value = value
+                            changed = True
+            if not changed:
+                break
+
+        # =================
+        #  Compile Rules
+        # =================
+        extract_anon = ExtractAnonTokens(tokens, set(token_dict))
+        ebnf_to_bnf = EBNF_to_BNF()
+        simplify_rule = SimplifyRule_Visitor()
+        rule_tree_to_text = RuleTreeToText()
+        rules = {}
+
+        for name, rule_tree in self.ruledefs:
+            assert name not in rules
+            tree = extract_anon.transform(rule_tree) # Adds to tokens
+            rules[name] = ebnf_to_bnf.transform(tree)
+
+        dict_update_safe(rules, ebnf_to_bnf.new_rules)
+
+        for r in rules.values():
+            simplify_rule.visit(r)
+
+        rules = {origin: rule_tree_to_text.transform(tree) for origin, tree in rules.items()}
+
+        return tokens, rules, self.extra
+
+
+
+class GrammarRule:
+    def __init__(self, name, expansions):
+        self.keep_all_tokens = name.startswith('!')
+        name = name.lstrip('!')
+        self.expand1 = name.startswith('?')
+        name = name.lstrip('?')
+
+        self.name = name
+        self.expansions = expansions
+
 
 
 
@@ -289,8 +429,6 @@ class GrammarLoader:
         self.parser = LALR(lexer_conf, parser_conf)
 
         self.simplify_tree = SimplifyTree()
-        self.simplify_rule = SimplifyRule_Visitor()
-        self.rule_tree_to_text = RuleTreeToText()
 
     def load_grammar(self, grammar_text):
         try:
@@ -306,74 +444,51 @@ class GrammarLoader:
                 raise GrammarError("Newline without starting a new option (Expecting '|') at line %s column %s" % (e.line, e.column))
             raise
 
-        # =================
-        #  Process Tokens
-        # =================
+        # Extract grammar items
 
-        token_set = set()
-        tokens = list(get_tokens(tree, token_set))
-        extract_anon = ExtractAnonTokens(tokens, token_set)
-        tree = extract_anon.transform(tree) # Adds to tokens
+        token_defs = [c.children for c in tree.children if c.data=='token']
+        rule_defs = [c.children for c in tree.children if c.data=='rule']
+        statements = [c.children for c in tree.children if c.data=='statement']
+        assert len(token_defs) + len(rule_defs) + len(statements) == len(tree.children)
 
-        token_ref = {}
-        tokendefs = []
-        for name, token, flags in tokens:
-            value = token.value[1:-1]
-            if r'\u' in value:
-                # XXX for now, you can't mix unicode escaping and unicode characters at the same token
-                value = unicode_escape(value)[0]
+        # Verify correctness
+        token_names = set()
+        for name, _ in token_defs:
+            if name.startswith('__'):
+                raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
+            if name in token_names:
+                raise GrammarError("Token '%s' defined more than once" % name)
+            token_names.add(name)
 
-            if token.type == 'REGEXP':
-                sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], value)
-                if sp:
-                    value = ''.join(token_ref[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
-                                    for x in sp)
+        rules = [GrammarRule(name, x) for name, x in rule_defs]
 
-                token_ref[name] = value
-                tokendef = TokenDef__Regexp(name, value)
+        rule_names = set()
+        for r in rules:
+            if r.name.startswith('__'):
+                raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
+            if r.name in rule_names:
+                raise GrammarError("Token '%s' defined more than once" % name)
+            rule_names.add(r.name)
+
+        for r in rules:
+            used_symbols = {t for x in r.expansions.find_data('expansion')
+                              for t in x.scan_values(lambda t: t.type in ('RULE', 'TOKEN'))}
+            for sym in used_symbols:
+                if is_terminal(sym):
+                    if sym not in token_names:
+                        raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, r.name))
+                else:
+                    if sym not in rule_names:
+                        raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, r.name))
+
+        ignore = []
+        for command, expansions in statements:
+            if command == 'ignore':
+                ignore.append(expansions)
             else:
-                assert token.type == 'STRING'
-                tokendef = TokenDef__Str(name, value)
+                assert False, command
 
-            tokendefs.append((tokendef, flags))
+        return Grammar(rule_defs, token_defs, {'ignore': ignore})
 
-        # =================
-        #  Process Rules
-        # =================
-
-        ebnf_to_bnf = EBNF_to_BNF()
-
-        rules = {}
-        for rule in tree.find_data('rule'):
-            name, ebnf_tree = rule.children
-            name = name.value
-            if name in rules:
-                raise ValueError("Rule '%s' defined more than once" % name)
-
-            rules[name] = ebnf_to_bnf.transform(ebnf_tree)
-
-        dict_update_safe(rules, ebnf_to_bnf.new_rules)
-
-        for r in rules.values():
-            self.simplify_rule.visit(r)
-
-        rules = {origin: self.rule_tree_to_text.transform(tree) for origin, tree in rules.items()}
-
-        # ====================
-        #  Verify correctness
-        # ====================
-        used_symbols = {symbol for expansions in rules.values()
-                               for expansion, _alias in expansions
-                               for symbol in expansion}
-        rule_set = {r.lstrip('!').lstrip('?') for r in rules}
-        for sym in used_symbols:
-            if is_terminal(sym):
-                if sym not in token_set:
-                    raise GrammarError("Token '%s' used but not defined" % sym)
-            else:
-                if sym not in rule_set:
-                    raise GrammarError("Rule '%s' used but not defined" % sym)
-
-        return tokendefs, rules
 
 load_grammar = GrammarLoader().load_grammar

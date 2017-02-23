@@ -48,6 +48,16 @@ class Tree(object):
     def find_data(self, data):
         return self.find_pred(lambda t: t.data == data)
 
+    def scan_values(self, pred):
+        for c in self.children:
+            if isinstance(c, Tree):
+                for t in c.scan_values(pred):
+                    yield t
+            else:
+                if pred(c):
+                    yield c
+
+
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo))
 

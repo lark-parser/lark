@@ -22,9 +22,10 @@ parser = Lark(r"""
         NAME: /[a-zA-Z_]\w*/
         VALUE: /.*/
 
-        WS.ignore: /[\t \f]+/
-        COMMENT.ignore: /\#[^\n]*/
         _NL: /(\r?\n)+/
+
+        %ignore /[\t \f]+/
+        %ignore /\#[^\n]*/
     """, parser="lalr_contextual_lexer")
 
 

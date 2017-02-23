@@ -16,6 +16,7 @@ class Parser(object):
 
     def parse(self, seq, set_state=None):
         i = 0
+        token = None
         stream = iter(seq)
         states_idx = self.analysis.states_idx
 

@@ -2,7 +2,7 @@
 
 import re
 
-from .utils import Str, classify
+from .utils import Str, classify, STRING_TYPE
 from .common import is_terminal
 
 class LexError(Exception):
@@ -10,6 +10,7 @@ class LexError(Exception):
 
 class TokenDef(object):
     def __init__(self, name, value):
+        assert isinstance(value, STRING_TYPE), value
         self.name = name
         self.value = value
 
@@ -94,7 +95,7 @@ def _create_unless(tokens):
 
 class Lexer(object):
     def __init__(self, tokens, ignore=()):
-        assert all(isinstance(t, TokenDef) for t in tokens)
+        assert all(isinstance(t, TokenDef) for t in tokens), tokens
 
         self.ignore = ignore
         self.newline_char = '\n'
@@ -176,7 +177,7 @@ class ContextualLexer:
     def __init__(self, tokens, states, ignore=(), always_accept=()):
         tokens_by_name = {}
         for t in tokens:
-            assert t.name not in tokens_by_name
+            assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
 
         lexer_by_tokens = {}

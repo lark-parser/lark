@@ -27,7 +27,7 @@ json_grammar = r"""
     number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
     string : /".*?(?<!\\)"/
 
-    WS.ignore: /[ \t\n]+/
+    %ignore /[ \t\n]+/
 """
 
 class TreeToJson(Transformer):

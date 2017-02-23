@@ -3,12 +3,12 @@ from itertools import chain
 import re
 import codecs
 
-from .lexer import Lexer, Token, UnexpectedInput, TokenDef__Str, TokenDef__Regexp
+from .lexer import Lexer, Token, UnexpectedInput
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
-from .common import is_terminal, GrammarError, LexerConf, ParserConf
+from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 
@@ -232,18 +232,19 @@ class SimplifyTree(InlineTransformer):
         return tokenmods + [value]
 
 class ExtractAnonTokens(InlineTransformer):
-    def __init__(self, tokens, token_set):
+    def __init__(self, tokens):
         self.tokens = tokens
-        self.token_set = token_set
-        self.token_reverse = {td.value: td.name for td in tokens}
+        self.token_set = {td.name for td in self.tokens}
+        self.str_reverse = {td.pattern.value: td.name for td in tokens if isinstance(td.pattern, PatternStr)}
+        self.re_reverse = {td.pattern.value: td.name for td in tokens if isinstance(td.pattern, PatternRE)}
         self.i = 0
 
     def tokenvalue(self, token):
+        value = token.value[1:-1]
         if token.type == 'STRING':
-            value = token.value[1:-1]
             try:
                 # If already defined, use the user-defined token name
-                token_name = self.token_reverse[value]
+                token_name = self.str_reverse[value]
             except KeyError:
                 # Try to assign an indicative anon-token name, otherwise use a numbered name
                 try:
@@ -257,40 +258,32 @@ class ExtractAnonTokens(InlineTransformer):
                 token_name = '__' + token_name
 
         elif token.type == 'REGEXP':
-            token_name = 'ANONRE_%d' % self.i
-            value = token.value
-            self.i += 1
+            if value in self.re_reverse: # Kind of a wierd placement
+                token_name = self.re_reverse[value]
+            else:
+                token_name = 'ANONRE_%d' % self.i
+                self.i += 1
         else:
             assert False, token
 
-        if value in self.token_reverse: # Kind of a wierd placement
-            token_name = self.token_reverse[value]
-
         if token_name not in self.token_set:
             self.token_set.add(token_name)
+
             if token.type == 'STRING':
-                self.tokens.append(TokenDef__Str(token_name, token[1:-1]))
+                pattern = PatternStr(value)
+                assert value not in self.str_reverse
+                self.str_reverse[value] = token_name
             else:
-                self.tokens.append(TokenDef__Regexp(token_name, token[1:-1]))
-            assert value not in self.token_reverse, value
-            self.token_reverse[value] = token_name
+                pattern = PatternRE(value)
+                assert value not in self.re_reverse
+                self.re_reverse[value] = token_name
+
+            self.tokens.append(TokenDef(token_name, pattern))
 
         return Token('TOKEN', token_name, -1)
 
 
-class TokenValue(object):
-    def __init__(self, value):
-        self.value = value
-
-class TokenValue__Str(TokenValue):
-    def to_regexp(self):
-        return re.escape(self.value)
-
-class TokenValue__Regexp(TokenValue):
-    def to_regexp(self):
-        return self.value
-
-class TokenTreeToRegexp(Transformer):
+class TokenTreeToPattern(Transformer):
     def tokenvalue(self, tv):
         tv ,= tv
         value = tv.value[1:-1]
@@ -300,30 +293,30 @@ class TokenTreeToRegexp(Transformer):
             value = unicode_escape(value)[0]
 
         if tv.type == 'REGEXP':
-            return TokenValue__Regexp(value)
+            return PatternRE(value)
         elif tv.type == 'STRING':
-            return TokenValue__Str(value)
+            return PatternStr(value)
 
         assert False
 
     def expansion(self, items):
         if len(items) == 1:
             return items[0]
-        return TokenValue__Regexp(''.join(i.to_regexp() for i in items))
+        return PatternRE(''.join(i.to_regexp() for i in items))
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        return TokenValue__Regexp('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)))
+        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)))
     def range(self, items):
         assert all(i.type=='STRING' for i in items)
         items = [i[1:-1] for i in items]
         start, end = items
         assert len(start) == len(end) == 1, (start, end)
-        return TokenValue__Regexp('[%s-%s]' % (start, end))
+        return PatternRE('[%s-%s]' % (start, end))
 
     def expr(self, args):
         inner, op = args
-        return TokenValue__Regexp('(?:%s)%s' % (inner.to_regexp(), op))
+        return PatternRE('(?:%s)%s' % (inner.to_regexp(), op))
 
 class Grammar:
     def __init__(self, rule_defs, token_defs, extra):
@@ -339,32 +332,28 @@ class Grammar:
         # =================
         #  Compile Tokens
         # =================
-        token_to_regexp = TokenTreeToRegexp()
+        token_tree_to_pattern = TokenTreeToPattern()
 
         # Convert tokens to strings/regexps
         tokens = []
         for name, token_tree in tokendefs:
-            regexp = token_to_regexp.transform(token_tree)
-            if isinstance(regexp, TokenValue__Str):
-                tokendef = TokenDef__Str(name, regexp.value)
-            else:
-                tokendef = TokenDef__Regexp(name, regexp.to_regexp())
-            tokens.append(tokendef)
+            pattern = token_tree_to_pattern.transform(token_tree)
+            tokens.append(TokenDef(name, pattern) )
 
         #  Resolve regexp assignments of the form /..${X}../
         # XXX This is deprecated, since you can express most regexps with EBNF
         # XXX Also, since this happens after import, it can be a source of bugs
-        token_dict = {td.name: td.to_regexp() for td in tokens}
+        token_dict = {td.name: td.pattern.to_regexp() for td in tokens}
         while True:
             changed = False
             for t in tokens:
-                if isinstance(t, TokenDef__Regexp):
-                    sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], t.value)
+                if isinstance(t.pattern, PatternRE):
+                    sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], t.pattern.value)
                     if sp:
                         value = ''.join(token_dict[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
                                         for x in sp)
-                        if value != t.value:
-                            t.value = value
+                        if value != t.pattern.value:
+                            t.pattern.value = value
                             changed = True
             if not changed:
                 break
@@ -372,7 +361,7 @@ class Grammar:
         # =================
         #  Compile Rules
         # =================
-        extract_anon = ExtractAnonTokens(tokens, set(token_dict))
+        extract_anon = ExtractAnonTokens(tokens)
         ebnf_to_bnf = EBNF_to_BNF()
         simplify_rule = SimplifyRule_Visitor()
         rule_tree_to_text = RuleTreeToText()
@@ -439,7 +428,7 @@ def resolve_token_references(token_defs):
 
 class GrammarLoader:
     def __init__(self):
-        tokens = [TokenDef__Regexp(name, value) for name, value in TOKENS.items()]
+        tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
         d = {r: [(x.split(), None) for x in xs] for r, xs in RULES.items()}
         rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
@@ -493,6 +482,7 @@ class GrammarLoader:
         for name, _ in token_defs:
             if name.startswith('__'):
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
+
         # Handle ignore tokens
         ignore_names = []
         for i, t in enumerate(ignore):

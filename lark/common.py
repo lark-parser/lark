@@ -1,3 +1,4 @@
+import re
 
 class GrammarError(Exception):
     pass
@@ -43,3 +44,34 @@ class ParserConf:
         self.rules = rules
         self.callback = callback
         self.start = start
+
+
+
+class Pattern(object):
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return repr(self.value)
+
+class PatternStr(Pattern):
+    def to_regexp(self):
+        return re.escape(self.value)
+
+    priority = 0
+
+class PatternRE(Pattern):
+    def to_regexp(self):
+        return self.value
+
+    priority = 1
+
+class TokenDef(object):
+    def __init__(self, name, pattern):
+        assert isinstance(pattern, Pattern), pattern
+        self.name = name
+        self.pattern = pattern
+
+    def __repr__(self):
+        return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+

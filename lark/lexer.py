@@ -3,32 +3,10 @@
 import re
 
 from .utils import Str, classify, STRING_TYPE
-from .common import is_terminal
+from .common import is_terminal, PatternStr, PatternRE, TokenDef
 
 class LexError(Exception):
     pass
-
-class TokenDef(object):
-    def __init__(self, name, value):
-        assert isinstance(value, STRING_TYPE), value
-        self.name = name
-        self.value = value
-
-    def __repr__(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.value)
-
-class TokenDef__Str(TokenDef):
-    def to_regexp(self):
-        return re.escape(self.value)
-
-    priority = 0
-
-class TokenDef__Regexp(TokenDef):
-    def to_regexp(self):
-        return self.value
-
-    priority = 1
-
 
 class UnexpectedInput(LexError):
     def __init__(self, seq, lex_pos, line, column):
@@ -75,17 +53,18 @@ def _create_unless_callback(strs):
     return unless_callback
 
 def _create_unless(tokens):
-    tokens_by_type = classify(tokens, type)
+    tokens_by_type = classify(tokens, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
     callback = {}
-    for retok in tokens_by_type.get(TokenDef__Regexp, []):
+    for retok in tokens_by_type.get(PatternRE, []):
         unless = {}
-        for strtok in tokens_by_type.get(TokenDef__Str, []):
-            m = re.match(retok.value, strtok.value)
-            if m and m.group(0) == strtok.value:
+        for strtok in tokens_by_type.get(PatternStr, []):
+            s = strtok.pattern.value
+            m = re.match(retok.pattern.value, s)
+            if m and m.group(0) == s:
                 embedded_strs.add(strtok.name)
-                unless[strtok.value] = strtok.name
+                unless[s] = strtok.name
         if unless:
             callback[retok.name] = _create_unless_callback(unless)
 
@@ -104,21 +83,21 @@ class Lexer(object):
         # Sanitization
         for t in tokens:
             try:
-                re.compile(t.to_regexp())
+                re.compile(t.pattern.to_regexp())
             except:
-                raise LexError("Cannot compile token: %s: %s" % t)
+                raise LexError("Cannot compile token: %s: %s" % (t.name, t.pattern))
 
         token_names = {t.name for t in tokens}
         assert all(t in token_names for t in ignore)
 
         # Init
-        self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.to_regexp())]
+        self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = [t for t in ignore]
 
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())
 
-        tokens.sort(key=lambda x:(x.priority, len(x.value)), reverse=True)
+        tokens.sort(key=lambda x:(x.pattern.priority, len(x.pattern.value)), reverse=True)
 
         self.tokens = tokens
 
@@ -132,7 +111,7 @@ class Lexer(object):
         mres = []
         while tokens:
             try:
-                mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.to_regexp()) for t in tokens[:max_size]))
+                mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()) for t in tokens[:max_size]))
             except AssertionError:  # Yes, this is what Python provides us.. :/
                 return self._build_mres(tokens, max_size//2)
 

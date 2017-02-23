@@ -317,13 +317,22 @@ def _make_parser_test(PARSER):
             That means that "a" is not filtered out, despite being an 'immediate string'.
             Whether or not this is the intuitive behavior, I'm not sure yet.
 
+            Perhaps the right thing to do is report a collision (if such is relevant)
+
             -Erez
             """
 
             g = _Lark("""start: "a"
                         A: "a" """)
             x = g.parse('a')
+
             self.assertEqual(len(x.children), 1, '"a" should not be considered anonymous')
+            self.assertEqual(x.children[0].type, "A")
+
+            g = _Lark("""start: /a/
+                        A: /a/ """)
+            x = g.parse('a')
+            self.assertEqual(len(x.children), 1, '/a/ should not be considered anonymous')
             self.assertEqual(x.children[0].type, "A")
 
         def test_maybe(self):

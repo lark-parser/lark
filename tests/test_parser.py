@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError
+from lark.lexer import LexError
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -275,6 +276,20 @@ def _make_parser_test(PARSER):
             self.assertSequenceEqual(x.children, ['World'])
             x = g.parse('Hello HelloWorld')
             self.assertSequenceEqual(x.children, ['HelloWorld'])
+
+        # def test_string_priority(self):
+        #     g = _Lark("""start: (A | /a?bb/)+
+        #                  A: "a"  """)
+        #     x = g.parse('abb')
+        #     self.assertEqual(len(x.children), 2)
+
+        #     # This parse raises an exception because the lexer will always try to consume
+        #     # "a" first and will never match the regular expression
+        #     # This behavior is subject to change!!
+        #     # Thie won't happen with ambiguity handling.
+        #     g = _Lark("""start: (A | /a?ab/)+
+        #                  A: "a"  """)
+        #     self.assertRaises(LexError, g.parse, 'aab')
 
         def test_undefined_rule(self):
             self.assertRaises(GrammarError, _Lark, """start: a""")

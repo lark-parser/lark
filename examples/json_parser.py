@@ -24,11 +24,11 @@ json_grammar = r"""
     object : "{" [pair ("," pair)*] "}"
     pair   : string ":" value
 
-    number: FLOAT
+    number: SIGNED_NUMBER
     string : ESCAPED_STRING
 
     %import common.ESCAPED_STRING
-    %import common.FLOAT
+    %import common.SIGNED_NUMBER
     %import common.WS
 
     %ignore WS

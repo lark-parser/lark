@@ -3,13 +3,18 @@
 //
 
 DIGIT: "0".."9"
+HEXDIGIT: "a".."f"|"A".."F"|DIGIT
 
 INT: DIGIT+
-DECIMAL: INT ("." INT)?
+SIGNED_INT: ["+"|"-"] INT
+DECIMAL: INT "." INT? | "." INT
 
 // float = /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-FLOAT: "-"? DECIMAL (("e"|"E")("+"|"-")? INT)?
+_EXP: ("e"|"E") SIGNED_INT
+FLOAT: INT _EXP | DECIMAL _EXP?
 
+NUMBER: FLOAT | INT
+SIGNED_NUMBER: ["+"|"-"] NUMBER
 
 //
 // Strings

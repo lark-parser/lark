@@ -22,15 +22,16 @@ calc_grammar = """
         | product "*" atom  -> mul
         | product "/" atom  -> div
 
-    ?atom: NUMBER           -> number
+    ?atom: DECIMAL          -> number
          | "-" atom         -> neg
          | NAME             -> var
          | "(" sum ")"
 
-    NAME: /[a-zA-Z]\w+/       // Regexp form
-    NUMBER: ("0".."9"|".")+   // EBNF form (compiles to regexp)
+    %import common.CNAME -> NAME
+    %import common.DECIMAL
+    %import common.WS_INLINE
 
-    %ignore " "|"\t"
+    %ignore WS_INLINE
 """
 
 class CalculateTree(InlineTransformer):

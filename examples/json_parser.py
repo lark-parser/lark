@@ -24,10 +24,14 @@ json_grammar = r"""
     object : "{" [pair ("," pair)*] "}"
     pair   : string ":" value
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/
+    number: FLOAT
+    string : ESCAPED_STRING
 
-    %ignore /[ \t\n]+/
+    %import common.ESCAPED_STRING
+    %import common.FLOAT
+    %import common.WS
+
+    %ignore WS
 """
 
 class TreeToJson(Transformer):

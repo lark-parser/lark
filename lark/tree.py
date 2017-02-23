@@ -39,11 +39,11 @@ class Tree(object):
     def find_pred(self, pred):
         if pred(self):
             yield self
-        else:
-            for c in self.children:
-                if isinstance(c, Tree):
-                    for t in c.find_pred(pred):
-                        yield t
+
+        for c in self.children:
+            if isinstance(c, Tree):
+                for t in c.find_pred(pred):
+                    yield t
 
     def find_data(self, data):
         return self.find_pred(lambda t: t.data == data)

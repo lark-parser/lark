@@ -22,13 +22,13 @@ calc_grammar = """
         | product "*" atom  -> mul
         | product "/" atom  -> div
 
-    ?atom: DECIMAL          -> number
+    ?atom: NUMBER           -> number
          | "-" atom         -> neg
          | NAME             -> var
          | "(" sum ")"
 
     %import common.CNAME -> NAME
-    %import common.DECIMAL
+    %import common.NUMBER
     %import common.WS_INLINE
 
     %ignore WS_INLINE

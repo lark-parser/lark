@@ -11,7 +11,7 @@ from .common import GrammarError, LexerConf, ParserConf
 
 from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import ENGINE_DICT
+from .parser_frontends import get_frontend
 
 class LarkOptions(object):
     """Specifies the options for Lark
@@ -19,7 +19,13 @@ class LarkOptions(object):
     """
     OPTIONS_DOC = """
         parser - Which parser engine to use ("earley" or "lalr". Default: "earley")
-                 Note: Both will use Lark's lexer.
+                 Note: "lalr" requires a lexer
+        lexer - Whether or not to use a lexer stage
+            None: Don't use a lexer
+            "standard": Use a standard lexer
+            "contextual": Stronger lexer (only works with parser="lalr")
+            "auto" (default): Choose for me based on grammar and parser
+
         transformer - Applies the transformer to every parse tree
         debug - Affects verbosity (default: False)
         only_lex - Don't build a parser. Useful for debugging (default: False)
@@ -40,11 +46,12 @@ class LarkOptions(object):
         self.cache_grammar = o.pop('cache_grammar', False)
         self.postlex = o.pop('postlex', None)
         self.parser = o.pop('parser', 'earley')
+        self.lexer = o.pop('lexer', 'auto')
         self.transformer = o.pop('transformer', None)
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
 
-        assert self.parser in ENGINE_DICT
+        # assert self.parser in ENGINE_DICT
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
@@ -118,9 +125,15 @@ class Lark:
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
 
-        if not self.options.only_lex:
+        if self.options.lexer == 'auto':
+            if self.options.parser == 'lalr':
+                self.options.lexer = 'standard'
+            elif self.options.parser == 'earley':
+                self.options.lexer = 'standard'
+
+        if self.options.parser:
             self.parser = self._build_parser()
-        else:
+        elif self.options.lexer:
             self.lexer = self._build_lexer()
 
         if self.profiler: self.profiler.enter_section('outside_lark')
@@ -131,7 +144,7 @@ class Lark:
         return Lexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore)
 
     def _build_parser(self):
-        self.parser_class = ENGINE_DICT[self.options.parser]
+        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
         rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
         if self.profiler:

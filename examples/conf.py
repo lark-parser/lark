@@ -26,7 +26,7 @@ parser = Lark(r"""
 
         %ignore /[\t \f]+/
         %ignore /\#[^\n]*/
-    """, parser="lalr_contextual_lexer")
+    """, parser="lalr", lexer="contextual")
 
 
 sample_conf = """

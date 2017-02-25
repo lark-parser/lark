@@ -131,7 +131,7 @@ class Earley_NoLex:
     def _prepare_expansion(self, expansion):
         for sym in expansion:
             if is_terminal(sym):
-                regexp = self.token_by_name[sym].to_regexp()
+                regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
                 if not width == (1,1):
                     raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
@@ -144,9 +144,28 @@ class Earley_NoLex:
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
-ENGINE_DICT = {
-    'lalr': LALR,
-    'earley': Earley,
-    'earley_nolex': Earley_NoLex,
-    'lalr_contextual_lexer': LALR_ContextualLexer
-}
+
+def get_frontend(parser, lexer):
+    if parser=='lalr':
+        if lexer is None:
+            raise ValueError('The LALR parser requires use of a lexer')
+        elif lexer == 'standard':
+            return LALR
+        elif lexer == 'contextual':
+            return LALR_ContextualLexer
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    elif parser=='earley':
+        if lexer is None:
+            return Earley_NoLex
+        elif lexer=='standard':
+            return Earley
+        elif lexer=='contextual':
+            raise ValueError('The Earley parser does not support the contextual parser')
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    else:
+        raise ValueError('Unknown parser: %s' % parser)
+
+
+

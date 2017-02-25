@@ -24,7 +24,7 @@ parser = Lark(r"""
 
         _CR : /\r/
         _LF : /\n/
-    """, parser="earley_nolex")
+    """, lexer=None)
 
 class RestoreTokens(Transformer):
     value = ''.join

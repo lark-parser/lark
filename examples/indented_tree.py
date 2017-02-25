@@ -16,9 +16,10 @@ tree_grammar = r"""
 
     tree: NAME _NL [_INDENT tree+ _DEDENT]
 
-    NAME: /\w+/
+    %import common.CNAME -> NAME
+    %import common.WS_INLINE
+    %ignore WS_INLINE
 
-    WS.ignore: /\s+/
     _NL: /(\r?\n[\t ]*)+/
     _INDENT: "<INDENT>"
     _DEDENT: "<DEDENT>"

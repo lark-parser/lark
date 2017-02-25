@@ -88,7 +88,9 @@ class Lexer(object):
                 raise LexError("Cannot compile token: %s: %s" % (t.name, t.pattern))
 
         token_names = {t.name for t in tokens}
-        assert all(t in token_names for t in ignore)
+        for t in ignore:
+            if t not in token_names:
+                raise LexError("Token '%s' was marked to ignore but it is not defined!" % t)
 
         # Init
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]

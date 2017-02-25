@@ -2,8 +2,8 @@ import re
 from collections import defaultdict
 
 from .tree import Tree
-from .common import is_terminal, ParserConf
-from .lexer import Token, TokenDef__Str
+from .common import is_terminal, ParserConf, PatternStr
+from .lexer import Token
 from .parsers import earley
 from .lark import Lark
 
@@ -22,7 +22,7 @@ def is_iter_empty(i):
 class Reconstructor:
     def __init__(self, parser):
         tokens = {t.name:t for t in parser.lexer_conf.tokens}
-        token_res = {t.name:re.compile(t.to_regexp()) for t in parser.lexer_conf.tokens}
+        token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in parser.lexer_conf.tokens}
 
         class MatchData:
             def __init__(self, data):
@@ -50,8 +50,8 @@ class Reconstructor:
                 for sym in self.expansion:
                     if is_discarded_terminal(sym):
                         t = tokens[sym]
-                        assert isinstance(t, TokenDef__Str)
-                        to_write.append(t.value)
+                        assert isinstance(t.pattern, PatternStr)
+                        to_write.append(t.pattern.value)
                     else:
                         x = next(args2)
                         if isinstance(x, list):

@@ -42,9 +42,9 @@ class TestParsers(unittest.TestCase):
 class TestEarley(unittest.TestCase):
     pass
 
-def _make_parser_test(PARSER):
+def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):
-        return Lark(grammar, parser=PARSER, **kwargs)
+        return Lark(grammar, lexer=LEXER, parser=PARSER, **kwargs)
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*
@@ -397,12 +397,18 @@ def _make_parser_test(PARSER):
             g.parse("+2e-9")
             self.assertRaises(ParseError, g.parse, "+2e-9e")
 
-    _NAME = "Test" + PARSER.capitalize()
+    _NAME = "Test" + PARSER.capitalize() + (LEXER or 'None').capitalize()
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser
 
-for PARSER in ['lalr', 'earley', 'lalr_contextual_lexer']:
-    _make_parser_test(PARSER)
+_TO_TEST = [
+        ('standard', 'earley'),
+        ('standard', 'lalr'),
+        ('contextual', 'lalr'),
+]
+
+for LEXER, PARSER in _TO_TEST:
+    _make_parser_test(LEXER, PARSER)
 
 
 if __name__ == '__main__':

@@ -18,9 +18,10 @@ class LarkOptions(object):
 
     """
     OPTIONS_DOC = """
-        parser - Which parser engine to use ("earley" or "lalr". Default: "earley")
+        parser - Decides which parser engine to use, "earley" or "lalr". (Default: "earley")
                  Note: "lalr" requires a lexer
-        lexer - Whether or not to use a lexer stage
+
+        lexer - Decides whether or not to use a lexer stage
             None: Don't use a lexer
             "standard": Use a standard lexer
             "contextual": Stronger lexer (only works with parser="lalr")
@@ -28,7 +29,6 @@ class LarkOptions(object):
 
         transformer - Applies the transformer to every parse tree
         debug - Affects verbosity (default: False)
-        only_lex - Don't build a parser. Useful for debugging (default: False)
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None)
@@ -40,7 +40,6 @@ class LarkOptions(object):
         o = dict(options_dict)
 
         self.debug = bool(o.pop('debug', False))
-        self.only_lex = bool(o.pop('only_lex', False))
         self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
         self.tree_class = o.pop('tree_class', Tree)
         self.cache_grammar = o.pop('cache_grammar', False)
@@ -51,12 +50,13 @@ class LarkOptions(object):
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
 
-        # assert self.parser in ENGINE_DICT
+        assert self.parser in ('earley', 'lalr', None)
+
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
         if self.keep_all_tokens:
-            raise NotImplementedError("Not implemented yet!")
+            raise NotImplementedError("keep_all_tokens: Not implemented yet!")
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -166,8 +166,6 @@ class Lark:
             return stream
 
     def parse(self, text):
-        assert not self.options.only_lex
-
         return self.parser.parse(text)
 
         # if self.profiler:

@@ -20,13 +20,13 @@ Knowledge assumed:
 
 Lark accepts its grammars in a format called [EBNF](https://www.wikiwand.com/en/Extended_Backus%E2%80%93Naur_form). It basically looks like this:
 
-    rule_name : list of rules and TOKENS to match
+    rule_name : list of rules and TERMINALS to match
               | another possible list of items
               | etc.
 
-    TOKEN: "some text to match"
+    TERMINAL: "some text to match"
 
-(*a token is a string or a regular expression*)
+(*a terminal is a string or a regular expression*)
 
 The parser will try to match each rule (left-part) by matching its items (right-part) sequentially, trying each alternative (In practice, the parser is predictive so we don't have to try every alternative).
 
@@ -57,20 +57,32 @@ A quick explanation of the syntax:
 
 Lark also supports the rule+ operator, meaning one or more instances. It also supports the rule? operator which is another way to say *optional*.
 
-Of course, we still haven't defined "STRING" and "NUMBER".
+Of course, we still haven't defined "STRING" and "NUMBER". Luckily, both these literals are already defined in Lark's common library:
 
-We'll do that now, and also take care of the white-space, which is part of the text.
+    %import common.ESCAPED_STRING   -> STRING
+    %import common.SIGNED_NUMBER    -> NUMBER
+
+The arrow (->) renames the terminals. But that only adds obscurity in this case, so going forward we'll just use their original names.
+
+We'll also take care of the white-space, which is part of the text.
+
+    %import common.WS
+    %ignore WS
+
+We tell our parser to ignore whitespace. Otherwise, we'd have to fill our grammar with WS terminals.
+
+By the way, if you're curious what these terminals signify, they are roughly equivalent to this:
 
     NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
     STRING : /".*?(?<!\\)"/
+    %ignore /[ \t\n\f\r]+/
 
-    WS.ignore: /[ \t\n]+/
+Lark will accept this, if you really want to complicate your life :)
 
-Upper-case names signify tokens, while lower-case names signify rules. Rules can contain other rules and tokens, while tokens can only contain a single value.
+(You can find the original definitions in [common.g](/lark/grammars/common.g).)
 
-These regular-expressions are a bit complex, but there's no simple way around it. We want to match "3.14" and also "-2e10", and that's just how it's done.
-
-Notice that WS, which matches whitespace, gets flagged with "ignore". This tells Lark not to pass it to the parser. Otherwise, we'd have to fill our grammar with WS tokens.
+Notice that terminals are written in UPPER-CASE, while rules are written in lower-case.
+I'll touch more on the differences between rules and terminals later.
 
 ## Part 2 - Creating the Parser
 
@@ -83,19 +95,19 @@ from lark import Lark
 json_parser = Lark(r"""
     value: dict
          | list
-         | STRING
-         | NUMBER
+         | ESCAPED_STRING
+         | SIGNED_NUMBER
          | "true" | "false" | "null"
 
     list : "[" [value ("," value)*] "]"
 
     dict : "{" [pair ("," pair)*] "}"
-    pair : STRING ":" value
+    pair : ESCAPED_STRING ":" value
 
-    NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    STRING : /".*?(?<!\\)"/
-
-    WS.ignore: /[ \t\n]+/
+    %import common.ESCAPED_STRING
+    %import common.SIGNED_NUMBER
+    %import common.WS
+    %ignore WS
 
     """, start='value')
 ```
@@ -120,14 +132,14 @@ value
 
 As promised, Lark automagically creates a tree that represents the parsed text.
 
-But something is suspiciously missing from the tree. Where are the curly braces, the commas and all the other punctuation tokens?
+But something is suspiciously missing from the tree. Where are the curly braces, the commas and all the other punctuation literals?
 
-Lark automatically filters out tokens from the tree, based on the following criteria:
+Lark automatically filters out literals from the tree, based on the following criteria:
 
-- Filter out string tokens without a name, or with a name that starts with an underscore.
-- Keep regex tokens, even unnamed ones, unless their name starts with an underscore.
+- Filter out string literals without a name, or with a name that starts with an underscore.
+- Keep regexps, even unnamed ones, unless their name starts with an underscore.
 
-Unfortunately, this means that it will also filter out tokens like "true" and "false", and we will lose that information. The next section, "Shaping the tree" deals with this issue, and others.
+Unfortunately, this means that it will also filter out literals like "true" and "false", and we will lose that information. The next section, "Shaping the tree" deals with this issue, and others.
 
 ## Part 3 - Shaping the Tree
 
@@ -141,21 +153,20 @@ I'll present the solution, and then explain it:
     ?value: dict
           | list
           | string
-          | number
+          | SIGNED_NUMBER      -> number
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
 
     ...
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/ 
+    string : ESCAPED_STRING
 
-1. Those little arrows signify *aliases*. An alias is a name for a specific part of the rule. In this case, we will name *true/false/null* matches, and this way we won't lose the information.
+1. Those little arrows signify *aliases*. An alias is a name for a specific part of the rule. In this case, we will name the *true/false/null* matches, and this way we won't lose the information. We also alias *SIGNED_NUMBER* to mark it for later processing.
 
-2. The question mark prefixing *value* ("?value") tells the tree-builder to inline this branch if it has only one member. In this case, *value* will always have only one member.
+2. The question-mark prefixing *value* ("?value") tells the tree-builder to inline this branch if it has only one member. In this case, *value* will always have only one member, and will always be inlined.
 
-3. We turned the *string* and *number* tokens into rules containing anonymous tokens. This way they will appear in the tree as a branch. You will see why that's useful in the next part of the tutorial. Note that these anonymous tokens won't get filtered out, because they are regular expressions.
+3. We turned the *ESCAPED_STRING* terminal into a rule. This way it will appear in the tree as a branch. This is equivalent to aliasing (like we did for the number), but now *string* can also be used elsewhere in the grammar (namely, in the *pair* rule).
 
 Here is the new grammar:
 
@@ -165,7 +176,7 @@ json_parser = Lark(r"""
     ?value: dict
           | list
           | string
-          | number
+          | SIGNED_NUMBER      -> number
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
@@ -175,10 +186,12 @@ json_parser = Lark(r"""
     dict : "{" [pair ("," pair)*] "}"
     pair : string ":" value
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/
+    string : ESCAPED_STRING
 
-    WS.ignore: /[ \t\n]+/
+    %import common.ESCAPED_STRING
+    %import common.SIGNED_NUMBER
+    %import common.WS
+    %ignore WS
 
     """, start='value')
 ```
@@ -229,7 +242,7 @@ And when we run it, we get this:
 {Tree(string, [Token(ANONRE_1, "key")]): [Tree(string, [Token(ANONRE_1, "item0")]), Tree(string, [Token(ANONRE_1, "item1")]), Tree(number, [Token(ANONRE_0, 3.14)]), Tree(true, [])]}
 ```
 
-This is pretty close. Let's write a full transformer that can handle the tokens too.
+This is pretty close. Let's write a full transformer that can handle the terminals too.
 
 Also, our definitions of list and dict are a bit verbose. We can do better:
 
@@ -282,7 +295,7 @@ json_grammar = r"""
     ?value: dict
           | list
           | string
-          | number
+          | SIGNED_NUMBER      -> number
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
@@ -292,10 +305,12 @@ json_grammar = r"""
     dict : "{" [pair ("," pair)*] "}"
     pair : string ":" value
 
-    number : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    string : /".*?(?<!\\)"/
+    string : ESCAPED_STRING
 
-    WS.ignore: /[ \t\n]+/
+    %import common.ESCAPED_STRING
+    %import common.SIGNED_NUMBER
+    %import common.WS
+    %ignore WS
     """
 
 class TreeToJson(Transformer):
@@ -344,9 +359,9 @@ json_parser = Lark(json_grammar, start='value', parser='lalr')
 ```
     $ time python tutorial_json.py json_data > /dev/null
 
-    real	0m7.722s
-    user	0m7.504s
-    sys 	0m0.175s
+    real        0m7.554s
+    user        0m7.352s
+    sys         0m0.148s
 
 Ah, that's much better. The resulting JSON is of course exactly the same. You can run it for yourself and see.
 

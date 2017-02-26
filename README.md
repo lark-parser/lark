@@ -28,7 +28,7 @@ Here is a little program to parse "Hello, World!" (Or any other similar phrase):
 from lark import Lark
 l = Lark('''start: WORD "," WORD "!"
             WORD: /\w+/
-            SPACE.ignore: " "
+            %ignore " "
          ''')
 print( l.parse("Hello, World!") )
 ```
@@ -53,11 +53,12 @@ parser = Lark('''?sum: product
                      | product "*" item  -> mul
                      | product "/" item  -> div
 
-                 ?item: /[\d.]+/         -> number
+                 ?item: NUMBER           -> number
                       | "-" item         -> neg
                       | "(" sum ")"
 
-                 SPACE.ignore: /\s+/
+                 %import common.NUMBER
+                 %ignore /\s+/
          ''', start='sum')
 
 class CalculateTree(InlineTransformer):
@@ -92,24 +93,24 @@ Lark has no dependencies.
 
 ## List of Features
 
- - EBNF grammar with a little extra
- - Earley & LALR(1)
- - Builds an AST automagically based on the grammar
- - Optional Lexer
-     - Automatic line & column tracking
-     - Automatic token collision resolution (unless both tokens are regexps)
  - Python 2 & 3 compatible
+ - Earley & LALR(1)
+ - EBNF grammar with a little extra
+ - Builds an AST automagically based on the grammar
+ - Standard library of terminals (strings, numbers, names, etc.)
  - Unicode fully supported
  - Extensive test suite
+ - Lexer (optional)
+     - Automatic line & column tracking
+     - Automatic token collision resolution (unless both terminals are regexps)
+     - Contextual lexing for LALR
 
 ## Coming soon
 
 These features are planned to be implemented in the near future:
 
- - Standard library of tokens (string, int, name, etc.)
- - Contextual lexing for LALR (already working, needs some finishing touches)
  - Parser generator - create a small parser, independent of Lark, to embed in your project.
- - Grammar composition (in cases that the tokens can reliably signify a grammar change)
+ - Grammar composition
  - Optimizations in both the parsers and the lexer
  - Better handling of ambiguity
 

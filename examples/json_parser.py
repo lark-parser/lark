@@ -15,7 +15,7 @@ json_grammar = r"""
     ?value: object
           | array
           | string
-          | number
+          | SIGNED_NUMBER      -> number
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
@@ -24,7 +24,6 @@ json_grammar = r"""
     object : "{" [pair ("," pair)*] "}"
     pair   : string ":" value
 
-    number: SIGNED_NUMBER
     string : ESCAPED_STRING
 
     %import common.ESCAPED_STRING

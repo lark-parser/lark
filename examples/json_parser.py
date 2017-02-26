@@ -36,7 +36,7 @@ json_grammar = r"""
 class TreeToJson(Transformer):
     @inline_args
     def string(self, s):
-        return s[1:-1]
+        return s[1:-1].replace('\\"', '"')
 
     array = list
     pair = tuple
@@ -46,6 +46,10 @@ class TreeToJson(Transformer):
     null = lambda self, _: None
     true = lambda self, _: True
     false = lambda self, _: False
+
+# json_parser = Lark(json_grammar, parser='earley')
+# def parse(x):
+#     return TreeToJson().transform(json_parser.parse(x))
 
 json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
 parse = json_parser.parse
@@ -57,7 +61,7 @@ def test():
             "empty_array"  : [],
             "booleans"     : { "YES" : true, "NO" : false },
             "numbers"      : [ 0, 1, -2, 3.3, 4.4e5, 6.6e-7 ],
-            "strings"      : [ "This", [ "And" , "That" ] ],
+            "strings"      : [ "This", [ "And" , "That", "And a \\"b" ] ],
             "nothing"      : null
         }
     '''

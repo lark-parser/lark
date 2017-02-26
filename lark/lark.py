@@ -127,8 +127,8 @@ class Lark:
                 lexer = 'standard'
         self.options.lexer = lexer
 
-        self.grammar = load_grammar(grammar)
-        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer))
+        self.grammar = load_grammar(grammar, source)
+        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
         self.ignore_tokens = self.grammar.extra['ignore']
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)

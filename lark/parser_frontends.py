@@ -92,21 +92,39 @@ class Earley(WithLexer):
         return res[0]
 
 
+def tokenize_text(text):
+    new_text = []
+    line = 1
+    col_start_pos = 0
+    for i, ch in enumerate(text):
+        if '\n' in ch:
+            line += ch.count('\n')
+            col_start_pos = i + ch.rindex('\n')
+        new_text.append(Token('CHAR', ch, line=line, column=i - col_start_pos))
+    return new_text
+
 class Nearley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
+        self.tokens_to_convert = {name: '__token_'+name for name, tree, _ in parser_conf.rules if is_terminal(name)}
+        rules = []
+        for name, exp, alias in parser_conf.rules:
+            name = self.tokens_to_convert.get(name, name)
+            exp = [self.tokens_to_convert.get(x, x) for x in exp]
+            rules.append((name, exp, alias))
+
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
         rules = [{'name':n,
                   'symbols': list(self._prepare_expansion(x)),
                   'postprocess': getattr(parser_conf.callback, a)}
-                  for n,x,a in parser_conf.rules]
+                  for n,x,a in rules]
 
         self.parser = nearley.Parser(rules, parser_conf.start)
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
             if is_terminal(sym):
-                regexp = self.token_by_name[sym].to_regexp()
+                regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
                 if not width == (1,1):
                     raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
@@ -115,9 +133,19 @@ class Nearley_NoLex:
                 yield sym
 
     def parse(self, text):
-        res = self.parser.parse(text)
+        new_text = tokenize_text(text)
+        res = self.parser.parse(new_text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
-        return res[0]
+        res = res[0]
+
+        class RestoreTokens(Transformer):
+            pass
+
+        for t in self.tokens_to_convert:
+            setattr(RestoreTokens, t, ''.join)
+
+        res = RestoreTokens().transform(res)
+        return res
 
 
 class Earley_NoLex:
@@ -141,13 +169,14 @@ class Earley_NoLex:
                 regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
                 if not width == (1,1):
-                    raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
-                yield (re.compile(regexp).match,)
+                    raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
+                yield (re.compile(regexp).match, regexp)
             else:
                 yield sym
 
     def parse(self, text):
-        res = self.parser.parse(text)
+        new_text = tokenize_text(text)
+        res = self.parser.parse(new_text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         res = res[0]
 

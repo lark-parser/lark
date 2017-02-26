@@ -49,7 +49,14 @@ class TestParsers(unittest.TestCase):
 
 
 class TestEarley(unittest.TestCase):
-    pass
+    def test_anon_in_scanless(self):
+        # Fails an Earley implementation without special handling for empty rules,
+        # or re-processing of already completed rules.
+        g = Lark(r"""start: B
+                     B: ("ab"|/[^b]/)*
+                  """, lexer=None)
+
+        assertEqual( g.parse('abc'), 'abc')
 
 
 def _make_parser_test(LEXER, PARSER):
@@ -98,6 +105,7 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             g.parse(u'\xa3\u0101\u00a3')
 
+        @unittest.skipIf(LEXER is None, "Regexps >1 not supported with scanless parsing")
         def test_unicode2(self):
             g = _Lark(r"""start: UNIA UNIB UNIA UNIC
                         UNIA: /\xa3/
@@ -105,6 +113,14 @@ def _make_parser_test(LEXER, PARSER):
                         UNIC: /a?\u0101c\n/
                         """)
             g.parse(u'\xa3a\u0101b\\ \u00a3\u0101c\n')
+
+        def test_unicode3(self):
+            g = _Lark(r"""start: UNIA UNIB UNIA UNIC
+                        UNIA: /\xa3/
+                        UNIB: "\u0101"
+                        UNIC: /\u0203/ /\n/
+                        """)
+            g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
 
         def test_recurse_expansion(self):
@@ -279,7 +295,7 @@ def _make_parser_test(LEXER, PARSER):
 
         def test_token_collision(self):
             g = _Lark("""start: "Hello" NAME
-                        NAME: /\w+/
+                        NAME: /\w/+
                         %ignore " "
                     """)
             x = g.parse('Hello World')
@@ -320,6 +336,7 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('aaaab')
             x = g.parse('b')
 
+        @unittest.skipIf(LEXER is None, "Regexps >1 not supported with scanless parsing")
         def test_regex_embed(self):
             g = _Lark("""start: A B C
                         A: /a/
@@ -413,9 +430,7 @@ def _make_parser_test(LEXER, PARSER):
             # or re-processing of already completed rules.
             g = _Lark(r"""start: _empty a "B"
                           a: _empty "A"
-                          _empty: _empty2
-                          _empty2: _empty3
-                          _empty3:
+                          _empty:
                             """)
             x = g.parse('AB')
 
@@ -437,7 +452,7 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("+2e-9")
             self.assertRaises(ParseError, g.parse, "+2e-9e")
 
-    _NAME = "Test" + PARSER.capitalize() + (LEXER or 'None').capitalize()
+    _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser
 
@@ -445,6 +460,7 @@ _TO_TEST = [
         ('standard', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
+        (None, 'earley'),
 ]
 
 for LEXER, PARSER in _TO_TEST:

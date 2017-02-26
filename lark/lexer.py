@@ -20,11 +20,13 @@ class UnexpectedInput(LexError):
         self.context = context
 
 class Token(Str):
-    def __new__(cls, type_, value, pos_in_stream=None):
+    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
         inst = Str.__new__(cls, value)
         inst.type = type_
         inst.pos_in_stream = pos_in_stream
         inst.value = value
+        inst.line = line
+        inst.column = column
         return inst
 
     @classmethod
@@ -134,9 +136,7 @@ class Lexer(object):
                     value = m.group(0)
                     type_ = type_from_index[m.lastindex]
                     if type_ not in ignore_types:
-                        t = Token(type_, value, lex_pos)
-                        t.line = line
-                        t.column = lex_pos - col_start_pos
+                        t = Token(type_, value, lex_pos, line, lex_pos - col_start_pos)
                         if t.type in self.callback:
                             t = self.callback[t.type](t)
                         yield t
@@ -198,9 +198,7 @@ class ContextualLexer:
                     value = m.group(0)
                     type_ = type_from_index[m.lastindex]
                     if type_ not in ignore_types:
-                        t = Token(type_, value, lex_pos)
-                        t.line = line
-                        t.column = lex_pos - col_start_pos
+                        t = Token(type_, value, lex_pos, line, lex_pos - col_start_pos)
                         if t.type in lexer.callback:
                             t = lexer.callback[t.type](t)
                         yield t

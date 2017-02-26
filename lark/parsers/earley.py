@@ -76,18 +76,18 @@ class Column:
         for item in items:
 
             if item.is_complete:
-                if item in added:
-                    continue
+                # if item in added: # XXX This causes a bug with empty rules
+                #     continue      #     And might be unnecessary
+                # added.add(item)
                 self.to_reduce.append(item)
-                added.add(item)
             else:
                 if is_terminal(item.expect):
                     self.to_scan.append(item)
                 else:
                     if item in added:
                         continue
-                    self.to_predict.append(item)
                     added.add(item)
+                    self.to_predict.append(item)
 
             self.item_count += 1    # Only count if actually added
 

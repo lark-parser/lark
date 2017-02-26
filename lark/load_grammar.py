@@ -2,6 +2,7 @@ import os.path
 from itertools import chain
 import re
 import codecs
+from ast import literal_eval
 
 from .lexer import Lexer, Token, UnexpectedInput
 
@@ -69,8 +70,8 @@ TOKENS = {
     '_DOT': r'\.',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
-    'STRING': r'".*?[^\\]"',
-    'REGEXP': r"/(?!/).*?[^\\]/",
+    'STRING': r'"(\\"|\\\\|[^"])*?"',
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/',
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*',
@@ -279,34 +280,30 @@ class ExtractAnonTokens(InlineTransformer):
             self.token_set.add(token_name)
 
             if token.type == 'STRING':
-                pattern = PatternStr(value)
                 assert value not in self.str_reverse
                 self.str_reverse[value] = token_name
             else:
-                pattern = PatternRE(value)
                 assert value not in self.re_reverse
                 self.re_reverse[value] = token_name
 
+            pattern = _tokenvalue_to_pattern(token)
             self.tokens.append(TokenDef(token_name, pattern))
 
         return Token('TOKEN', token_name, -1)
 
 
+def _tokenvalue_to_pattern(tokenvalue):
+    v = tokenvalue.value
+    assert v[0] == v[-1] and v[0] in '"/'
+    s = literal_eval("u'''%s'''" % v[1:-1])
+    return { 'STRING': PatternStr,
+             'REGEXP': PatternRE }[tokenvalue.type](s)
+
+
 class TokenTreeToPattern(Transformer):
     def tokenvalue(self, tv):
         tv ,= tv
-        value = tv.value[1:-1]
-
-        if r'\u' in value:
-            # XXX for now, you can't mix unicode escaping and unicode characters at the same token
-            value = unicode_escape(value)[0]
-
-        if tv.type == 'REGEXP':
-            return PatternRE(value)
-        elif tv.type == 'STRING':
-            return PatternStr(value)
-
-        assert False
+        return _tokenvalue_to_pattern(tv)
 
     def expansion(self, items):
         if len(items) == 1:
@@ -459,6 +456,8 @@ class GrammarLoader:
         self.simplify_tree = SimplifyTree()
 
     def load_grammar(self, grammar_text):
+        # for x in self.parser.lex(grammar_text):
+        #     print (x)
         try:
             tree = self.simplify_tree.transform( self.parser.parse(grammar_text+'\n') )
         except UnexpectedInput as e:

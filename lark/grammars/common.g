@@ -19,7 +19,7 @@ SIGNED_NUMBER: ["+"|"-"] NUMBER
 //
 // Strings
 //
-ESCAPED_STRING: /".*?(?<!\\)"/
+ESCAPED_STRING: /".*?(?<!\\\\)"/
 
 
 //

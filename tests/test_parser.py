@@ -383,6 +383,25 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcde')
             x = g.parse('dd')
 
+        def test_backslash(self):
+            g = _Lark(r"""start: "\\" "a"
+                      """)
+            x = g.parse(r'\a')
+
+            g = _Lark(r"""start: /\\\\/ /a/
+                      """)
+            x = g.parse(r'\a')
+
+
+        def test_backslash2(self):
+            g = _Lark(r"""start: "\"" "-"
+                      """)
+            x = g.parse('"-')
+
+            g = _Lark(r"""start: /\// /-/
+                      """)
+            x = g.parse('/-')
+
         # def test_token_recurse(self):
         #     g = _Lark("""start: A
         #                  A: B

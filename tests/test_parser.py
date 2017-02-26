@@ -39,8 +39,18 @@ class TestParsers(unittest.TestCase):
         l2 = g.parse('(a,b,c,*x)')
         assert l == l2, '%s != %s' % (l.pretty(), l2.pretty())
 
+
+    def test_earley_nolex(self):
+        g = Lark("""start: A "b" c
+                    A: "a"+
+                    c: "abc"
+                    """, parser="earley", lexer=None)
+        x = g.parse('aaaababc')
+
+
 class TestEarley(unittest.TestCase):
     pass
+
 
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):

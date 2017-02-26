@@ -12,24 +12,20 @@
 # See examples/conf.py for an example of that approach.
 #
 
-from lark import Lark, Transformer
+
+from lark import Lark
 
 parser = Lark(r"""
-        start: _nl? section+
-        section: "[" name "]" _nl item+
-        item: name "=" value _nl
-        name: /[a-zA-Z_]/ /\w/*
-        value: /./+
-        _nl: (_CR? _LF)+
+        start: _NL? section+
+        section: "[" NAME "]" _NL item+
+        item: NAME "=" VALUE _NL
+        VALUE: /./*
+        %import common.CNAME -> NAME
+        %import common.NEWLINE -> _NL
 
-        _CR : /\r/
-        _LF : /\n/
+        %import common.WS_INLINE
+        %ignore WS_INLINE
     """, lexer=None)
-
-class RestoreTokens(Transformer):
-    value = ''.join
-    name = ''.join
-
 
 def test():
     sample_conf = """
@@ -40,7 +36,7 @@ this="that",4
 """
 
     r = parser.parse(sample_conf)
-    print(RestoreTokens().transform(r).pretty())
+    print r.pretty()
 
 if __name__ == '__main__':
     test()

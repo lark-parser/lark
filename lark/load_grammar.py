@@ -239,6 +239,15 @@ class ExtractAnonTokens(InlineTransformer):
         self.re_reverse = {td.pattern.value: td.name for td in tokens if isinstance(td.pattern, PatternRE)}
         self.i = 0
 
+    def range(self, start, end):
+        assert start.type == end.type == 'STRING'
+        start = start.value[1:-1]
+        end = end.value[1:-1]
+        assert len(start) == len(end) == 1
+        regexp = '/[%s-%s]/' % (start, end)
+        t = Token('REGEXP', regexp)
+        return self.tokenvalue(t)
+
     def tokenvalue(self, token):
         value = token.value[1:-1]
         if token.type == 'STRING':
@@ -325,8 +334,19 @@ class Grammar:
         self.extra = extra
 
     def compile(self, lexer=False):
-        assert lexer
+        # assert lexer
+        if not lexer:
+            self.rule_defs += self.token_defs
+            self.token_defs = []
 
+            for name, tree in self.rule_defs:
+                for tokenvalue in tree.find_data('tokenvalue'):
+                    value ,= tokenvalue.children
+                    if value.type == 'STRING':
+                        assert value[0] == value[-1] == '"'
+                        if len(value)>3:
+                            tokenvalue.data = 'expansion'
+                            tokenvalue.children = [T('tokenvalue', [Token('STRING', '"%s"'%ch)]) for ch in value[1:-1]]
         tokendefs = list(self.token_defs)
 
         # =================

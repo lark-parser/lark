@@ -119,21 +119,23 @@ class Lark:
         assert not self.options.profile, "Feature temporarily disabled"
         self.profiler = Profiler() if self.options.profile else None
 
+        lexer = self.options.lexer
+        if lexer == 'auto':
+            if self.options.parser == 'lalr':
+                lexer = 'standard'
+            elif self.options.parser == 'earley':
+                lexer = 'standard'
+        self.options.lexer = lexer
+
         self.grammar = load_grammar(grammar)
-        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=True)
+        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer))
         self.ignore_tokens = self.grammar.extra['ignore']
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
 
-        if self.options.lexer == 'auto':
-            if self.options.parser == 'lalr':
-                self.options.lexer = 'standard'
-            elif self.options.parser == 'earley':
-                self.options.lexer = 'standard'
-
         if self.options.parser:
             self.parser = self._build_parser()
-        elif self.options.lexer:
+        elif lexer:
             self.lexer = self._build_lexer()
 
         if self.profiler: self.profiler.enter_section('outside_lark')

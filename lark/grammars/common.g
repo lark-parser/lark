@@ -39,3 +39,7 @@ CNAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
 WS_INLINE: (" "|/\t/)+
 WS: /[ \t\f\r\n]/+
 
+CR : /\r/
+LF : /\n/
+NEWLINE: (CR? LF)+
+

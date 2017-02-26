@@ -6,6 +6,7 @@ from .lexer import Lexer, ContextualLexer, Token
 from .common import is_terminal, GrammarError, ParserConf
 from .parsers import lalr_parser, earley, nearley
 from .parsers.grammar_analysis import Rule
+from .tree import Transformer
 
 class WithLexer:
     def __init__(self, lexer_conf):
@@ -121,10 +122,16 @@ class Nearley_NoLex:
 
 class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
+        self.tokens_to_convert = {name: '__token_'+name for name, tree, _ in parser_conf.rules if is_terminal(name)}
+        rules = []
+        for name, exp, alias in parser_conf.rules:
+            name = self.tokens_to_convert.get(name, name)
+            exp = [self.tokens_to_convert.get(x, x) for x in exp]
+            rules.append((name, exp, alias))
+
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
-        rules = [(n, list(self._prepare_expansion(x)), a)
-                 for n,x,a in parser_conf.rules]
+        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in rules]
 
         self.parser = earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
 
@@ -142,7 +149,16 @@ class Earley_NoLex:
     def parse(self, text):
         res = self.parser.parse(text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
-        return res[0]
+        res = res[0]
+
+        class RestoreTokens(Transformer):
+            pass
+
+        for t in self.tokens_to_convert:
+            setattr(RestoreTokens, t, ''.join)
+
+        res = RestoreTokens().transform(res)
+        return res
 
 
 def get_frontend(parser, lexer):

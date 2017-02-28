@@ -389,6 +389,17 @@ def _make_parser_test(LEXER, PARSER):
         #                  B: A
         #               """)
 
+        def test_empty(self):
+            # Fails an Earley implementation without special handling for empty rules,
+            # or re-processing of already completed rules.
+            g = _Lark(r"""start: _empty a "B"
+                          a: _empty "A"
+                          _empty: _empty2
+                          _empty2: _empty3
+                          _empty3:
+                            """)
+            x = g.parse('AB')
+
         def test_lexer_token_limit(self):
             "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
             tokens = {'A%d'%i:'"%d"'%i for i in range(300)}

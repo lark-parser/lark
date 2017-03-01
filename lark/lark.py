@@ -22,7 +22,7 @@ class LarkOptions(object):
                  Note: "lalr" requires a lexer
 
         lexer - Decides whether or not to use a lexer stage
-            None: Don't use a lexer
+            None: Don't use a lexer (scanless, only works with parser="earley")
             "standard": Use a standard lexer
             "contextual": Stronger lexer (only works with parser="lalr")
             "auto" (default): Choose for me based on grammar and parser
@@ -124,7 +124,7 @@ class Lark:
             if self.options.parser == 'lalr':
                 lexer = 'standard'
             elif self.options.parser == 'earley':
-                lexer = 'standard'
+                lexer = None
         self.options.lexer = lexer
 
         self.grammar = load_grammar(grammar, source)

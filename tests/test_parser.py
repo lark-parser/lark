@@ -35,17 +35,9 @@ class TestParsers(unittest.TestCase):
 
         g = Lark("""start: "(" name_list ("," "*" NAME)? ")"
                     name_list: NAME | name_list "," NAME
-                    NAME: /\w+/ """)
+                    NAME: /\w/+ """)
         l2 = g.parse('(a,b,c,*x)')
         assert l == l2, '%s != %s' % (l.pretty(), l2.pretty())
-
-
-    def test_earley_nolex(self):
-        g = Lark("""start: A "b" c
-                    A: "a"+
-                    c: "abc"
-                    """, parser="earley", lexer=None)
-        x = g.parse('aaaababc')
 
 
 class TestEarley(unittest.TestCase):
@@ -57,6 +49,14 @@ class TestEarley(unittest.TestCase):
                   """, lexer=None)
 
         assertEqual( g.parse('abc'), 'abc')
+
+    def test_earley_scanless(self):
+        g = Lark("""start: A "b" c
+                    A: "a"+
+                    c: "abc"
+                    """, parser="earley", lexer=None)
+        x = g.parse('aaaababc')
+
 
 
 def _make_parser_test(LEXER, PARSER):
@@ -78,8 +78,8 @@ def _make_parser_test(LEXER, PARSER):
         def test_basic2(self):
             # Multiple parsers and colliding tokens
             g = _Lark("""start: B A
-                        B: "12"
-                        A: "1" """)
+                         B: "12"
+                         A: "1" """)
             g2 = _Lark("""start: B A
                          B: "12"
                          A: "2" """)
@@ -123,14 +123,12 @@ def _make_parser_test(LEXER, PARSER):
             g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
 
-        def test_recurse_expansion(self):
-            """Verify that stack depth doesn't get exceeded on recursive rules marked for expansion."""
-            g = _Lark(r"""start: a | start a
+        def test_stack_for_ebnf(self):
+            """Verify that stack depth isn't an issue for EBNF grammars"""
+            g = _Lark(r"""start: a+
                          a : "a" """)
 
-            # Force PLY to write to the debug log, but prevent writing it to the terminal (uses repr() on the half-built
-            # STree data structures, which uses recursion).
-            g.parse("a" * (sys.getrecursionlimit() // 4))
+            g.parse("a" * (sys.getrecursionlimit()*2 ))
 
         def test_expand1_lists_with_one_item(self):
             g = _Lark(r"""start: list

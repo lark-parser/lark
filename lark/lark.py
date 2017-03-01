@@ -7,7 +7,7 @@ from collections import defaultdict
 from .utils import STRING_TYPE
 from .load_grammar import load_grammar
 from .tree import Tree
-from .common import GrammarError, LexerConf, ParserConf
+from .common import LexerConf, ParserConf
 
 from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder

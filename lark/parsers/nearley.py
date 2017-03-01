@@ -1,6 +1,6 @@
 "My name is Earley"
 
-from ..utils import classify, STRING_TYPE
+from ..utils import classify
 from ..common import ParseError, UnexpectedToken
 
 try:

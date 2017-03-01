@@ -5,7 +5,6 @@ from .tree import Tree
 from .common import is_terminal, ParserConf, PatternStr
 from .lexer import Token
 from .parsers import earley
-from .lark import Lark
 
 
 
@@ -68,7 +67,7 @@ class Reconstructor:
                 return to_write
 
         d = defaultdict(list)
-        for name, (expansions, options) in parser.rules.items():
+        for name, (expansions, _o) in parser.rules.items():
             for expansion, alias in expansions:
                 if alias:
                     d[alias].append(expansion)
@@ -103,5 +102,4 @@ class Reconstructor:
 
     def reconstruct(self, tree):
         return ''.join(self._reconstruct(tree))
-
 

@@ -6,10 +6,11 @@
 #
 
 import json
-from .json_parser import json_grammar
 
 from lark import Lark
 from lark.reconstruct import Reconstructor
+
+from .json_parser import json_grammar
 
 def test():
 

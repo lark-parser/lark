@@ -5,7 +5,6 @@ from .lexer import Lexer, ContextualLexer, Token
 
 from .common import is_terminal, GrammarError, ParserConf
 from .parsers import lalr_parser, earley, nearley
-from .parsers.grammar_analysis import Rule
 from .tree import Transformer
 
 class WithLexer:
@@ -126,7 +125,7 @@ class Nearley_NoLex:
             if is_terminal(sym):
                 regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
-                if not width == (1,1):
+                if width != (1,1):
                     raise GrammarError('Dynamic lexing requires all tokens to have a width of 1 (%s is %s)' % (regexp, width))
                 yield sym, re.compile(regexp)
             else:
@@ -168,7 +167,7 @@ class Earley_NoLex:
             if is_terminal(sym):
                 regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
-                if not width == (1,1):
+                if width != (1,1):
                     raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
                 yield (re.compile(regexp).match, regexp)
             else:

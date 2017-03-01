@@ -2,7 +2,7 @@
 
 import re
 
-from .utils import Str, classify, STRING_TYPE
+from .utils import Str, classify
 from .common import is_terminal, PatternStr, PatternRE, TokenDef
 
 class LexError(Exception):
@@ -13,7 +13,7 @@ class UnexpectedInput(LexError):
         context = seq[lex_pos:lex_pos+5]
         message = "No token defined for: '%s' in %r at line %d" % (seq[lex_pos], context, line)
 
-        super(LexError, self).__init__(message)
+        super(UnexpectedInput, self).__init__(message)
 
         self.line = line
         self.column = column

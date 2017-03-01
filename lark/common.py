@@ -24,7 +24,7 @@ class UnexpectedToken(ParseError):
                    "Expected: %s\n"
                    "Context: %s" % (token, self.line, self.column, expected, context))
 
-        super(ParseError, self).__init__(message)
+        super(UnexpectedToken, self).__init__(message)
 
 
 

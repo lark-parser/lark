@@ -3,7 +3,7 @@ from itertools import chain
 import re
 from ast import literal_eval
 
-from .lexer import Lexer, Token, UnexpectedInput
+from .lexer import Token, UnexpectedInput
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
@@ -526,7 +526,7 @@ class GrammarLoader:
                 token_tree = dict(g.token_defs)[dotted_path[-1]]
                 token_defs.append([name.value, token_tree])
             else:
-                assert False, command
+                assert False, stmt
 
 
         # Verify correctness 1

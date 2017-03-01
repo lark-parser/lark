@@ -8,7 +8,7 @@ class Indenter:
         self.indent_level = [0]
 
     def handle_NL(self, token):
-        if (self.paren_level > 0):
+        if self.paren_level > 0:
             return
 
         yield token

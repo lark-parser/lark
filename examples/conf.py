@@ -18,8 +18,8 @@ from lark import Lark
 parser = Lark(r"""
         start: _NL? section+
         section: "[" NAME "]" _NL item+
-        item: NAME "=" VALUE _NL
-        VALUE: /./*
+        item: NAME "=" VALUE? _NL
+        VALUE: /./+
         %import common.CNAME -> NAME
         %import common.NEWLINE -> _NL
 

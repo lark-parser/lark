@@ -33,9 +33,9 @@ class Item(object):
         return Item(self.rule, self.ptr+1, self.start, self.data + [data])
 
     def __eq__(self, other):
-        return self.start == other.start and self.ptr == other.ptr and self.rule == other.rule
+        return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
     def __hash__(self):
-        return hash((self.rule, self.ptr, self.start))
+        return hash((self.rule, self.ptr, id(self.start)))
 
     def __repr__(self):
         before = map(str, self.rule.expansion[:self.ptr])
@@ -115,14 +115,12 @@ class Parser:
             assert not is_terminal(nonterm), nonterm
             return [Item(rule, 0, i, []) for rule in self.predictions[nonterm]]
 
-        def complete(item, table):
+        def complete(item):
             name = item.rule.origin
             item.data = self.postprocess[item.rule](item.data)
-            return [i.advance(item.data) for i in table[item.start].to_predict if i.expect == name]
+            return [i.advance(item.data) for i in item.start.to_predict if i.expect == name]
 
-        def process_column(i, token):
-            assert i == len(table)-1
-            cur_set = table[i]
+        def process_column(i, token, cur_set):
             next_set = Column()
 
             while True:
@@ -133,9 +131,9 @@ class Parser:
                     break
 
                 for nonterm in to_predict:
-                    cur_set.add( predict(nonterm, i) )
+                    cur_set.add( predict(nonterm, cur_set) )
                 for item in to_reduce:
-                    cur_set.add( complete(item, table) )
+                    cur_set.add( complete(item) )
 
 
             if token is not END_TOKEN:
@@ -148,20 +146,21 @@ class Parser:
                 expect = {i.expect for i in cur_set.to_scan}
                 raise UnexpectedToken(token, expect, stream, i)
 
-            table.append(next_set)
+            return cur_set, next_set
 
         # Main loop starts
-        table = [Column()]
-        table[0].add(predict(start, 0))
+        column0 = Column()
+        column0.add(predict(start, column0))
 
+        cur_set = column0
         for i, char in enumerate(stream):
-            process_column(i, char)
+            _, cur_set = process_column(i, char, cur_set)
 
-        process_column(len(stream), END_TOKEN)
+        last_set, _ = process_column(len(stream), END_TOKEN, cur_set)
 
         # Parse ended. Now build a parse tree
-        solutions = [n.data for n in table[len(stream)].to_reduce
-                     if n.rule.origin==start and n.start==0]
+        solutions = [n.data for n in last_set.to_reduce
+                     if n.rule.origin==start and n.start is column0]
 
         if not solutions:
             raise ParseError('Incomplete parse: Could not find a solution to input')

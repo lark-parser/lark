@@ -36,7 +36,7 @@ this="that",4
 """
 
     r = parser.parse(sample_conf)
-    print r.pretty()
+    print (r.pretty())
 
 if __name__ == '__main__':
     test()

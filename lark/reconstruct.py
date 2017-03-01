@@ -68,7 +68,7 @@ class Reconstructor:
                 return to_write
 
         d = defaultdict(list)
-        for name, expansions in parser.rules.items():
+        for name, (expansions, options) in parser.rules.items():
             for expansion, alias in expansions:
                 if alias:
                     d[alias].append(expansion)
@@ -77,16 +77,14 @@ class Reconstructor:
                     d[name].append(expansion)
 
         rules = []
-        expand1s = {name.lstrip('!').lstrip('?') for name in d
-                    if name.startswith(('?', '!?'))}    # XXX Ugly code
+        expand1s = {name for name, (_x, options) in parser.rules.items()
+                    if options and options.expand1}
 
         for name, expansions in d.items():
             for expansion in expansions:
                 reduced = [sym if sym.startswith('_') or sym in expand1s else
                            (MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym),)
                            for sym in expansion if not is_discarded_terminal(sym)]
-
-                name = name.lstrip('!').lstrip('?')
 
                 rules.append((name, reduced, WriteTokens(name, expansion).f))
         self.rules = rules

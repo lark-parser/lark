@@ -407,6 +407,15 @@ def _make_parser_test(LEXER, PARSER):
                       """)
             x = g.parse(r'\a')
 
+        def test_special_chars(self):
+            g = _Lark(r"""start: "\n"
+                      """)
+            x = g.parse('\n')
+
+            g = _Lark(r"""start: /\n/
+                      """)
+            x = g.parse('\n')
+
 
         def test_backslash2(self):
             g = _Lark(r"""start: "\"" "-"

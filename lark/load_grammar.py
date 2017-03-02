@@ -290,7 +290,8 @@ class ExtractAnonTokens(InlineTransformer):
 def _literal_to_pattern(literal):
     v = literal.value
     assert v[0] == v[-1] and v[0] in '"/'
-    s = literal_eval("u'''%s'''" % v[1:-1])
+    x = v[1:-1].replace("'", r"\'")
+    s = literal_eval("u'''%s'''" % x)
     return { 'STRING': PatternStr,
              'REGEXP': PatternRE }[literal.type](s)
 

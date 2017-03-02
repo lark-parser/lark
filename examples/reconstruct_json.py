@@ -46,7 +46,7 @@ def test_lalr():
 
     new_json = Reconstructor(json_parser).reconstruct(tree)
     print (new_json)
-    print (json.loads(new_json) == json.loads(test_json)) 
+    print (json.loads(new_json) == json.loads(test_json))
 
 test_scanless()
 test_lalr()

@@ -20,8 +20,11 @@ def is_iter_empty(i):
 
 class Reconstructor:
     def __init__(self, parser):
-        tokens = {t.name:t for t in parser.lexer_conf.tokens}
-        token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in parser.lexer_conf.tokens}
+        # Recreate the rules to assume a standard lexer
+        _tokens, rules, _grammar_extra = parser.grammar.compile(lexer='standard', start='whatever')
+        tokens = {t.name:t for t in _tokens}
+
+        token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in _tokens}
 
         class MatchData(object):
             def __init__(self, data):
@@ -70,9 +73,6 @@ class Reconstructor:
                 assert is_iter_empty(args2)
 
                 return to_write
-
-        # Recreate the rules to assume a standard lexer
-        _tokens, rules, _grammar_extra = parser.grammar.compile(lexer='standard', start='whatever')
 
         d = defaultdict(list)
         for name, (expansions, _o) in rules.items():

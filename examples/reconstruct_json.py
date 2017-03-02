@@ -12,18 +12,18 @@ from lark.reconstruct import Reconstructor
 
 from .json_parser import json_grammar
 
-def test():
+test_json = '''
+    {
+        "empty_object" : {},
+        "empty_array"  : [],
+        "booleans"     : { "YES" : true, "NO" : false },
+        "numbers"      : [ 0, 1, -2, 3.3, 4.4e5, 6.6e-7 ],
+        "strings"      : [ "This", [ "And" , "That", "And a \\"b" ] ],
+        "nothing"      : null
+    }
+'''
 
-    test_json = '''
-        {
-            "empty_object" : {},
-            "empty_array"  : [],
-            "booleans"     : { "YES" : true, "NO" : false },
-            "numbers"      : [ 0, 1, -2, 3.3, 4.4e5, 6.6e-7 ],
-            "strings"      : [ "This", [ "And" , "That" ] ],
-            "nothing"      : null
-        }
-    '''
+def test_scanless():
 
     json_parser = Lark(json_grammar)
     tree = json_parser.parse(test_json)
@@ -38,4 +38,15 @@ def test():
     print (new_json)
     print (json.loads(new_json) == json.loads(test_json))
 
-test()
+
+def test_lalr():
+
+    json_parser = Lark(json_grammar, parser='lalr')
+    tree = json_parser.parse(test_json)
+
+    new_json = Reconstructor(json_parser).reconstruct(tree)
+    print (new_json)
+    print (json.loads(new_json) == json.loads(test_json)) 
+
+test_scanless()
+test_lalr()

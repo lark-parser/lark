@@ -380,7 +380,7 @@ class Grammar:
                     if name.startswith('_'):
                         options = RuleOptions.new_from(options, filter_out=True)
                     else:
-                        options = RuleOptions.new_from(options, join_children=True)
+                        options = RuleOptions.new_from(options, create_token=name)
 
                 name = tokens_to_convert.get(name, name)
                 for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
@@ -454,10 +454,10 @@ class Grammar:
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, join_children=False, filter_out=False):
+    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
-        self.join_children = join_children  # used for scanless postprocessing
+        self.create_token = create_token  # used for scanless postprocessing
 
         self.filter_out = filter_out        # remove this rule from the tree
                                             # used for "token"-rules in scanless

@@ -1,4 +1,5 @@
 from .common import is_terminal, GrammarError
+from .lexer import Token
 
 class Callback(object):
     pass
@@ -12,9 +13,9 @@ def create_expand1_tree_builder_function(tree_builder):
             return tree_builder(children)
     return expand1
 
-def create_join_children(tree_builder):
+def create_token_wrapper(tree_builder, name):
     def join_children(children):
-        children = [''.join(children)]
+        children = [Token(name, ''.join(children))]
         return tree_builder(children)
     return join_children
 
@@ -67,7 +68,7 @@ class ParseTreeBuilder:
         for origin, (expansions, options) in rules.items():
             keep_all_tokens = options.keep_all_tokens if options else False
             expand1 = options.expand1 if options else False
-            join_children = options.join_children if options else False
+            create_token = options.create_token if options else False
 
             _origin = origin
 
@@ -85,8 +86,8 @@ class ParseTreeBuilder:
                         if expand1:
                             f = create_expand1_tree_builder_function(f)
 
-                    if join_children:
-                        f = create_join_children(f)
+                    if create_token:
+                        f = create_token_wrapper(f, create_token)
 
 
                 alias_handler = create_rule_handler(expansion, f, keep_all_tokens, filter_out)

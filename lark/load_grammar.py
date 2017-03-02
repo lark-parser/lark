@@ -2,6 +2,7 @@ import os.path
 from itertools import chain
 import re
 from ast import literal_eval
+from copy import deepcopy
 
 from .lexer import Token, UnexpectedInput
 
@@ -348,13 +349,15 @@ class Grammar:
 
     def compile(self, lexer=False, start=None):
         if not lexer:
+            rule_defs = deepcopy(self.rule_defs)
+
             # XXX VERY HACKY!! There must be a better way..
             ignore_tokens = [('_'+name, t) for name, t in self.token_defs if name in self.extra['ignore']]
             if ignore_tokens:
                 self.token_defs = [('_'+name if name in self.extra['ignore'] else name,t) for name,t in self.token_defs]
                 ignore_names = [t[0] for t in ignore_tokens]
                 expr = Token('RULE', '__ignore')
-                for r, tree, _o in self.rule_defs:
+                for r, tree, _o in rule_defs:
                     for exp in tree.find_data('expansion'):
                         exp.children = list(interleave(exp.children, expr))
                         if r == start: # TODO use GrammarRule or similar (RuleOptions?)
@@ -362,14 +365,34 @@ class Grammar:
 
                 x = [T('expansion', [Token('RULE', x)]) for x in ignore_names]
                 _ignore_tree = T('expr', [T('expansions', x), Token('OP', '?')])
-                self.rule_defs.append(('__ignore', _ignore_tree, None))
+                rule_defs.append(('__ignore', _ignore_tree, None))
+            # End of "ignore" section
 
             for name, tree in self.token_defs:
-                self.rule_defs.append((name, tree, RuleOptions(keep_all_tokens=True)))
+                rule_defs.append((name, tree, RuleOptions(keep_all_tokens=True)))
 
             token_defs = []
+
+            tokens_to_convert = {name: '__token_'+name for name, tree, _ in rule_defs if is_terminal(name)}
+            new_rule_defs = []
+            for name, tree, options in rule_defs:
+                if name in tokens_to_convert:
+                    if name.startswith('_'):
+                        options = RuleOptions.new_from(options, filter_out=True)
+                    else:
+                        options = RuleOptions.new_from(options, join_children=True)
+
+                name = tokens_to_convert.get(name, name)
+                for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
+                    for i, sym in enumerate(exp.children):
+                        if sym in tokens_to_convert:
+                            exp.children[i] = Token(sym.type, tokens_to_convert[sym])
+                new_rule_defs.append((name, tree, options))
+
+            rule_defs = new_rule_defs
         else:
             token_defs = list(self.token_defs)
+            rule_defs = self.rule_defs
 
         # =================
         #  Compile Tokens
@@ -410,7 +433,7 @@ class Grammar:
         rule_tree_to_text = RuleTreeToText()
         rules = {}
 
-        for name, rule_tree, options in self.rule_defs:
+        for name, rule_tree, options in rule_defs:
             assert name not in rules, name
             rule_tree = PrepareLiterals().transform(rule_tree)
             if not lexer:
@@ -431,9 +454,20 @@ class Grammar:
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False):
+    def __init__(self, keep_all_tokens=False, expand1=False, join_children=False, filter_out=False):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
+        self.join_children = join_children  # used for scanless postprocessing
+
+        self.filter_out = filter_out        # remove this rule from the tree
+                                            # used for "token"-rules in scanless
+
+    @classmethod
+    def new_from(cls, options, **kw):
+        return cls(
+            keep_all_tokens=options and options.keep_all_tokens,
+            expand1=options and options.expand1,
+            **kw)
 
 def _extract_options_for_rule(name, expansions):
     keep_all_tokens = name.startswith('!')

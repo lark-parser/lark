@@ -23,12 +23,17 @@ class Reconstructor:
         tokens = {t.name:t for t in parser.lexer_conf.tokens}
         token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in parser.lexer_conf.tokens}
 
-        class MatchData:
+        class MatchData(object):
             def __init__(self, data):
                 self.data = data
 
+            def __repr__(self):
+                return '%s(%r)' % (type(self).__name__, self.data)
+
         class MatchTerminal(MatchData):
             def __call__(self, other):
+                if isinstance(other, Tree):
+                    return False
                 return token_res[self.data].match(other) is not None
 
         class MatchTree(MatchData):
@@ -66,8 +71,11 @@ class Reconstructor:
 
                 return to_write
 
+        # Recreate the rules to assume a standard lexer
+        _tokens, rules, _grammar_extra = parser.grammar.compile(lexer='standard', start='whatever')
+
         d = defaultdict(list)
-        for name, (expansions, _o) in parser.rules.items():
+        for name, (expansions, _o) in rules.items():
             for expansion, alias in expansions:
                 if alias:
                     d[alias].append(expansion)

@@ -149,16 +149,9 @@ class Nearley_NoLex:
 
 class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
-        self.tokens_to_convert = {name: '__token_'+name for name, tree, _ in parser_conf.rules if is_terminal(name)}
-        rules = []
-        for name, exp, alias in parser_conf.rules:
-            name = self.tokens_to_convert.get(name, name)
-            exp = [self.tokens_to_convert.get(x, x) for x in exp]
-            rules.append((name, exp, alias))
-
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
-        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in rules]
+        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
 
         self.parser = earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
 
@@ -177,16 +170,7 @@ class Earley_NoLex:
         new_text = tokenize_text(text)
         res = self.parser.parse(new_text)
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
-        res = res[0]
-
-        class RestoreTokens(Transformer):
-            pass
-
-        for t in self.tokens_to_convert:
-            setattr(RestoreTokens, t, ''.join)
-
-        res = RestoreTokens().transform(res)
-        return res
+        return res[0]
 
 
 def get_frontend(parser, lexer):

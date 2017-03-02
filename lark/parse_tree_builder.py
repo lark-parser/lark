@@ -12,11 +12,19 @@ def create_expand1_tree_builder_function(tree_builder):
             return tree_builder(children)
     return expand1
 
-def create_rule_handler(expansion, usermethod, keep_all_tokens):
+def create_join_children(tree_builder):
+    def join_children(children):
+        children = [''.join(children)]
+        return tree_builder(children)
+    return join_children
+
+def create_rule_handler(expansion, usermethod, keep_all_tokens, filter_out):
     # if not keep_all_tokens:
     to_include = [(i, not is_terminal(sym) and sym.startswith('_'))
                   for i, sym in enumerate(expansion)
-                  if keep_all_tokens or not is_terminal(sym) or not sym.startswith('_')]
+                  if keep_all_tokens
+                  or not ((is_terminal(sym) and sym.startswith('_')) or sym in filter_out)
+                  ]
 
     if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
         def _build_ast(match):
@@ -49,17 +57,23 @@ class ParseTreeBuilder:
     def create_tree_builder(self, rules, transformer):
         callback = Callback()
         new_rules = []
+
+        filter_out = set()
+        for origin, (expansions, options) in rules.items():
+            if options and options.filter_out:
+                assert origin.startswith('_')   # Just to make sure
+                filter_out.add(origin)
+
         for origin, (expansions, options) in rules.items():
             keep_all_tokens = options.keep_all_tokens if options else False
             expand1 = options.expand1 if options else False
+            join_children = options.join_children if options else False
 
             _origin = origin
 
             for expansion, alias in expansions:
                 if alias and origin.startswith('_'):
                     raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
-
-                _alias = 'autoalias_%s_%s' % (_origin, '_'.join(expansion))
 
                 try:
                     f = transformer._get_func(alias or _origin)
@@ -71,12 +85,17 @@ class ParseTreeBuilder:
                         if expand1:
                             f = create_expand1_tree_builder_function(f)
 
-                alias_handler = create_rule_handler(expansion, f, keep_all_tokens)
+                    if join_children:
+                        f = create_join_children(f)
 
-                if hasattr(callback, _alias):
+
+                alias_handler = create_rule_handler(expansion, f, keep_all_tokens, filter_out)
+
+                callback_name = 'autoalias_%s_%s' % (_origin, '_'.join(expansion))
+                if hasattr(callback, callback_name):
                     raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
-                setattr(callback, _alias, alias_handler)
+                setattr(callback, callback_name, alias_handler)
 
-                new_rules.append(( _origin, expansion, _alias ))
+                new_rules.append(( _origin, expansion, callback_name ))
 
         return new_rules, callback

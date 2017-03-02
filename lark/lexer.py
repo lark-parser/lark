@@ -40,6 +40,9 @@ class Token(Str):
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)
 
+    def __deepcopy__(self, memo):
+        return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
+
 class Regex:
     def __init__(self, pattern, flags=()):
         self.pattern = pattern

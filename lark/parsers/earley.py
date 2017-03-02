@@ -40,7 +40,7 @@ class Item(object):
     def __repr__(self):
         before = map(str, self.rule.expansion[:self.ptr])
         after = map(str, self.rule.expansion[self.ptr:])
-        return '<(%d) %s : %s * %s>' % (self.start, self.rule.origin, ' '.join(before), ' '.join(after))
+        return '<(%d) %s : %s * %s>' % (id(self.start), self.rule.origin, ' '.join(before), ' '.join(after))
 
 
 class NewsList(list):
@@ -76,9 +76,20 @@ class Column:
         for item in items:
 
             if item.is_complete:
-                # if item in added: # XXX This causes a bug with empty rules
-                #     continue      #     And might be unnecessary
-                # added.add(item)
+
+                # (We must allow repetition of empty rules)
+                if item.rule.expansion:
+
+                    # This is an important test to avoid infinite-loops,
+                    # For example for the rule:
+                    #   a: a | "b"
+                    # If we can detect these cases statically, we can remove
+                    # this test an gain a small optimization
+                    #
+                    if item in added:
+                        continue
+                    added.add(item)
+
                 self.to_reduce.append(item)
             else:
                 if is_terminal(item.expect):

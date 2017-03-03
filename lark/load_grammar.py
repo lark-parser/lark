@@ -234,8 +234,7 @@ class ExtractAnonTokens(InlineTransformer):
     def __init__(self, tokens):
         self.tokens = tokens
         self.token_set = {td.name for td in self.tokens}
-        self.str_reverse = {td.pattern.value: td.name for td in tokens if isinstance(td.pattern, PatternStr)}
-        self.re_reverse = {td.pattern.value: td.name for td in tokens if isinstance(td.pattern, PatternRE)}
+        self.token_reverse = {td.pattern: td.name for td in tokens}
         self.i = 0
 
 
@@ -244,7 +243,7 @@ class ExtractAnonTokens(InlineTransformer):
         if isinstance(p, PatternStr):
             try:
                 # If already defined, use the user-defined token name
-                token_name = self.str_reverse[value]
+                token_name = self.token_reverse[p]
             except KeyError:
                 # Try to assign an indicative anon-token name, otherwise use a numbered name
                 try:
@@ -264,8 +263,8 @@ class ExtractAnonTokens(InlineTransformer):
                 token_name = '__' + token_name
 
         elif isinstance(p, PatternRE):
-            if value in self.re_reverse: # Kind of a wierd placement
-                token_name = self.re_reverse[value]
+            if p in self.token_reverse: # Kind of a wierd placement
+                token_name = self.token_reverse[p]
             else:
                 token_name = 'ANONRE_%d' % self.i
                 self.i += 1
@@ -273,15 +272,9 @@ class ExtractAnonTokens(InlineTransformer):
             assert False, p
 
         if token_name not in self.token_set:
+            assert p not in self.token_reverse
             self.token_set.add(token_name)
-
-            if isinstance(p, PatternStr):
-                assert value not in self.str_reverse
-                self.str_reverse[value] = token_name
-            else:
-                assert value not in self.re_reverse
-                self.re_reverse[value] = token_name
-
+            self.token_reverse[p] = token_name
             self.tokens.append(TokenDef(token_name, p))
 
         return Token('TOKEN', token_name, -1)
@@ -323,6 +316,7 @@ class TokenTreeToPattern(Transformer):
         if len(items) == 1:
             return items[0]
         return PatternRE(''.join(i.to_regexp() for i in items))
+
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
@@ -361,7 +355,7 @@ class Grammar:
                 for r, tree, _o in rule_defs:
                     for exp in tree.find_data('expansion'):
                         exp.children = list(interleave(exp.children, expr))
-                        if r == start: # TODO use GrammarRule or similar (RuleOptions?)
+                        if r == start:
                             exp.children = [expr] + exp.children
 
                 x = [T('expansion', [Token('RULE', x)]) for x in ignore_names]
@@ -369,9 +363,7 @@ class Grammar:
                 rule_defs.append(('__ignore', _ignore_tree, None))
             # End of "ignore" section
 
-            for name, tree in self.token_defs:
-                rule_defs.append((name, tree, RuleOptions(keep_all_tokens=True)))
-
+            rule_defs += [(name, tree, RuleOptions(keep_all_tokens=True)) for name, tree in self.token_defs]
             token_defs = []
 
             tokens_to_convert = {name: '__token_'+name for name, tree, _ in rule_defs if is_terminal(name)}
@@ -382,12 +374,13 @@ class Grammar:
                         options = RuleOptions.new_from(options, filter_out=True)
                     else:
                         options = RuleOptions.new_from(options, create_token=name)
+                    name = tokens_to_convert[name]
 
-                name = tokens_to_convert.get(name, name)
                 for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
                     for i, sym in enumerate(exp.children):
                         if sym in tokens_to_convert:
                             exp.children[i] = Token(sym.type, tokens_to_convert[sym])
+
                 new_rule_defs.append((name, tree, options))
 
             rule_defs = new_rule_defs
@@ -470,13 +463,14 @@ class RuleOptions:
             expand1=options and options.expand1,
             **kw)
 
-def _extract_options_for_rule(name, expansions):
-    keep_all_tokens = name.startswith('!')
-    name = name.lstrip('!')
-    expand1 = name.startswith('?')
-    name = name.lstrip('?')
+    @classmethod
+    def from_rule(cls, name, expansions):
+        keep_all_tokens = name.startswith('!')
+        name = name.lstrip('!')
+        expand1 = name.startswith('?')
+        name = name.lstrip('?')
 
-    return name, expansions, RuleOptions(keep_all_tokens, expand1)
+        return name, expansions, cls(keep_all_tokens, expand1)
 
 
 
@@ -515,7 +509,7 @@ class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
-        rules = [_extract_options_for_rule(name, x) for name, x in RULES.items()]
+        rules = [RuleOptions.from_rule(name, x) for name, x in RULES.items()]
         d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
         rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'], None)
@@ -595,7 +589,7 @@ class GrammarLoader:
                 raise GrammarError("Token '%s' defined more than once" % name)
             token_names.add(name)
 
-        rules = [_extract_options_for_rule(name, x) for name, x in rule_defs]
+        rules = [RuleOptions.from_rule(name, x) for name, x in rule_defs]
 
         rule_names = set()
         for name, _x, _o in rules:

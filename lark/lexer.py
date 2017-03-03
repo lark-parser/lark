@@ -32,10 +32,7 @@ class Token(Str):
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        inst = cls(type_, value, borrow_t.pos_in_stream)
-        inst.line = borrow_t.line
-        inst.column = borrow_t.column
-        return inst
+        return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
 
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)
@@ -176,9 +173,7 @@ class ContextualLexer:
             try:
                 lexer = lexer_by_tokens[key]
             except KeyError:
-                accepts = set(accepts) # For python3
-                accepts |= set(ignore)
-                accepts |= set(always_accept)
+                accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$end']
                 lexer = Lexer(state_tokens, ignore=ignore)
                 lexer_by_tokens[key] = lexer

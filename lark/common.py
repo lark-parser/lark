@@ -54,6 +54,12 @@ class Pattern(object):
     def __repr__(self):
         return repr(self.value)
 
+    # Pattern Hashing assumes all subclasses have a different priority!
+    def __hash__(self):
+        return hash((self.priority, self.value))
+    def __eq__(self, other):
+        return self.priority == other.priority and self.value == other.value
+
 class PatternStr(Pattern):
     def to_regexp(self):
         return re.escape(self.value)

@@ -48,7 +48,7 @@ class TestEarley(unittest.TestCase):
                      B: ("ab"|/[^b]/)*
                   """, lexer=None)
 
-        assertEqual( g.parse('abc'), 'abc')
+        self.assertEqual( g.parse('abc').children[0], 'abc')
 
     def test_earley_scanless(self):
         g = Lark("""start: A "b" c
@@ -58,6 +58,20 @@ class TestEarley(unittest.TestCase):
         x = g.parse('aaaababc')
 
 
+    def test_earley_scanless2(self):
+        grammar = """
+        start: statement+
+
+        statement: "r"
+                 | "c" /[a-z]/+
+
+        %ignore " "
+        """
+
+        program = """c b r"""
+
+        l = Lark(grammar, parser='earley', lexer=None)
+        l.parse(program)
 
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):

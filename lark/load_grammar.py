@@ -357,6 +357,8 @@ class Grammar:
                         exp.children = list(interleave(exp.children, expr))
                         if r == start:
                             exp.children = [expr] + exp.children
+                    for exp in tree.find_data('expr'):
+                        exp.children[0] = T('expansion', list(interleave(exp.children[:1], expr)))
 
                 x = [T('expansion', [Token('RULE', x)]) for x in ignore_names]
                 _ignore_tree = T('expr', [T('expansions', x), Token('OP', '?')])

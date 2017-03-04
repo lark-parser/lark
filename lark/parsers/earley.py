@@ -107,6 +107,7 @@ class Column:
 
 class Parser:
     def __init__(self, parser_conf):
+
         self.analysis = GrammarAnalyzer(parser_conf.rules, parser_conf.start)
         self.start = parser_conf.start
 
@@ -154,7 +155,7 @@ class Parser:
                         next_set.add([item.advance(stream[i])])
 
             if not next_set and token is not END_TOKEN:
-                expect = {i.expect for i in cur_set.to_scan}
+                expect = {i.expect[-1] for i in cur_set.to_scan}
                 raise UnexpectedToken(token, expect, stream, i)
 
             return cur_set, next_set

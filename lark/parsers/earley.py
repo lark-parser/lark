@@ -84,7 +84,7 @@ class Column:
                     # For example for the rule:
                     #   a: a | "b"
                     # If we can detect these cases statically, we can remove
-                    # this test an gain a small optimization
+                    # this test an gain a tiny performance boost
                     #
                     if item in added:
                         continue

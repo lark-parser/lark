@@ -85,6 +85,7 @@ Then, the transformer calculates the tree and returns a number:
  - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
  - Check out the [tests](/tests/test_parser.py) for more examples.
 
+
 ## Install Lark
 
     $ pip install lark-parser
@@ -104,27 +105,63 @@ Lark has no dependencies.
      - Automatic line & column tracking
      - Automatic token collision resolution (unless both terminals are regexps)
      - Contextual lexing for LALR
+ - Automatic reconstruction of input (experimental, see examples)
 
-## Coming soon
+### Coming soon
 
 These features are planned to be implemented in the near future:
 
- - Parser generator - create a small parser, independent of Lark, to embed in your project.
  - Grammar composition
  - Optimizations in both the parsers and the lexer
  - Better handling of ambiguity
+ - Automatically convert grammars from/to [Nearley](https://github.com/Hardmath123/nearley), an awesome Earley library in Javascript
+
+### Planned
+
+These features may be implemented some day:
+
+ - Parser generator - create a small parser, independent of Lark, to embed in your project.
+    - Generate code in other languages than Python
+ - LALR(k) parser
+ - "Look-back" Enhancement for LALR(1)
+ - Full regexp-collision support using NFAs
+ - Automatically produce syntax-highlighters for popular IDEs
 
 ## Comparison to other parsers
 
-This is a feature comparison. For benchmarks vs other parsers, check out the [JSON tutorial](/docs/json_tutorial.md#conclusion).
+### Lark is easier to use
+
+- You can work with parse-trees instead of state-machines .
+- The grammar is simple to read and write
+- There are no restrictions on grammar structure. Any grammar you write can be parsed.
+    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working.
+    - A well-written grammar is very fast.
+    - Note: Nondeterminstic grammars will run a little slower
+    - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)
+- You don't have to worry about terminals (regexps) or rules colliding
+- You can repeat expressions without losing efficiency (turns out that's a thing)
+
+### Performance comparison
+
+| Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
+|:-----|:-------------|:------------|:----------|:---------
+| **Lark - LALR(1)** | 4.2s | 1.1s | 0.4M | 0.3M |
+| PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 4.1s | 0.4M | 0.2M |
+| funcparserlib ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 11s | 1.9s | 0.5M | 0.3M |
+| Parsimonious ([Parser](https://gist.githubusercontent.com/reclosedev/5222560/raw/5e97cf7eb62c3a3671885ec170577285e891f7d5/parsimonious_json.py)) | ? | 7s | ? | 1.4M |
+
+Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
+
+
+### Feature comparison
 
 | Library | Algorithm | LOC | Grammar | Builds tree?
 |:--------|:----------|:----|:--------|:------------
-| Lark | Earley/LALR(1) | 0.5K | EBNF+ | Yes! |
+| **Lark** | Earley/LALR(1) | 0.5K | EBNF+ | Yes! |
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | 4.6K | Yacc-like BNF | No |
 | [PyParsing](http://pyparsing.wikispaces.com/) | PEG | 5.7K | Parser combinators | No |
 | [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | 3.3K | EBNF-like | No |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No 
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No
 | [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | ? | EBNF | Yes |
 
 (*LOC measures lines of code of the parsing algorithm(s), without accompanying files*)
@@ -142,8 +179,8 @@ Lark offers both Earley and LALR(1), which means you can choose between the most
 
 ## License
 
-Lark uses the MIT license.
+Lark uses the [MIT license](LICENSE).
 
 ## Contact
 
-If you have any questions or want to contribute, please email me at erezshin at gmail com.
+If you have any questions or want to contribute, you can email me at erezshin at gmail com.

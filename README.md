@@ -20,7 +20,7 @@ Lark can automagically build an AST from your grammar, without any more code on 
 
 3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
 
-## Hello World
+### Hello World
 
 Here is a little program to parse "Hello, World!" (Or any other similar phrase):
 
@@ -41,7 +41,7 @@ Tree(start, [Token(WORD, 'Hello'), Token(WORD, 'World')])
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
 
-## Tiny Calculator
+### Tiny Calculator
 
 ```python
 from lark import Lark, InlineTransformer
@@ -131,11 +131,11 @@ These features may be implemented some day:
 
 ### Lark is easier to use
 
-- You can work with parse-trees instead of state-machines .
+- You can work with parse-trees instead of state-machines
 - The grammar is simple to read and write
 - There are no restrictions on grammar structure. Any grammar you write can be parsed.
     - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working.
-    - A well-written grammar is very fast.
+    - A well-written grammar is very fast
     - Note: Nondeterminstic grammars will run a little slower
     - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)
 - You don't have to worry about terminals (regexps) or rules colliding
@@ -146,9 +146,9 @@ These features may be implemented some day:
 | Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
 |:-----|:-------------|:------------|:----------|:---------
 | **Lark - LALR(1)** | 4.2s | 1.1s | 0.4M | 0.3M |
-| PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 4.1s | 0.4M | 0.2M |
-| funcparserlib ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 11s | 1.9s | 0.5M | 0.3M |
-| Parsimonious ([Parser](https://gist.githubusercontent.com/reclosedev/5222560/raw/5e97cf7eb62c3a3671885ec170577285e891f7d5/parsimonious_json.py)) | ? | 7s | ? | 1.4M |
+| PyParsing | 32s | 4.1s | 0.4M | 0.2M |
+| funcparserlib | 11s | 1.9s | 0.5M | 0.3M |
+| Parsimonious | | 7s | | 1.4M |
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 

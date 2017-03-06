@@ -2,7 +2,7 @@ import re
 from collections import defaultdict
 
 from .tree import Tree
-from .common import is_terminal, ParserConf, PatternStr
+from .common import is_terminal, ParserConf, PatternStr, Terminal
 from .lexer import Token
 from .parsers import earley
 
@@ -26,21 +26,14 @@ class Reconstructor:
 
         token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in _tokens}
 
-        class MatchData(object):
-            def __init__(self, data):
-                self.data = data
-
-            def __repr__(self):
-                return '%s(%r)' % (type(self).__name__, self.data)
-
-        class MatchTerminal(MatchData):
-            def __call__(self, other):
+        class MatchTerminal(Terminal):
+            def match(self, other):
                 if isinstance(other, Tree):
                     return False
                 return token_res[self.data].match(other) is not None
 
-        class MatchTree(MatchData):
-            def __call__(self, other):
+        class MatchTree(Terminal):
+            def match(self, other):
                 try:
                     return self.data == other.data
                 except AttributeError:
@@ -90,7 +83,7 @@ class Reconstructor:
         for name, expansions in d.items():
             for expansion in expansions:
                 reduced = [sym if sym.startswith('_') or sym in expand1s else
-                           (MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym),)
+                           MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym)
                            for sym in expansion if not is_discarded_terminal(sym)]
 
                 rules.append((name, reduced, WriteTokens(name, expansion).f))
@@ -98,9 +91,9 @@ class Reconstructor:
 
 
     def _reconstruct(self, tree):
-        parser = earley.Parser(ParserConf(self.rules, {}, tree.data))
-
-        res ,= parser.parse(tree.children)  # XXX ambiguity?
+        # TODO: ambiguity?
+        parser = earley.Parser(self.rules, tree.data, {})
+        res = parser.parse(tree.children)
         for item in res:
             if isinstance(item, Tree):
                 for x in self._reconstruct(item):

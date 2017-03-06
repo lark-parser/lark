@@ -69,3 +69,14 @@ def inline_args(f):
             return f.__func__(self, *args)
         return _f
 
+
+try:
+    compare = cmp
+except NameError:
+    def compare(a, b):
+        if a == b:
+            return 0
+        elif a > b:
+            return 1
+        else:
+            return -1

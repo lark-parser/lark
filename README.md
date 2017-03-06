@@ -134,7 +134,7 @@ These features may be implemented some day:
 - You can work with parse-trees instead of state-machines
 - The grammar is simple to read and write
 - There are no restrictions on grammar structure. Any grammar you write can be parsed.
-    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working.
+    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working
     - A well-written grammar is very fast
     - Note: Nondeterminstic grammars will run a little slower
     - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)

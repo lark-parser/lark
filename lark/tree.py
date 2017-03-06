@@ -32,7 +32,11 @@ class Tree(object):
             self.children[i:i+1] = kid.children
 
     def __eq__(self, other):
-        return self.data == other.data and self.children == other.children
+        try:
+            return self.data == other.data and self.children == other.children
+        except AttributeError:
+            return False
+
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
 
@@ -57,9 +61,23 @@ class Tree(object):
                 if pred(c):
                     yield c
 
+    def iter_subtrees(self):
+        q = [self]
+
+        while q:
+            subtree = q.pop()
+            yield subtree
+            q += [c for c in subtree.children if isinstance(c, Tree)]
+
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo))
+
+    def copy(self):
+        return type(self)(self.data, self.children)
+    def set(self, data, children):
+        self.data = data
+        self.children = children
 
 
 
@@ -81,7 +99,7 @@ class Transformer(object):
 
 
 class InlineTransformer(Transformer):
-    def _get_func(self, name):
+    def _get_func(self, name):  # use super()._get_func
         return inline_args(getattr(self, name)).__get__(self)
 
 
@@ -97,3 +115,35 @@ class Visitor(object):
 
     def __default__(self, tree):
         pass
+
+
+class Visitor_NoRecurse(Visitor):
+    def visit(self, tree):
+        subtrees = list(tree.iter_subtrees())
+
+        for subtree in reversed(subtrees):
+            getattr(self, subtree.data, self.__default__)(subtree)
+        return tree
+
+
+class Transformer_NoRecurse(Transformer):
+    def transform(self, tree):
+        subtrees = list(tree.iter_subtrees())
+
+        def _t(t):
+            # Assumes t is already transformed
+            try:
+                f = self._get_func(t.data)
+            except AttributeError:
+                return self.__default__(t)
+            else:
+                return f(t)
+
+        for subtree in reversed(subtrees):
+            subtree.children = [_t(c) if isinstance(c, Tree) else c for c in subtree.children]
+
+        return _t(tree)
+
+    def __default__(self, t):
+        return t
+

@@ -29,7 +29,7 @@ class UnexpectedToken(ParseError):
 
 
 def is_terminal(sym):
-    return isinstance(sym, tuple) or sym.isupper() or sym[0] == '$'
+    return isinstance(sym, Terminal) or sym.isupper() or sym[0] == '$'
 
 
 class LexerConf:
@@ -80,4 +80,27 @@ class TokenDef(object):
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+
+
+class Terminal:
+    def __init__(self, data):
+        self.data = data
+
+    def __repr__(self):
+        return '%r' % self.data
+
+    def __eq__(self, other):
+        return isinstance(other, type(self)) and self.data == other.data
+    def __hash__(self):
+        return hash(self.data)
+
+
+class Terminal_Regexp(Terminal):
+    def __init__(self, data):
+        Terminal.__init__(self, data)
+        self.match = re.compile(data).match
+
+class Terminal_Token(Terminal):
+    def match(self, other):
+        return self.data == other.type
 

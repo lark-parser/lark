@@ -67,8 +67,8 @@ TOKENS = {
     '_DOT': r'\.',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
-    'STRING': r'"(\\"|\\\\|[^"])*?"',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/',
+    'STRING': r'"(\\"|\\\\|[^"\n])*?"',
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/',
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*',
@@ -377,11 +377,15 @@ class Grammar:
                     else:
                         options = RuleOptions.new_from(options, create_token=name)
                     name = tokens_to_convert[name]
+                    inner = Token('RULE', name + '_inner')
+                    new_rule_defs.append((name, T('expansions', [T('expansion', [inner])]), None))
+                    name = inner
 
-                for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
-                    for i, sym in enumerate(exp.children):
-                        if sym in tokens_to_convert:
-                            exp.children[i] = Token(sym.type, tokens_to_convert[sym])
+                else:
+                    for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
+                        for i, sym in enumerate(exp.children):
+                            if sym in tokens_to_convert:
+                                exp.children[i] = Token(sym.type, tokens_to_convert[sym])
 
                 new_rule_defs.append((name, tree, options))
 

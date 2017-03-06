@@ -159,6 +159,8 @@ class Lark:
 
 
     def lex(self, text):
+        if not hasattr(self, 'lexer'):
+            self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
         if self.options.postlex:
             return self.options.postlex.process(stream)

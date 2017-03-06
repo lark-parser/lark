@@ -25,7 +25,7 @@ parser = Lark(r"""
 
         %import common.WS_INLINE
         %ignore WS_INLINE
-    """)
+    """, lexer=None)
 
 def test():
     sample_conf = """

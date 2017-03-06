@@ -73,6 +73,28 @@ class TestEarley(unittest.TestCase):
         l = Lark(grammar, parser='earley', lexer=None)
         l.parse(program)
 
+    def test_earley_scanless3(self):
+        "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
+
+        grammar = """
+        start: A A
+        A: "a"+
+        """
+
+        l = Lark(grammar, parser='earley', lexer=None)
+        res = l.parse("aaa")
+        self.assertEqual(res.children, ['aa', 'a'])
+
+    def test_earley_scanless4(self):
+        grammar = """
+        start: A A?
+        A: "a"+
+        """
+
+        l = Lark(grammar, parser='earley', lexer=None)
+        res = l.parse("aaa")
+        self.assertEqual(res.children, ['aaa'])
+
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=LEXER, parser=PARSER, **kwargs)

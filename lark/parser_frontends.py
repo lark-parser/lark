@@ -3,8 +3,8 @@ import sre_parse
 
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import is_terminal, GrammarError, ParserConf
-from .parsers import lalr_parser, earley, nearley
+from .common import is_terminal, GrammarError, ParserConf, Terminal_Regexp, Terminal_Token
+from .parsers import lalr_parser, old_earley, nearley, earley
 from .tree import Transformer
 
 class WithLexer:
@@ -70,13 +70,13 @@ class Nearley(WithLexer):
         return res[0]
 
 
-class Earley(WithLexer):
+class OldEarley(WithLexer):
     def __init__(self, lexer_conf, parser_conf):
         WithLexer.__init__(self, lexer_conf)
 
         rules = [(n, self._prepare_expansion(x), a) for n,x,a in parser_conf.rules]
 
-        self.parser = earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
+        self.parser = old_earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
 
     def _prepare_expansion(self, expansion):
         return [(sym,) if is_terminal(sym) else sym for sym in expansion]
@@ -100,13 +100,13 @@ def tokenize_text(text):
     return new_text
 
 
-class Earley_NoLex:
+class OldEarley_NoLex:
     def __init__(self, lexer_conf, parser_conf):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
         rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
 
-        self.parser = earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
+        self.parser = old_earley.Parser(ParserConf(rules, parser_conf.callback, parser_conf.start))
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
@@ -125,6 +125,43 @@ class Earley_NoLex:
         assert len(res) ==1 , 'Ambiguious Parse! Not handled yet'
         return res[0]
 
+class Earley_NoLex:
+    def __init__(self, lexer_conf, parser_conf):
+        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+
+        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
+
+        self.parser = earley.Parser(rules, parser_conf.start, parser_conf.callback)
+
+    def _prepare_expansion(self, expansion):
+        for sym in expansion:
+            if is_terminal(sym):
+                regexp = self.token_by_name[sym].pattern.to_regexp()
+                width = sre_parse.parse(regexp).getwidth()
+                if width != (1,1):
+                    raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
+                yield Terminal_Regexp(regexp)
+            else:
+                yield sym
+
+    def parse(self, text):
+        new_text = tokenize_text(text)
+        return self.parser.parse(new_text)
+
+class Earley(WithLexer):
+    def __init__(self, lexer_conf, parser_conf):
+        WithLexer.__init__(self, lexer_conf)
+
+        rules = [(n, self._prepare_expansion(x), a) for n,x,a in parser_conf.rules]
+
+        self.parser = earley.Parser(rules, parser_conf.start, parser_conf.callback)
+
+    def _prepare_expansion(self, expansion):
+        return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
+
+    def parse(self, text):
+        tokens = list(self.lex(text))
+        return self.parser.parse(tokens)
 
 def get_frontend(parser, lexer):
     if parser=='lalr':

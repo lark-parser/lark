@@ -2,23 +2,18 @@
 
 Lark is a modern general-purpose parsing library for Python.
 
+It's intended for everyone, from complete beginners to experts in parsing.
+
 Lark focuses on simplicity, power, and speed. It lets you choose between two parsing algorithms:
 
  - Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
  - LALR(1): Only LR grammars. Outperforms PLY and most (if not all) other pure-python parsing libraries.
 
-Both algorithms are written in Python and can be used interchangeably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
+Both algorithms are written in Python and can be used interchangeably with the same grammar\*. Similarly, the lexer can be turned on/off without changing the grammar. That means you can write your parser without any limitations (just keep it context-free) and optimize it for speed only when you need to.
 
 Lark can automagically build an AST from your grammar, without any more code on your part.
 
-
-## Lark does things a little differently
-
-1. *Separates code from grammar*: The result is parsers that are cleaner and easier to read & work with.
-
-2. *Automatically builds a tree (AST)*: Trees are always simpler to work with than state-machines. (But if you want to provide a callback for efficiency reasons, Lark lets you do that too)
-
-3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
+\* *Both the lexer and the LALR algorithm require certain limitations on the grammar. If you choose to use them, it's better to learn what they are first.*
 
 ### Hello World
 
@@ -27,7 +22,7 @@ Here is a little program to parse "Hello, World!" (Or any other similar phrase):
 ```python
 from lark import Lark
 l = Lark('''start: WORD "," WORD "!"
-            WORD: /\w+/
+            %import common.WORD
             %ignore " "
          ''')
 print( l.parse("Hello, World!") )
@@ -58,7 +53,8 @@ parser = Lark('''?sum: product
                       | "(" sum ")"
 
                  %import common.NUMBER
-                 %ignore /\s+/
+                 %import common.WS
+                 %ignore WS
          ''', start='sum')
 
 class CalculateTree(InlineTransformer):
@@ -94,18 +90,22 @@ Lark has no dependencies.
 
 ## List of Features
 
- - Python 2 & 3 compatible
- - Earley & LALR(1)
- - EBNF grammar with a little extra
- - Builds an AST automagically based on the grammar
- - Standard library of terminals (strings, numbers, names, etc.)
- - Unicode fully supported
- - Extensive test suite
- - Lexer (optional)
+ - **Earley** parser
+    - Can parse *ALL* context-free grammars
+    - Accepts and resolves ambiguous grammars using a parse forest
+    - Optional lexer
+ - **LALR(1)** parser
+    - Standard & Contextual lexers
+ - **EBNF** grammar (with a little extra)
+ - Builds a parse-tree (AST) automagically based on the grammar
+ - Lexer with regular expressions (regexps)
      - Automatic line & column tracking
      - Automatic token collision resolution (unless both terminals are regexps)
-     - Contextual lexing for LALR
+ - **Standard library** of terminals (strings, numbers, names, etc.)
  - Automatic reconstruction of input (experimental, see examples)
+ - **Unicode** fully supported
+ - Extensive test suite
+ - **Python 2 & 3** compatible
 
 ### Coming soon
 
@@ -113,7 +113,7 @@ These features are planned to be implemented in the near future:
 
  - Grammar composition
  - Optimizations in both the parsers and the lexer
- - Better handling of ambiguity
+ - Better ambiguity resolution
  - Automatically convert grammars from/to [Nearley](https://github.com/Hardmath123/nearley), an awesome Earley library in Javascript
 
 ### Planned
@@ -128,6 +128,15 @@ These features may be implemented some day:
  - Automatically produce syntax-highlighters for popular IDEs
 
 ## Comparison to other parsers
+
+### Lark does things a little differently
+
+1. *Separates code from grammar*: Parsers written this way are cleaner and easier to read & work with.
+
+2. *Automatically builds a parse tree (AST)*: Trees are always simpler to work with than state-machines. (But if you want to provide a callback for efficiency reasons, Lark lets you do that too)
+
+3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
+
 
 ### Lark is easier to use
 

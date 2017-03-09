@@ -105,6 +105,8 @@ class Column:
                         new_tree = old_tree.copy()
                         new_tree.rule = old_tree.rule
                         old_tree.set('ambig', [new_tree])
+                    if item.tree.children[0] is old_tree:   # XXX a little hacky!
+                        raise ParseError("Infinite recursion in grammar!")
                     old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item

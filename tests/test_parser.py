@@ -39,6 +39,16 @@ class TestParsers(unittest.TestCase):
         l2 = g.parse('(a,b,c,*x)')
         assert l == l2, '%s != %s' % (l.pretty(), l2.pretty())
 
+    def test_infinite_recurse(self):
+        g = """start: a
+               a: a | "a"
+            """
+
+        self.assertRaises(GrammarError, Lark, g, parser='lalr')
+
+        l = Lark(g, parser='earley')
+        self.assertRaises(ParseError, l.parse, 'a')
+
 
 class TestEarley(unittest.TestCase):
     def test_anon_in_scanless(self):

@@ -48,8 +48,9 @@ class ParserConf:
 
 
 class Pattern(object):
-    def __init__(self, value):
+    def __init__(self, value, flags=None):
         self.value = value
+        self.flags = flags
 
     def __repr__(self):
         return repr(self.value)
@@ -60,15 +61,21 @@ class Pattern(object):
     def __eq__(self, other):
         return self.priority == other.priority and self.value == other.value
 
+    def _get_flags(self):
+        if self.flags:
+            assert len(self.flags) == 1
+            return '(?%s)' % self.flags
+        return ''
+
 class PatternStr(Pattern):
     def to_regexp(self):
-        return re.escape(self.value)
+        return self._get_flags() + re.escape(self.value)
 
     priority = 0
 
 class PatternRE(Pattern):
     def to_regexp(self):
-        return self.value
+        return self._get_flags() + self.value
 
     priority = 1
 

@@ -67,7 +67,6 @@ class TestEarley(unittest.TestCase):
                     """, parser="earley", lexer=None)
         x = g.parse('aaaababc')
 
-
     def test_earley_scanless2(self):
         grammar = """
         start: statement+
@@ -504,6 +503,30 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("-.2e9")
             g.parse("+2e-9")
             self.assertRaises(ParseError, g.parse, "+2e-9e")
+
+        def test_token_flags(self):
+            l = _Lark("""!start: "a"i+
+                      """
+                      )
+            tree = l.parse('aA')
+            self.assertEqual(tree.children, ['a', 'A'])
+
+            l = _Lark("""!start: /a/i+
+                      """
+                      )
+            tree = l.parse('aA')
+            self.assertEqual(tree.children, ['a', 'A'])
+
+            g = """!start: "a"i "a"
+                """
+            self.assertRaises(GrammarError, _Lark, g)
+
+            g = """!start: /a/i /a/
+                """
+            self.assertRaises(GrammarError, _Lark, g)
+
+
+
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()
     _TestParser.__name__ = _NAME

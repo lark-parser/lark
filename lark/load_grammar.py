@@ -67,8 +67,8 @@ TOKENS = {
     '_DOT': r'\.',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
-    'STRING': r'"(\\"|\\\\|[^"\n])*?"',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/',
+    'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/i?',
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*',
@@ -234,16 +234,18 @@ class ExtractAnonTokens(InlineTransformer):
     def __init__(self, tokens):
         self.tokens = tokens
         self.token_set = {td.name for td in self.tokens}
-        self.token_reverse = {td.pattern: td.name for td in tokens}
+        self.token_reverse = {td.pattern: td for td in tokens}
         self.i = 0
 
 
     def pattern(self, p):
         value = p.value
+        if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
+            raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
         if isinstance(p, PatternStr):
             try:
                 # If already defined, use the user-defined token name
-                token_name = self.token_reverse[p]
+                token_name = self.token_reverse[p].name
             except KeyError:
                 # Try to assign an indicative anon-token name, otherwise use a numbered name
                 try:
@@ -263,8 +265,8 @@ class ExtractAnonTokens(InlineTransformer):
                 token_name = '__' + token_name
 
         elif isinstance(p, PatternRE):
-            if p in self.token_reverse: # Kind of a wierd placement
-                token_name = self.token_reverse[p]
+            if p in self.token_reverse: # Kind of a wierd placement.name
+                token_name = self.token_reverse[p].name
             else:
                 token_name = 'ANONRE_%d' % self.i
                 self.i += 1
@@ -274,19 +276,26 @@ class ExtractAnonTokens(InlineTransformer):
         if token_name not in self.token_set:
             assert p not in self.token_reverse
             self.token_set.add(token_name)
-            self.token_reverse[p] = token_name
-            self.tokens.append(TokenDef(token_name, p))
+            tokendef = TokenDef(token_name, p)
+            self.token_reverse[p] = tokendef
+            self.tokens.append(tokendef)
 
         return Token('TOKEN', token_name, -1)
 
 
 def _literal_to_pattern(literal):
     v = literal.value
+    if v[-1] in 'i':
+        flags = v[-1]
+        v = v[:-1]
+    else:
+        flags = None
+
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1].replace("'", r"\'")
     s = literal_eval("u'''%s'''" % x)
     return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s)
+             'REGEXP': PatternRE }[literal.type](s, flags)
 
 
 class PrepareLiterals(InlineTransformer):

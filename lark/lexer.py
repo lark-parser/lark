@@ -88,7 +88,7 @@ class Lexer(object):
             try:
                 re.compile(t.pattern.to_regexp())
             except:
-                raise LexError("Cannot compile token: %s: %s" % (t.name, t.pattern))
+                raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
             width = sre_parse.parse(t.pattern.to_regexp()).getwidth()
             if width[0] == 0:

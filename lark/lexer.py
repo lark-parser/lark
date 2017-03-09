@@ -49,9 +49,15 @@ def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
 
 def _create_unless_callback(strs):
+    mres = build_mres(strs, match_whole=True)
     def unless_callback(t):
-        if t in strs:
-            t.type = strs[t]
+        # if t in strs:
+        #     t.type = strs[t]
+        for mre, type_from_index in mres:
+            m = mre.match(t.value)
+            if m:
+                value = m.group(0)
+                t.type = type_from_index[m.lastindex]
         return t
     return unless_callback
 
@@ -61,18 +67,39 @@ def _create_unless(tokens):
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
-        unless = {}
+        unless = [] # {}
         for strtok in tokens_by_type.get(PatternStr, []):
             s = strtok.pattern.value
             m = re.match(retok.pattern.value, s)
             if m and m.group(0) == s:
                 embedded_strs.add(strtok.name)
-                unless[s] = strtok.name
+                #unless[s] = strtok.name
+                unless.append(strtok)
         if unless:
             callback[retok.name] = _create_unless_callback(unless)
 
     tokens = [t for t in tokens if t.name not in embedded_strs]
     return tokens, callback
+
+
+def _build_mres(tokens, max_size, match_whole):
+    # Python sets an unreasonable group limit (currently 100) in its re module
+    # Worse, the only way to know we reached it is by catching an AssertionError!
+    # This function recursively tries less and less groups until it's successful.
+    postfix = '$' if match_whole else ''
+    mres = []
+    while tokens:
+        try:
+            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()) for t in tokens[:max_size])+postfix)
+        except AssertionError:  # Yes, this is what Python provides us.. :/
+            return _build_mres(tokens, max_size//2, match_whole)
+
+        mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
+        tokens = tokens[max_size:]
+    return mres
+
+def build_mres(tokens, match_whole=False):
+    return _build_mres(tokens, len(tokens), match_whole)
 
 
 class Lexer(object):
@@ -110,23 +137,8 @@ class Lexer(object):
 
         self.tokens = tokens
 
-        self.mres = self._build_mres(tokens, len(tokens))
+        self.mres = build_mres(tokens)
 
-
-    def _build_mres(self, tokens, max_size):
-        # Python sets an unreasonable group limit (currently 100) in its re module
-        # Worse, the only way to know we reached it is by catching an AssertionError!
-        # This function recursively tries less and less groups until it's successful.
-        mres = []
-        while tokens:
-            try:
-                mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()) for t in tokens[:max_size]))
-            except AssertionError:  # Yes, this is what Python provides us.. :/
-                return self._build_mres(tokens, max_size//2)
-
-            mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
-            tokens = tokens[max_size:]
-        return mres
 
     def lex(self, stream):
         lex_pos = 0

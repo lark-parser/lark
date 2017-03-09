@@ -58,6 +58,7 @@ def _create_unless_callback(strs):
             if m:
                 value = m.group(0)
                 t.type = type_from_index[m.lastindex]
+                break
         return t
     return unless_callback
 
@@ -65,20 +66,22 @@ def _create_unless(tokens):
     tokens_by_type = classify(tokens, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
+    delayed_strs = []
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
         unless = [] # {}
         for strtok in tokens_by_type.get(PatternStr, []):
             s = strtok.pattern.value
-            m = re.match(retok.pattern.value, s)
+            m = re.match(retok.pattern.to_regexp(), s)
             if m and m.group(0) == s:
+                if strtok.pattern.flags:
+                    delayed_strs.append(strtok)
                 embedded_strs.add(strtok.name)
-                #unless[s] = strtok.name
                 unless.append(strtok)
         if unless:
             callback[retok.name] = _create_unless_callback(unless)
 
-    tokens = [t for t in tokens if t.name not in embedded_strs]
+    tokens = [t for t in tokens if t.name not in embedded_strs] + delayed_strs
     return tokens, callback
 
 
@@ -90,7 +93,7 @@ def _build_mres(tokens, max_size, match_whole):
     mres = []
     while tokens:
         try:
-            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()) for t in tokens[:max_size])+postfix)
+            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in tokens[:max_size]))
         except AssertionError:  # Yes, this is what Python provides us.. :/
             return _build_mres(tokens, max_size//2, match_whole)
 
@@ -130,10 +133,10 @@ class Lexer(object):
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = [t for t in ignore]
 
+        tokens.sort(key=lambda x:(x.pattern.priority, len(x.pattern.value)), reverse=True)
+
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())
-
-        tokens.sort(key=lambda x:(x.pattern.priority, len(x.pattern.value)), reverse=True)
 
         self.tokens = tokens
 

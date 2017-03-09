@@ -525,6 +525,23 @@ def _make_parser_test(LEXER, PARSER):
                 """
             self.assertRaises(GrammarError, _Lark, g)
 
+            g = """start: NAME "," "a"
+                   NAME: /[a-z_]/i /[a-z0-9_]/i*
+                """
+            l = _Lark(g)
+            tree = l.parse('ab,a')
+            self.assertEqual(tree.children, ['ab'])
+            tree = l.parse('AB,a')
+            self.assertEqual(tree.children, ['AB'])
+
+        def test_token_flags2(self):
+            g = """!start: ("a"i | /a/ /b/?)+
+                """
+            l = _Lark(g)
+            tree = l.parse('aA')
+            self.assertEqual(tree.children, ['a', 'A'])
+
+
 
 
 

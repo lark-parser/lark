@@ -53,7 +53,7 @@ class Pattern(object):
         self.flags = flags
 
     def __repr__(self):
-        return repr(self.value)
+        return repr(self._get_flags() + self.value)
 
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):

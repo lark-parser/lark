@@ -324,16 +324,19 @@ class TokenTreeToPattern(Transformer):
     def expansion(self, items):
         if len(items) == 1:
             return items[0]
-        return PatternRE(''.join(i.to_regexp() for i in items))
+        if len(set(i.flags for i in items)) > 1:
+            raise GrammarError("Lark doesn't support joining tokens with conflicting flags!")
+        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags)
 
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
+        assert all(i.flags is None for i in exps)
         return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)))
 
     def expr(self, args):
         inner, op = args
-        return PatternRE('(?:%s)%s' % (inner.to_regexp(), op))
+        return PatternRE('(?:%s)%s' % (inner.to_regexp(), op), inner.flags)
 
 
 def interleave(l, item):

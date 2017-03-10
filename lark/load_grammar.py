@@ -339,11 +339,11 @@ class TokenTreeToPattern(Transformer):
         return PatternRE('(?:%s)%s' % (inner.to_regexp(), op), inner.flags)
 
 
-def interleave(l, item):
+def _interleave(l, item):
     for e in l:
         yield e
         if isinstance(e, T):
-            if e.data == 'literal':
+            if e.data in ('literal', 'range'):
                 yield item
         elif is_terminal(e):
             yield item
@@ -366,11 +366,11 @@ class Grammar:
                 expr = Token('RULE', '__ignore')
                 for r, tree, _o in rule_defs:
                     for exp in tree.find_data('expansion'):
-                        exp.children = list(interleave(exp.children, expr))
+                        exp.children = list(_interleave(exp.children, expr))
                         if r == start:
                             exp.children = [expr] + exp.children
                     for exp in tree.find_data('expr'):
-                        exp.children[0] = T('expansion', list(interleave(exp.children[:1], expr)))
+                        exp.children[0] = T('expansion', list(_interleave(exp.children[:1], expr)))
 
                 x = [T('expansion', [Token('RULE', x)]) for x in ignore_names]
                 _ignore_tree = T('expr', [T('expansions', x), Token('OP', '?')])

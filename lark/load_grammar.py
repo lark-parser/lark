@@ -542,9 +542,11 @@ class GrammarLoader:
         except UnexpectedInput as e:
             raise GrammarError("Unexpected input %r at line %d column %d in %s" % (e.context, e.line, e.column, name))
         except UnexpectedToken as e:
-            if '_COLON' in e.expected:
+            if e.expected == ['_COLON']:
                 raise GrammarError("Missing colon at line %s column %s" % (e.line, e.column))
-            elif 'literal' in e.expected:
+            elif e.expected == ['RULE']:
+                raise GrammarError("Missing alias at line %s column %s" % (e.line, e.column))
+            elif 'STRING' in e.expected:
                 raise GrammarError("Expecting a value at line %s column %s" % (e.line, e.column))
             elif e.expected == ['_OR']:
                 raise GrammarError("Newline without starting a new option (Expecting '|') at line %s column %s" % (e.line, e.column))

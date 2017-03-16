@@ -27,10 +27,13 @@ nearley_grammar = r"""
     _JS: /(?s){%.*?%}/
 
     NAME: /[a-zA-Z_$]\w*/
-    WS.ignore: /[\t \f\n]+/
-    COMMENT.ignore: /\#[^\n]*/
+    COMMENT: /\#[^\n]*/
     REGEXP: /\[.*?\]/
     STRING: /".*?"/
+
+    %import common.WS
+    %ignore WS
+    %ignore COMMENT
 
     """
 
@@ -85,7 +88,7 @@ class NearleyToLark(InlineTransformer):
         return '\n'.join(filter(None, rules))
 
 def nearley_to_lark(g, builtin_path):
-    parser = Lark(nearley_grammar)
+    parser = Lark(nearley_grammar, parser='earley', lexer='standard')
     tree = parser.parse(g)
     return NearleyToLark(builtin_path).transform(tree)
 
@@ -129,7 +132,7 @@ def test():
     converted_grammar = nearley_to_lark(css_example_grammar, '/home/erez/nearley/builtin')
     print(converted_grammar)
 
-    l = Lark(converted_grammar, start='csscolor', parser='earley_nolex')
+    l = Lark(converted_grammar, start='csscolor')
     print(l.parse('#a199ff').pretty())
     print(l.parse('rgb(255, 70%, 3)').pretty())
 
@@ -148,3 +151,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # test()

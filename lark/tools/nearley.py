@@ -3,18 +3,20 @@
 import os.path
 import sys
 
-from lark import Lark, InlineTransformer
+import js2py
+
+from lark import Lark, InlineTransformer, Transformer
 
 nearley_grammar = r"""
     start: (ruledef|directive)+
 
     directive: "@" NAME (STRING|NAME)
-             | "@" _JS  -> js_code
+             | "@" JS  -> js_code
     ruledef: NAME "->" expansions
            | NAME REGEXP "->" expansions -> macro
     expansions: expansion ("|" expansion)*
 
-    expansion: expr+ _JS?
+    expansion: expr+ js
 
     ?expr: item [":" /[+*?]/]
 
@@ -24,7 +26,8 @@ nearley_grammar = r"""
     rule: NAME
     string: STRING
     regexp: REGEXP
-    _JS: /(?s){%.*?%}/
+    JS: /(?s){%.*?%}/
+    js: JS?
 
     NAME: /[a-zA-Z_$]\w*/
     COMMENT: /\#[^\n]*/
@@ -37,60 +40,104 @@ nearley_grammar = r"""
 
     """
 
+nearley_grammar_parser = Lark(nearley_grammar, parser='earley', lexer='standard')
 
+def _get_rulename(name):
+    name = {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
+    return 'n_' + name.replace('$', '__DOLLAR__')
 
 class NearleyToLark(InlineTransformer):
-    def __init__(self, builtin_path):
-        self.builtin_path = builtin_path
+    def __init__(self, context):
+        self.context = context
+        self.functions = {}
+        self.extra_rules = {}
+
+    def _new_function(self, code):
+        n = len(self.functions)
+        name = 'alias_%d' % n
+        assert name not in self.functions
+        code = "%s = (%s);" % (name, code)
+        self.context.execute(code)
+        f = getattr(self.context, name)
+        self.functions[name] = f
+
+        return name
+
+    def _extra_rule(self, rule):
+        name = 'xrule_%d' % len(self.extra_rules)
+        assert name not in self.extra_rules
+        self.extra_rules[name] = rule                
+        return name
 
     def rule(self, name):
-        # return {'_': '_WS?', '__':'_WS'}.get(name, name)
-        return {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
+        return _get_rulename(name)
 
     def ruledef(self, name, exps):
-        name = {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
-        return '%s: %s' % (name, exps)
+        return '!%s: %s' % (_get_rulename(name), exps)
 
     def expr(self, item, op):
-        return '(%s)%s' % (item, op)
+        rule = '(%s)%s' % (item, op)
+        return self._extra_rule(rule)
 
     def regexp(self, r):
         return '/%s/' % r
 
     def string(self, s):
-        # TODO allow regular strings, and split them in the parser frontend
-        return ' '.join('"%s"'%ch for ch in s[1:-1])
+        return self._extra_rule(s)
 
     def expansion(self, *x):
-        return ' '.join(x)
+        x, js = x[:-1], x[-1]
+        if js.children:
+            js_code ,= js.children
+            js_code = js_code[2:-2]
+            alias = '-> ' + self._new_function(js_code)
+        else:
+            alias = ''
+        return ' '.join(x) + alias
 
     def expansions(self, *x):
-        return '(%s)' % ('\n    |'.join(x))
-
-    def js_code(self):
-        return ''
-
-    def macro(self, *args):
-        return ''   # TODO support macros?!
-
-    def directive(self, name, *args):
-        if name == 'builtin':
-            arg = args[0][1:-1]
-            with open(os.path.join(self.builtin_path, arg)) as f:
-                text = f.read()
-            return nearley_to_lark(text, self.builtin_path)
-        elif name == 'preprocessor':
-            return ''
-
-        raise Exception('Unknown directive: %s' % name)
+        return '%s' % ('\n    |'.join(x))
 
     def start(self, *rules):
         return '\n'.join(filter(None, rules))
 
-def nearley_to_lark(g, builtin_path):
-    parser = Lark(nearley_grammar, parser='earley', lexer='standard')
-    tree = parser.parse(g)
-    return NearleyToLark(builtin_path).transform(tree)
+def _nearley_to_lark(g, builtin_path, n2l):
+    rule_defs = []
+
+    tree = nearley_grammar_parser.parse(g)
+    for statement in tree.children:
+        if statement.data == 'directive':
+            directive, arg = statement.children
+            if directive == 'builtin':
+                with open(os.path.join(builtin_path, arg[1:-1])) as f:
+                    text = f.read()
+                rule_defs += _nearley_to_lark(text, builtin_path, n2l)
+            else:
+                assert False, directive
+        elif statement.data == 'js_code':
+            code ,= statement.children
+            code = code[2:-2]
+            n2l.context.execute(code)
+        elif statement.data == 'macro':
+            pass    # TODO Add support for macros!
+        elif statement.data == 'ruledef':
+            rule_defs.append( n2l.transform(statement) )
+        else:
+            raise Exception("Unknown statement: %s" % statement)
+
+    return rule_defs
+
+
+def nearley_to_lark(g, builtin_path, context):
+    n2l = NearleyToLark(context)
+    lark_g = '\n'.join(_nearley_to_lark(g, builtin_path, n2l))
+    lark_g += '\n'+'\n'.join('!%s: %s' % item for item in n2l.extra_rules.items())
+    t = Transformer()
+    for fname, fcode in n2l.functions.items():
+        setattr(t, fname, fcode)
+    setattr(t, '__default__', lambda n, c: c if c else None)
+
+    return lark_g, t
 
 
 def test():
@@ -129,12 +176,17 @@ def test():
         function(d) {return Math.floor(d[0]*255); }
     %}
     """
-    converted_grammar = nearley_to_lark(css_example_grammar, '/home/erez/nearley/builtin')
-    print(converted_grammar)
+    context = js2py.EvalJs()
+    context.execute('function id(x) {return x[0]; }')
 
-    l = Lark(converted_grammar, start='csscolor')
-    print(l.parse('#a199ff').pretty())
-    print(l.parse('rgb(255, 70%, 3)').pretty())
+    converted_grammar, t = nearley_to_lark(css_example_grammar, '/home/erez/nearley/builtin', context)
+    # print(converted_grammar)
+
+    l = Lark(converted_grammar, start='n_csscolor')
+    tree = l.parse('#a199ff')
+    print(t.transform(tree))
+    tree = l.parse('rgb(255, 70%, 3)')
+    print(t.transform(tree))
 
 
 def main():

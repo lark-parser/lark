@@ -324,7 +324,7 @@ class TokenTreeToPattern(Transformer):
     def expansion(self, items):
         if len(items) == 1:
             return items[0]
-        if len(set(i.flags for i in items)) > 1:
+        if len({i.flags for i in items}) > 1:
             raise GrammarError("Lark doesn't support joining tokens with conflicting flags!")
         return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags)
 
@@ -348,60 +348,64 @@ def _interleave(l, item):
         elif is_terminal(e):
             yield item
 
+def _choice_of_rules(rules):
+    return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
+
 class Grammar:
     def __init__(self, rule_defs, token_defs, extra):
         self.token_defs = token_defs
         self.rule_defs = rule_defs
         self.extra = extra
 
+    def _prepare_scanless_grammar(self, start):
+        # XXX Pretty hacky! There should be a better way to write this method..
+
+        rule_defs = deepcopy(self.rule_defs)
+        term_defs = self.token_defs
+
+        # Implement the "%ignore" feature without a lexer..
+        terms_to_ignore = {name:'__'+name for name in self.extra['ignore']}
+        if terms_to_ignore:
+            assert set(terms_to_ignore) <= {name for name, t in term_defs}
+            term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
+            expr = Token('RULE', '__ignore')
+            for r, tree, _o in rule_defs:
+                for exp in tree.find_data('expansion'):
+                    exp.children = list(_interleave(exp.children, expr))
+                    if r == start:
+                        exp.children = [expr] + exp.children
+                for exp in tree.find_data('expr'):
+                    exp.children[0] = T('expansion', list(_interleave(exp.children[:1], expr)))
+
+            _ignore_tree = T('expr', [_choice_of_rules(terms_to_ignore.values()), Token('OP', '?')])
+            rule_defs.append(('__ignore', _ignore_tree, None))
+
+        # Convert all tokens to rules
+        new_terminal_names = {name: '__token_'+name for name, tree in term_defs}
+
+        for name, tree, options in rule_defs:
+            for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
+                for i, sym in enumerate(exp.children):
+                    if sym in new_terminal_names:
+                        exp.children[i] = Token(sym.type, new_terminal_names[sym])
+
+        for name, tree in term_defs:
+            if name.startswith('_'):
+                options = RuleOptions(filter_out=True)
+            else:
+                options = RuleOptions(keep_all_tokens=True, create_token=name)
+
+            name = new_terminal_names[name]
+            inner_name = name + '_inner'
+            rule_defs.append((name, _choice_of_rules([inner_name]), None))
+            rule_defs.append((inner_name, tree, options))
+
+        return [], rule_defs
+
+
     def compile(self, lexer=False, start=None):
         if not lexer:
-            rule_defs = deepcopy(self.rule_defs)
-
-            # XXX VERY HACKY!! There must be a better way..
-            ignore_tokens = [('_'+name, t) for name, t in self.token_defs if name in self.extra['ignore']]
-            if ignore_tokens:
-                self.token_defs = [('_'+name if name in self.extra['ignore'] else name,t) for name,t in self.token_defs]
-                ignore_names = [t[0] for t in ignore_tokens]
-                expr = Token('RULE', '__ignore')
-                for r, tree, _o in rule_defs:
-                    for exp in tree.find_data('expansion'):
-                        exp.children = list(_interleave(exp.children, expr))
-                        if r == start:
-                            exp.children = [expr] + exp.children
-                    for exp in tree.find_data('expr'):
-                        exp.children[0] = T('expansion', list(_interleave(exp.children[:1], expr)))
-
-                x = [T('expansion', [Token('RULE', x)]) for x in ignore_names]
-                _ignore_tree = T('expr', [T('expansions', x), Token('OP', '?')])
-                rule_defs.append(('__ignore', _ignore_tree, None))
-            # End of "ignore" section
-
-            rule_defs += [(name, tree, RuleOptions(keep_all_tokens=True)) for name, tree in self.token_defs]
-            token_defs = []
-
-            tokens_to_convert = {name: '__token_'+name for name, tree, _ in rule_defs if is_terminal(name)}
-            new_rule_defs = []
-            for name, tree, options in rule_defs:
-                if name in tokens_to_convert:
-                    if name.startswith('_'):
-                        options = RuleOptions.new_from(options, filter_out=True)
-                    else:
-                        options = RuleOptions.new_from(options, create_token=name)
-                    name = tokens_to_convert[name]
-                    inner = Token('RULE', name + '_inner')
-                    new_rule_defs.append((name, T('expansions', [T('expansion', [inner])]), None))
-                    name = inner
-
-                else:
-                    for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
-                        for i, sym in enumerate(exp.children):
-                            if sym in tokens_to_convert:
-                                exp.children[i] = Token(sym.type, tokens_to_convert[sym])
-
-                new_rule_defs.append((name, tree, options))
-
-            rule_defs = new_rule_defs
+            token_defs, rule_defs = self._prepare_scanless_grammar(start)
         else:
             token_defs = list(self.token_defs)
             rule_defs = self.rule_defs
@@ -473,14 +477,6 @@ class RuleOptions:
 
         self.filter_out = filter_out        # remove this rule from the tree
                                             # used for "token"-rules in scanless
-
-    @classmethod
-    def new_from(cls, options, **kw):
-        return cls(
-            keep_all_tokens=options and options.keep_all_tokens,
-            expand1=options and options.expand1,
-            **kw)
-
     @classmethod
     def from_rule(cls, name, expansions):
         keep_all_tokens = name.startswith('!')

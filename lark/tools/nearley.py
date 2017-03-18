@@ -128,7 +128,9 @@ def _nearley_to_lark(g, builtin_path, n2l):
     return rule_defs
 
 
-def nearley_to_lark(g, builtin_path, context):
+def nearley_to_lark(g, builtin_path):
+    context = js2py.EvalJs()
+    context.execute('function id(x) {return x[0]; }')
     n2l = NearleyToLark(context)
     lark_g = '\n'.join(_nearley_to_lark(g, builtin_path, n2l))
     lark_g += '\n'+'\n'.join('!%s: %s' % item for item in n2l.extra_rules.items())
@@ -176,10 +178,7 @@ def test():
         function(d) {return Math.floor(d[0]*255); }
     %}
     """
-    context = js2py.EvalJs()
-    context.execute('function id(x) {return x[0]; }')
-
-    converted_grammar, t = nearley_to_lark(css_example_grammar, '/home/erez/nearley/builtin', context)
+    converted_grammar, t = nearley_to_lark(css_example_grammar, '/home/erez/nearley/builtin')
     # print(converted_grammar)
 
     l = Lark(converted_grammar, start='n_csscolor')
@@ -202,5 +201,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    # test()
+    # main()
+    test()

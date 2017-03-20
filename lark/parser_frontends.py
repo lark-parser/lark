@@ -27,7 +27,7 @@ class LALR(WithLexer):
         self.parser = lalr_parser.Parser(parser_conf)
 
     def parse(self, text):
-        tokens = list(self.lex(text))
+        tokens = self.lex(text)
         return self.parser.parse(tokens)
 
 class LALR_ContextualLexer:
@@ -160,7 +160,7 @@ class Earley(WithLexer):
         return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
 
     def parse(self, text):
-        tokens = list(self.lex(text))
+        tokens = self.lex(text)
         return self.parser.parse(tokens)
 
 def get_frontend(parser, lexer):

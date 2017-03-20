@@ -154,10 +154,10 @@ These features may be implemented some day:
 
 | Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
 |:-----|:-------------|:------------|:----------|:---------
-| **Lark - LALR(1)** | 4.2s | 1.1s | 0.4M | 0.3M |
-| PyParsing | 32s | 4.1s | 0.4M | 0.2M |
-| funcparserlib | 11s | 1.9s | 0.5M | 0.3M |
-| Parsimonious | | 7s | | 1.4M |
+| **Lark - LALR(1)** | 4.7s | 1.2s | 70M | 134M |
+| PyParsing | 32s | 4.1s | 443M | 225M |
+| funcparserlib | 11s | 1.9s | 483M | 293M |
+| Parsimonious | | 7s | | 1545M |
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 

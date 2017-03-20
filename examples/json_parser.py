@@ -47,7 +47,7 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
-# json_parser = Lark(json_grammar, parser='earley')
+# json_parser = Lark(json_grammar, parser='earley', lexer='standard')
 # def parse(x):
 #     return TreeToJson().transform(json_parser.parse(x))
 
@@ -72,7 +72,7 @@ def test():
     assert j == json.loads(test_json)
 
 if __name__ == '__main__':
-    test()
+    # test()
     with open(sys.argv[1]) as f:
         print(parse(f.read()))
 

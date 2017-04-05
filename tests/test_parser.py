@@ -19,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError
 from lark.lexer import LexError
+from lark.tree import Tree
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -103,6 +104,21 @@ class TestEarley(unittest.TestCase):
         l = Lark(grammar, parser='earley', lexer=None)
         res = l.parse("aaa")
         self.assertEqual(res.children, ['aaa'])
+
+    def test_earley_repeating_empty(self):
+        # This was a sneaky bug!
+
+        grammar = """
+        !start: "a" empty empty "b"
+        empty: empty2
+        empty2:
+        """
+
+        parser = Lark(grammar, parser='earley', lexer=None)
+        res = parser.parse('ab')
+
+        empty_tree = Tree('empty', [Tree('empty2', [])])
+        self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):

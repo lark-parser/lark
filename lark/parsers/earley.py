@@ -98,7 +98,7 @@ class Column:
         for item in items:
 
             if item.is_complete:
-                # XXX TODO Potential bug: What happens if there's ambiguity in an empty rule?
+                # XXX Potential bug: What happens if there's ambiguity in an empty rule?
                 if item.rule.expansion and item in self.completed:
                     old_tree = self.completed[item].tree
                     if old_tree.data != 'ambig':
@@ -110,7 +110,7 @@ class Column:
                     old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item
-                    self.to_reduce.append(item)
+                self.to_reduce.append(item)
             else:
                 if item not in added:
                     added.add(item)

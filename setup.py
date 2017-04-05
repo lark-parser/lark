@@ -11,10 +11,7 @@ setup(
     requires = [],
     install_requires = [],
 
-    package_data = {
-        '': ['*.md', '*.g'],
-        'docs': ['*.png'],
-    },
+    package_data = { '': ['*.md', '*.g'] },
 
     # metadata for upload to PyPI
     author = "Erez Shinan",

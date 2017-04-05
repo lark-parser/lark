@@ -98,7 +98,7 @@ class Column:
         for item in items:
 
             if item.is_complete:
-                # XXX TODO Potential bug: What happens if there's ambiguity in an empty rule?
+                # XXX Potential bug: What happens if there's ambiguity in an empty rule?
                 if item.rule.expansion and item in self.completed:
                     old_tree = self.completed[item].tree
                     if old_tree.data != 'ambig':
@@ -110,7 +110,7 @@ class Column:
                     old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item
-                    self.to_reduce.append(item)
+                self.to_reduce.append(item)
             else:
                 if item not in added:
                     added.add(item)
@@ -168,7 +168,7 @@ class Parser:
                 to_scan = cur_set.to_scan.get_news()
                 for item in to_scan:
                     if item.expect.match(token):
-                        next_set.add([item.advance(stream[i])])
+                        next_set.add([item.advance(token)])
 
             if not next_set and token is not END_TOKEN:
                 expect = {i.expect for i in cur_set.to_scan}
@@ -181,10 +181,12 @@ class Parser:
         column0.add(predict(start, column0))
 
         cur_set = column0
-        for i, char in enumerate(stream):
-            _, cur_set = process_column(i, char, cur_set)
+        i = 0
+        for token in stream:
+            _, cur_set = process_column(i, token, cur_set)
+            i += 1
 
-        last_set, _ = process_column(len(stream), END_TOKEN, cur_set)
+        last_set, _ = process_column(i, END_TOKEN, cur_set)
 
         # Parse ended. Now build a parse tree
         solutions = [n.tree for n in last_set.to_reduce

@@ -327,7 +327,7 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
-json_parser = Lark(json_grammar, start='value')
+json_parser = Lark(json_grammar, start='value', lexer='standard')
 
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:
@@ -419,12 +419,13 @@ I measured memory consumption using a little script called [memusg](https://gist
 
 | Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
 |:-----|:-------------|:------------|:----------|:---------
-| Lark - Earley  | 36s | 4.3s | 6.2M | 1.2M |
-| Lark - LALR(1) | 7s | 1.3s | 0.6M | 0.3M |
-| Lark - LALR(1) tree-less | 4.2s | 1.1s | 0.4M | 0.3M |
-| PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 4.1s | 0.4M | 0.2M |
-| funcparserlib ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 11s | 1.9s | 0.5M | 0.3M |
-| Parsimonious ([Parser](https://gist.githubusercontent.com/reclosedev/5222560/raw/5e97cf7eb62c3a3671885ec170577285e891f7d5/parsimonious_json.py)) | ? | 7s | ? | 1.4M |
+| Lark - Earley *(with lexer)* | 42s | 4s | 1167M | 608M |
+| Lark - LALR(1) | 8s | 1.53s | 453M | 266M |
+| Lark - LALR(1) tree-less | 4.76s | 1.23s | 70M | 134M |
+| PyParsing ([Parser](http://pyparsing.wikispaces.com/file/view/jsonParser.py)) | 32s | 3.53s | 443M | 225M |
+| funcparserlib ([Parser](https://github.com/vlasovskikh/funcparserlib/blob/master/funcparserlib/tests/json.py)) | 8.5s | 1.3s | 483M | 293M |
+| Parsimonious ([Parser](https://gist.githubusercontent.com/reclosedev/5222560/raw/5e97cf7eb62c3a3671885ec170577285e891f7d5/parsimonious_json.py)) | ? | 5.7s | ? | 1545M |
+
 
 I added a few other parsers for comparison. PyParsing and funcparselib fair pretty well in their memory usage (they don't build a tree), but they can't compete with the run-time speed of LALR(1).
 

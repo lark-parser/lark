@@ -81,12 +81,35 @@ Then, the transformer calculates the tree and returns a number:
  - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
  - Check out the [tests](/tests/test_parser.py) for more examples.
 
-
-## Install Lark
+### Install Lark
 
     $ pip install lark-parser
 
 Lark has no dependencies.
+
+### Projects using Lark
+
+ - [mappyfile](https://github.com/geographika/mappyfile) - A pure Python MapFile parser for working with MapServer
+
+Using Lark? Send me a message and I'll add your project!
+
+### How to use Nearley grammars in Lark
+
+Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
+
+Here's an example:
+```bash
+git clone https://github.com/Hardmath123/nearley
+python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley > ncalc.py
+```
+
+You can use the output as a regular python module:
+
+```python
+>>> import ncalc
+>>> ncalc.parse('sin(pi/4) ^ e')
+0.38981434460254655
+```
 
 ## List of Features
 
@@ -114,7 +137,6 @@ These features are planned to be implemented in the near future:
  - Grammar composition
  - Optimizations in both the parsers and the lexer
  - Better ambiguity resolution
- - Automatically convert grammars from/to [Nearley](https://github.com/Hardmath123/nearley), an awesome Earley library in Javascript
 
 ### Planned
 

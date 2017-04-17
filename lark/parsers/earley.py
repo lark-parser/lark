@@ -101,10 +101,10 @@ class Column:
                 # XXX Potential bug: What happens if there's ambiguity in an empty rule?
                 if item.rule.expansion and item in self.completed:
                     old_tree = self.completed[item].tree
-                    if old_tree.data != 'ambig':
+                    if old_tree.data != '_ambig':
                         new_tree = old_tree.copy()
                         new_tree.rule = old_tree.rule
-                        old_tree.set('ambig', [new_tree])
+                        old_tree.set('_ambig', [new_tree])
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar!")
                     old_tree.children.append(item.tree)
@@ -125,9 +125,10 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start, callback):
+    def __init__(self, rules, start, callback, resolve_ambiguity=True):
         self.analysis = GrammarAnalyzer(rules, start)
         self.start = start
+        self.resolve_ambiguity = resolve_ambiguity
 
         self.postprocess = {}
         self.predictions = {}
@@ -197,9 +198,11 @@ class Parser:
         elif len(solutions) == 1:
             tree = solutions[0]
         else:
-            tree = Tree('ambig', solutions)
+            tree = Tree('_ambig', solutions)
 
-        ResolveAmbig().visit(tree) 
+        if self.resolve_ambiguity:
+            ResolveAmbig().visit(tree) 
+
         return ApplyCallbacks(self.postprocess).transform(tree)
         
 
@@ -220,9 +223,8 @@ def _compare_rules(rule1, rule2):
     assert rule1.origin == rule2.origin
     c = compare( len(rule1.expansion), len(rule2.expansion))
     if rule1.origin.startswith('__'):   # XXX hack! We need to set priority in parser, not here
-        return c
-    else:
-        return -c
+        c = -c
+    return c
 
 def _compare_drv(tree1, tree2):
     if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
@@ -242,8 +244,8 @@ def _compare_drv(tree1, tree2):
 
 
 class ResolveAmbig(Visitor_NoRecurse):
-    def ambig(self, tree):
-        best = max(tree.children, key=cmp_to_key(_compare_drv))
+    def _ambig(self, tree):
+        best = min(tree.children, key=cmp_to_key(_compare_drv))
         assert best.data == 'drv'
         tree.set('drv', best.children)
         tree.rule = best.rule   # needed for applying callbacks

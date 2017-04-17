@@ -120,6 +120,23 @@ class TestEarley(unittest.TestCase):
         empty_tree = Tree('empty', [Tree('empty2', [])])
         self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
+    def test_earley_explicit_ambiguity(self):
+        # This was a sneaky bug!
+
+        grammar = """
+        start: a b | ab
+        a: "a"
+        b: "b"
+        ab: "ab"
+        """
+
+        parser = Lark(grammar, parser='earley', lexer=None, ambiguity='explicit')
+        res = parser.parse('ab')
+
+        self.assertEqual( res.data, '_ambig')
+        self.assertEqual( len(res.children), 2)
+
+
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=LEXER, parser=PARSER, **kwargs)

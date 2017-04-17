@@ -27,6 +27,11 @@ class LarkOptions(object):
             "contextual": Stronger lexer (only works with parser="lalr")
             "auto" (default): Choose for me based on grammar and parser
 
+        ambiguity - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
+            "resolve": The parser will automatically choose the simplest derivation 
+                       (it chooses consistently: greedy for tokens, non-greedy for rules)
+            "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+
         transformer - Applies the transformer to every parse tree
         debug - Affects verbosity (default: False)
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
@@ -49,6 +54,7 @@ class LarkOptions(object):
         self.transformer = o.pop('transformer', None)
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
+        self.ambiguity = o.pop('ambiguity', 'auto')
 
         assert self.parser in ('earley', 'lalr', None)
 
@@ -119,13 +125,20 @@ class Lark:
         assert not self.options.profile, "Feature temporarily disabled"
         self.profiler = Profiler() if self.options.profile else None
 
-        lexer = self.options.lexer
-        if lexer == 'auto':
+        if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
-                lexer = 'standard'
+                self.options.lexer = 'standard'
             elif self.options.parser == 'earley':
-                lexer = None
-        self.options.lexer = lexer
+                self.options.lexer = None
+        lexer = self.options.lexer
+        assert lexer in ('standard', 'contextual', None)
+
+        if self.options.ambiguity == 'auto':
+            if self.options.parser == 'earley':
+                self.options.ambiguity = 'resolve'
+        else:
+            assert self.options.parser == 'earley'
+        assert self.options.ambiguity in ('resolve', 'explicit', 'auto')
 
         self.grammar = load_grammar(grammar, source)
         tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
@@ -155,7 +168,7 @@ class Lark:
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
         parser_conf = ParserConf(rules, callback, self.options.start)
 
-        return self.parser_class(self.lexer_conf, parser_conf)
+        return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
 
     def lex(self, text):

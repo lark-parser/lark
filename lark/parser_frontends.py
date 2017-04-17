@@ -20,7 +20,7 @@ class WithLexer:
             return stream
 
 class LALR(WithLexer):
-    def __init__(self, lexer_conf, parser_conf):
+    def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf)
 
         self.parser_conf = parser_conf
@@ -31,7 +31,7 @@ class LALR(WithLexer):
         return self.parser.parse(tokens)
 
 class LALR_ContextualLexer:
-    def __init__(self, lexer_conf, parser_conf):
+    def __init__(self, lexer_conf, parser_conf, options=None):
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf
 
@@ -126,12 +126,16 @@ class OldEarley_NoLex:
         return res[0]
 
 class Earley_NoLex:
-    def __init__(self, lexer_conf, parser_conf):
+    def __init__(self, lexer_conf, parser_conf, options=None):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
         rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
 
-        self.parser = earley.Parser(rules, parser_conf.start, parser_conf.callback)
+        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
+        self.parser = earley.Parser(rules, 
+                                    parser_conf.start,
+                                    parser_conf.callback,
+                                    resolve_ambiguity=resolve_ambiguity)
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
@@ -149,12 +153,16 @@ class Earley_NoLex:
         return self.parser.parse(new_text)
 
 class Earley(WithLexer):
-    def __init__(self, lexer_conf, parser_conf):
+    def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf)
 
         rules = [(n, self._prepare_expansion(x), a) for n,x,a in parser_conf.rules]
 
-        self.parser = earley.Parser(rules, parser_conf.start, parser_conf.callback)
+        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
+        self.parser = earley.Parser(rules, 
+                                    parser_conf.start,
+                                    parser_conf.callback,
+                                    resolve_ambiguity=resolve_ambiguity)
 
     def _prepare_expansion(self, expansion):
         return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]

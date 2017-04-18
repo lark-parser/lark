@@ -166,6 +166,8 @@ You can use the output as a regular python module:
  - Extensive test suite
  - **Python 2 & 3** compatible
 
+[![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
+
 ### Coming soon
 
 These features are planned to be implemented in the near future:

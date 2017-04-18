@@ -100,7 +100,8 @@ grammar = """
 """
 
 parser = Lark(grammar, start='sentence', ambiguity='explicit')  # Explicit ambiguity in parse tree!
-tree = fruitflies.parser.parse('fruit flies like bananas')
+
+tree = parser.parse('fruit flies like bananas')
 
 from lark.tree import pydot__tree_to_png    # Just a neat utility function
 pydot__tree_to_png(tree, "examples/fruitflies.png")

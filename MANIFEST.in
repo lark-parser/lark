@@ -1,1 +1,1 @@
-include README.md LICENSE docs/* examples/*.py tests/*.py
+include README.md LICENSE docs/* examples/*.py tests/*.py examples/*.png

@@ -74,9 +74,44 @@ Then, the transformer calculates the tree and returns a number:
 1337.0
 ```
 
+### Fruit Flies Like Bananas
+
+Lark can automatically resolve ambiguity by choosing the simplest solution. Or, you can ask it to return all the possible parse trees, wrapped in a meta "\_ambig" node.
+
+Here's a toy example to parse the famously ambiguous phrase: "fruit flies like bananas"
+
+```python
+from lark import Lark
+
+grammar = """
+    sentence: noun verb noun        -> simple
+            | noun verb "like" noun -> comparative
+
+    noun: adj? NOUN
+    verb: VERB
+    adj: ADJ
+
+    NOUN: "flies" | "bananas" | "fruit"
+    VERB: "like" | "flies"
+    ADJ: "fruit"
+
+    %import common.WS
+    %ignore WS
+"""
+
+parser = Lark(grammar, start='sentence', ambiguity='explicit')  # Explicit ambiguity in parse tree!
+tree = fruitflies.parser.parse('fruit flies like bananas')
+
+from lark.tree import pydot__tree_to_png    # Just a neat utility function
+pydot__tree_to_png(tree, "examples/fruitflies.png")
+```
+![fruitflies.png](examples/fruitflies.png)
+
+
 ## Learn more about using Lark
 
  - **Read the [tutorial](/docs/json_tutorial.md)**, which shows how to write a JSON parser in Lark.
+ - Read a blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
  - Read the [reference](/docs/reference.md)
  - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
  - Check out the [tests](/tests/test_parser.py) for more examples.

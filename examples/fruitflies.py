@@ -4,12 +4,13 @@
 
 from lark import Lark
 
-g = """
+grammar = """
     sentence: noun verb noun        -> simple
             | noun verb "like" noun -> comparative
 
-    noun: ADJ? NOUN
+    noun: adj? NOUN
     verb: VERB
+    adj: ADJ
 
     NOUN: "flies" | "bananas" | "fruit"
     VERB: "like" | "flies"
@@ -19,11 +20,12 @@ g = """
     %ignore WS
 """
 
-lark = Lark(g, start='sentence', ambiguity='explicit')
+parser = Lark(grammar, start='sentence', ambiguity='explicit')
 
-print(lark.parse('fruit flies like bananas').pretty())
+if __name__ == '__main__':
+    print(parser.parse('fruit flies like bananas').pretty())
 
-# Outputs:
+# Output:
 #
 # _ambig
 #   comparative
@@ -36,4 +38,5 @@ print(lark.parse('fruit flies like bananas').pretty())
 #       flies
 #     verb	like
 #     noun	bananas
-
+#
+# (or view a nicer version at "./fruitflies.png")

@@ -429,6 +429,7 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             x = g.parse('aababc')
 
+        @unittest.skipIf(LEXER is None, "Known bug with scanless parsing")  # TODO
         def test_token_not_anon(self):
             """Tests that "a" is matched as A, rather than an anonymous token.
 

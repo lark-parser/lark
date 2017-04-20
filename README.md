@@ -167,6 +167,7 @@ You can use the output as a regular python module:
  - **Python 2 & 3** compatible
 
 [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
+[![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
 
 ### Coming soon
 

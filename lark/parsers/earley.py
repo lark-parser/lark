@@ -17,8 +17,8 @@ from functools import cmp_to_key
 
 from ..utils import compare
 from ..common import ParseError, UnexpectedToken, Terminal
-from .grammar_analysis import GrammarAnalyzer
 from ..tree import Tree, Visitor_NoRecurse, Transformer_NoRecurse
+from .grammar_analysis import GrammarAnalyzer
 
 
 class EndToken:
@@ -32,6 +32,8 @@ class Derivation(Tree):
 END_TOKEN = EndToken()
 
 class Item(object):
+    "An Earley Item, the atom of the algorithm."
+
     def __init__(self, rule, ptr, start, tree):
         self.rule = rule
         self.ptr = ptr
@@ -77,7 +79,7 @@ class NewsList(list):
 
 
 class Column:
-    "An entry in the table, aka Earley Chart"
+    "An entry in the table, aka Earley Chart. Contains lists of items."
     def __init__(self, i):
         self.i = i
         self.to_reduce = NewsList()
@@ -94,7 +96,6 @@ class Column:
         Makes sure only unique items are added.
         """
 
-        added = self.added
         for item in items:
 
             if item.is_complete:
@@ -112,8 +113,8 @@ class Column:
                     self.completed[item] = item
                 self.to_reduce.append(item)
             else:
-                if item not in added:
-                    added.add(item)
+                if item not in self.added:
+                    self.added.add(item)
                     if isinstance(item.expect, Terminal):
                         self.to_scan.append(item)
                     else:
@@ -125,9 +126,9 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start, callback, resolve_ambiguity=True):
-        self.analysis = GrammarAnalyzer(rules, start)
-        self.start = start
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True):
+        self.analysis = GrammarAnalyzer(rules, start_symbol)
+        self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
 
         self.postprocess = {}
@@ -138,60 +139,57 @@ class Parser:
                 self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
                 self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
-    def parse(self, stream, start=None):
+    def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start = start or self.start
+        start_symbol = start_symbol or self.start_symbol
 
-        def predict(nonterm, i):
+        def predict(nonterm, column):
             assert not isinstance(nonterm, Terminal), nonterm
-            return [Item(rule, 0, i, None) for rule in self.predictions[nonterm]]
+            return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):
             name = item.rule.origin
             return [i.advance(item.tree) for i in item.start.to_predict if i.expect == name]
 
-        def process_column(i, token, cur_set):
-            next_set = Column(i)
-
+        def predict_and_complete(column):
             while True:
-                to_predict = {x.expect for x in cur_set.to_predict.get_news()
+                to_predict = {x.expect for x in column.to_predict.get_news()
                               if x.ptr}  # if not part of an already predicted batch
-                to_reduce = cur_set.to_reduce.get_news()
+                to_reduce = column.to_reduce.get_news()
                 if not (to_predict or to_reduce):
                     break
 
                 for nonterm in to_predict:
-                    cur_set.add( predict(nonterm, cur_set) )
+                    column.add( predict(nonterm, column) )
                 for item in to_reduce:
-                    cur_set.add( complete(item) )
+                    column.add( complete(item) )
 
-            if token is not END_TOKEN:
-                to_scan = cur_set.to_scan.get_news()
-                for item in to_scan:
-                    if item.expect.match(token):
-                        next_set.add([item.advance(token)])
+        def scan(i, token, column):
+            to_scan = column.to_scan.get_news()
 
-            if not next_set and token is not END_TOKEN:
-                expect = {i.expect for i in cur_set.to_scan}
+            next_set = Column(i)
+            next_set.add(item.advance(token) for item in to_scan if item.expect.match(token))
+
+            if not next_set:
+                expect = {i.expect for i in column.to_scan}
                 raise UnexpectedToken(token, expect, stream, i)
 
-            return cur_set, next_set
+            return next_set
 
         # Main loop starts
         column0 = Column(0)
-        column0.add(predict(start, column0))
+        column0.add(predict(start_symbol, column0))
 
-        cur_set = column0
-        i = 0
-        for token in stream:
-            _, cur_set = process_column(i, token, cur_set)
-            i += 1
+        column = column0
+        for i, token in enumerate(stream):
+            predict_and_complete(column)
+            column = scan(i, token, column)
 
-        last_set, _ = process_column(i, END_TOKEN, cur_set)
+        predict_and_complete(column)
 
         # Parse ended. Now build a parse tree
-        solutions = [n.tree for n in last_set.to_reduce
-                     if n.rule.origin==start and n.start is column0]
+        solutions = [n.tree for n in column.to_reduce
+                     if n.rule.origin==start_symbol and n.start is column0]
 
         if not solutions:
             raise ParseError('Incomplete parse: Could not find a solution to input')

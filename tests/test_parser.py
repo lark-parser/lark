@@ -57,7 +57,7 @@ class TestEarley(unittest.TestCase):
         # or re-processing of already completed rules.
         g = Lark(r"""start: B
                      B: ("ab"|/[^b]/)*
-                  """, lexer=None)
+                  """, lexer='dynamic')
 
         self.assertEqual( g.parse('abc').children[0], 'abc')
 
@@ -65,7 +65,7 @@ class TestEarley(unittest.TestCase):
         g = Lark("""start: A "b" c
                     A: "a"+
                     c: "abc"
-                    """, parser="earley", lexer=None)
+                    """, parser="earley", lexer='dynamic')
         x = g.parse('aaaababc')
 
     def test_earley_scanless2(self):
@@ -80,7 +80,7 @@ class TestEarley(unittest.TestCase):
 
         program = """c b r"""
 
-        l = Lark(grammar, parser='earley', lexer=None)
+        l = Lark(grammar, parser='earley', lexer='dynamic')
         l.parse(program)
 
     def test_earley_scanless3(self):
@@ -91,7 +91,7 @@ class TestEarley(unittest.TestCase):
         A: "a"+
         """
 
-        l = Lark(grammar, parser='earley', lexer=None)
+        l = Lark(grammar, parser='earley', lexer='dynamic')
         res = l.parse("aaa")
         self.assertEqual(res.children, ['aa', 'a'])
 
@@ -101,7 +101,7 @@ class TestEarley(unittest.TestCase):
         A: "a"+
         """
 
-        l = Lark(grammar, parser='earley', lexer=None)
+        l = Lark(grammar, parser='earley', lexer='dynamic')
         res = l.parse("aaa")
         self.assertEqual(res.children, ['aaa'])
 
@@ -114,7 +114,7 @@ class TestEarley(unittest.TestCase):
         empty2:
         """
 
-        parser = Lark(grammar, parser='earley', lexer=None)
+        parser = Lark(grammar, parser='earley', lexer='dynamic')
         res = parser.parse('ab')
 
         empty_tree = Tree('empty', [Tree('empty2', [])])
@@ -130,7 +130,7 @@ class TestEarley(unittest.TestCase):
         ab: "ab"
         """
 
-        parser = Lark(grammar, parser='earley', lexer=None, ambiguity='explicit')
+        parser = Lark(grammar, parser='earley', lexer='dynamic', ambiguity='explicit')
         res = parser.parse('ab')
 
         self.assertEqual( res.data, '_ambig')
@@ -146,6 +146,7 @@ def _make_parser_test(LEXER, PARSER):
                         b: "b"
                         a: "a"
                      """)
+
             r = g.parse('aaabaab')
             self.assertEqual( ''.join(x.data for x in r.children), 'aaabaa' )
             r = g.parse('aaabaaba')
@@ -583,15 +584,17 @@ def _make_parser_test(LEXER, PARSER):
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser
 
+# Note: You still have to import them in __main__ for the tests to run
 _TO_TEST = [
         ('standard', 'earley'),
+        ('dynamic', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
         (None, 'earley'),
 ]
 
-for LEXER, PARSER in _TO_TEST:
-    _make_parser_test(LEXER, PARSER)
+for _LEXER, _PARSER in _TO_TEST:
+    _make_parser_test(_LEXER, _PARSER)
 
 
 if __name__ == '__main__':

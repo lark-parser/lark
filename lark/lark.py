@@ -130,8 +130,10 @@ class Lark:
                 self.options.lexer = 'standard'
             elif self.options.parser == 'earley':
                 self.options.lexer = None
+            else:
+                assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', None)
+        assert lexer in ('standard', 'contextual', 'dynamic', None)
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':

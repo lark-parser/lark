@@ -7,6 +7,8 @@ from .common import is_terminal, GrammarError, ParserConf, Terminal_Regexp, Term
 from .parsers import lalr_parser, old_earley, nearley, earley
 from .tree import Transformer
 
+from .parsers import xearley
+
 class WithLexer:
     def __init__(self, lexer_conf):
         self.lexer_conf = lexer_conf
@@ -171,6 +173,31 @@ class Earley(WithLexer):
         tokens = self.lex(text)
         return self.parser.parse(tokens)
 
+
+class XEarley:
+    def __init__(self, lexer_conf, parser_conf, options=None):
+        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+
+        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
+
+        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
+        self.parser = xearley.Parser(rules,
+                                    parser_conf.start,
+                                    parser_conf.callback,
+                                    resolve_ambiguity=resolve_ambiguity)
+
+    def _prepare_expansion(self, expansion):
+        for sym in expansion:
+            if is_terminal(sym):
+                regexp = self.token_by_name[sym].pattern.to_regexp()
+                width = sre_parse.parse(regexp).getwidth()
+                yield Terminal_Regexp(regexp)
+            else:
+                yield sym
+
+    def parse(self, text):
+        return self.parser.parse(text)
+
 def get_frontend(parser, lexer):
     if parser=='lalr':
         if lexer is None:
@@ -186,6 +213,8 @@ def get_frontend(parser, lexer):
             return Earley_NoLex
         elif lexer=='standard':
             return Earley
+        elif lexer=='dynamic':
+            return XEarley
         elif lexer=='contextual':
             raise ValueError('The Earley parser does not support the contextual parser')
         else:

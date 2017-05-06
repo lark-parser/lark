@@ -63,11 +63,17 @@ def inline_args(f):
         def _f_builtin(_self, args):
             return f(*args)
         return _f_builtin
-    else:
-        @functools.wraps(f)
+    elif isinstance(f, types.MethodType):
+        @functools.wraps(f.__func__)
         def _f(self, args):
             return f.__func__(self, *args)
         return _f
+    else:
+        @functools.wraps(f.__call__.__func__)
+        def _f(self, args):
+            return f.__call__.__func__(self, *args)
+        return _f
+
 
 
 try:

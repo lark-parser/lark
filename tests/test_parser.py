@@ -568,6 +568,14 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('AB,a')
             self.assertEqual(tree.children, ['AB'])
 
+        def test_token_flags3(self):
+            l = _Lark("""!start: ABC+
+                      ABC: "abc"i
+                      """
+                      )
+            tree = l.parse('aBcAbC')
+            self.assertEqual(tree.children, ['aBc', 'AbC'])
+
         def test_token_flags2(self):
             g = """!start: ("a"i | /a/ /b/?)+
                 """

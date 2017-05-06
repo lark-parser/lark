@@ -313,7 +313,7 @@ class PrepareLiterals(InlineTransformer):
 class SplitLiterals(InlineTransformer):
     def pattern(self, p):
         if isinstance(p, PatternStr) and len(p.value)>1:
-            return T('expansion', [T('pattern', [PatternStr(ch)]) for ch in p.value])
+            return T('expansion', [T('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
         return T('pattern', [p])
 
 class TokenTreeToPattern(Transformer):

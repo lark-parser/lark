@@ -584,6 +584,22 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['a', 'A'])
 
 
+        def test_reduce_cycle(self):
+            """Tests an edge-condition in the LALR parser, in which a transition state looks exactly like the end state.
+            It seems that the correct solution is to explicitely distinguish finalization in the reduce() function.
+            """
+
+            l = _Lark("""
+                term: A
+                    | term term
+
+                A: "a"
+
+            """, start='term')
+
+            tree = l.parse("aa")
+            self.assertEqual(len(tree.children), 2)
+
 
 
 

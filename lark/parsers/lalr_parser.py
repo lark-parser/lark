@@ -34,7 +34,7 @@ class Parser(object):
 
                 raise UnexpectedToken(token, expected, seq, i)
 
-        def reduce(rule, size):
+        def reduce(rule, size, end=False):
             if size:
                 s = value_stack[-size:]
                 del state_stack[-size:]
@@ -44,7 +44,7 @@ class Parser(object):
 
             res = self.callbacks[rule](s)
 
-            if len(state_stack) == 1 and rule.origin == self.analysis.start_symbol:
+            if end and len(state_stack) == 1 and rule.origin == self.analysis.start_symbol:
                 return res
 
             _action, new_state = get_action(rule.origin)
@@ -73,7 +73,7 @@ class Parser(object):
         while True:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
-            res = reduce(*rule)
+            res = reduce(*rule, end=True)
             if res:
                 assert state_stack == [self.analysis.init_state_idx] and not value_stack, len(state_stack)
                 return res

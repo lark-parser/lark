@@ -125,7 +125,8 @@ Lark has no dependencies.
 
 ### Projects using Lark
 
- - [mappyfile](https://github.com/geographika/mappyfile) - A pure Python MapFile parser for working with MapServer
+ - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
+ - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
 
 Using Lark? Send me a message and I'll add your project!
 

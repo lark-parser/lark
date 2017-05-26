@@ -1,4 +1,5 @@
 from .common import is_terminal, GrammarError
+from .utils import suppress
 from .lexer import Token
 
 class Callback(object):
@@ -42,10 +43,31 @@ def create_rule_handler(expansion, usermethod, keep_all_tokens, filter_out):
     # else, if no filtering required..
     return usermethod
 
+def propagate_positions_wrapper(f):
+    def _f(args):
+        res = f(args)
+
+        if args:
+            for a in args:
+                with suppress(AttributeError):
+                    res.line = a.line
+                    res.column = a.column
+                break
+
+            for a in reversed(args):
+                with suppress(AttributeError):
+                    res.end_line = a.end_line
+                    res.end_col = a.end_col
+                break
+
+        return res
+
+    return _f
 
 class ParseTreeBuilder:
-    def __init__(self, tree_class):
+    def __init__(self, tree_class, propagate_positions=False):
         self.tree_class = tree_class
+        self.propagate_positions = propagate_positions
 
     def _create_tree_builder_function(self, name):
         tree_class = self.tree_class
@@ -91,6 +113,9 @@ class ParseTreeBuilder:
 
 
                 alias_handler = create_rule_handler(expansion, f, keep_all_tokens, filter_out)
+
+                if self.propagate_positions:
+                    alias_handler = propagate_positions_wrapper(alias_handler)
 
                 callback_name = 'autoalias_%s_%s' % (_origin, '_'.join(expansion))
                 if hasattr(callback, callback_name):

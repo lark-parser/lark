@@ -39,6 +39,7 @@ class LarkOptions(object):
         postlex - Lexer post-processing (Default: None)
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
+        propagate_positions - Experimental. Don't use yet.
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -55,6 +56,7 @@ class LarkOptions(object):
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
+        self.propagate_positions = o.pop('propagate_positions', False)
 
         assert self.parser in ('earley', 'lalr', None)
 
@@ -160,7 +162,7 @@ class Lark:
 
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
+        self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class, self.options.propagate_positions)
         rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
         if self.profiler:
             for f in dir(callback):

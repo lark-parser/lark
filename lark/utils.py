@@ -1,6 +1,7 @@
 import functools
 import types
 from collections import deque
+from contextlib import contextmanager
 
 class fzset(frozenset):
     def __repr__(self):
@@ -86,6 +87,25 @@ except NameError:
             return 1
         else:
             return -1
+
+
+try:
+    from contextlib import suppress     # Python 3
+except ImportError:
+    @contextmanager
+    def suppress(*excs):
+        '''Catch and dismiss the provided exception
+
+        >>> x = 'hello'
+        >>> with suppress(IndexError):
+        ...     x = x[10]
+        >>> x
+        'hello'
+        '''
+        try:
+            yield
+        except excs:
+            pass
 
 
 

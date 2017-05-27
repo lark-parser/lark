@@ -252,6 +252,22 @@ Lark offers both Earley and LALR(1), which means you can choose between the most
 
 Lark uses the [MIT license](LICENSE).
 
+## Contribute
+
+Lark is currently accepting pull-requests.
+
+There are many ways you can help the project:
+
+* Improve the performance of Lark's parsing algorithm
+* Implement macros for grammars (important for grammar composition)
+* Write new grammars for Lark's library
+* Write & improve the documentation
+* Write a blog post introducing Lark to your audience
+
+If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
+
 ## Contact
 
-If you have any questions or want to contribute, you can email me at erezshin at gmail com.
+If you have any questions or want my assistance, you can email me at erezshin at gmail com.
+
+I'm also available for contract work.

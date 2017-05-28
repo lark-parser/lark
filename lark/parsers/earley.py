@@ -107,7 +107,7 @@ class Column:
                         new_tree.rule = old_tree.rule
                         old_tree.set('_ambig', [new_tree])
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
-                        raise ParseError("Infinite recursion in grammar!")
+                        raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
                     old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item
@@ -226,6 +226,12 @@ def _compare_rules(rule1, rule2):
 
 def _compare_drv(tree1, tree2):
     if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
+        return compare(tree1, tree2)
+
+    try:
+        rule1, rule2 = tree1.rule, tree2.rule
+    except AttributeError:
+        # Probably trees that don't take part in this parse (better way to distinguish?)
         return compare(tree1, tree2)
 
     c = _compare_rules(tree1.rule, tree2.rule)

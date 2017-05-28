@@ -538,6 +538,12 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("+2e-9")
             self.assertRaises(ParseError, g.parse, "+2e-9e")
 
+        def test_keep_all_tokens(self):
+            l = _Lark("""start: "a"+ """, keep_all_tokens=True)
+            tree = l.parse('aaa')
+            self.assertEqual(tree.children, ['a', 'a', 'a'])
+
+
         def test_token_flags(self):
             l = _Lark("""!start: "a"i+
                       """

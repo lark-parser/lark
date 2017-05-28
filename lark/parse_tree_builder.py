@@ -65,9 +65,10 @@ def propagate_positions_wrapper(f):
     return _f
 
 class ParseTreeBuilder:
-    def __init__(self, tree_class, propagate_positions=False):
+    def __init__(self, tree_class, propagate_positions=False, keep_all_tokens=False):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions
+        self.always_keep_all_tokens = keep_all_tokens
 
     def _create_tree_builder_function(self, name):
         tree_class = self.tree_class
@@ -88,7 +89,7 @@ class ParseTreeBuilder:
                 filter_out.add(origin)
 
         for origin, (expansions, options) in rules.items():
-            keep_all_tokens = options.keep_all_tokens if options else False
+            keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
             expand1 = options.expand1 if options else False
             create_token = options.create_token if options else False
 

@@ -159,10 +159,10 @@ class Lexer(object):
 
                     if to_yield:
                         t = Token(type_, value, lex_pos, line, lex_pos - col_start_pos)
+                        end_col = t.column + len(value)
                         if t.type in self.callback:
                             t = self.callback[t.type](t)
 
-                    end_col = t.column + len(value)
                     if type_ in newline_types:
                         newlines = value.count(self.newline_char)
                         if newlines:

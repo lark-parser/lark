@@ -10,11 +10,14 @@ class Tree(object):
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)
 
+    def _pretty_label(self):
+        return self.data
+
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
             return [ indent_str*level, self.data, '\t', '%s' % self.children[0], '\n']
 
-        l = [ indent_str*level, self.data, '\n' ]
+        l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
             if isinstance(n, Tree):
                 l += n._pretty(level+1, indent_str)
@@ -62,10 +65,14 @@ class Tree(object):
                     yield c
 
     def iter_subtrees(self):
+        visited = set()
         q = [self]
 
         while q:
             subtree = q.pop()
+            if id(subtree) in visited:
+                continue    # already been here from another branch
+            visited.add(id(subtree))
             yield subtree
             q += [c for c in subtree.children if isinstance(c, Tree)]
 

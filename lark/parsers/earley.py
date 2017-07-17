@@ -29,6 +29,9 @@ class Derivation(Tree):
         Tree.__init__(self, 'drv', items or [])
         self.rule = rule
 
+    def _pretty_label(self):    # Nicer pretty for debugging the parser
+        return self.rule.origin if self.rule else self.data
+
 END_TOKEN = EndToken()
 
 class Item(object):
@@ -106,8 +109,11 @@ class Column:
                         new_tree = old_tree.copy()
                         new_tree.rule = old_tree.rule
                         old_tree.set('_ambig', [new_tree])
+                        old_tree.rule = None    # No longer a 'drv' node
+
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
+
                     old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item
@@ -234,6 +240,14 @@ def _compare_drv(tree1, tree2):
         # Probably trees that don't take part in this parse (better way to distinguish?)
         return compare(tree1, tree2)
 
+    # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
+    #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
+    #     computationally inefficient. So we handle it here.
+    if tree1.data == '_ambig':
+        _resolve_ambig(tree1)
+    if tree2.data == '_ambig':
+        _resolve_ambig(tree2)
+
     c = _compare_rules(tree1.rule, tree2.rule)
     if c:
         return c
@@ -247,12 +261,19 @@ def _compare_drv(tree1, tree2):
     return compare(len(tree1.children), len(tree2.children))
 
 
+def _resolve_ambig(tree):
+    assert tree.data == '_ambig'
+
+    best = min(tree.children, key=cmp_to_key(_compare_drv))
+    assert best.data == 'drv'
+    tree.set('drv', best.children)
+    tree.rule = best.rule   # needed for applying callbacks
+
+    assert tree.data != '_ambig'
+
 class ResolveAmbig(Visitor_NoRecurse):
     def _ambig(self, tree):
-        best = min(tree.children, key=cmp_to_key(_compare_drv))
-        assert best.data == 'drv'
-        tree.set('drv', best.children)
-        tree.rule = best.rule   # needed for applying callbacks
+        _resolve_ambig(tree)
 
 
 # RULES = [

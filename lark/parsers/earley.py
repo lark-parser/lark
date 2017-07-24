@@ -224,7 +224,8 @@ class ApplyCallbacks(Transformer_NoRecurse):
             return Tree(rule.origin, children)
 
 def _compare_rules(rule1, rule2):
-    assert rule1.origin == rule2.origin
+    if rule1.origin != rule2.origin:
+        return 0
     c = compare( len(rule1.expansion), len(rule2.expansion))
     if rule1.origin.startswith('__'):   # XXX hack! We need to set priority in parser, not here
         c = -c

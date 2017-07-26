@@ -379,6 +379,20 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('Hello HelloWorld')
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
+        def test_token_collision2(self):
+            # NOTE: This test reveals a bug in token reconstruction in Scanless Earley
+            #       I probably need to re-write grammar transformation
+
+            g = _Lark("""
+                    !start: "starts"
+
+                    %import common.LCASE_LETTER
+                    """)
+
+            x = g.parse("starts")
+            self.assertSequenceEqual(x.children, ['starts'])
+
+
         # def test_string_priority(self):
         #     g = _Lark("""start: (A | /a?bb/)+
         #                  A: "a"  """)

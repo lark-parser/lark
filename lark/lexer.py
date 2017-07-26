@@ -1,7 +1,6 @@
 ## Lexer Implementation
 
 import re
-import sre_parse
 
 from .utils import Str, classify
 from .common import is_terminal, PatternStr, PatternRE, TokenDef
@@ -120,8 +119,7 @@ class Lexer(object):
             except:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
-            width = sre_parse.parse(t.pattern.to_regexp()).getwidth()
-            if width[0] == 0:
+            if t.pattern.min_width == 0:
                 raise LexError("Lexer does not allow zero-width tokens. (%s: %s)" % (t.name, t.pattern))
 
         token_names = {t.name for t in tokens}
@@ -133,7 +131,7 @@ class Lexer(object):
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = [t for t in ignore]
 
-        tokens.sort(key=lambda x:(x.pattern.priority, len(x.pattern.value)), reverse=True)
+        tokens.sort(key=lambda x:x.pattern.max_width, reverse=True)
 
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())

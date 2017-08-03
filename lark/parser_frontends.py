@@ -129,7 +129,7 @@ class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
-        rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
+        rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
         resolve_ambiguity = (options.ambiguity=='resolve') if options else True
         self.parser = earley.Parser(rules, 
@@ -156,7 +156,7 @@ class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf)
 
-        rules = [(n, self._prepare_expansion(x), a) for n,x,a in parser_conf.rules]
+        rules = [(n, self._prepare_expansion(x), a, o) for n,x,a,o in parser_conf.rules]
 
         resolve_ambiguity = (options.ambiguity=='resolve') if options else True
         self.parser = earley.Parser(rules, 

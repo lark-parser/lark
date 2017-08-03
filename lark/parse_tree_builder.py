@@ -123,6 +123,6 @@ class ParseTreeBuilder:
                     raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
                 setattr(callback, callback_name, alias_handler)
 
-                new_rules.append(( _origin, expansion, callback_name ))
+                new_rules.append(( _origin, expansion, callback_name, options ))
 
         return new_rules, callback

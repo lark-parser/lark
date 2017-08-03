@@ -41,7 +41,7 @@ class LexerConf:
 
 class ParserConf:
     def __init__(self, rules, callback, start):
-        assert all(len(r)==3 for r in rules)
+        assert all(len(r) == 4 for r in rules)
         self.rules = rules
         self.callback = callback
         self.start = start

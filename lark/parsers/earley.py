@@ -224,6 +224,11 @@ class ApplyCallbacks(Transformer_NoRecurse):
             return Tree(rule.origin, children)
 
 def _compare_rules(rule1, rule2):
+    if rule1.options and rule2.options:
+        if rule1.options.priority is not None and rule2.options.priority is not None:
+            assert rule1.options.priority != rule2.options.priority, "Priority is the same between both rules: %s == %s" % (rule1, rule2)
+            return -compare(rule1.options.priority, rule2.options.priority)
+
     if rule1.origin != rule2.origin:
         return 0
     c = compare( len(rule1.expansion), len(rule2.expansion))

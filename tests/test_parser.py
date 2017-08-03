@@ -621,6 +621,30 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
+        def test_earley_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: a | b
+            a.1: "a"
+            b.2: "a"
+            """
+
+            l = Lark(grammar, parser='earley', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'b')
+
+            grammar = """
+            start: a | b
+            a.2: "a"
+            b.1: "a"
+            """
+
+            l = Lark(grammar, parser='earley', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'a')
+
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

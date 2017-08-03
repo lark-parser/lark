@@ -9,6 +9,7 @@ from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
 
 class Parser(object):
     def __init__(self, parser_conf):
+        assert all(o is None or o.priority is None for n,x,a,o in parser_conf.rules), "LALR doesn't yet support prioritization"
         self.analysis = LALR_Analyzer(parser_conf.rules, parser_conf.start)
         self.analysis.compute_lookahead()
         self.callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)

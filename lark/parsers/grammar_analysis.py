@@ -7,10 +7,11 @@ class Rule(object):
         origin : a symbol
         expansion : a list of symbols
     """
-    def __init__(self, origin, expansion, alias=None):
+    def __init__(self, origin, expansion, alias=None, options=None):
         self.origin = origin
         self.expansion = expansion
         self.alias = alias
+        self.options = options
 
     def __repr__(self):
         return '<%s : %s>' % (self.origin, ' '.join(map(str,self.expansion)))
@@ -111,12 +112,12 @@ class GrammarAnalyzer(object):
         self.debug = debug
         rule_tuples = list(rule_tuples)
         rule_tuples.append(('$root', [start_symbol, '$end']))
-        rule_tuples = [(t[0], t[1], None) if len(t)==2 else t for t in rule_tuples]
+        rule_tuples = [(t[0], t[1], None, None) if len(t)==2 else t for t in rule_tuples]
 
         self.rules = set()
-        self.rules_by_origin = {o: [] for o, _x, _a in rule_tuples}
-        for origin, exp, alias in rule_tuples:
-            r =  Rule( origin, exp, alias )
+        self.rules_by_origin = {o: [] for o, _x, _a, _opt in rule_tuples}
+        for origin, exp, alias, options in rule_tuples:
+            r =  Rule( origin, exp, alias, options )
             self.rules.add(r)
             self.rules_by_origin[origin].append(r)
 

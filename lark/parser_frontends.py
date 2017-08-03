@@ -181,10 +181,14 @@ class XEarley:
         rules = [(n, list(self._prepare_expansion(x)), a) for n,x,a in parser_conf.rules]
 
         resolve_ambiguity = (options.ambiguity=='resolve') if options else True
+        ignore = [Terminal_Regexp(self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
+
         self.parser = xearley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity)
+                                    resolve_ambiguity=resolve_ambiguity,
+                                    ignore=ignore,
+                                    )
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:

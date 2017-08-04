@@ -24,7 +24,7 @@ from ..common import ParseError, UnexpectedToken, Terminal
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
 
-from earley import ResolveAmbig, ApplyCallbacks, Item, NewsList, Derivation, END_TOKEN, Column
+from .earley import ResolveAmbig, ApplyCallbacks, Item, NewsList, Derivation, END_TOKEN, Column
 
 class Parser:
     def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True, ignore=()):

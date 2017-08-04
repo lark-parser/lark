@@ -25,7 +25,7 @@ test_json = '''
 
 def test_scanless():
 
-    json_parser = Lark(json_grammar)
+    json_parser = Lark(json_grammar, lexer=None)
     tree = json_parser.parse(test_json)
 
     # print ('@@', tree.pretty())

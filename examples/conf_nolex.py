@@ -1,14 +1,15 @@
 #
-# This example demonstrates scanless parsing using the earley_nolex frontend
+# This example demonstrates scanless parsing using the dynamic-lexer earley frontend
 #
 # Using a lexer for configuration files is tricky, because values don't
-# have to be surrounded by delimiters.
-# In this example with skip lexing and let the Earley parser resolve the ambiguity.
+# have to be surrounded by delimiters. Using a standard lexer for this just won't work.
+#
+# In this example we use a dynamic lexer and let the Earley parser resolve the ambiguity.
 #
 # Future versions of lark will make it easier to write these kinds of grammars.
 #
-# Another approach is to use the contextual lexer. It is less powerful than the scanless approach,
-# but it can handle some ambiguity in lexing and it's much faster since it uses LALR(1).
+# Another approach is to use the contextual lexer with LALR. It is less powerful than Earley,
+# but it can handle some ambiguity when lexing and it's much faster.
 # See examples/conf.py for an example of that approach.
 #
 
@@ -25,7 +26,7 @@ parser = Lark(r"""
 
         %import common.WS_INLINE
         %ignore WS_INLINE
-    """, lexer=None)
+    """, lexer='dynamic')
 
 def test():
     sample_conf = """

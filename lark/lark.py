@@ -129,7 +129,7 @@ class Lark:
             if self.options.parser == 'lalr':
                 self.options.lexer = 'standard'
             elif self.options.parser == 'earley':
-                self.options.lexer = None
+                self.options.lexer = 'dynamic'
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer

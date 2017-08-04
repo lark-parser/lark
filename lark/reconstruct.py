@@ -86,7 +86,7 @@ class Reconstructor:
                            MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym)
                            for sym in expansion if not is_discarded_terminal(sym)]
 
-                rules.append((name, reduced, WriteTokens(name, expansion).f))
+                rules.append((name, reduced, WriteTokens(name, expansion).f, None))
         self.rules = rules
 
 

@@ -5,7 +5,7 @@
 from lark import Lark, InlineTransformer
 
 try:
-    input = raw_input
+    input = raw_input   # For Python2 compatibility
 except NameError:
     pass
 

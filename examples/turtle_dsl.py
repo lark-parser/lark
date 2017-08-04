@@ -1,5 +1,10 @@
 # This example implements a LOGO-like toy language for Python's turtle, with interpreter.
 
+try:
+    input = raw_input   # For Python2 compatibility
+except NameError:
+    pass
+
 import turtle
 
 from lark import Lark
@@ -76,5 +81,5 @@ def test():
     run_turtle(text)
 
 if __name__ == '__main__':
-    #test
+    # test()
     main()

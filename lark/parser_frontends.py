@@ -79,7 +79,7 @@ class Earley_NoLex:
                 width = sre_parse.parse(regexp).getwidth()
                 if width != (1,1):
                     raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
-                yield Terminal_Regexp(regexp)
+                yield Terminal_Regexp(sym, regexp)
             else:
                 yield sym
 
@@ -114,7 +114,7 @@ class XEarley:
         rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
         resolve_ambiguity = (options.ambiguity=='resolve') if options else True
-        ignore = [Terminal_Regexp(self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
+        ignore = [Terminal_Regexp(x, self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
 
         self.parser = xearley.Parser(rules,
                                     parser_conf.start,
@@ -129,7 +129,7 @@ class XEarley:
                 regexp = self.token_by_name[sym].pattern.to_regexp()
                 width = sre_parse.parse(regexp).getwidth()
                 assert width
-                yield Terminal_Regexp(regexp)
+                yield Terminal_Regexp(sym, regexp)
             else:
                 yield sym
 

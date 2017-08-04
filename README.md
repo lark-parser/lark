@@ -1,19 +1,20 @@
-# Lark - a modern parsing library
+# Lark - a modern parsing library for Python
 
-Lark is a modern general-purpose parsing library for Python.
+Parse any context-free grammar, FAST and EASY!
 
-It's intended for everyone, from complete beginners to experts in parsing.
+**Beginners**: Forget everything you knew about parsers! Lark's algorithm can quickly parse any grammar you throw at it, no matter how complicated. It also constructs a parse-tree for you.
 
-Lark focuses on simplicity, power, and speed. It lets you choose between two parsing algorithms:
+**Experts**: Lark lets you choose between Earley and LALR(1), to trade-off power and speed. It also contains experimental features such as a contextual-lexer.
 
- - Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
- - LALR(1): Only LR grammars. Outperforms PLY and most (if not all) other pure-python parsing libraries.
+Lark can:
 
-Both algorithms are written in Python and can be used interchangeably with the same grammar\*. Similarly, the lexer can be turned on/off without changing the grammar. That means you can write your parser without any limitations (just keep it context-free) and optimize it for speed only when you need to.
+    - Parse all context-free grammars, and handle all ambiguity (using Earley)
+    - Built a parse-tree automagically, no construction code required
+    - Outperform PLY (when using LALR(1))
+    - Run on every Python interpreter (it's pure-python)
 
-Lark can automagically build an AST from your grammar, without any more code on your part.
+And many more features. Read ahead and find out.
 
-\* *Both the lexer and the LALR algorithm require certain limitations on the grammar. If you choose to use them, it's better to learn what they are first.*
 
 ### Hello World
 
@@ -152,17 +153,21 @@ You can use the output as a regular python module:
 
  - **Earley** parser
     - Can parse *ALL* context-free grammars
-    - Accepts and resolves ambiguous grammars using a parse forest
-    - Optional lexer
+    - Resolves ambiguous grammars using a parse forest
+    - Automatiic & user-defined rule priority for ambiguity resolution
+    - Dynamic lexer
  - **LALR(1)** parser
-    - Standard & Contextual lexers
- - **EBNF** grammar (with a little extra)
+    - Standard lexer (like PLY)
+    - Contextual lexer (can handle some ambiguity and non-determinism)
+ - **EBNF** grammar (with a few extra features)
  - Builds a parse-tree (AST) automagically based on the grammar
  - Lexer with regular expressions (regexps)
      - Automatic line & column tracking
      - Automatic token collision resolution (unless both terminals are regexps)
  - **Standard library** of terminals (strings, numbers, names, etc.)
- - Automatic reconstruction of input (experimental, see examples)
+ - Experimental features:
+     - Automatic reconstruction of input from parse-tree (see examples)
+     - Import grammars from Nearley.js
  - **Unicode** fully supported
  - Extensive test suite
  - **Python 2 & 3** compatible

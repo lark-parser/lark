@@ -112,9 +112,10 @@ class Terminal:
 
 
 class Terminal_Regexp(Terminal):
-    def __init__(self, data):
-        Terminal.__init__(self, data)
-        self.match = re.compile(data).match
+    def __init__(self, name, regexp):
+        Terminal.__init__(self, regexp)
+        self.name = name
+        self.match = re.compile(regexp).match
 
 class Terminal_Token(Terminal):
     def match(self, other):

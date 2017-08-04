@@ -21,6 +21,7 @@
 from collections import defaultdict
 
 from ..common import ParseError, UnexpectedToken, Terminal
+from ..lexer import Token
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
 
@@ -32,6 +33,7 @@ class Parser:
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = list(ignore)
+
 
         self.postprocess = {}
         self.predictions = {}
@@ -45,6 +47,9 @@ class Parser:
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
         delayed_matches = defaultdict(list)
+
+        text_line = 1
+        text_column = 0
 
         def predict(nonterm, column):
             assert not isinstance(nonterm, Terminal), nonterm
@@ -78,7 +83,8 @@ class Parser:
             for item in to_scan:
                 m = item.expect.match(stream, i)
                 if m:
-                    delayed_matches[m.end()].append(item.advance(m.group(0)))
+                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                    delayed_matches[m.end()].append(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
@@ -98,9 +104,15 @@ class Parser:
 
         column = column0
         for i, token in enumerate(stream):
-
             predict_and_complete(column)
             column = scan(i, token, column)
+
+            if token == '\n':
+                text_line += 1
+                text_column = 0
+            else:
+                text_column += 1
+
 
         predict_and_complete(column)
 

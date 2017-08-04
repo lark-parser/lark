@@ -14,6 +14,7 @@
 # Email : erezshin@gmail.com
 
 from functools import cmp_to_key
+from collections import defaultdict
 
 from ..utils import compare
 from ..common import ParseError, UnexpectedToken, Terminal
@@ -125,7 +126,6 @@ class Column:
     def __nonzero__(self):
         return bool(self.item_count)
 
-from collections import defaultdict
 class Parser:
     def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True, ignore=()):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
@@ -144,7 +144,7 @@ class Parser:
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
-        matched_terminals = defaultdict(set)
+        matched_terminals = defaultdict(list)
 
         def predict(nonterm, column):
             assert not isinstance(nonterm, Terminal), nonterm
@@ -178,24 +178,16 @@ class Parser:
             for item in to_scan:
                 m = item.expect.match(stream, i)
                 if m:
-                    matched_terminals[m.end()].add(item.advance(m.group(0)))
+                    matched_terminals[m.end()].append(item.advance(m.group(0)))
 
-                    # s = m.group(0)
-                    # for j in range(1, len(s)):
-                    #     m = item.expect.match(s[:-j])
-                    #     if m:
-                    #         matched_terminals[m.end()].add(item.advance(m.group(0)))
+                    s = m.group(0)
+                    for j in range(1, len(s)):
+                        m = item.expect.match(s[:-j])
+                        if m:
+                            matched_terminals[m.end()].append(item.advance(m.group(0)))
 
             next_set = Column(i+1)
-            # next_set.add(item.advance(token) for item in to_scan if item.expect.match(token))
             next_set.add(matched_terminals[i+1])
-            # del matched_terminals[i+1]
-
-            # if not next_set:
-            #     import pdb
-            #     pdb.set_trace()
-            #     expect = {i.expect for i in column.to_scan}
-            #     raise UnexpectedToken(token, expect, stream, i)
 
             return next_set
 
@@ -205,7 +197,7 @@ class Parser:
 
         column = column0
         for i, token in enumerate(stream):
-            # print i, token
+
             predict_and_complete(column)
             column = scan(i, token, column)
 
@@ -226,7 +218,7 @@ class Parser:
             ResolveAmbig().visit(tree) 
 
         return ApplyCallbacks(self.postprocess).transform(tree)
-        
+
 
 
 class ApplyCallbacks(Transformer_NoRecurse):
@@ -250,7 +242,7 @@ def _compare_rules(rule1, rule2):
 
 def _compare_drv(tree1, tree2):
     if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
-        return compare(tree1, tree2)
+        return -compare(tree1, tree2)
 
     c = _compare_rules(tree1.rule, tree2.rule)
     if c:
@@ -262,10 +254,15 @@ def _compare_drv(tree1, tree2):
         if c:
             return c
 
-    return compare(len(tree1.children), len(tree2.children))
+    return -compare(len(tree1.children), len(tree2.children))
 
 
 class ResolveAmbig(Visitor_NoRecurse):
+    """Resolves ambiguity in resulting parse tree.
+
+    Minimizes rule length, maximizes match length.
+    """
+
     def _ambig(self, tree):
         best = min(tree.children, key=cmp_to_key(_compare_drv))
         assert best.data == 'drv'

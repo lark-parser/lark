@@ -51,90 +51,95 @@ class TestParsers(unittest.TestCase):
         self.assertRaises(ParseError, l.parse, 'a')
 
 
-class TestEarley(unittest.TestCase):
-    def test_anon_in_scanless(self):
-        # Fails an Earley implementation without special handling for empty rules,
-        # or re-processing of already completed rules.
-        g = Lark(r"""start: B
-                     B: ("ab"|/[^b]/)*
-                  """, lexer='dynamic')
+def _make_full_earley_test(LEXER):
+    class _TestFullEarley(unittest.TestCase):
+        def test_anon_in_scanless(self):
+            # Fails an Earley implementation without special handling for empty rules,
+            # or re-processing of already completed rules.
+            g = Lark(r"""start: B
+                         B: ("ab"|/[^b]/)*
+                      """, lexer=LEXER)
 
-        self.assertEqual( g.parse('abc').children[0], 'abc')
+            self.assertEqual( g.parse('abc').children[0], 'abc')
 
-    def test_earley_scanless(self):
-        g = Lark("""start: A "b" c
-                    A: "a"+
-                    c: "abc"
-                    """, parser="earley", lexer='dynamic')
-        x = g.parse('aaaababc')
+        def test_earley_scanless(self):
+            g = Lark("""start: A "b" c
+                        A: "a"+
+                        c: "abc"
+                        """, parser="earley", lexer=LEXER)
+            x = g.parse('aaaababc')
 
-    def test_earley_scanless2(self):
-        grammar = """
-        start: statement+
+        def test_earley_scanless2(self):
+            grammar = """
+            start: statement+
 
-        statement: "r"
-                 | "c" /[a-z]/+
+            statement: "r"
+                     | "c" /[a-z]/+
 
-        %ignore " "
-        """
+            %ignore " "
+            """
 
-        program = """c b r"""
+            program = """c b r"""
 
-        l = Lark(grammar, parser='earley', lexer='dynamic')
-        l.parse(program)
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            l.parse(program)
 
-    def test_earley_scanless3(self):
-        "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
+        def test_earley_scanless3(self):
+            "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
 
-        grammar = """
-        start: A A
-        A: "a"+
-        """
+            grammar = """
+            start: A A
+            A: "a"+
+            """
 
-        l = Lark(grammar, parser='earley', lexer='dynamic')
-        res = l.parse("aaa")
-        self.assertEqual(res.children, ['aa', 'a'])
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse("aaa")
+            self.assertEqual(res.children, ['aa', 'a'])
 
-    def test_earley_scanless4(self):
-        grammar = """
-        start: A A?
-        A: "a"+
-        """
+        def test_earley_scanless4(self):
+            grammar = """
+            start: A A?
+            A: "a"+
+            """
 
-        l = Lark(grammar, parser='earley', lexer='dynamic')
-        res = l.parse("aaa")
-        self.assertEqual(res.children, ['aaa'])
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse("aaa")
+            self.assertEqual(res.children, ['aaa'])
 
-    def test_earley_repeating_empty(self):
-        # This was a sneaky bug!
+        def test_earley_repeating_empty(self):
+            # This was a sneaky bug!
 
-        grammar = """
-        !start: "a" empty empty "b"
-        empty: empty2
-        empty2:
-        """
+            grammar = """
+            !start: "a" empty empty "b"
+            empty: empty2
+            empty2:
+            """
 
-        parser = Lark(grammar, parser='earley', lexer='dynamic')
-        res = parser.parse('ab')
+            parser = Lark(grammar, parser='earley', lexer=LEXER)
+            res = parser.parse('ab')
 
-        empty_tree = Tree('empty', [Tree('empty2', [])])
-        self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
+            empty_tree = Tree('empty', [Tree('empty2', [])])
+            self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
-    def test_earley_explicit_ambiguity(self):
-        # This was a sneaky bug!
+        def test_earley_explicit_ambiguity(self):
+            # This was a sneaky bug!
 
-        grammar = """
-        start: a b | ab
-        a: "a"
-        b: "b"
-        ab: "ab"
-        """
+            grammar = """
+            start: a b | ab
+            a: "a"
+            b: "b"
+            ab: "ab"
+            """
 
-        parser = Lark(grammar, parser='earley', lexer='dynamic', ambiguity='explicit')
-        res = parser.parse('ab')
+            parser = Lark(grammar, parser='earley', lexer=LEXER, ambiguity='explicit')
+            res = parser.parse('ab')
 
-        self.assertEqual( res.data, '_ambig')
-        self.assertEqual( len(res.children), 2)
+            self.assertEqual( res.data, '_ambig')
+            self.assertEqual( len(res.children), 2)
+
+    _NAME = "TestFullEarley" + (LEXER or 'Scanless').capitalize()
+    _TestFullEarley.__name__ = _NAME
+    globals()[_NAME] = _TestFullEarley
 
 
 def _make_parser_test(LEXER, PARSER):
@@ -444,7 +449,7 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             x = g.parse('aababc')
 
-        @unittest.skipIf(LEXER is None, "Known bug with scanless parsing")  # TODO
+        @unittest.skipIf(LEXER in (None, 'dynamic'), "Known bug with scanless parsing")  # TODO
         def test_token_not_anon(self):
             """Tests that "a" is matched as A, rather than an anonymous token.
 
@@ -664,6 +669,8 @@ _TO_TEST = [
 for _LEXER, _PARSER in _TO_TEST:
     _make_parser_test(_LEXER, _PARSER)
 
+for _LEXER in (None, 'dynamic'):
+    _make_full_earley_test(_LEXER)
 
 if __name__ == '__main__':
     unittest.main()

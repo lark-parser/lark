@@ -4,9 +4,22 @@ import unittest
 import logging
 
 from .test_trees import TestTrees
+
 # from .test_selectors import TestSelectors
-from .test_parser import TestLalrStandard, TestEarleyStandard, TestLalrContextual, TestParsers, TestEarleyScanless, TestEarley, TestEarleyDynamic
 # from .test_grammars import TestPythonG, TestConfigG
+
+from .test_parser import (
+        TestLalrStandard,
+        TestEarleyStandard,
+        TestLalrContextual,
+        TestEarleyScanless,
+        TestEarleyDynamic,
+
+        TestFullEarleyScanless,
+        TestFullEarleyDynamic,
+
+        TestParsers,
+        )
 
 logging.basicConfig(level=logging.INFO)
 

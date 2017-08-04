@@ -238,13 +238,13 @@ def _compare_rules(rule1, rule2):
 
 def _compare_drv(tree1, tree2):
     if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
-        return compare(tree1, tree2)
+        return -compare(tree1, tree2)
 
     try:
         rule1, rule2 = tree1.rule, tree2.rule
     except AttributeError:
         # Probably trees that don't take part in this parse (better way to distinguish?)
-        return compare(tree1, tree2)
+        return -compare(tree1, tree2)
 
     # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
@@ -264,7 +264,7 @@ def _compare_drv(tree1, tree2):
         if c:
             return c
 
-    return compare(len(tree1.children), len(tree2.children))
+    return -compare(len(tree1.children), len(tree2.children))
 
 
 def _resolve_ambig(tree):

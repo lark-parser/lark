@@ -47,12 +47,12 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
-json_parser = Lark(json_grammar, parser='earley', lexer='dynamic')
-def parse(x):
-    return TreeToJson().transform(json_parser.parse(x))
+# json_parser = Lark(json_grammar, parser='earley', lexer='standard')
+# def parse(x):
+#     return TreeToJson().transform(json_parser.parse(x))
 
-# json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
-# parse = json_parser.parse
+json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
+parse = json_parser.parse
 
 def test():
     test_json = '''

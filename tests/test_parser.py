@@ -432,23 +432,6 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('aaaab')
             x = g.parse('b')
 
-        @unittest.skipIf(LEXER is None, "Regexps >1 not supported with scanless parsing")
-        def test_regex_embed(self):
-            g = _Lark("""start: A B C
-                        A: /a/
-                        B: /${A}b/
-                        C: /${B}c/
-                        """)
-            x = g.parse('aababc')
-
-        def test_token_embed(self):
-            g = _Lark("""start: A B C
-                        A: "a"
-                        B: A "b"
-                        C: B "c"
-                        """)
-            x = g.parse('aababc')
-
         @unittest.skipIf(LEXER in (None, 'dynamic'), "Known bug with scanless parsing")  # TODO
         def test_token_not_anon(self):
             """Tests that "a" is matched as A, rather than an anonymous token.

@@ -34,7 +34,7 @@ def is_terminal(sym):
 
 
 class LexerConf:
-    def __init__(self, tokens, ignore, postlex):
+    def __init__(self, tokens, ignore=(), postlex=None):
         self.tokens = tokens
         self.ignore = ignore
         self.postlex = postlex

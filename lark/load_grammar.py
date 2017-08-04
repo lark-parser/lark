@@ -222,7 +222,7 @@ class RuleTreeToText(Transformer):
         return expansion, alias.value
 
 
-class SimplifyTree(InlineTransformer):
+class CanonizeTree(InlineTransformer):
     def maybe(self, expr):
         return T('expr', [expr, Token('OP', '?', -1)])
 
@@ -354,10 +354,10 @@ def _choice_of_rules(rules):
     return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
 
 class Grammar:
-    def __init__(self, rule_defs, token_defs, extra):
+    def __init__(self, rule_defs, token_defs, ignore):
         self.token_defs = token_defs
         self.rule_defs = rule_defs
-        self.extra = extra
+        self.ignore = ignore
 
     def _prepare_scanless_grammar(self, start):
         # XXX Pretty hacky! There should be a better way to write this method..
@@ -366,7 +366,7 @@ class Grammar:
         term_defs = self.token_defs
 
         # Implement the "%ignore" feature without a lexer..
-        terms_to_ignore = {name:'__'+name for name in self.extra['ignore']}
+        terms_to_ignore = {name:'__'+name for name in self.ignore}
         if terms_to_ignore:
             assert set(terms_to_ignore) <= {name for name, t in term_defs}
             term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
@@ -415,49 +415,28 @@ class Grammar:
         # =================
         #  Compile Tokens
         # =================
-        token_tree_to_pattern = TokenTreeToPattern()
 
-        # Convert tokens to strings/regexps
-        tokens = []
-        for name, token_tree in token_defs:
-            token_tree = PrepareLiterals().transform(token_tree)
-            pattern = token_tree_to_pattern.transform(token_tree)
-            tokens.append(TokenDef(name, pattern) )
-
-        #  Resolve regexp assignments of the form /..${X}../
-        # XXX This is deprecated, since you can express most regexps with EBNF
-        # XXX Also, since this happens after import, it can be a source of bugs
-        token_dict = {td.name: td.pattern.to_regexp() for td in tokens}
-        while True:
-            changed = False
-            for t in tokens:
-                if isinstance(t.pattern, PatternRE):
-                    sp = re.split(r'(\$\{%s})' % TOKENS['TOKEN'], t.pattern.value)
-                    if sp:
-                        value = ''.join(token_dict[x[2:-1]] if x.startswith('${') and x.endswith('}') else x
-                                        for x in sp)
-                        if value != t.pattern.value:
-                            t.pattern.value = value
-                            changed = True
-            if not changed:
-                break
+        # Convert token-trees to strings/regexps
+        transformer = PrepareLiterals() * TokenTreeToPattern()
+        tokens = [TokenDef(name, transformer.transform(token_tree))
+                  for name, token_tree in token_defs]
 
         # =================
         #  Compile Rules
         # =================
-        extract_anon = ExtractAnonTokens(tokens)
         ebnf_to_bnf = EBNF_to_BNF()
         simplify_rule = SimplifyRule_Visitor()
-        rule_tree_to_text = RuleTreeToText()
-        rules = {}
 
+        transformer = PrepareLiterals()
+        if not lexer:
+            transformer *= SplitLiterals()
+        transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
+
+        rules = {}
         for name, rule_tree, options in rule_defs:
             assert name not in rules, name
-            rule_tree = PrepareLiterals().transform(rule_tree)
-            if not lexer:
-                rule_tree = SplitLiterals().transform(rule_tree)
-            tree = extract_anon.transform(rule_tree) # Adds to tokens
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            tree = transformer.transform(rule_tree)
             rules[name] = ebnf_to_bnf.transform(tree), options
 
         dict_update_safe(rules, ebnf_to_bnf.new_rules)
@@ -465,9 +444,10 @@ class Grammar:
         for tree, _o in rules.values():
             simplify_rule.visit(tree)
 
+        rule_tree_to_text = RuleTreeToText()
         rules = {origin: (rule_tree_to_text.transform(tree), options) for origin, (tree, options) in rules.items()}
 
-        return tokens, rules, self.extra
+        return tokens, rules, self.ignore
 
 
 
@@ -511,6 +491,9 @@ def import_grammar(grammar_path):
 
 
 def resolve_token_references(token_defs):
+    # TODO Cycles detection
+    # TODO Solve with transitive closure (maybe)
+
     token_dict = dict(token_defs)
     assert len(token_dict) == len(token_defs), "Same name defined twice?"
 
@@ -536,15 +519,17 @@ class GrammarLoader:
         rules = [RuleOptions.from_rule(name, x) for name, x in RULES.items()]
         d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
         rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
-        lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'], None)
+        lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
         parser_conf = ParserConf(rules, callback, 'start')
         self.parser = LALR(lexer_conf, parser_conf)
 
-        self.simplify_tree = SimplifyTree()
+        self.canonize_tree = CanonizeTree()
 
     def load_grammar(self, grammar_text, name='<?>'):
+        "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
+
         try:
-            tree = self.simplify_tree.transform( self.parser.parse(grammar_text+'\n') )
+            tree = self.canonize_tree.transform( self.parser.parse(grammar_text+'\n') )
         except UnexpectedInput as e:
             raise GrammarError("Unexpected input %r at line %d column %d in %s" % (e.context, e.line, e.column, name))
         except UnexpectedToken as e:
@@ -590,23 +575,9 @@ class GrammarLoader:
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
 
         # Handle ignore tokens
-        ignore_names = []
-        for i, t in enumerate(ignore):
-            if t.data == 'expansions' and len(t.children) == 1:
-                x ,= t.children
-                if x.data == 'expansion' and len(x.children) == 1:
-                    item ,= x.children
-                    if isinstance(item, Token) and item.type == 'TOKEN':
-                        # XXX is this really a wise solution? -- Erez
-                        ignore_names.append(item.value)
-                        continue
-
-            name = '__IGNORE_%d'%i
-            token_defs.append((name, t))
-            ignore_names.append(name)
-
-        # Resolve token references
-        resolve_token_references(token_defs)
+        ignore_defs = [('__IGNORE_%d'%i, t) for i, t in enumerate(ignore)]
+        ignore_names = [name for name,_ in ignore_defs]
+        token_defs += ignore_defs
 
         # Verify correctness 2
         token_names = set()
@@ -614,6 +585,9 @@ class GrammarLoader:
             if name in token_names:
                 raise GrammarError("Token '%s' defined more than once" % name)
             token_names.add(name)
+
+        # Resolve token references
+        resolve_token_references(token_defs)
 
         rules = [RuleOptions.from_rule(*x) for x in rule_defs]
 
@@ -638,7 +612,7 @@ class GrammarLoader:
 
         # TODO don't include unused tokens, they can only cause trouble!
 
-        return Grammar(rules, token_defs, {'ignore': ignore_names})
+        return Grammar(rules, token_defs, ignore_names)
 
 
 

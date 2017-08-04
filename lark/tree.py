@@ -104,6 +104,23 @@ class Transformer(object):
     def __default__(self, data, children):
         return Tree(data, children)
 
+    def __mul__(self, other):
+        return TransformerChain(self, other)
+
+
+class TransformerChain(object):
+    def __init__(self, *transformers):
+        self.transformers = transformers
+
+    def transform(self, tree):
+        for t in self.transformers:
+            tree = t.transform(tree)
+        return tree
+
+    def __mul__(self, other):
+        return TransformerChain(*self.transformers + (other,))
+        
+
 
 class InlineTransformer(Transformer):
     def _get_func(self, name):  # use super()._get_func

@@ -146,9 +146,7 @@ class Lark:
         self.grammar = load_grammar(grammar, source)
 
         # Compile the EBNF grammar into BNF
-        tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
-
-        self.ignore_tokens = self.grammar.extra['ignore']
+        tokens, self.rules, self.ignore_tokens = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
 

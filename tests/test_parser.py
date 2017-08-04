@@ -380,6 +380,20 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('Hello HelloWorld')
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
+        def test_token_collision2(self):
+            # NOTE: This test reveals a bug in token reconstruction in Scanless Earley
+            #       I probably need to re-write grammar transformation
+
+            g = _Lark("""
+                    !start: "starts"
+
+                    %import common.LCASE_LETTER
+                    """)
+
+            x = g.parse("starts")
+            self.assertSequenceEqual(x.children, ['starts'])
+
+
         # def test_string_priority(self):
         #     g = _Lark("""start: (A | /a?bb/)+
         #                  A: "a"  """)
@@ -539,6 +553,12 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("+2e-9")
             self.assertRaises(ParseError, g.parse, "+2e-9e")
 
+        def test_keep_all_tokens(self):
+            l = _Lark("""start: "a"+ """, keep_all_tokens=True)
+            tree = l.parse('aaa')
+            self.assertEqual(tree.children, ['a', 'a', 'a'])
+
+
         def test_token_flags(self):
             l = _Lark("""!start: "a"i+
                       """
@@ -569,6 +589,14 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('AB,a')
             self.assertEqual(tree.children, ['AB'])
 
+        def test_token_flags3(self):
+            l = _Lark("""!start: ABC+
+                      ABC: "abc"i
+                      """
+                      )
+            tree = l.parse('aBcAbC')
+            self.assertEqual(tree.children, ['aBc', 'AbC'])
+
         def test_token_flags2(self):
             g = """!start: ("a"i | /a/ /b/?)+
                 """
@@ -577,6 +605,46 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['a', 'A'])
 
 
+        def test_reduce_cycle(self):
+            """Tests an edge-condition in the LALR parser, in which a transition state looks exactly like the end state.
+            It seems that the correct solution is to explicitely distinguish finalization in the reduce() function.
+            """
+
+            l = _Lark("""
+                term: A
+                    | term term
+
+                A: "a"
+
+            """, start='term')
+
+            tree = l.parse("aa")
+            self.assertEqual(len(tree.children), 2)
+
+
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
+        def test_earley_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: a | b
+            a.1: "a"
+            b.2: "a"
+            """
+
+            l = Lark(grammar, parser='earley', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'b')
+
+            grammar = """
+            start: a | b
+            a.2: "a"
+            b.1: "a"
+            """
+
+            l = Lark(grammar, parser='earley', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'a')
 
 
 

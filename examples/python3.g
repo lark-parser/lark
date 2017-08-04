@@ -116,11 +116,12 @@ AWAIT: "await"
           | atom_expr "." NAME               -> getattr
           | atom
 
-?atom: "(" [yield_expr|testlist_comp] ")"
-     | "[" [testlist_comp] "]"
-     | "{" [dictorsetmaker] "}"
+?atom: "(" [yield_expr|testlist_comp] ")" -> tuple
+     | "[" [testlist_comp] "]"  -> list
+     | "{" [dictorsetmaker] "}" -> dict
      | NAME -> var
-     | number | string+ | "..."
+     | number | string+
+     | "..." -> ellipsis
      | "None"    -> const_none
      | "True"    -> const_true
      | "False"   -> const_false

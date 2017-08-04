@@ -1,7 +1,6 @@
 ## Lexer Implementation
 
 import re
-import sre_parse
 
 from .utils import Str, classify
 from .common import is_terminal, PatternStr, PatternRE, TokenDef
@@ -120,8 +119,7 @@ class Lexer(object):
             except:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
-            width = sre_parse.parse(t.pattern.to_regexp()).getwidth()
-            if width[0] == 0:
+            if t.pattern.min_width == 0:
                 raise LexError("Lexer does not allow zero-width tokens. (%s: %s)" % (t.name, t.pattern))
 
         token_names = {t.name for t in tokens}
@@ -133,7 +131,7 @@ class Lexer(object):
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = [t for t in ignore]
 
-        tokens.sort(key=lambda x:(x.pattern.priority, len(x.pattern.value)), reverse=True)
+        tokens.sort(key=lambda x:x.pattern.max_width, reverse=True)
 
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())
@@ -155,17 +153,27 @@ class Lexer(object):
                 if m:
                     value = m.group(0)
                     type_ = type_from_index[m.lastindex]
-                    if type_ not in ignore_types:
+                    to_yield = type_ not in ignore_types
+
+                    if to_yield:
                         t = Token(type_, value, lex_pos, line, lex_pos - col_start_pos)
+                        end_col = t.column + len(value)
                         if t.type in self.callback:
                             t = self.callback[t.type](t)
-                        yield t
 
                     if type_ in newline_types:
                         newlines = value.count(self.newline_char)
                         if newlines:
                             line += newlines
-                            col_start_pos = lex_pos + value.rindex(self.newline_char)
+                            last_newline_index = value.rindex(self.newline_char) + 1
+                            col_start_pos = lex_pos + last_newline_index
+                            end_col = len(value) - last_newline_index
+
+                    if to_yield:
+                        t.end_line = line
+                        t.end_col = end_col
+                        yield t
+
                     lex_pos += len(value)
                     break
             else:

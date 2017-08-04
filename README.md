@@ -125,7 +125,8 @@ Lark has no dependencies.
 
 ### Projects using Lark
 
- - [mappyfile](https://github.com/geographika/mappyfile) - A pure Python MapFile parser for working with MapServer
+ - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
+ - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
 
 Using Lark? Send me a message and I'll add your project!
 
@@ -251,6 +252,22 @@ Lark offers both Earley and LALR(1), which means you can choose between the most
 
 Lark uses the [MIT license](LICENSE).
 
+## Contribute
+
+Lark is currently accepting pull-requests.
+
+There are many ways you can help the project:
+
+* Improve the performance of Lark's parsing algorithm
+* Implement macros for grammars (important for grammar composition)
+* Write new grammars for Lark's library
+* Write & improve the documentation
+* Write a blog post introducing Lark to your audience
+
+If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
+
 ## Contact
 
-If you have any questions or want to contribute, you can email me at erezshin at gmail com.
+If you have any questions or want my assistance, you can email me at erezshin at gmail com.
+
+I'm also available for contract work.

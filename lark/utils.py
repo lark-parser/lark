@@ -1,6 +1,7 @@
 import functools
 import types
 from collections import deque
+from contextlib import contextmanager
 
 class fzset(frozenset):
     def __repr__(self):
@@ -63,11 +64,17 @@ def inline_args(f):
         def _f_builtin(_self, args):
             return f(*args)
         return _f_builtin
-    else:
-        @functools.wraps(f)
+    elif isinstance(f, types.MethodType):
+        @functools.wraps(f.__func__)
         def _f(self, args):
             return f.__func__(self, *args)
         return _f
+    else:
+        @functools.wraps(f.__call__.__func__)
+        def _f(self, args):
+            return f.__call__.__func__(self, *args)
+        return _f
+
 
 
 try:
@@ -80,6 +87,25 @@ except NameError:
             return 1
         else:
             return -1
+
+
+try:
+    from contextlib import suppress     # Python 3
+except ImportError:
+    @contextmanager
+    def suppress(*excs):
+        '''Catch and dismiss the provided exception
+
+        >>> x = 'hello'
+        >>> with suppress(IndexError):
+        ...     x = x[10]
+        >>> x
+        'hello'
+        '''
+        try:
+            yield
+        except excs:
+            pass
 
 
 

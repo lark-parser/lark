@@ -39,6 +39,7 @@ class LarkOptions(object):
         postlex - Lexer post-processing (Default: None)
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
+        propagate_positions - Experimental. Don't use yet.
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -55,14 +56,13 @@ class LarkOptions(object):
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
+        self.propagate_positions = o.pop('propagate_positions', False)
 
         assert self.parser in ('earley', 'lalr', None)
 
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
-        if self.keep_all_tokens:
-            raise NotImplementedError("keep_all_tokens: Not implemented yet!")
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -119,7 +119,7 @@ class Lark:
 
         assert isinstance(grammar, STRING_TYPE)
 
-        if self.options.cache_grammar or self.options.keep_all_tokens:
+        if self.options.cache_grammar:
             raise NotImplementedError("Not available yet")
 
         assert not self.options.profile, "Feature temporarily disabled"
@@ -142,8 +142,12 @@ class Lark:
             assert self.options.parser == 'earley'
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto')
 
+        # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, source)
+
+        # Compile the EBNF grammar into BNF
         tokens, self.rules, self.grammar_extra = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
+
         self.ignore_tokens = self.grammar.extra['ignore']
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
@@ -162,7 +166,7 @@ class Lark:
 
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class)
+        self.parse_tree_builder = ParseTreeBuilder(self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens)
         rules, callback = self.parse_tree_builder.create_tree_builder(self.rules, self.options.transformer)
         if self.profiler:
             for f in dir(callback):

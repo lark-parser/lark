@@ -1,4 +1,5 @@
 import re
+import sre_parse
 
 class GrammarError(Exception):
     pass
@@ -40,7 +41,7 @@ class LexerConf:
 
 class ParserConf:
     def __init__(self, rules, callback, start):
-        assert all(len(r)==3 for r in rules)
+        assert all(len(r) == 4 for r in rules)
         self.rules = rules
         self.callback = callback
         self.start = start
@@ -57,9 +58,9 @@ class Pattern(object):
 
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):
-        return hash((self.priority, self.value))
+        return hash((type(self), self.value))
     def __eq__(self, other):
-        return self.priority == other.priority and self.value == other.value
+        return type(self) == type(other) and self.value == other.value
 
     def _get_flags(self):
         if self.flags:
@@ -71,13 +72,21 @@ class PatternStr(Pattern):
     def to_regexp(self):
         return self._get_flags() + re.escape(self.value)
 
-    priority = 0
+    @property
+    def min_width(self):
+        return len(self.value)
+    max_width = min_width
 
 class PatternRE(Pattern):
     def to_regexp(self):
         return self._get_flags() + self.value
 
-    priority = 1
+    @property
+    def min_width(self):
+        return sre_parse.parse(self.to_regexp()).getwidth()[0]
+    @property
+    def max_width(self):
+        return sre_parse.parse(self.to_regexp()).getwidth()[1]
 
 class TokenDef(object):
     def __init__(self, name, pattern):

@@ -75,6 +75,7 @@ TOKENS = {
     '_TO': '->',
     '_IGNORE': r'%ignore',
     '_IMPORT': r'%import',
+    'NUMBER': '\d+',
 }
 
 RULES = {
@@ -82,7 +83,8 @@ RULES = {
     '_list':  ['_item', '_list _item'],
     '_item':  ['rule', 'token', 'statement', '_NL'],
 
-    'rule': ['RULE _COLON expansions _NL'],
+    'rule': ['RULE _COLON expansions _NL',
+             'RULE _DOT NUMBER _COLON expansions _NL'],
     'expansions': ['alias',
                    'expansions _OR alias',
                    'expansions _NL _OR alias'],
@@ -313,7 +315,7 @@ class PrepareLiterals(InlineTransformer):
 class SplitLiterals(InlineTransformer):
     def pattern(self, p):
         if isinstance(p, PatternStr) and len(p.value)>1:
-            return T('expansion', [T('pattern', [PatternStr(ch)]) for ch in p.value])
+            return T('expansion', [T('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
         return T('pattern', [p])
 
 class TokenTreeToPattern(Transformer):
@@ -470,21 +472,29 @@ class Grammar:
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False):
+    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False, priority=None):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.create_token = create_token  # used for scanless postprocessing
+        self.priority = priority
 
         self.filter_out = filter_out        # remove this rule from the tree
                                             # used for "token"-rules in scanless
     @classmethod
-    def from_rule(cls, name, expansions):
+    def from_rule(cls, name, *x):
+        if len(x) > 1:
+            priority, expansions = x
+            priority = int(priority)
+        else:
+            expansions ,= x
+            priority = None
+
         keep_all_tokens = name.startswith('!')
         name = name.lstrip('!')
         expand1 = name.startswith('?')
         name = name.lstrip('?')
 
-        return name, expansions, cls(keep_all_tokens, expand1)
+        return name, expansions, cls(keep_all_tokens, expand1, priority=priority)
 
 
 
@@ -605,7 +615,7 @@ class GrammarLoader:
                 raise GrammarError("Token '%s' defined more than once" % name)
             token_names.add(name)
 
-        rules = [RuleOptions.from_rule(name, x) for name, x in rule_defs]
+        rules = [RuleOptions.from_rule(*x) for x in rule_defs]
 
         rule_names = set()
         for name, _x, _o in rules:

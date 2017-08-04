@@ -9,6 +9,7 @@ from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
 
 class Parser(object):
     def __init__(self, parser_conf):
+        assert all(o is None or o.priority is None for n,x,a,o in parser_conf.rules), "LALR doesn't yet support prioritization"
         self.analysis = LALR_Analyzer(parser_conf.rules, parser_conf.start)
         self.analysis.compute_lookahead()
         self.callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
@@ -34,7 +35,7 @@ class Parser(object):
 
                 raise UnexpectedToken(token, expected, seq, i)
 
-        def reduce(rule, size):
+        def reduce(rule, size, end=False):
             if size:
                 s = value_stack[-size:]
                 del state_stack[-size:]
@@ -44,7 +45,7 @@ class Parser(object):
 
             res = self.callbacks[rule](s)
 
-            if len(state_stack) == 1 and rule.origin == self.analysis.start_symbol:
+            if end and len(state_stack) == 1 and rule.origin == self.analysis.start_symbol:
                 return res
 
             _action, new_state = get_action(rule.origin)
@@ -73,7 +74,7 @@ class Parser(object):
         while True:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
-            res = reduce(*rule)
+            res = reduce(*rule, end=True)
             if res:
                 assert state_stack == [self.analysis.init_state_idx] and not value_stack, len(state_stack)
                 return res

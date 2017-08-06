@@ -265,7 +265,7 @@ def _compare_drv(tree1, tree2):
         if c:
             return c
 
-    return -compare(len(tree1.children), len(tree2.children))
+    return compare(len(tree1.children), len(tree2.children))
 
 
 def _resolve_ambig(tree):

@@ -4,10 +4,7 @@ import sre_parse
 from .lexer import Lexer, ContextualLexer, Token
 
 from .common import is_terminal, GrammarError, ParserConf, Terminal_Regexp, Terminal_Token
-from .parsers import lalr_parser, earley
-from .tree import Transformer
-
-from .parsers import xearley
+from .parsers import lalr_parser, earley, xearley
 
 class WithLexer:
     def __init__(self, lexer_conf):
@@ -21,6 +18,7 @@ class WithLexer:
         else:
             return stream
 
+
 class LALR(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf)
@@ -31,6 +29,7 @@ class LALR(WithLexer):
     def parse(self, text):
         tokens = self.lex(text)
         return self.parser.parse(tokens)
+
 
 class LALR_ContextualLexer:
     def __init__(self, lexer_conf, parser_conf, options=None):
@@ -48,6 +47,7 @@ class LALR_ContextualLexer:
         if self.lexer_conf.postlex:
             tokens = self.lexer_conf.postlex.process(tokens)
         return self.parser.parse(tokens, self.lexer.set_parser_state)
+
 
 def tokenize_text(text):
     new_text = []

@@ -1,3 +1,5 @@
+"Parses and creates Grammar objects"
+
 import os.path
 from itertools import chain
 import re
@@ -205,12 +207,6 @@ class SimplifyRule_Visitor(Visitor):
 
     expansions = _flatten
 
-def dict_update_safe(d1, d2):
-    for k, v in d2.items():
-        assert k not in d1
-        d1[k] = v
-
-
 class RuleTreeToText(Transformer):
     def expansions(self, x):
         return x
@@ -233,6 +229,8 @@ class CanonizeTree(InlineTransformer):
         return tokenmods + [value]
 
 class ExtractAnonTokens(InlineTransformer):
+    "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
+
     def __init__(self, tokens):
         self.tokens = tokens
         self.token_set = {td.name for td in self.tokens}
@@ -244,6 +242,7 @@ class ExtractAnonTokens(InlineTransformer):
         value = p.value
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
+
         if isinstance(p, PatternStr):
             try:
                 # If already defined, use the user-defined token name
@@ -352,6 +351,12 @@ def _interleave(l, item):
 
 def _choice_of_rules(rules):
     return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
+
+def dict_update_safe(d1, d2):
+    for k, v in d2.items():
+        assert k not in d1
+        d1[k] = v
+
 
 class Grammar:
     def __init__(self, rule_defs, token_defs, ignore):

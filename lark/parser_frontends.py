@@ -66,11 +66,10 @@ class Earley_NoLex:
 
         rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
-        self.parser = earley.Parser(rules, 
+        self.parser = earley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity)
+                                    resolve_ambiguity=options.ambiguity or 'resolve')
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
@@ -93,11 +92,10 @@ class Earley(WithLexer):
 
         rules = [(n, self._prepare_expansion(x), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
-        self.parser = earley.Parser(rules, 
+        self.parser = earley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity)
+                                    resolve_ambiguity=options.ambiguity or 'resolve')
 
     def _prepare_expansion(self, expansion):
         return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
@@ -113,13 +111,12 @@ class XEarley:
 
         rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
         ignore = [Terminal_Regexp(x, self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
 
         self.parser = xearley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity,
+                                    resolve_ambiguity=options.ambiguity,
                                     ignore=ignore,
                                     )
 
@@ -159,6 +156,3 @@ def get_frontend(parser, lexer):
             raise ValueError('Unknown lexer: %s' % lexer)
     else:
         raise ValueError('Unknown parser: %s' % parser)
-
-
-

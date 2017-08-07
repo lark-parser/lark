@@ -13,6 +13,8 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
+from functools import cmp_to_key
+
 from ..utils import compare
 from ..common import ParseError, UnexpectedToken, Terminal
 from ..tree import Tree, Visitor_NoRecurse, Transformer_NoRecurse
@@ -130,7 +132,7 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True):
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
@@ -202,8 +204,7 @@ class Parser:
         else:
             tree = Tree('_ambig', solutions)
 
-        if self.resolve_ambiguity:
-            ResolveAmbig().visit(tree)
+        resolve_ambig(self.resolve_ambiguity, tree)
 
         return ApplyCallbacks(self.postprocess).transform(tree)
 
@@ -235,6 +236,47 @@ def _compare_rules(rule1, rule2):
         c = -c
     return c
 
+def _compare_drv(tree1, tree2):
+    if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
+        return -compare(tree1, tree2)
+
+    try:
+        rule1, rule2 = tree1.rule, tree2.rule
+    except AttributeError:
+        # Probably trees that don't take part in this parse (better way to distinguish?)
+        return -compare(tree1, tree2)
+
+    # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
+    #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
+    #     computationally inefficient. So we handle it here.
+    if tree1.data == '_ambig':
+        _resolve_ambig(tree1)
+    if tree2.data == '_ambig':
+        _resolve_ambig(tree2)
+
+    c = _compare_rules(tree1.rule, tree2.rule)
+    if c:
+        return c
+
+    # rules are "equal", so compare trees
+    for t1, t2 in zip(tree1.children, tree2.children):
+        c = _compare_drv(t1, t2)
+        if c:
+            return c
+
+    return -compare(len(tree1.children), len(tree2.children))
+
+class _NaiveAmbig(Visitor_NoRecurse):
+    def _ambig(self, tree):
+        assert tree.data == '_ambig'
+
+        best = min(tree.children, key=cmp_to_key(_compare_drv))
+        assert best.data == 'drv'
+        tree.set('drv', best.children)
+        tree.rule = best.rule   # needed for applying callbacks
+
+        assert tree.data != '_ambig'
+
 def _score_drv(tree):
     if not isinstance(tree, Tree):
         return 0
@@ -259,19 +301,27 @@ def _score_drv(tree):
 
     return antiscore
 
-def _resolve_ambig(tree):
-    assert tree.data == '_ambig'
-
-    best = min(tree.children, key=_score_drv)
-    assert best.data == 'drv'
-    tree.set('drv', best.children)
-    tree.rule = best.rule   # needed for applying callbacks
-
-    assert tree.data != '_ambig'
-
-class ResolveAmbig(Visitor_NoRecurse):
+class _SumPriorityAmbig(Visitor_NoRecurse):
     def _ambig(self, tree):
-        _resolve_ambig(tree)
+        assert tree.data == '_ambig'
+
+        best = min(tree.children, key=_score_drv)
+        assert best.data == 'drv'
+        tree.set('drv', best.children)
+        tree.rule = best.rule   # needed for applying callbacks
+
+        assert tree.data != '_ambig'
+
+def resolve_ambig(ambiguity, tree):
+  assert ambiguity in ('resolve', 'explicit', 'sum'), ambiguity
+  if ambiguity == 'explicit':
+    return
+  if ambiguity == 'resolve':
+    visitor = _NaiveAmbig()
+  if ambiguity == 'sum':
+    visitor = _SumPriorityAmbig()
+  visitor.visit(tree)
+
 
 
 # RULES = [

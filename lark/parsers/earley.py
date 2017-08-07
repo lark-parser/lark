@@ -231,7 +231,7 @@ def _compare_rules(rule1, rule2):
 
         return 0
 
-    c = compare( len(rule1.expansion), len(rule2.expansion))
+    c = -compare( len(rule1.expansion), len(rule2.expansion))
     if rule1.origin.startswith('__'):   # XXX hack! We need to set priority in parser, not here
         c = -c
     return c

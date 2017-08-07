@@ -622,7 +622,7 @@ def _make_parser_test(LEXER, PARSER):
 
             l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'b')
+            self.assertEqual(res.children[0].data, 'a')
 
             grammar = """
             start: a | b
@@ -632,7 +632,7 @@ def _make_parser_test(LEXER, PARSER):
 
             l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'a')
+            self.assertEqual(res.children[0].data, 'b')
 
 
 

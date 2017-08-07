@@ -236,7 +236,7 @@ def _compare_rules(rule1, rule2):
     return c
 
 def _score_drv(tree):
-    if not (isinstance(tree, Tree):
+    if not isinstance(tree, Tree):
         return 0
     try:
         rule = tree.rule

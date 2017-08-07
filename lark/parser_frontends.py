@@ -69,7 +69,7 @@ class Earley_NoLex:
         self.parser = earley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=options.ambiguity or 'resolve')
+                                    resolve_ambiguity=options.ambiguity if options else 'resolve')
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
@@ -95,7 +95,7 @@ class Earley(WithLexer):
         self.parser = earley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=options.ambiguity or 'resolve')
+                                    resolve_ambiguity=options.ambiguity if options else 'resolve')
 
     def _prepare_expansion(self, expansion):
         return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
@@ -116,7 +116,7 @@ class XEarley:
         self.parser = xearley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=options.ambiguity,
+                                    resolve_ambiguity=options.ambiguity if options else 'resolve',
                                     ignore=ignore,
                                     )
 

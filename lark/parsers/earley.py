@@ -203,10 +203,10 @@ class Parser:
             tree = Tree('_ambig', solutions)
 
         if self.resolve_ambiguity:
-            ResolveAmbig().visit(tree) 
+            ResolveAmbig().visit(tree)
 
         return ApplyCallbacks(self.postprocess).transform(tree)
-        
+
 
 
 class ApplyCallbacks(Transformer_NoRecurse):
@@ -238,23 +238,25 @@ def _compare_rules(rule1, rule2):
 def _score_drv(tree):
     if not isinstance(tree, Tree):
         return 0
-    try:
-        rule = tree.rule
-    except AttributeError:
-        # Probably trees that don't take part in this parse (better way to distinguish?)
-        return 0
-    
+
     # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
     #     computationally inefficient. So we handle it here.
     if tree.data == '_ambig':
         _resolve_ambig(tree)
-            
+
+    try:
+        rule = tree.rule
+    except AttributeError:
+        # Probably trees that don't take part in this parse (better way to distinguish?)
+        return 0
+
     antiscore = 0
-    if rule.options and rule.options.priority is not None:
+    if rule is not None and rule.options and rule.options.priority is not None:
         antiscore += rule.options.priority
     for child in tree.children:
         antiscore += _score_drv(child)
+
     return antiscore
 
 def _resolve_ambig(tree):

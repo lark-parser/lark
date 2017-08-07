@@ -250,9 +250,9 @@ def _compare_drv(tree1, tree2):
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
     #     computationally inefficient. So we handle it here.
     if tree1.data == '_ambig':
-        _resolve_ambig(tree1)
+        _NaiveAmbig().visit(tree1)
     if tree2.data == '_ambig':
-        _resolve_ambig(tree2)
+        _NaiveAmbig().visit(tree2)
 
     c = _compare_rules(tree1.rule, tree2.rule)
     if c:
@@ -285,7 +285,7 @@ def _score_drv(tree):
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
     #     computationally inefficient. So we handle it here.
     if tree.data == '_ambig':
-        _resolve_ambig(tree)
+        _SumPriorityAmbig().visit(tree)
 
     try:
         rule = tree.rule

@@ -432,6 +432,23 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('aaaab')
             x = g.parse('b')
 
+        @unittest.skipIf(LEXER is None, "Regexps >1 not supported with scanless parsing")
+        def test_regex_embed(self):
+            g = _Lark("""start: A B C
+                        A: /a/
+                        B: /${A}b/
+                        C: /${B}c/
+                        """)
+            x = g.parse('aababc')
+
+        def test_token_embed(self):
+            g = _Lark("""start: A B C
+                        A: "a"
+                        B: A "b"
+                        C: B "c"
+                        """)
+            x = g.parse('aababc')
+
         @unittest.skipIf(LEXER in (None, 'dynamic'), "Known bug with scanless parsing")  # TODO
         def test_token_not_anon(self):
             """Tests that "a" is matched as A, rather than an anonymous token.
@@ -622,7 +639,7 @@ def _make_parser_test(LEXER, PARSER):
 
             l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'a')
+            self.assertEqual(res.children[0].data, 'b')
 
             grammar = """
             start: a | b
@@ -632,8 +649,32 @@ def _make_parser_test(LEXER, PARSER):
 
             l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'b')
+            self.assertEqual(res.children[0].data, 'a')
 
+
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
+        def test_earley_prioritization_sum(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: a | b
+            a.1: "a"
+            b.2: "a"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'a')
+
+            grammar = """
+            start: a | b
+            a.2: "a"
+            b.1: "a"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'b')
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

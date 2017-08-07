@@ -231,7 +231,7 @@ def _compare_rules(rule1, rule2):
 
         return 0
 
-    c = -compare( len(rule1.expansion), len(rule2.expansion))
+    c = compare( len(rule1.expansion), len(rule2.expansion))
     if rule1.origin.startswith('__'):   # XXX hack! We need to set priority in parser, not here
         c = -c
     return c
@@ -264,7 +264,7 @@ def _compare_drv(tree1, tree2):
         if c:
             return c
 
-    return -compare(len(tree1.children), len(tree2.children))
+    return compare(len(tree1.children), len(tree2.children))
 
 class _NaiveAmbig(Visitor_NoRecurse):
     def _ambig(self, tree):

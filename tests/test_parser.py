@@ -658,6 +658,30 @@ def _make_parser_test(LEXER, PARSER):
             l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'b')
+            
+            grammar = """
+            start: ab_ b_ a_ | a_ bb_ a_
+            a_: "a"
+            b_: "b"
+            ab_: "ab"
+            bb_.1: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
+            res = l.parse("abba")
+            self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
+
+            grammar = """
+            start: ab_ b_ a_ | a_ bb_ a_
+            a_: "a"
+            b_: "b"
+            ab_.1: "ab"
+            bb_: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
+            res = l.parse("abba")
+            self.assertEqual(''.join(child.data for child in res.children), 'a_bb_a_')
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

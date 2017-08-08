@@ -287,15 +287,16 @@ def _score_drv(tree):
     if tree.data == '_ambig':
         _SumPriorityAmbig().visit(tree)
 
+    antiscore = 0
+
     try:
         rule = tree.rule
+        if rule is not None and rule.options and rule.options.priority is not None:
+            antiscore += rule.options.priority
     except AttributeError:
         # Probably trees that don't take part in this parse (better way to distinguish?)
-        return 0
+        pass
 
-    antiscore = 0
-    if rule is not None and rule.options and rule.options.priority is not None:
-        antiscore += rule.options.priority
     for child in tree.children:
         antiscore += _score_drv(child)
 
@@ -313,14 +314,14 @@ class _SumPriorityAmbig(Visitor_NoRecurse):
         assert tree.data != '_ambig'
 
 def resolve_ambig(ambiguity, tree):
-  assert ambiguity in ('resolve', 'explicit', 'sum'), ambiguity
-  if ambiguity == 'explicit':
-    return
-  if ambiguity == 'resolve':
-    visitor = _NaiveAmbig()
-  if ambiguity == 'sum':
-    visitor = _SumPriorityAmbig()
-  visitor.visit(tree)
+    assert ambiguity in ('resolve', 'explicit', 'sum'), ambiguity
+    if ambiguity == 'explicit':
+        return
+    if ambiguity == 'resolve':
+        visitor = _NaiveAmbig()
+    if ambiguity == 'sum':
+        visitor = _SumPriorityAmbig()
+    visitor.visit(tree)
 
 
 

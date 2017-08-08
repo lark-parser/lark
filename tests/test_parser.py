@@ -638,50 +638,32 @@ def _make_parser_test(LEXER, PARSER):
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization_sum(self):
             "Tests effect of priority on result"
-
-            grammar = """
-            start: a | b
-            a.1: "a"
-            b.2: "a"
-            """
-
-            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
-            res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'a')
-
-            grammar = """
-            start: a | b
-            a.2: "a"
-            b.1: "a"
-            """
-
-            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
-            res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'b')
             
             grammar = """
-            start: ab_ b_ a_ | a_ bb_ a_
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
             a_: "a"
             b_: "b"
             ab_: "ab"
             bb_.1: "bb"
             """
 
-            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
-            res = l.parse("abba")
+            l = Lark(grammar, parser='earley', ambiguity='sum')
+            res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 
             grammar = """
-            start: ab_ b_ a_ | a_ bb_ a_
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
             a_: "a"
             b_: "b"
             ab_.1: "ab"
             bb_: "bb"
             """
 
-            l = Lark(grammar, parser='earley', ambiguity='sum', lexer='standard')
-            res = l.parse("abba")
-            self.assertEqual(''.join(child.data for child in res.children), 'a_bb_a_')
+            l = Lark(grammar, parser='earley', ambiguity='sum')
+            res = l.parse('abba')
+            self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

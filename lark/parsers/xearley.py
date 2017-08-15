@@ -70,7 +70,11 @@ class Parser:
                 for nonterm in to_predict:
                     column.add( predict(nonterm, column) )
                 for item in to_reduce:
-                    column.add( complete(item) )
+                    new_items = list(complete(item))
+                    for new_item in new_items:
+                        if new_item.similar(item):
+                            raise ParseError('Infinite recursion detected! (rule %s)' % new_item.rule)
+                    column.add(new_items)
 
         def scan(i, token, column):
             for x in self.ignore:

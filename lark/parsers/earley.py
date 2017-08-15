@@ -56,8 +56,12 @@ class Item(object):
         new_tree = Derivation(self.rule, self.tree.children + [tree])
         return Item(self.rule, self.ptr+1, self.start, new_tree)
 
-    def __eq__(self, other):
+    def similar(self, other):
         return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
+
+    def __eq__(self, other):
+        return self.similar(other) and (self.tree is other.tree or self.tree == other.tree)
+
     def __hash__(self):
         return hash((self.rule, self.ptr, id(self.start)))
 
@@ -168,7 +172,11 @@ class Parser:
                 for nonterm in to_predict:
                     column.add( predict(nonterm, column) )
                 for item in to_reduce:
-                    column.add( complete(item) )
+                    new_items = list(complete(item))
+                    for new_item in new_items:
+                        if new_item.similar(item):
+                            raise ParseError('Infinite recursion detected! (rule %s)' % new_item.rule)
+                    column.add(new_items)
 
         def scan(i, token, column):
             to_scan = column.to_scan.get_news()

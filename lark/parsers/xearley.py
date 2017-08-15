@@ -25,10 +25,10 @@ from ..lexer import Token
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
 
-from .earley import ResolveAmbig, ApplyCallbacks, Item, NewsList, Derivation, END_TOKEN, Column
+from .earley import ApplyCallbacks, Item, Column
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True, ignore=()):
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, ignore=()):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
@@ -132,7 +132,7 @@ class Parser:
             tree = Tree('_ambig', solutions)
 
         if self.resolve_ambiguity:
-            ResolveAmbig().visit(tree) 
+            tree = self.resolve_ambiguity(tree)
 
         return ApplyCallbacks(self.postprocess).transform(tree)
 

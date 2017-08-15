@@ -4,7 +4,7 @@ import sre_parse
 from .lexer import Lexer, ContextualLexer, Token
 
 from .common import is_terminal, GrammarError, ParserConf, Terminal_Regexp, Terminal_Token
-from .parsers import lalr_parser, earley, xearley
+from .parsers import lalr_parser, earley, xearley, resolve_ambig
 
 class WithLexer:
     def __init__(self, lexer_conf):
@@ -48,6 +48,12 @@ class LALR_ContextualLexer:
             tokens = self.lexer_conf.postlex.process(tokens)
         return self.parser.parse(tokens, self.lexer.set_parser_state)
 
+def get_ambiguity_resolver(options):
+    if not options or options.ambiguity == 'resolve':
+        return resolve_ambig.resolve_ambig
+    elif options.ambiguity == 'explicit':
+        return None
+    raise ValueError(options)
 
 def tokenize_text(text):
     new_text = []
@@ -66,11 +72,10 @@ class Earley_NoLex:
 
         rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
-        self.parser = earley.Parser(rules, 
+        self.parser = earley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity)
+                                    resolve_ambiguity=get_ambiguity_resolver(options))
 
     def _prepare_expansion(self, expansion):
         for sym in expansion:
@@ -93,11 +98,10 @@ class Earley(WithLexer):
 
         rules = [(n, self._prepare_expansion(x), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
         self.parser = earley.Parser(rules, 
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity)
+                                    resolve_ambiguity=get_ambiguity_resolver(options))
 
     def _prepare_expansion(self, expansion):
         return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
@@ -113,13 +117,12 @@ class XEarley:
 
         rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
 
-        resolve_ambiguity = (options.ambiguity=='resolve') if options else True
         ignore = [Terminal_Regexp(x, self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
 
         self.parser = xearley.Parser(rules,
                                     parser_conf.start,
                                     parser_conf.callback,
-                                    resolve_ambiguity=resolve_ambiguity,
+                                    resolve_ambiguity=get_ambiguity_resolver(options),
                                     ignore=ignore,
                                     )
 

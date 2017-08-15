@@ -136,7 +136,7 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=True):
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
@@ -212,11 +212,10 @@ class Parser:
         else:
             tree = Tree('_ambig', solutions)
 
-        if self.resolve_ambiguity:
-            ResolveAmbig().visit(tree) 
+        resolve_ambig(self.resolve_ambiguity, tree)
 
         return ApplyCallbacks(self.postprocess).transform(tree)
-        
+
 
 
 class ApplyCallbacks(Transformer_NoRecurse):
@@ -259,9 +258,9 @@ def _compare_drv(tree1, tree2):
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
     #     computationally inefficient. So we handle it here.
     if tree1.data == '_ambig':
-        _resolve_ambig(tree1)
+        _NaiveAmbig().visit(tree1)
     if tree2.data == '_ambig':
-        _resolve_ambig(tree2)
+        _NaiveAmbig().visit(tree2)
 
     c = _compare_rules(tree1.rule, tree2.rule)
     if c:
@@ -275,20 +274,63 @@ def _compare_drv(tree1, tree2):
 
     return compare(len(tree1.children), len(tree2.children))
 
-
-def _resolve_ambig(tree):
-    assert tree.data == '_ambig'
-
-    best = min(tree.children, key=cmp_to_key(_compare_drv))
-    assert best.data == 'drv'
-    tree.set('drv', best.children)
-    tree.rule = best.rule   # needed for applying callbacks
-
-    assert tree.data != '_ambig'
-
-class ResolveAmbig(Visitor_NoRecurse):
+class _NaiveAmbig(Visitor_NoRecurse):
     def _ambig(self, tree):
-        _resolve_ambig(tree)
+        assert tree.data == '_ambig'
+
+        best = min(tree.children, key=cmp_to_key(_compare_drv))
+        assert best.data == 'drv'
+        tree.set('drv', best.children)
+        tree.rule = best.rule   # needed for applying callbacks
+
+        assert tree.data != '_ambig'
+
+def _score_drv(tree):
+    if not isinstance(tree, Tree):
+        return 0
+
+    # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
+    #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
+    #     computationally inefficient. So we handle it here.
+    if tree.data == '_ambig':
+        _SumPriorityAmbig().visit(tree)
+
+    antiscore = 0
+
+    try:
+        rule = tree.rule
+        if rule is not None and rule.options and rule.options.priority is not None:
+            antiscore += rule.options.priority
+    except AttributeError:
+        # Probably trees that don't take part in this parse (better way to distinguish?)
+        pass
+
+    for child in tree.children:
+        antiscore += _score_drv(child)
+
+    return antiscore
+
+class _SumPriorityAmbig(Visitor_NoRecurse):
+    def _ambig(self, tree):
+        assert tree.data == '_ambig'
+
+        best = min(tree.children, key=_score_drv)
+        assert best.data == 'drv'
+        tree.set('drv', best.children)
+        tree.rule = best.rule   # needed for applying callbacks
+
+        assert tree.data != '_ambig'
+
+def resolve_ambig(ambiguity, tree):
+    assert ambiguity in ('resolve', 'explicit', 'sum'), ambiguity
+    if ambiguity == 'explicit':
+        return
+    if ambiguity == 'resolve':
+        visitor = _NaiveAmbig()
+    if ambiguity == 'sum':
+        visitor = _SumPriorityAmbig()
+    visitor.visit(tree)
+
 
 
 # RULES = [

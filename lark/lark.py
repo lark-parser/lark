@@ -140,7 +140,7 @@ class Lark:
                 self.options.ambiguity = 'resolve'
         else:
             assert self.options.parser == 'earley'
-        assert self.options.ambiguity in ('resolve', 'explicit', 'auto')
+        assert self.options.ambiguity in ('resolve', 'explicit', 'sum', 'auto')
 
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, source)
@@ -198,4 +198,3 @@ class Lark:
         # else:
         #     l = list(self.lex(text))
         #     return self.parser.parse(l)
-

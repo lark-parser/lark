@@ -3,6 +3,11 @@ from functools import cmp_to_key
 
 from ..tree import Tree, Visitor_NoRecurse
 
+
+# Standard ambiguity resolver (uses comparison)
+#
+# Author: Erez Sh
+
 def _compare_rules(rule1, rule2):
     if rule1.origin != rule2.origin:
         if rule1.options and rule2.options:
@@ -31,9 +36,9 @@ def _compare_drv(tree1, tree2):
     #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
     #     computationally inefficient. So we handle it here.
     if tree1.data == '_ambig':
-        _resolve_ambig(tree1)
+        _standard_resolve_ambig(tree1)
     if tree2.data == '_ambig':
-        _resolve_ambig(tree2)
+        _standard_resolve_ambig(tree2)
 
     c = _compare_rules(tree1.rule, tree2.rule)
     if c:
@@ -48,21 +53,54 @@ def _compare_drv(tree1, tree2):
     return compare(len(tree1.children), len(tree2.children))
 
 
-def _resolve_ambig(tree):
+def _standard_resolve_ambig(tree):
     assert tree.data == '_ambig'
-
     best = min(tree.children, key=cmp_to_key(_compare_drv))
     assert best.data == 'drv'
     tree.set('drv', best.children)
     tree.rule = best.rule   # needed for applying callbacks
 
-    assert tree.data != '_ambig'
+def standard_resolve_ambig(tree):
+    for ambig in tree.find_data('_ambig'):
+        _standard_resolve_ambig(ambig)
 
-class ResolveAmbig(Visitor_NoRecurse):
-    def _ambig(self, tree):
-        _resolve_ambig(tree)
+    return tree
 
 
-def resolve_ambig(tree):
-    ResolveAmbig().visit(tree)
+
+
+# Anti-score Sum
+#
+# Author: Uriva (https://github.com/uriva)
+
+def _antiscore_sum_drv(tree):
+    if not isinstance(tree, Tree):
+        return 0
+
+    # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
+    #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
+    #     computationally inefficient. So we handle it here.
+    if tree.data == '_ambig':
+        _antiscore_sum_resolve_ambig(tree)
+
+    try:
+        priority = tree.rule.options.priority
+    except AttributeError:
+        # Probably trees that don't take part in this parse (better way to distinguish?)
+        priority = None
+
+    return (priority or 0) + sum(map(_antiscore_sum_drv, tree.children), 0)
+
+def _antiscore_sum_resolve_ambig(tree):
+    assert tree.data == '_ambig'
+
+    best = min(tree.children, key=_antiscore_sum_drv)
+    assert best.data == 'drv'
+    tree.set('drv', best.children)
+    tree.rule = best.rule   # needed for applying callbacks
+
+def antiscore_sum_resolve_ambig(tree):
+    for ambig in tree.find_data('_ambig'):
+        _antiscore_sum_resolve_ambig(ambig)
+
     return tree

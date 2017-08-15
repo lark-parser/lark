@@ -50,7 +50,9 @@ class LALR_ContextualLexer:
 
 def get_ambiguity_resolver(options):
     if not options or options.ambiguity == 'resolve':
-        return resolve_ambig.resolve_ambig
+        return resolve_ambig.standard_resolve_ambig
+    elif options.ambiguity == 'resolve__antiscore_sum':
+        return resolve_ambig.antiscore_sum_resolve_ambig
     elif options.ambiguity == 'explicit':
         return None
     raise ValueError(options)

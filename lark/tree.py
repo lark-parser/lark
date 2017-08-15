@@ -1,3 +1,8 @@
+try:
+    from future_builtins import filter
+except ImportError:
+    pass
+
 from copy import deepcopy
 
 from .utils import inline_args
@@ -44,13 +49,7 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def find_pred(self, pred):
-        if pred(self):
-            yield self
-
-        for c in self.children:
-            if isinstance(c, Tree):
-                for t in c.find_pred(pred):
-                    yield t
+        return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
         return self.find_pred(lambda t: t.data == data)

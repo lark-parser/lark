@@ -140,7 +140,7 @@ class Lark:
                 self.options.ambiguity = 'resolve'
         else:
             assert self.options.parser == 'earley', "Only Earley supports disambiguation right now"
-        assert self.options.ambiguity in ('resolve', 'explicit', 'auto')
+        assert self.options.ambiguity in ('resolve', 'explicit', 'auto', 'resolve__antiscore_sum')
 
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, source)

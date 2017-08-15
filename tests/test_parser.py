@@ -650,6 +650,62 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children[0].data, 'a')
 
 
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
+        def test_earley_prioritization_sum(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
+            a_: "a"
+            b_: "b"
+            ab_: "ab"
+            bb_.1: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
+            res = l.parse('abba')
+            self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
+
+            grammar = """
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
+            a_: "a"
+            b_: "b"
+            ab_.1: "ab"
+            bb_: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
+            res = l.parse('abba')
+            self.assertEqual(''.join(child.data for child in res.children), 'indirection')
+
+            grammar = """
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
+            a_.2: "a"
+            b_.1: "b"
+            ab_.3: "ab"
+            bb_.3: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
+            res = l.parse('abba')
+            self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
+
+            grammar = """
+            start: ab_ b_ a_ | indirection
+            indirection: a_ bb_ a_
+            a_.1: "a"
+            b_.1: "b"
+            ab_.4: "ab"
+            bb_.3: "bb"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
+            res = l.parse('abba')
+            self.assertEqual(''.join(child.data for child in res.children), 'indirection')
+
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()
     _TestParser.__name__ = _NAME

@@ -561,8 +561,8 @@ class GrammarLoader:
         ignore = []
         for (stmt,) in statements:
             if stmt.data == 'ignore':
-                expansions ,= stmt.children
-                ignore.append(expansions)
+                t ,= stmt.children
+                ignore.append(t)
             elif stmt.data == 'import':
                 dotted_path = stmt.children[0].children
                 name = stmt.children[1] if len(stmt.children)>1 else dotted_path[-1]
@@ -580,9 +580,22 @@ class GrammarLoader:
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
 
         # Handle ignore tokens
-        ignore_defs = [('__IGNORE_%d'%i, t) for i, t in enumerate(ignore)]
-        ignore_names = [name for name,_ in ignore_defs]
-        token_defs += ignore_defs
+        # XXX A slightly hacky solution. Recognition of %ignore TOKEN as separate comes from the lexer's
+        #     inability to handle duplicate tokens (two names, one value)
+        ignore_names = []
+        for t in ignore:
+            if t.data=='expansions' and len(t.children) == 1:
+                t2 ,= t.children
+                if t2.data=='expansion' and len(t2.children) == 1:
+                    item ,= t2.children
+                    if isinstance(item, Token) and item.type == 'TOKEN':
+                        ignore_names.append(item.value)
+                        continue
+
+            name = '__IGNORE_%d'% len(ignore_names)
+            ignore_names.append(name)
+            token_defs.append((name, t))
+
 
         # Verify correctness 2
         token_names = set()

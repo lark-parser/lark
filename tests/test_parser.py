@@ -47,7 +47,10 @@ class TestParsers(unittest.TestCase):
 
         self.assertRaises(GrammarError, Lark, g, parser='lalr')
 
-        l = Lark(g, parser='earley')
+        l = Lark(g, parser='earley', lexer=None)
+        self.assertRaises(ParseError, l.parse, 'a')
+
+        l = Lark(g, parser='earley', lexer='dynamic')
         self.assertRaises(ParseError, l.parse, 'a')
 
 
@@ -384,6 +387,18 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children, ['World'])
             x = g.parse('Hello HelloWorld')
             self.assertSequenceEqual(x.children, ['HelloWorld'])
+
+        def test_token_collision_WS(self):
+            g = _Lark("""start: "Hello" NAME
+                        NAME: /\w/+
+                        %import common.WS
+                        %ignore WS
+                    """)
+            x = g.parse('Hello World')
+            self.assertSequenceEqual(x.children, ['World'])
+            x = g.parse('Hello HelloWorld')
+            self.assertSequenceEqual(x.children, ['HelloWorld'])
+
 
         def test_token_collision2(self):
             # NOTE: This test reveals a bug in token reconstruction in Scanless Earley

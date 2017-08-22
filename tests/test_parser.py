@@ -690,11 +690,26 @@ def _make_parser_test(LEXER, PARSER):
                | "cd"
 
             """
-            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=None)
+            # l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=None)
+            l = _Lark(grammar, ambiguity='explicit')
             x = l.parse('cde')
             assert x.data == '_ambig'
             assert len(x.children) == 2
 
+
+        def test_import(self):
+            grammar = """
+            start: NUMBER WORD
+
+            %import common.NUMBER
+            %import common.WORD
+            %import common.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 elephants')
+            self.assertEqual(x.children, ['12', 'elephants'])
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization_sum(self):

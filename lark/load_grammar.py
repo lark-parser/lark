@@ -500,7 +500,7 @@ def resolve_token_references(token_defs):
     # TODO Cycles detection
     # TODO Solve with transitive closure (maybe)
 
-    token_dict = dict(token_defs)
+    token_dict = {k:t for k, (t,_p) in token_defs}
     assert len(token_dict) == len(token_defs), "Same name defined twice?"
 
     while True:

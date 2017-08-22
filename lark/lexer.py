@@ -131,7 +131,7 @@ class Lexer(object):
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = [t for t in ignore]
 
-        tokens.sort(key=lambda x:(-x.priority, -x.pattern.max_width, x.name))
+        tokens.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
 
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())

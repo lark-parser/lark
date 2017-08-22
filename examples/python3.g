@@ -166,7 +166,8 @@ string: STRING | LONG_STRING
 
 NAME: /[a-zA-Z_]\w*/
 COMMENT: /\#[^\n]*/
-_NEWLINE: /(\r?\n[\t ]*|${COMMENT})+/
+_NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
+
 
 %ignore /[\t \f]+/  // WS
 %ignore /\\\\[\t \f]*\r?\n/   // LINE_CONT 

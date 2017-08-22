@@ -36,7 +36,7 @@ class LarkOptions(object):
         debug - Affects verbosity (default: False)
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
         cache_grammar - Cache the Lark grammar (Default: False)
-        postlex - Lexer post-processing (Default: None)
+        postlex - Lexer post-processing (Requires standard lexer. Default: None)
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
         propagate_positions - Experimental. Don't use yet.

@@ -89,10 +89,11 @@ class PatternRE(Pattern):
         return sre_parse.parse(self.to_regexp()).getwidth()[1]
 
 class TokenDef(object):
-    def __init__(self, name, pattern):
+    def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
+        self.priority = priority
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)

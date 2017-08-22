@@ -110,7 +110,8 @@ RULES = {
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOT _DOT STRING'],
 
-    'token': ['TOKEN _COLON expansions _NL'],
+    'token': ['TOKEN _COLON expansions _NL',
+              'TOKEN _DOT NUMBER _COLON expansions _NL'],
     'statement': ['ignore', 'import'],
     'ignore': ['_IGNORE expansions _NL'],
     'import': ['_IMPORT import_args _NL',
@@ -373,7 +374,7 @@ class Grammar:
         # Implement the "%ignore" feature without a lexer..
         terms_to_ignore = {name:'__'+name for name in self.ignore}
         if terms_to_ignore:
-            assert set(terms_to_ignore) <= {name for name, t in term_defs}
+            assert set(terms_to_ignore) <= {name for name, _t in term_defs}
             term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
             expr = Token('RULE', '__ignore')
             for r, tree, _o in rule_defs:
@@ -388,7 +389,7 @@ class Grammar:
             rule_defs.append(('__ignore', _ignore_tree, None))
 
         # Convert all tokens to rules
-        new_terminal_names = {name: '__token_'+name for name, tree in term_defs}
+        new_terminal_names = {name: '__token_'+name for name, _t in term_defs}
 
         for name, tree, options in rule_defs:
             for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
@@ -396,11 +397,11 @@ class Grammar:
                     if sym in new_terminal_names:
                         exp.children[i] = Token(sym.type, new_terminal_names[sym])
 
-        for name, tree in term_defs:
+        for name, (tree, priority) in term_defs:   # TODO transfer priority to rule?
             if name.startswith('_'):
-                options = RuleOptions(filter_out=True)
+                options = RuleOptions(filter_out=True, priority=priority)
             else:
-                options = RuleOptions(keep_all_tokens=True, create_token=name)
+                options = RuleOptions(keep_all_tokens=True, create_token=name, priority=priority)
 
             name = new_terminal_names[name]
             inner_name = name + '_inner'
@@ -423,8 +424,8 @@ class Grammar:
 
         # Convert token-trees to strings/regexps
         transformer = PrepareLiterals() * TokenTreeToPattern()
-        tokens = [TokenDef(name, transformer.transform(token_tree))
-                  for name, token_tree in token_defs]
+        tokens = [TokenDef(name, transformer.transform(token_tree), priority)
+                  for name, (token_tree, priority) in token_defs]
 
         # =================
         #  Compile Rules
@@ -504,7 +505,7 @@ def resolve_token_references(token_defs):
 
     while True:
         changed = False
-        for name, token_tree in token_defs:
+        for name, (token_tree, _p) in token_defs:
             for exp in chain(token_tree.find_data('expansion'), token_tree.find_data('expr')):
                 for i, item in enumerate(exp.children):
                     if isinstance(item, Token):
@@ -555,7 +556,9 @@ class GrammarLoader:
         statements = [c.children for c in tree.children if c.data=='statement']
         assert len(token_defs) + len(rule_defs) + len(statements) == len(tree.children)
 
-        token_defs = [(name.value, t) for name, t in token_defs]
+        token_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in token_defs]
+
+        token_defs = [(name.value, (t, int(p))) for name, p, t in token_defs]
 
         # Execute statements
         ignore = []
@@ -568,8 +571,9 @@ class GrammarLoader:
                 name = stmt.children[1] if len(stmt.children)>1 else dotted_path[-1]
                 grammar_path = os.path.join(*dotted_path[:-1]) + '.g'
                 g = import_grammar(grammar_path)
-                token_tree = dict(g.token_defs)[dotted_path[-1]]
-                token_defs.append([name.value, token_tree])
+                token_options = dict(g.token_defs)[dotted_path[-1]]
+                assert isinstance(token_options, tuple) and len(token_options)==2
+                token_defs.append([name.value, token_options])
             else:
                 assert False, stmt
 
@@ -594,7 +598,7 @@ class GrammarLoader:
 
             name = '__IGNORE_%d'% len(ignore_names)
             ignore_names.append(name)
-            token_defs.append((name, t))
+            token_defs.append((name, (t, 0)))
 
 
         # Verify correctness 2

@@ -635,7 +635,8 @@ def _make_parser_test(LEXER, PARSER):
             b.2: "a"
             """
 
-            l = Lark(grammar, parser='earley', lexer='standard')
+            # l = Lark(grammar, parser='earley', lexer='standard')
+            l = _Lark(grammar)
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'b')
 
@@ -645,9 +646,54 @@ def _make_parser_test(LEXER, PARSER):
             b.1: "a"
             """
 
-            l = Lark(grammar, parser='earley', lexer='standard')
+            l = _Lark(grammar)
+            # l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'a')
+
+        @unittest.skipIf(LEXER != 'standard', "Only standard lexers care about token priority")
+        def test_lexer_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: A B | AB
+            A.2: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['a', 'b'])
+            self.assertNotEqual(res.children, ['ab'])
+
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B: "b"
+            AB.3: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertNotEqual(res.children, ['a', 'b'])
+            self.assertEqual(res.children, ['ab'])
+
+
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports ambiguity")
+        def test_ambiguity1(self):
+            grammar = """
+            start: cd+ "e"
+
+            !cd: "c"
+               | "d"
+               | "cd"
+
+            """
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=None)
+            x = l.parse('cde')
+            assert x.data == '_ambig'
+            assert len(x.children) == 2
 
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")

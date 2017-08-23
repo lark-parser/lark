@@ -51,7 +51,7 @@ class Item(object):
     def advance(self, tree):
         assert self.tree.data == 'drv'
         new_tree = Derivation(self.rule, self.tree.children + [tree])
-        return Item(self.rule, self.ptr+1, self.start, new_tree)
+        return self.__class__(self.rule, self.ptr+1, self.start, new_tree)
 
     def similar(self, other):
         return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
@@ -66,6 +66,9 @@ class Item(object):
         before = list(map(str, self.rule.expansion[:self.ptr]))
         after = list(map(str, self.rule.expansion[self.ptr:]))
         return '<(%d) %s : %s * %s>' % (id(self.start), self.rule.origin, ' '.join(before), ' '.join(after))
+
+class Item_JoinDerivations(Item):
+    __eq__ = Item.similar
 
 
 class NewsList(list):
@@ -133,10 +136,16 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None):
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, all_derivations=True):
+        """
+        all_derivations:
+            True = Try every rule combination, and every possible derivation of each rule. (default)
+            False = Try every rule combination, but not every derivation of the same rule.
+        """
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
+        self.all_derivations = all_derivations
 
         self.postprocess = {}
         self.predictions = {}
@@ -150,9 +159,11 @@ class Parser:
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
 
+        _Item = Item if self.all_derivations else Item_JoinDerivations
+
         def predict(nonterm, column):
             assert not isinstance(nonterm, Terminal), nonterm
-            return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
+            return [_Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):
             name = item.rule.origin

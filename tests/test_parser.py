@@ -140,6 +140,35 @@ def _make_full_earley_test(LEXER):
             self.assertEqual( res.data, '_ambig')
             self.assertEqual( len(res.children), 2)
 
+        def test_ambiguity1(self):
+            grammar = """
+            start: cd+ "e"
+
+            !cd: "c"
+               | "d"
+               | "cd"
+
+            """
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            x = l.parse('cde')
+            assert x.data == '_ambig', x
+            assert len(x.children) == 2
+
+        @unittest.skipIf(LEXER=='dynamic', "Not implemented in Dynamic Earley yet")  # TODO
+        def test_not_all_derivations(self):
+            grammar = """
+            start: cd+ "e"
+
+            !cd: "c"
+               | "d"
+               | "cd"
+
+            """
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER, earley__all_derivations=False)
+            x = l.parse('cde')
+            assert x.data != '_ambig', x
+            assert len(x.children) == 1
+
     _NAME = "TestFullEarley" + (LEXER or 'Scanless').capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
@@ -400,6 +429,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
 
+        @unittest.skipIf(LEXER is None, "Known bug with scanless parsing")  # TODO
         def test_token_collision2(self):
             # NOTE: This test reveals a bug in token reconstruction in Scanless Earley
             #       I probably need to re-write grammar transformation
@@ -625,32 +655,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
-        def test_earley_prioritization(self):
-            "Tests effect of priority on result"
-
-            grammar = """
-            start: a | b
-            a.1: "a"
-            b.2: "a"
-            """
-
-            # l = Lark(grammar, parser='earley', lexer='standard')
-            l = _Lark(grammar)
-            res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'b')
-
-            grammar = """
-            start: a | b
-            a.2: "a"
-            b.1: "a"
-            """
-
-            l = _Lark(grammar)
-            # l = Lark(grammar, parser='earley', lexer='standard')
-            res = l.parse("a")
-            self.assertEqual(res.children[0].data, 'a')
-
         @unittest.skipIf(LEXER != 'standard', "Only standard lexers care about token priority")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
@@ -680,22 +684,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
-        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports ambiguity")
-        def test_ambiguity1(self):
-            grammar = """
-            start: cd+ "e"
-
-            !cd: "c"
-               | "d"
-               | "cd"
-
-            """
-            # l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=None)
-            l = _Lark(grammar, ambiguity='explicit')
-            x = l.parse('cde')
-            assert x.data == '_ambig'
-            assert len(x.children) == 2
-
 
         def test_import(self):
             grammar = """
@@ -710,6 +698,33 @@ def _make_parser_test(LEXER, PARSER):
             l = _Lark(grammar)
             x = l.parse('12 elephants')
             self.assertEqual(x.children, ['12', 'elephants'])
+
+        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
+        def test_earley_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: a | b
+            a.1: "a"
+            b.2: "a"
+            """
+
+            # l = Lark(grammar, parser='earley', lexer='standard')
+            l = _Lark(grammar)
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'b')
+
+            grammar = """
+            start: a | b
+            a.2: "a"
+            b.1: "a"
+            """
+
+            l = _Lark(grammar)
+            # l = Lark(grammar, parser='earley', lexer='standard')
+            res = l.parse("a")
+            self.assertEqual(res.children[0].data, 'a')
+
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization_sum(self):

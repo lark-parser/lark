@@ -69,6 +69,7 @@ class Item(object):
 
 class Item_JoinDerivations(Item):
     __eq__ = Item.similar
+    __hash__ = Item.__hash__
 
 
 class NewsList(list):

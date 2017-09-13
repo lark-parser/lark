@@ -24,7 +24,10 @@ def _compare_rules(rule1, rule2):
 
 def _compare_drv(tree1, tree2):
     if not (isinstance(tree1, Tree) and isinstance(tree2, Tree)):
-        return -compare(tree1, tree2)
+        try:
+            return -compare(tree1, tree2)
+        except TypeError:
+            return 0
 
     try:
         rule1, rule2 = tree1.rule, tree2.rule

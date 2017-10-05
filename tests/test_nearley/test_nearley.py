@@ -65,6 +65,19 @@ class TestNearley(unittest.TestCase):
         assert c['g'] == 178
         assert c['b'] == 3
 
+    def test_include(self):
+        fn = os.path.join(NEARLEY_PATH, 'test/grammars/folder-test.ne')
+        with open(fn) as f:
+            grammar = f.read()
+
+        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, os.path.dirname(fn))
+        d = {}
+        exec (code, d)
+        parse = d['parse']
+
+        parse('a')
+        parse('b')
+
 
 if __name__ == '__main__':
     unittest.main()

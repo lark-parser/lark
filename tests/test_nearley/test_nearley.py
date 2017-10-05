@@ -45,6 +45,20 @@ class TestNearley(unittest.TestCase):
         parse('a')
         parse('b')
 
+    def test_multi_include(self):
+        fn = os.path.join(NEARLEY_PATH, 'test/grammars/multi-include-test.ne')
+        with open(fn) as f:
+            grammar = f.read()
+
+        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, os.path.dirname(fn))
+        d = {}
+        exec (code, d)
+        parse = d['parse']
+
+        parse('a')
+        parse('b')
+        parse('c')
+
 
 if __name__ == '__main__':
     unittest.main()

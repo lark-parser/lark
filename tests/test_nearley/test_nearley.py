@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import unittest
 import logging
 import os
-import sys
 
 logging.basicConfig(level=logging.INFO)
 

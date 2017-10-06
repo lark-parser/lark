@@ -101,7 +101,10 @@ class NearleyToLark(InlineTransformer):
     def start(self, *rules):
         return '\n'.join(filter(None, rules))
 
-def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path):
+def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes=None):
+    if includes is None:
+        includes = []
+
     rule_defs = []
 
     tree = nearley_grammar_parser.parse(g)
@@ -110,14 +113,22 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path):
             directive, arg = statement.children
             if directive == 'builtin':
                 path = os.path.join(builtin_path, arg[1:-1])
-                with open(path) as f:
-                    text = f.read()
-                rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)))
+                if path not in includes:
+                    includes.append(path)
+                    with open(path) as f:
+                        text = f.read()
+                    [included_rule_defs, included_includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
+                    rule_defs += included_rule_defs
+                    includes += included_includes
             elif directive == 'include':
                 path = os.path.join(folder_path, arg[1:-1])
-                with open(path) as f:
-                    text = f.read()
-                rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)))
+                if path not in includes:
+                    includes.append(path)
+                    with open(path) as f:
+                        text = f.read()
+                    [included_rule_defs, included_includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
+                    rule_defs += included_rule_defs
+                    includes += included_includes
             else:
                 assert False, directive
         elif statement.data == 'js_code':
@@ -131,7 +142,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path):
         else:
             raise Exception("Unknown statement: %s" % statement)
 
-    return rule_defs
+    return [rule_defs, includes]
 
 
 def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
@@ -145,7 +156,8 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
 
     js_code = ['function id(x) {return x[0];}']
     n2l = NearleyToLark()
-    lark_g = '\n'.join(_nearley_to_lark(g, builtin_path, n2l, js_code, folder_path))
+    [rule_defs, _] = _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path)
+    lark_g = '\n'.join(rule_defs)
     lark_g += '\n'+'\n'.join('!%s: %s' % item for item in n2l.extra_rules.items())
 
     emit('from lark import Lark, Transformer')

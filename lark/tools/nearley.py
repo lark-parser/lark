@@ -118,9 +118,8 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes=None):
                     includes.append(path)
                     with open(path) as f:
                         text = f.read()
-                    [included_rule_defs, included_includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
+                    [included_rule_defs, includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
                     rule_defs += included_rule_defs
-                    includes += included_includes
             else:
                 assert False, directive
         elif statement.data == 'js_code':

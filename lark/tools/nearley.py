@@ -111,17 +111,9 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes=None):
     for statement in tree.children:
         if statement.data == 'directive':
             directive, arg = statement.children
-            if directive == 'builtin':
-                path = os.path.join(builtin_path, arg[1:-1])
-                if path not in includes:
-                    includes.append(path)
-                    with open(path) as f:
-                        text = f.read()
-                    [included_rule_defs, included_includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
-                    rule_defs += included_rule_defs
-                    includes += included_includes
-            elif directive == 'include':
-                path = os.path.join(folder_path, arg[1:-1])
+            if directive == 'builtin' or directive == 'include':
+                folder = builtin_path if directive == 'builtin' else folder_path
+                path = os.path.join(folder, arg[1:-1])
                 if path not in includes:
                     includes.append(path)
                     with open(path) as f:

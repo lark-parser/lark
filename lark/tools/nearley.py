@@ -65,7 +65,7 @@ class NearleyToLark(InlineTransformer):
 
         name = 'xrule_%d' % len(self.extra_rules)
         assert name not in self.extra_rules
-        self.extra_rules[name] = rule                
+        self.extra_rules[name] = rule
         self.extra_rules_rev[rule] = name
         return name
 
@@ -101,17 +101,21 @@ class NearleyToLark(InlineTransformer):
     def start(self, *rules):
         return '\n'.join(filter(None, rules))
 
-def _nearley_to_lark(g, builtin_path, n2l, js_code):
+def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
     rule_defs = []
 
     tree = nearley_grammar_parser.parse(g)
     for statement in tree.children:
         if statement.data == 'directive':
             directive, arg = statement.children
-            if directive == 'builtin':
-                with open(os.path.join(builtin_path, arg[1:-1])) as f:
-                    text = f.read()
-                rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code)
+            if directive in ('builtin', 'include'):
+                folder = builtin_path if directive == 'builtin' else folder_path
+                path = os.path.join(folder, arg[1:-1])
+                if path not in includes:
+                    includes.add(path)
+                    with open(path) as f:
+                        text = f.read()
+                    rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
             else:
                 assert False, directive
         elif statement.data == 'js_code':
@@ -128,7 +132,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code):
     return rule_defs
 
 
-def create_code_for_nearley_grammar(g, start, builtin_path):
+def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
     import js2py
 
     emit_code = []
@@ -136,17 +140,18 @@ def create_code_for_nearley_grammar(g, start, builtin_path):
         if x:
             emit_code.append(x)
         emit_code.append('\n')
-    
+
     js_code = ['function id(x) {return x[0];}']
     n2l = NearleyToLark()
-    lark_g = '\n'.join(_nearley_to_lark(g, builtin_path, n2l, js_code))
+    rule_defs = _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, set())
+    lark_g = '\n'.join(rule_defs)
     lark_g += '\n'+'\n'.join('!%s: %s' % item for item in n2l.extra_rules.items())
 
     emit('from lark import Lark, Transformer')
     emit()
     emit('grammar = ' + repr(lark_g))
     emit()
-    
+
     for alias, code in n2l.alias_js_code.items():
         js_code.append('%s = (%s);' % (alias, code))
 
@@ -163,51 +168,6 @@ def create_code_for_nearley_grammar(g, start, builtin_path):
 
     return ''.join(emit_code)
 
-def test():
-    css_example_grammar = """
-# http://www.w3.org/TR/css3-color/#colorunits
-
-    @builtin "whitespace.ne"
-    @builtin "number.ne"
-    @builtin "postprocessors.ne"
-
-    csscolor -> "#" hexdigit hexdigit hexdigit hexdigit hexdigit hexdigit {%
-        function(d) {
-            return {
-                "r": parseInt(d[1]+d[2], 16),
-                "g": parseInt(d[3]+d[4], 16),
-                "b": parseInt(d[5]+d[6], 16),
-            }
-        }
-    %}
-              | "#" hexdigit hexdigit hexdigit {%
-        function(d) {
-            return {
-                "r": parseInt(d[1]+d[1], 16),
-                "g": parseInt(d[2]+d[2], 16),
-                "b": parseInt(d[3]+d[3], 16),
-            }
-        }
-    %}
-              | "rgb"  _ "(" _ colnum _ "," _ colnum _ "," _ colnum _ ")" {% $({"r": 4, "g": 8, "b": 12}) %}
-              | "hsl"  _ "(" _ colnum _ "," _ colnum _ "," _ colnum _ ")" {% $({"h": 4, "s": 8, "l": 12}) %}
-              | "rgba" _ "(" _ colnum _ "," _ colnum _ "," _ colnum _ "," _ decimal _ ")" {% $({"r": 4, "g": 8, "b": 12, "a": 16}) %}
-              | "hsla" _ "(" _ colnum _ "," _ colnum _ "," _ colnum _ "," _ decimal _ ")" {% $({"h": 4, "s": 8, "l": 12, "a": 16}) %}
-
-    hexdigit -> [a-fA-F0-9]
-    colnum -> unsigned_int {% id %} | percentage {%
-        function(d) {return Math.floor(d[0]*255); }
-    %}
-    """
-    code = create_code_for_nearley_grammar(css_example_grammar, 'csscolor', '/home/erez/nearley/builtin')
-    d = {}
-    exec (code, d)
-    parse = d['parse']
-
-    print(parse('#a199ff'))
-    print(parse('rgb(255, 70%, 3)'))
-
-
 def main():
     if len(sys.argv) < 3:
         print("Reads Nearley grammar (with js functions) outputs an equivalent lark parser.")
@@ -217,9 +177,8 @@ def main():
     fn, start, nearley_lib = sys.argv[1:]
     with open(fn) as f:
         grammar = f.read()
-    print(create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin')))
+    print(create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn))))
 
 
 if __name__ == '__main__':
     main()
-    # test()

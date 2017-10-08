@@ -1,0 +1,3 @@
+[submodule "tests/test_nearley/nearley"]
+	path = tests/test_nearley/nearley
+	url = https://github.com/Hardmath123/nearley

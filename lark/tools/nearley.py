@@ -101,25 +101,21 @@ class NearleyToLark(InlineTransformer):
     def start(self, *rules):
         return '\n'.join(filter(None, rules))
 
-def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes=None):
-    if includes is None:
-        includes = []
-
+def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
     rule_defs = []
 
     tree = nearley_grammar_parser.parse(g)
     for statement in tree.children:
         if statement.data == 'directive':
             directive, arg = statement.children
-            if directive == 'builtin' or directive == 'include':
+            if directive in ('builtin', 'include'):
                 folder = builtin_path if directive == 'builtin' else folder_path
                 path = os.path.join(folder, arg[1:-1])
                 if path not in includes:
-                    includes.append(path)
+                    includes.add(path)
                     with open(path) as f:
                         text = f.read()
-                    [included_rule_defs, includes] = _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
-                    rule_defs += included_rule_defs
+                    rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
             else:
                 assert False, directive
         elif statement.data == 'js_code':
@@ -133,7 +129,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes=None):
         else:
             raise Exception("Unknown statement: %s" % statement)
 
-    return [rule_defs, includes]
+    return rule_defs
 
 
 def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
@@ -147,7 +143,7 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
 
     js_code = ['function id(x) {return x[0];}']
     n2l = NearleyToLark()
-    [rule_defs, _] = _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path)
+    rule_defs = _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, set())
     lark_g = '\n'.join(rule_defs)
     lark_g += '\n'+'\n'.join('!%s: %s' % item for item in n2l.extra_rules.items())
 

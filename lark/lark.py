@@ -66,7 +66,7 @@ class LarkOptions(object):
         assert self.parser in ('earley', 'lalr', None)
 
         if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an auto-transformer when using the Earley algorithm.'
+            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
 
         if o:

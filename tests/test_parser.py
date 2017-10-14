@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError
 from lark.lexer import LexError
-from lark.tree import Tree
+from lark.tree import Tree, Transformer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -52,6 +52,98 @@ class TestParsers(unittest.TestCase):
 
         l = Lark(g, parser='earley', lexer='dynamic')
         self.assertRaises(ParseError, l.parse, 'a')
+
+    def test_propagate_positions(self):
+        g = Lark("""start: a
+                    a: "a"
+                 """, propagate_positions=True)
+
+        r = g.parse('a')
+        self.assertEqual( r.children[0].line, 1 )
+
+    def test_expand1(self):
+
+        g = Lark("""start: a
+                    ?a: b
+                    b: "x"
+                 """)
+
+        r = g.parse('x')
+        self.assertEqual( r.children[0].data, "b" )
+
+        g = Lark("""start: a
+                    ?a: b -> c
+                    b: "x"
+                 """)
+
+        r = g.parse('x')
+        self.assertEqual( r.children[0].data, "b" )
+
+
+        g = Lark("""start: a
+                    ?a: b b -> c
+                    b: "x"
+                 """)
+        r = g.parse('xx')
+        self.assertEqual( r.children[0].data, "c" )
+
+    def test_embedded_transformer(self):
+        class T(Transformer):
+            def a(self, children):
+                return "<a>"
+            def b(self, children):
+                return "<b>"
+            def c(self, children):
+                return "<c>"
+
+        # Test regular
+        g = Lark("""start: a
+                    a : "x"
+                 """, parser='lalr')
+        r = T().transform(g.parse("x"))
+        self.assertEqual( r.children, ["<a>"] )
+
+
+        g = Lark("""start: a
+                    a : "x"
+                 """, parser='lalr', transformer=T())
+        r = g.parse("x")
+        self.assertEqual( r.children, ["<a>"] )
+
+
+        # Test Expand1
+        g = Lark("""start: a
+                    ?a : b
+                    b : "x"
+                 """, parser='lalr')
+        r = T().transform(g.parse("x"))
+        self.assertEqual( r.children, ["<b>"] )
+
+            
+        g = Lark("""start: a
+                    ?a : b
+                    b : "x"
+                 """, parser='lalr', transformer=T())
+        r = g.parse("x")
+        self.assertEqual( r.children, ["<b>"] )
+
+        # Test Expand1 -> Alias
+        g = Lark("""start: a
+                    ?a : b b -> c
+                    b : "x"
+                 """, parser='lalr')
+        r = T().transform(g.parse("xx"))
+        self.assertEqual( r.children, ["<c>"] )
+
+            
+        g = Lark("""start: a
+                    ?a : b b -> c
+                    b : "x"
+                 """, parser='lalr', transformer=T())
+        r = g.parse("xx")
+        self.assertEqual( r.children, ["<c>"] )
+ 
+
 
 
 def _make_full_earley_test(LEXER):

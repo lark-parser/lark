@@ -524,7 +524,7 @@ class GrammarLoader:
 
         rules = [RuleOptions.from_rule(name, x) for name, x in RULES.items()]
         d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
-        rules, callback = ParseTreeBuilder(T).create_tree_builder(d, None)
+        rules, callback = ParseTreeBuilder(d, T).apply()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
         parser_conf = ParserConf(rules, callback, 'start')
         self.parser = LALR(lexer_conf, parser_conf)

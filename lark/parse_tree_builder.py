@@ -20,6 +20,15 @@ class Expand1:
         else:
             return self.node_builder(children)
 
+class Factory:
+    def __init__(self, cls, *args):
+        self.cls = cls
+        self.args = args
+
+    def __call__(self, node_builder):
+        return self.cls(node_builder, *self.args)
+                 
+
 class TokenWrapper:
     "Used for fixing the results of scanless parsing"
 
@@ -29,6 +38,10 @@ class TokenWrapper:
 
     def __call__(self, children):
         return self.node_builder( [Token(self.token_name, ''.join(children))] )
+
+def identity(node_builder):
+    return node_builder
+
 
 class ChildFilter:
     def __init__(self, node_builder, to_include):
@@ -45,7 +58,7 @@ class ChildFilter:
 
         return self.node_builder(filtered)
 
-def create_rule_handler(expansion, usermethod, keep_all_tokens, filter_out):
+def create_rule_handler(expansion, keep_all_tokens, filter_out):
     # if not keep_all_tokens:
     to_include = [(i, not is_terminal(sym) and sym.startswith('_'))
                   for i, sym in enumerate(expansion)
@@ -54,10 +67,10 @@ def create_rule_handler(expansion, usermethod, keep_all_tokens, filter_out):
                   ]
 
     if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
-        return ChildFilter(usermethod, to_include)
+        return Factory(ChildFilter, to_include)
 
     # else, if no filtering required..
-    return usermethod
+    return identity
 
 class PropagatePositions:
     def __init__(self, node_builder):
@@ -86,15 +99,14 @@ class Callback(object):
     pass
 
 class ParseTreeBuilder:
-    def __init__(self, tree_class, propagate_positions=False, keep_all_tokens=False):
+    def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions
         self.always_keep_all_tokens = keep_all_tokens
 
-    def create_tree_builder(self, rules, transformer):
-        callback = Callback()
-        new_rules = []
+        self.rule_builders = list(self._init_builders(rules))
 
+    def _init_builders(self, rules):
         filter_out = set()
         for origin, (expansions, options) in rules.items():
             if options and options.filter_out:
@@ -110,30 +122,35 @@ class ParseTreeBuilder:
                 if alias and origin.startswith('_'):
                         raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
 
-                elif not alias:
-                    alias = origin
+                wrapper_chain = filter(None, [
+                    expand1 and Expand1,
+                    create_token and Factory(TokenWrapper, create_token),
+                    create_rule_handler(expansion, keep_all_tokens, filter_out),
+                    self.propagate_positions and PropagatePositions,
+                ])
 
-                try:
-                    f = transformer._get_func(alias)
-                except AttributeError:
-                    f = NodeBuilder(self.tree_class, alias)
+                yield origin, expansion, options, alias or origin, wrapper_chain
 
-                if expand1:
-                    f = Expand1(f)
 
-                if create_token:
-                    f = TokenWrapper(f, create_token)
+    def apply(self, transformer=None):
+        callback = Callback()
 
-                alias_handler = create_rule_handler(expansion, f, keep_all_tokens, filter_out)
+        new_rules = []
+        for origin, expansion, options, alias, wrapper_chain in self.rule_builders:
+            callback_name = '_callback_%s_%s' % (origin, '_'.join(expansion))
 
-                if self.propagate_positions:
-                    alias_handler = PropagatePositions(alias_handler)
+            try:
+                f = transformer._get_func(alias)
+            except AttributeError:
+                f = NodeBuilder(self.tree_class, alias)
 
-                callback_name = 'autoalias_%s_%s' % (origin, '_'.join(expansion))
-                if hasattr(callback, callback_name):
-                    raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
-                setattr(callback, callback_name, alias_handler)
+            for w in wrapper_chain:
+                f = w(f)
 
-                new_rules.append(( origin, expansion, callback_name, options ))
+            if hasattr(callback, callback_name):
+                raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
+            setattr(callback, callback_name, f)
+
+            new_rules.append(( origin, expansion, callback_name, options ))
 
         return new_rules, callback

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 import unittest
@@ -52,6 +53,19 @@ class TestParsers(unittest.TestCase):
 
         l = Lark(g, parser='earley', lexer='dynamic')
         self.assertRaises(ParseError, l.parse, 'a')
+
+    def test_utf8(self):
+        g = """start: a
+               a: "±a"
+            """
+        l = Lark(g)
+        l.parse('±a')
+
+        l = Lark(g, parser='earley', lexer=None)
+        l.parse('±a')
+
+        l = Lark(g, parser='earley', lexer='dynamic')
+        l.parse('±a')
 
 
 def _make_full_earley_test(LEXER):

@@ -1,14 +1,17 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 import unittest
 import logging
 import os
+import codecs
 
 logging.basicConfig(level=logging.INFO)
 
-from lark.tools.nearley import create_code_for_nearley_grammar
+from lark.tools.nearley import create_code_for_nearley_grammar, main as nearley_tool_main
 
-NEARLEY_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'nearley'))
+TEST_PATH    = os.path.abspath(os.path.dirname(__file__))
+NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
 class TestNearley(unittest.TestCase):
@@ -58,6 +61,23 @@ class TestNearley(unittest.TestCase):
         parse('a')
         parse('b')
         parse('c')
+
+    def test_utf8(self):
+        grammar = u'main -> "±a"'
+        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, './')
+        d = {}
+        exec (code, d)
+        parse = d['parse']
+
+        parse(u'±a')
+
+    def test_utf8_2(self):
+        fn = os.path.join(TEST_PATH, 'grammars/unicode.ne')
+        nearley_tool_main(fn, 'x', NEARLEY_PATH)
+
+    def test_include_utf8(self):
+        fn = os.path.join(TEST_PATH, 'grammars/include_unicode.ne')
+        nearley_tool_main(fn, 'main', NEARLEY_PATH)
 
 
 if __name__ == '__main__':

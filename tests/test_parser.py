@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 import unittest
@@ -873,6 +874,22 @@ def _make_parser_test(LEXER, PARSER):
             l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
+
+
+        def test_utf8(self):
+            g = u"""start: a
+                   a: "±a"
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'±a'), Tree('start', [Tree('a', [])]))
+
+            g = u"""start: A
+                   A: "±a"
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'±a'), Tree('start', [u'\xb1a']))
+
+
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

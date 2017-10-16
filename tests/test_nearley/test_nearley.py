@@ -73,6 +73,10 @@ class TestNearley(unittest.TestCase):
 
     def test_utf8_2(self):
         fn = os.path.join(TEST_PATH, 'grammars/unicode.ne')
+        nearley_tool_main(fn, 'x', NEARLEY_PATH)
+
+    def test_include_utf8(self):
+        fn = os.path.join(TEST_PATH, 'grammars/include_unicode.ne')
         nearley_tool_main(fn, 'main', NEARLEY_PATH)
 
 

@@ -2,6 +2,7 @@
 
 import os.path
 import sys
+import codecs
 
 
 from lark import Lark, InlineTransformer, Transformer
@@ -113,7 +114,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
                 path = os.path.join(folder, arg[1:-1])
                 if path not in includes:
                     includes.add(path)
-                    with open(path) as f:
+                    with codecs.open(path, encoding='utf8') as f:
                         text = f.read()
                     rule_defs += _nearley_to_lark(text, builtin_path, n2l, js_code, os.path.abspath(os.path.dirname(path)), includes)
             else:
@@ -175,7 +176,7 @@ def main():
         return
 
     fn, start, nearley_lib = sys.argv[1:]
-    with open(fn) as f:
+    with codecs.open(fn, encoding='utf8') as f:
         grammar = f.read()
     print(create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn))))
 

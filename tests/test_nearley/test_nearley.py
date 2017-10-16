@@ -8,10 +8,10 @@ import codecs
 
 logging.basicConfig(level=logging.INFO)
 
-from lark.tools.nearley import create_code_for_nearley_grammar
+from lark.tools.nearley import create_code_for_nearley_grammar, main as nearley_tool_main
 
-TEST_PATH    = os.path.dirname(__file__)
-NEARLEY_PATH = os.path.abspath(os.path.join(TEST_PATH, 'nearley'))
+TEST_PATH    = os.path.abspath(os.path.dirname(__file__))
+NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
 class TestNearley(unittest.TestCase):
@@ -73,14 +73,7 @@ class TestNearley(unittest.TestCase):
 
     def test_utf8_2(self):
         fn = os.path.join(TEST_PATH, 'grammars/unicode.ne')
-        with codecs.open(fn, encoding='utf8') as f:
-            grammar = f.read()
-        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, './')
-        d = {}
-        exec (code, d)
-        parse = d['parse']
-
-        parse(u'±a')
+        nearley_tool_main(fn, 'main', NEARLEY_PATH)
 
 
 if __name__ == '__main__':

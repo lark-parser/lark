@@ -169,17 +169,18 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
 
     return ''.join(emit_code)
 
-def main():
-    if len(sys.argv) < 3:
-        print("Reads Nearley grammar (with js functions) outputs an equivalent lark parser.")
-        print("Usage: %s <nearley_grammar_path> <start_rule> <nearley_lib_path>" % sys.argv[0])
-        return
-
-    fn, start, nearley_lib = sys.argv[1:]
+def main(fn, start, nearley_lib):
     with codecs.open(fn, encoding='utf8') as f:
         grammar = f.read()
     print(create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn))))
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 4:
+        print("Reads Nearley grammar (with js functions) outputs an equivalent lark parser.")
+        print("Usage: %s <nearley_grammar_path> <start_rule> <nearley_lib_path>" % sys.argv[0])
+        sys.exit(1)
+
+    fn, start, nearley_lib = sys.argv[1:]
+
+    main(fn, start, nearley_lib)

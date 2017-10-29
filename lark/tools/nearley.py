@@ -172,7 +172,7 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
 def main(fn, start, nearley_lib):
     with codecs.open(fn, encoding='utf8') as f:
         grammar = f.read()
-    print(create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn))))
+    return (create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn))))
 
 
 if __name__ == '__main__':
@@ -183,4 +183,4 @@ if __name__ == '__main__':
 
     fn, start, nearley_lib = sys.argv[1:]
 
-    main(fn, start, nearley_lib)
+    print(main(fn, start, nearley_lib))

@@ -22,12 +22,19 @@ class EndToken:
     type = '$end'
 
 class Derivation(Tree):
+    _hash = None
+
     def __init__(self, rule, items=None):
         Tree.__init__(self, 'drv', items or [])
         self.rule = rule
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
         return self.rule.origin if self.rule else self.data
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = Tree.__hash__(self)
+        return self._hash
 
 END_TOKEN = EndToken()
 
@@ -57,10 +64,10 @@ class Item(object):
         return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
 
     def __eq__(self, other):
-        return self.similar(other) and (self.tree is other.tree or self.tree == other.tree)
+        return self.similar(other) and (self.tree == other.tree)
 
     def __hash__(self):
-        return hash((self.rule, self.ptr, id(self.start)))
+        return hash((self.rule, self.ptr, id(self.start), self.tree))   # Always runs Derivation.__hash__
 
     def __repr__(self):
         before = list(map(str, self.rule.expansion[:self.ptr]))

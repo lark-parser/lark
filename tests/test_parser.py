@@ -30,12 +30,12 @@ def _read(n, *args):
 class TestParsers(unittest.TestCase):
     def test_same_ast(self):
         "Tests that Earley and LALR parsers produce equal trees"
-        g = Lark("""start: "(" name_list ("," "*" NAME)? ")"
+        g = Lark(r"""start: "(" name_list ("," "*" NAME)? ")"
                     name_list: NAME | name_list "," NAME
                     NAME: /\w+/ """, parser='lalr')
         l = g.parse('(a,b,c,*x)')
 
-        g = Lark("""start: "(" name_list ("," "*" NAME)? ")"
+        g = Lark(r"""start: "(" name_list ("," "*" NAME)? ")"
                     name_list: NAME | name_list "," NAME
                     NAME: /\w/+ """)
         l2 = g.parse('(a,b,c,*x)')
@@ -507,7 +507,7 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("a" * (sys.getrecursionlimit() // 4))
 
         def test_token_collision(self):
-            g = _Lark("""start: "Hello" NAME
+            g = _Lark(r"""start: "Hello" NAME
                         NAME: /\w/+
                         %ignore " "
                     """)
@@ -517,7 +517,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
         def test_token_collision_WS(self):
-            g = _Lark("""start: "Hello" NAME
+            g = _Lark(r"""start: "Hello" NAME
                         NAME: /\w/+
                         %import common.WS
                         %ignore WS

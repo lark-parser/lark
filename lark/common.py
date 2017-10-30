@@ -1,5 +1,8 @@
 import re
 import sre_parse
+import sys
+
+Py36 = (sys.version_info[:2] >= (3, 6))
 
 class GrammarError(Exception):
     pass
@@ -54,7 +57,7 @@ class Pattern(object):
         self.flags = flags
 
     def __repr__(self):
-        return repr(self._get_flags() + self.value)
+        return repr(self.to_regexp())
 
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):
@@ -62,15 +65,24 @@ class Pattern(object):
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value
 
-    def _get_flags(self):
-        if self.flags:
-            assert len(self.flags) == 1
-            return '(?%s)' % self.flags
-        return ''
+    if Py36:
+        # Python 3.6 changed syntax for flags in regular expression
+        def _get_flags(self, value):
+            if self.flags:
+                assert len(self.flags) == 1
+                return ('(?%s:%s)' % (self.flags[0], value))
+            return value
+
+    else:
+        def _get_flags(self, value):
+            if self.flags:
+                assert len(self.flags) == 1
+                return ('(?%s)' % self.flags) + value
+            return value
 
 class PatternStr(Pattern):
     def to_regexp(self):
-        return self._get_flags() + re.escape(self.value)
+        return self._get_flags(re.escape(self.value))
 
     @property
     def min_width(self):
@@ -79,7 +91,7 @@ class PatternStr(Pattern):
 
 class PatternRE(Pattern):
     def to_regexp(self):
-        return self._get_flags() + self.value
+        return self._get_flags(self.value)
 
     @property
     def min_width(self):

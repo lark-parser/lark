@@ -123,7 +123,7 @@ class ParseTreeBuilder:
                         raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
 
                 wrapper_chain = filter(None, [
-                    expand1 and Expand1,
+                    (expand1 and not alias) and Expand1,
                     create_token and Factory(TokenWrapper, create_token),
                     create_rule_handler(expansion, keep_all_tokens, filter_out),
                     self.propagate_positions and PropagatePositions,

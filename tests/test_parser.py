@@ -78,7 +78,13 @@ class TestParsers(unittest.TestCase):
                  """)
 
         r = g.parse('x')
-        self.assertEqual( r.children[0].data, "b" )
+        self.assertEqual( r.children[0].data, "c" )
+
+        g = Lark("""start: a
+                    ?a: B -> c
+                    B: "x"
+                 """)
+        self.assertEqual( r.children[0].data, "c" )
 
 
         g = Lark("""start: a

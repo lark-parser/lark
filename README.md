@@ -8,16 +8,18 @@ Parse any context-free grammar, FAST and EASY!
 
 Lark can:
 
- - Parse all context-free grammars, and handle all ambiguity (using Earley)
+ - Parse all context-free grammars, and handle all ambiguity
  - Build a parse-tree automagically, no construction code required
- - Outperform all competitors, including PLY (when using LALR(1))
+ - Outperform all other Python libraries when using LALR(1) (Yes, including PLY)
  - Run on every Python interpreter (it's pure-python)
 
 And many more features. Read ahead and find out.
 
+Most importantly, Lark will save you time and prevent you from getting parsing headaches.
+
 ### Quick links
 
-- [Documentation wiki](/wiki)
+- [Documentation wiki](wiki)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 
@@ -48,7 +50,7 @@ Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit 
 
 ![fruitflies.png](examples/fruitflies.png)
 
-See more [examples in the wiki](/wiki/Examples)
+See more [examples in the wiki](wiki/Examples)
 
 
 
@@ -102,7 +104,7 @@ You can use the output as a regular python module:
 [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
 [![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
 
-See the full list of [features in the wiki](/wiki/Features)
+See the full list of [features in the wiki](wiki/Features)
 
 ## Comparison to other parsers
 

@@ -956,6 +956,9 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse("int 1 ! This is a comment\n")      
             self.assertEqual(tree.children, ['1'])
 
+            tree = parser.parse("int 1 ! This is a comment")    # A trailing ignore token can be tricky!
+            self.assertEqual(tree.children, ['1'])
+
 
 
     _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()

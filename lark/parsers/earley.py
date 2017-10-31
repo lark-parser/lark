@@ -181,12 +181,13 @@ class Parser:
             while True:
                 to_predict = {x.expect for x in column.to_predict.get_news()
                               if x.ptr}  # if not part of an already predicted batch
-                to_reduce = column.to_reduce.get_news()
+                to_reduce = set(column.to_reduce.get_news())
                 if not (to_predict or to_reduce):
                     break
 
                 for nonterm in to_predict:
                     column.add( predict(nonterm, column) )
+
                 for item in to_reduce:
                     new_items = list(complete(item))
                     for new_item in new_items:

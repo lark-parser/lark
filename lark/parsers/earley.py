@@ -64,22 +64,15 @@ class Item(object):
         return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
 
     def __eq__(self, other):
-        return self.similar(other) and (self.tree == other.tree)
+        return self.similar(other) #and (self.tree == other.tree)
 
     def __hash__(self):
-        return hash((self.rule, self.ptr, id(self.start), self.tree))   # Always runs Derivation.__hash__
+        return hash((self.rule, self.ptr, id(self.start)))   # Always runs Derivation.__hash__
 
     def __repr__(self):
         before = list(map(str, self.rule.expansion[:self.ptr]))
         after = list(map(str, self.rule.expansion[self.ptr:]))
         return '<(%d) %s : %s * %s>' % (id(self.start), self.rule.origin, ' '.join(before), ' '.join(after))
-
-class Item_JoinDerivations(Item):
-    __eq__ = Item.similar
-
-    def __hash__(self):
-        return hash((self.rule, self.ptr, id(self.start)))   # Always runs Derivation.__hash__
-
 
 class NewsList(list):
     "Keeps track of newly added items (append-only)"
@@ -97,12 +90,13 @@ class NewsList(list):
 
 class Column:
     "An entry in the table, aka Earley Chart. Contains lists of items."
-    def __init__(self, i):
+    def __init__(self, i, FIRST):
         self.i = i
         self.to_reduce = NewsList()
         self.to_predict = NewsList()
         self.to_scan = NewsList()
         self.item_count = 0
+        self.FIRST = FIRST
 
         self.added = set()
         self.completed = {}
@@ -112,13 +106,17 @@ class Column:
 
         Makes sure only unique items are added.
         """
-
         for item in items:
 
             if item.is_complete:
                 # XXX Potential bug: What happens if there's ambiguity in an empty rule?
                 if item.rule.expansion and item in self.completed:
                     old_tree = self.completed[item].tree
+                    if old_tree == item.tree:
+                        is_empty = len(self.FIRST[item.rule.origin])
+                        if is_empty:
+                            continue
+
                     if old_tree.data != '_ambig':
                         new_tree = old_tree.copy()
                         new_tree.rule = old_tree.rule
@@ -128,16 +126,18 @@ class Column:
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
 
-                    old_tree.children.append(item.tree)
+                    if item.tree not in old_tree.children:
+                        old_tree.children.append(item.tree)
+                    # old_tree.children.append(item.tree)
                 else:
                     self.completed[item] = item
                 self.to_reduce.append(item)
             else:
-                if item not in self.added:
-                    self.added.add(item)
-                    if isinstance(item.expect, Terminal):
-                        self.to_scan.append(item)
-                    else:
+                if isinstance(item.expect, Terminal):
+                    self.to_scan.append(item)
+                else:
+                    if item not in self.added:
+                        self.added.add(item)
                         self.to_predict.append(item)
 
             self.item_count += 1    # Only count if actually added
@@ -146,30 +146,28 @@ class Column:
         return bool(self.item_count)
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, all_derivations=True):
-        """
-        all_derivations:
-            True = Try every rule combination, and every possible derivation of each rule. (default)
-            False = Try every rule combination, but not every derivation of the same rule.
-        """
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
-        self.all_derivations = all_derivations
 
         self.postprocess = {}
         self.predictions = {}
+        self.FIRST = {}
         for rule in self.analysis.rules:
             if rule.origin != '$root':  # XXX kinda ugly
                 a = rule.alias
                 self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
                 self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
+                self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+
+
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
 
-        _Item = Item if self.all_derivations else Item_JoinDerivations
+        _Item = Item
 
         def predict(nonterm, column):
             assert not isinstance(nonterm, Terminal), nonterm
@@ -199,7 +197,7 @@ class Parser:
         def scan(i, token, column):
             to_scan = column.to_scan.get_news()
 
-            next_set = Column(i)
+            next_set = Column(i, self.FIRST)
             next_set.add(item.advance(token) for item in to_scan if item.expect.match(token))
 
             if not next_set:
@@ -209,7 +207,7 @@ class Parser:
             return next_set
 
         # Main loop starts
-        column0 = Column(0)
+        column0 = Column(0, self.FIRST)
         column0.add(predict(start_symbol, column0))
 
         column = column0

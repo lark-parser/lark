@@ -37,11 +37,16 @@ class Parser:
 
         self.postprocess = {}
         self.predictions = {}
+        self.FIRST = {}
+
         for rule in self.analysis.rules:
             if rule.origin != '$root':  # XXX kinda ugly
                 a = rule.alias
                 self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
                 self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
+
+                self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
@@ -106,14 +111,14 @@ class Parser:
                         if m:
                             delayed_matches[m.end()].add(item.advance(m.group(0)))
 
-            next_set = Column(i+1)
+            next_set = Column(i+1, self.FIRST)
             next_set.add(delayed_matches[i+1])
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             return next_set
 
         # Main loop starts
-        column0 = Column(0)
+        column0 = Column(0, self.FIRST)
         column0.add(predict(start_symbol, column0))
 
         column = column0

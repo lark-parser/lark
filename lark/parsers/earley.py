@@ -110,8 +110,9 @@ class Column:
 
             if item.is_complete:
                 # XXX Potential bug: What happens if there's ambiguity in an empty rule?
-                if item.rule.expansion and item in self.completed:
-                    old_tree = self.completed[item].tree
+                item_key = item, item.tree  # Elsewhere, tree is not part of the comparison
+                if item.rule.expansion and item_key in self.completed:
+                    old_tree = self.completed[item_key].tree
                     if old_tree == item.tree:
                         is_empty = len(self.FIRST[item.rule.origin])
                         if is_empty:
@@ -130,7 +131,7 @@ class Column:
                         old_tree.children.append(item.tree)
                     # old_tree.children.append(item.tree)
                 else:
-                    self.completed[item] = item
+                    self.completed[item_key] = item
                 self.to_reduce.append(item)
             else:
                 if isinstance(item.expect, Terminal):

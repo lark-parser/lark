@@ -253,6 +253,48 @@ def _make_full_earley_test(LEXER):
             assert x.data == '_ambig', x
             assert len(x.children) == 2
 
+        def test_fruitflies_ambig(self):
+            grammar = """
+                start: noun verb noun        -> simple
+                        | noun verb "like" noun -> comparative
+
+                noun: adj? NOUN
+                verb: VERB
+                adj: ADJ
+
+                NOUN: "flies" | "bananas" | "fruit"
+                VERB: "like" | "flies"
+                ADJ: "fruit"
+
+                %import common.WS
+                %ignore WS
+            """
+            parser = Lark(grammar, ambiguity='explicit', lexer=LEXER)
+            res = parser.parse('fruit flies like bananas')
+
+            expected = Tree('_ambig', [
+                    Tree('comparative', [
+                        Tree('noun', ['fruit']),
+                        Tree('verb', ['flies']),
+                        Tree('noun', ['bananas'])
+                    ]),
+                    Tree('simple', [
+                        Tree('noun', [Tree('adj', ['fruit']), 'flies']),
+                        Tree('verb', ['like']),
+                        Tree('noun', ['bananas'])
+                    ])
+                ])
+
+            # print res.pretty()
+            # print expected.pretty()
+
+            self.assertEqual(res, expected)
+
+
+
+
+
+
         # @unittest.skipIf(LEXER=='dynamic', "Not implemented in Dynamic Earley yet")  # TODO
         # def test_not_all_derivations(self):
         #     grammar = """
@@ -825,6 +867,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children[0].data, 'a')
 
 
+
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization_sum(self):
             "Tests effect of priority on result"
@@ -838,7 +881,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.1: "bb"
             """
 
-            l = Lark(grammar, parser='earley', ambiguity='resolve__antiscore_sum')
+            l = _Lark(grammar, ambiguity='resolve__antiscore_sum')
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 

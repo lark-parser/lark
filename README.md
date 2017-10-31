@@ -15,6 +15,11 @@ Lark can:
 
 And many more features. Read ahead and find out.
 
+### Quick links
+
+- [Documentation wiki](/wiki)
+- [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
+- Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 
 ### Hello World
 
@@ -37,86 +42,15 @@ Tree(start, [Token(WORD, 'Hello'), Token(WORD, 'World')])
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
 
-### Tiny Calculator
-
-```python
-from lark import Lark, InlineTransformer
-parser = Lark('''?sum: product
-                     | sum "+" product   -> add
-                     | sum "-" product   -> sub
-
-                 ?product: item
-                     | product "*" item  -> mul
-                     | product "/" item  -> div
-
-                 ?item: NUMBER           -> number
-                      | "-" item         -> neg
-                      | "(" sum ")"
-
-                 %import common.NUMBER
-                 %import common.WS
-                 %ignore WS
-         ''', start='sum')
-
-class CalculateTree(InlineTransformer):
-    from operator import add, sub, mul, truediv as div, neg
-    number = float
-
-def calc(expr):
-    return CalculateTree().transform( parser.parse(expr) )
-```
-
-In the grammar, we shape the resulting tree. The '->' operator renames branches, and the '?' prefix tells Lark to inline single values. (see the [tutorial](/docs/json_tutorial.md) for a more in-depth explanation)
-
-Then, the transformer calculates the tree and returns a number:
-
-```python
->>> calc("(200 + 3*-3) * 7")
-1337.0
-```
-
 ### Fruit Flies Like Bananas
 
-Lark can automatically resolve ambiguity by choosing the simplest solution. Or, you can ask it to return all the possible parse trees, wrapped in a meta "\_ambig" node.
+Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit flies like bananas":
 
-Here's a toy example to parse the famously ambiguous phrase: "fruit flies like bananas"
-
-```python
-from lark import Lark
-
-grammar = """
-    sentence: noun verb noun        -> simple
-            | noun verb "like" noun -> comparative
-
-    noun: adj? NOUN
-    verb: VERB
-    adj: ADJ
-
-    NOUN: "flies" | "bananas" | "fruit"
-    VERB: "like" | "flies"
-    ADJ: "fruit"
-
-    %import common.WS
-    %ignore WS
-"""
-
-parser = Lark(grammar, start='sentence', ambiguity='explicit')  # Explicit ambiguity in parse tree!
-
-tree = parser.parse('fruit flies like bananas')
-
-from lark.tree import pydot__tree_to_png    # Just a neat utility function
-pydot__tree_to_png(tree, "examples/fruitflies.png")
-```
 ![fruitflies.png](examples/fruitflies.png)
 
+See more [examples in the wiki](/wiki/Examples)
 
-## Learn more about using Lark
 
- - **Read the [tutorial](/docs/json_tutorial.md)**, which shows how to write a JSON parser in Lark.
- - Read a blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
- - Read the [reference](/docs/reference.md)
- - Browse the [examples](/examples), which include a calculator, and a Python-code parser.
- - Check out the [tests](/tests/test_parser.py) for more examples.
 
 ### Install Lark
 
@@ -151,48 +85,24 @@ You can use the output as a regular python module:
 
 ## List of Features
 
+ - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - **Earley** parser
     - Can parse *ALL* context-free grammars
-    - Resolves ambiguous grammars using a parse forest
-    - Automatiic & user-defined rule priority for ambiguity resolution
-    - Dynamic lexer
+    - Full support for ambiguity in grammar
  - **LALR(1)** parser
-    - Standard lexer (like PLY)
-    - Contextual lexer (can handle some ambiguity and non-determinism)
- - **EBNF** grammar (with a few extra features)
- - Builds a parse-tree (AST) automagically based on the grammar
- - Lexer with regular expressions (regexps)
-     - Automatic line & column tracking
-     - Automatic token collision resolution (unless both terminals are regexps)
- - **Standard library** of terminals (strings, numbers, names, etc.)
- - Experimental features:
-     - Automatic reconstruction of input from parse-tree (see examples)
-     - Import grammars from Nearley.js
+    - Competitive with PLY
+ - **EBNF** grammar
  - **Unicode** fully supported
- - Extensive test suite
  - **Python 2 & 3** compatible
+ - Automatic line & column tracking
+ - Standard library of terminals (strings, numbers, names, etc.)
+ - Import grammars from Nearley.js
+ - Extensive test suite
 
 [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
 [![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
 
-### Coming soon
-
-These features are planned to be implemented in the near future:
-
- - Grammar composition
- - Optimizations in both the parsers and the lexer
- - Better ambiguity resolution
-
-### Planned
-
-These features may be implemented some day:
-
- - Parser generator - create a small parser, independent of Lark, to embed in your project.
-    - Generate code in other languages than Python
- - LALR(k) parser
- - "Look-back" Enhancement for LALR(1)
- - Full regexp-collision support using NFAs
- - Automatically produce syntax-highlighters for popular IDEs
+See the full list of [features in the wiki](/wiki/Features)
 
 ## Comparison to other parsers
 
@@ -231,25 +141,15 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 ### Feature comparison
 
-| Library | Algorithm | LOC | Grammar | Builds tree?
+| Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG?
 |:--------|:----------|:----|:--------|:------------
-| **Lark** | Earley/LALR(1) | 0.5K | EBNF+ | Yes! |
-| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | 4.6K | Yacc-like BNF | No |
-| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | 5.7K | Parser combinators | No |
-| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | 3.3K | EBNF-like | No |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | 0.5K | Parser combinators | No
-| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | ? | EBNF | Yes |
+| **Lark** | Earley/LALR(1) | EBNF+ | Yes! | Yes! | Yes! |
+| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | Yacc-like BNF | No | No | No |
+| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Parser combinators | No | No | No\* |
+| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF-like | No | No | No\* |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Parser combinators | No | No | No |
+| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* |
 
-(*LOC measures lines of code of the parsing algorithm(s), without accompanying files*)
-
-It's hard to compare parsers with different parsing algorithms, since each algorithm has many advantages and disadvantages. However, I will try to summarize the main points here:
-
-- **Earley**: The most powerful context-free algorithm. It can parse all context-free grammars, and it's Big-O efficient. But, its constant-time performance is slow.
-- **LALR(1)**: The fastest, most efficient algorithm. It runs at O(n) and uses the least amount of memory. But while it can parse most programming languages, there are many grammars it can't handle.
-- **PEG**: A powerful algorithm that can parse all deterministic context-free grammars\* at O(n). But, it hides ambiguity, and takes a lot of memory to run.
-- **Recursive-Descent**: Fast for simple grammars, and simple to implement. But poor in Big-O complexity.
-
-Lark offers both Earley and LALR(1), which means you can choose between the most powerful and the most efficient algorithms, without having to change libraries.
 
 (\* *According to Wikipedia, it remains unanswered whether PEGs can really parse all deterministic CFGs*)
 

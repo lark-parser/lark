@@ -46,7 +46,8 @@ class Parser:
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
-        delayed_matches = defaultdict(list)
+        delayed_matches = defaultdict(set)
+        match_after_ignore = set()
 
         text_line = 1
         text_column = 0
@@ -82,20 +83,28 @@ class Parser:
             for x in self.ignore:
                 m = x.match(stream, i)
                 if m:
+                    delayed_matches[m.end()] |= set(to_scan)
+                    if m.end() == len(stream):
+                        match_after_ignore.update(set(column.to_reduce))
+
                     # TODO add partial matches for ignore too?
-                    delayed_matches[m.end()] += to_scan
+                    # s = m.group(0)
+                    # for j in range(1, len(s)):
+                    #     m = x.match(s[:-j])
+                    #     if m:
+                    #         delayed_matches[m.end()] += to_scan
 
             for item in to_scan:
                 m = item.expect.match(stream, i)
                 if m:
                     t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].append(item.advance(t))
+                    delayed_matches[m.end()].add(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
                         m = item.expect.match(s[:-j])
                         if m:
-                            delayed_matches[m.end()].append(item.advance(m.group(0)))
+                            delayed_matches[m.end()].add(item.advance(m.group(0)))
 
             next_set = Column(i+1)
             next_set.add(delayed_matches[i+1])
@@ -123,6 +132,10 @@ class Parser:
 
         # Parse ended. Now build a parse tree
         solutions = [n.tree for n in column.to_reduce
+                     if n.rule.origin==start_symbol and n.start is column0]
+
+        if not solutions:
+            solutions = [n.tree for n in match_after_ignore
                      if n.rule.origin==start_symbol and n.start is column0]
 
         if not solutions:

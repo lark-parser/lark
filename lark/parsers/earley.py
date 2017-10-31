@@ -76,7 +76,9 @@ class Item(object):
 
 class Item_JoinDerivations(Item):
     __eq__ = Item.similar
-    __hash__ = Item.__hash__
+
+    def __hash__(self):
+        return hash((self.rule, self.ptr, id(self.start)))   # Always runs Derivation.__hash__
 
 
 class NewsList(list):

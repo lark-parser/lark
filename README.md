@@ -19,7 +19,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 ### Quick links
 
-- [Documentation wiki](wiki)
+- [Documentation wiki](https://github.com/erezsh/lark/wiki)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 
@@ -50,7 +50,7 @@ Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit 
 
 ![fruitflies.png](examples/fruitflies.png)
 
-See more [examples in the wiki](wiki/Examples)
+See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
 
 
@@ -104,7 +104,7 @@ You can use the output as a regular python module:
 [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
 [![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
 
-See the full list of [features in the wiki](wiki/Features)
+See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
 
 ## Comparison to other parsers
 
@@ -144,7 +144,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 ### Feature comparison
 
 | Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG?
-|:--------|:----------|:----|:--------|:------------
+|:--------|:----------|:----|:--------|:------------|:------------
 | **Lark** | Earley/LALR(1) | EBNF+ | Yes! | Yes! | Yes! |
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | Yacc-like BNF | No | No | No |
 | [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Parser combinators | No | No | No\* |

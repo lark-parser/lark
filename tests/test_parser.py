@@ -186,6 +186,7 @@ def _make_full_earley_test(LEXER):
             l = Lark(grammar, parser='earley', lexer=LEXER)
             l.parse(program)
 
+
         def test_earley_scanless3(self):
             "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
 
@@ -938,6 +939,22 @@ def _make_parser_test(LEXER, PARSER):
             l = _Lark(g)
             self.assertEqual(l.parse(u'±a'), Tree('start', [u'\xb1a']))
 
+
+
+        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        def test_ignore(self):
+            grammar = r"""
+            COMMENT: /(!|(\/\/))[^\n]*/
+            %ignore COMMENT
+            %import common.WS -> _WS
+            %import common.INT
+            start: "INT"i _WS+ INT _WS*
+            """
+
+            parser = _Lark(grammar)
+
+            tree = parser.parse("int 1 ! This is a comment\n")      
+            self.assertEqual(tree.children, ['1'])
 
 
 

@@ -77,12 +77,13 @@ class Parser:
                     column.add(new_items)
 
         def scan(i, token, column):
+            to_scan = column.to_scan.get_news()
+
             for x in self.ignore:
                 m = x.match(stream, i)
                 if m:
-                    return column
-
-            to_scan = column.to_scan.get_news()
+                    # TODO add partial matches for ignore too?
+                    delayed_matches[m.end()] += to_scan
 
             for item in to_scan:
                 m = item.expect.match(stream, i)

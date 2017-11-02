@@ -86,15 +86,16 @@ See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/
 
 #### Performance comparison
 
-| Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
-|:-----|:-------------|:------------|:----------|:---------
-| **Lark - LALR(1)** | 4.7s | 1.2s | 70M | 134M |
-| PyParsing | 32s | 3.5s | 443M | 225M |
-| funcparserlib | 8.5s | 1.3s | 483M | 293M |
-| Parsimonious | | 5.7s | | 1545M |
+Lower is better!
+
+![Run-time Comparison](docs/comparison_runtime.png)
+
+![Memory Usage Comparison](docs/comparison_memory.png)
+
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 
+*Note: I really wanted to add PLY to the benchmark, but I couldn't find a working JSON parser anywhere written in PLY. If anyone can point me to one that actually works, I would be happy to add it!*
 
 #### Feature comparison
 

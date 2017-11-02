@@ -29,6 +29,8 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 Lark has no dependencies.
 
+[![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
+
 ### Hello World
 
 Here is a little program to parse "Hello, World!" (Or any other similar phrase):
@@ -60,31 +62,6 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
 
 
-### Projects using Lark
-
- - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
- - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
-
-Using Lark? Send me a message and I'll add your project!
-
-### How to use Nearley grammars in Lark
-
-Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
-
-Here's an example:
-```bash
-git clone https://github.com/Hardmath123/nearley
-python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley > ncalc.py
-```
-
-You can use the output as a regular python module:
-
-```python
->>> import ncalc
->>> ncalc.parse('sin(pi/4) ^ e')
-0.38981434460254655
-```
-
 ## List of Features
 
  - Builds a parse-tree (AST) automagically, based on the structure of the grammar
@@ -99,36 +76,10 @@ You can use the output as a regular python module:
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js
- - Extensive test suite
+ - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
  - And much more!
 
 See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
-
-[![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
-[![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
-
-## Comparison to other parsers
-
-### Lark does things a little differently
-
-1. *Separates code from grammar*: Parsers written this way are cleaner and easier to read & work with.
-
-2. *Automatically builds a parse tree (AST)*: Trees are always simpler to work with than state-machines. (But if you want to provide a callback for efficiency reasons, Lark lets you do that too)
-
-3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
-
-
-### Lark is easier to use
-
-- You can work with parse-trees instead of state-machines
-- The grammar is simple to read and write
-- There are no restrictions on grammar structure. Any grammar you write can be parsed.
-    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working
-    - A well-written grammar is very fast
-    - Note: Nondeterminstic grammars will run a little slower
-    - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)
-- You don't have to worry about terminals (regexps) or rules colliding
-- You can repeat expressions without losing efficiency (turns out that's a thing)
 
 ### Performance comparison
 
@@ -155,6 +106,55 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 
 (\* *According to Wikipedia, it remains unanswered whether PEGs can really parse all deterministic CFGs*)
+
+
+### Projects using Lark
+
+ - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
+ - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
+
+Using Lark? Send me a message and I'll add your project!
+
+### How to use Nearley grammars in Lark
+
+Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
+
+Here's an example:
+```bash
+git clone https://github.com/Hardmath123/nearley
+python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley > ncalc.py
+```
+
+You can use the output as a regular python module:
+
+```python
+>>> import ncalc
+>>> ncalc.parse('sin(pi/4) ^ e')
+0.38981434460254655
+```
+
+## Comparison to other parsers
+
+### Lark does things a little differently
+
+1. *Separates code from grammar*: Parsers written this way are cleaner and easier to read & work with.
+
+2. *Automatically builds a parse tree (AST)*: Trees are always simpler to work with than state-machines. (But if you want to provide a callback for efficiency reasons, Lark lets you do that too)
+
+3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
+
+
+### Lark is easier to use
+
+- You can work with parse-trees instead of state-machines
+- The grammar is simple to read and write
+- There are no restrictions on grammar structure. Any grammar you write can be parsed.
+    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working
+    - A well-written grammar is very fast
+    - Note: Nondeterminstic grammars will run a little slower
+    - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)
+- You don't have to worry about terminals (regexps) or rules colliding
+- You can repeat expressions without losing efficiency (turns out that's a thing)
 
 ## License
 

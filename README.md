@@ -81,7 +81,10 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
 See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
 
-### Performance comparison
+
+### Comparison to other libraries
+
+#### Performance comparison
 
 | Code | CPython Time | PyPy Time | CPython Mem | PyPy Mem
 |:-----|:-------------|:------------|:----------|:---------
@@ -93,15 +96,15 @@ See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 
 
-### Feature comparison
+#### Feature comparison
 
 | Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG?
 |:--------|:----------|:----|:--------|:------------|:------------
-| **Lark** | Earley/LALR(1) | EBNF+ | Yes! | Yes! | Yes! |
-| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | Yacc-like BNF | No | No | No |
-| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Parser combinators | No | No | No\* |
-| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF-like | No | No | No\* |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Parser combinators | No | No | No |
+| **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! |
+| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No |
+| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* |
+| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Combinators | No | No | No |
 | [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* |
 
 

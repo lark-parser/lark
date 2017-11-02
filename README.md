@@ -23,6 +23,12 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 
+### Install Lark
+
+    $ pip install lark-parser
+
+Lark has no dependencies.
+
 ### Hello World
 
 Here is a little program to parse "Hello, World!" (Or any other similar phrase):
@@ -53,12 +59,6 @@ Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit 
 See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
 
-
-### Install Lark
-
-    $ pip install lark-parser
-
-Lark has no dependencies.
 
 ### Projects using Lark
 
@@ -100,11 +100,12 @@ You can use the output as a regular python module:
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js
  - Extensive test suite
+ - And much more!
+
+See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
 
 [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
 [![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
-
-See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
 
 ## Comparison to other parsers
 
@@ -165,11 +166,11 @@ Lark is currently accepting pull-requests.
 
 There are many ways you can help the project:
 
-* Improve the performance of Lark's parsing algorithm
-* Implement macros for grammars (important for grammar composition)
+* Improve the documentation
 * Write new grammars for Lark's library
-* Write & improve the documentation
 * Write a blog post introducing Lark to your audience
+* Port Lark to another language
+* Help me with code developemnt
 
 If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
 

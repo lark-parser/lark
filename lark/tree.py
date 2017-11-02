@@ -185,8 +185,7 @@ def pydot__tree_to_png(tree, filename):
 
     def _to_pydot(subtree):
         color = hash(subtree.data) & 0xffffff
-        if not (color & 0x808080):
-            color |= 0x808080
+        color |= 0x808080
 
         subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
                     for child in subtree.children]

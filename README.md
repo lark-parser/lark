@@ -52,7 +52,7 @@ Tree(start, [Token(WORD, 'Hello'), Token(WORD, 'World')])
 
 Notice punctuation doesn't appear in the resulting tree. It's automatically filtered away by Lark.
 
-### Fruit Flies Like Bananas
+### Fruit flies like bananas
 
 Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit flies like bananas":
 
@@ -62,7 +62,7 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
 
 
-## List of Features
+## List of main features
 
  - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - **Earley** parser
@@ -137,28 +137,6 @@ You can use the output as a regular python module:
 0.38981434460254655
 ```
 
-## Comparison to other parsers
-
-### Lark does things a little differently
-
-1. *Separates code from grammar*: Parsers written this way are cleaner and easier to read & work with.
-
-2. *Automatically builds a parse tree (AST)*: Trees are always simpler to work with than state-machines. (But if you want to provide a callback for efficiency reasons, Lark lets you do that too)
-
-3. *Follows Python's Idioms*: Beautiful is better than ugly. Readability counts.
-
-
-### Lark is easier to use
-
-- You can work with parse-trees instead of state-machines
-- The grammar is simple to read and write
-- There are no restrictions on grammar structure. Any grammar you write can be parsed.
-    - Some structures are faster than others. If you care about speed, you can learn them gradually while the parser is already working
-    - A well-written grammar is very fast
-    - Note: Nondeterminstic grammars will run a little slower
-    - Note: Ambiguous grammars (grammars that can be parsed in more than one way) are supported, but may cause significant slowdown if the ambiguity is too big)
-- You don't have to worry about terminals (regexps) or rules colliding
-- You can repeat expressions without losing efficiency (turns out that's a thing)
 
 ## License
 

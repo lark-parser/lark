@@ -290,6 +290,31 @@ class ExtractAnonTokens(InlineTransformer):
 def _rfind(s, choices):
     return max(s.rfind(c) for c in choices)
 
+
+
+def _fix_escaping(s):
+    s = s.replace('\\"', '"')
+    w = ''
+    i = iter(s)
+    for n in i:
+        w += n
+        if n == '\\':
+            n2 = next(i)
+            if n2 == '\\':
+                w += '\\\\'
+            elif n2 not in 'unftr':
+                w += '\\'
+            w += n2
+
+    to_eval = "u'''%s'''" % w
+    try:
+        s = literal_eval(to_eval)
+    except SyntaxError as e:
+        raise ValueError(v, e)
+
+    return s
+
+
 def _literal_to_pattern(literal):
     v = literal.value
     flag_start = _rfind(v, '/"')+1
@@ -300,13 +325,12 @@ def _literal_to_pattern(literal):
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
-    x = re.sub(r'(\\[wd/ .]|\\\[|\\\])', r'\\\1', x)
-    x = x.replace("'", r"\'")
-    to_eval = "u'''%s'''" % x
-    try:
-        s = literal_eval(to_eval)
-    except SyntaxError as e:
-        raise ValueError(v, e)
+
+    s = _fix_escaping(x)
+
+    if v[0] == '"':
+        s = s.replace('\\\\', '\\')
+
     return { 'STRING': PatternStr,
              'REGEXP': PatternRE }[literal.type](s, flags or None)
 

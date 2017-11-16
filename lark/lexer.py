@@ -9,7 +9,7 @@ class LexError(Exception):
     pass
 
 class UnexpectedInput(LexError):
-    def __init__(self, seq, lex_pos, line, column):
+    def __init__(self, seq, lex_pos, line, column, allowed=None):
         context = seq[lex_pos:lex_pos+5]
         message = "No token defined for: '%s' in %r at line %d" % (seq[lex_pos], context, line)
 
@@ -18,6 +18,7 @@ class UnexpectedInput(LexError):
         self.line = line
         self.column = column
         self.context = context
+        self.allowed = allowed
 
 class Token(Str):
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
@@ -238,7 +239,6 @@ class ContextualLexer:
                     break
             else:
                 if lex_pos < len(stream):
-                    print("Allowed tokens:", lexer.tokens)
-                    raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos)
+                    raise UnexpectedInput(stream, lex_pos, line, lex_pos - col_start_pos, lexer.tokens)
                 break
 

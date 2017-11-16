@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError
-from lark.lexer import LexError
+from lark.lexer import LexError, UnexpectedInput
 from lark.tree import Tree, Transformer
 
 __path__ = os.path.dirname(__file__)
@@ -673,7 +673,7 @@ def _make_parser_test(LEXER, PARSER):
                       """)
             x = g.parse(r'\a')
 
-            g = _Lark(r"""start: /\\\\/ /a/
+            g = _Lark(r"""start: /\\/ /a/
                       """)
             x = g.parse(r'\a')
 
@@ -959,6 +959,49 @@ def _make_parser_test(LEXER, PARSER):
 
             tree = parser.parse("int 1 ! This is a comment")    # A trailing ignore token can be tricky!
             self.assertEqual(tree.children, ['1'])
+
+
+        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        def test_regex_escaping(self):
+            expected_error = ParseError if LEXER == 'dynamic' else UnexpectedInput
+            # TODO Make dynamic parser raise UnexpectedInput if nothing scans?
+
+            g = _Lark("start: /[ab]/")
+            g.parse('a')
+            g.parse('b')
+
+            self.assertRaises( expected_error, g.parse, 'c')
+
+            _Lark(r'start: /\w/').parse('a')
+
+            g = _Lark(r'start: /\\w/')
+            self.assertRaises( expected_error, g.parse, 'a')
+            g.parse(r'\w')
+
+            _Lark(r'start: /\[/').parse('[')
+
+            _Lark(r'start: /\//').parse('/')
+
+            _Lark(r'start: /\\/').parse('\\')
+
+            _Lark(r'start: /\[ab]/').parse('[ab]')
+
+            _Lark(r'start: /\\[ab]/').parse('\\a')
+
+            _Lark(r'start: /\t/').parse('\t')
+
+            _Lark(r'start: /\\t/').parse('\\t')
+
+            _Lark(r'start: /\\\t/').parse('\\\t')
+
+            _Lark(r'start: "\t"').parse('\t')
+
+            _Lark(r'start: "\\t"').parse('\\t')
+
+            _Lark(r'start: "\\\t"').parse('\\\t')
+
+
+
 
 
 

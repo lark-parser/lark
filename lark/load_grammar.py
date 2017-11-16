@@ -293,7 +293,7 @@ def _rfind(s, choices):
 
 
 def _fix_escaping(s):
-    s = s.replace('\\"', '"')
+    s = s.replace('\\"', '"').replace("'", "\\'")
     w = ''
     i = iter(s)
     for n in i:

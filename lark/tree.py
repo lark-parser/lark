@@ -45,6 +45,9 @@ class Tree(object):
         except AttributeError:
             return False
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
 

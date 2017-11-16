@@ -32,10 +32,6 @@ class LarkOptions(object):
                        (it chooses consistently: greedy for tokens, non-greedy for rules)
             "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
 
-        earley__all_derivations - If True, try every possible derivation of each rule. If False, pick the first
-                                  correct derivation. Both will find a solution to every correct grammar & input,
-                                  but when False, some ambiguities won't appear (Default: True)
-
         transformer - Applies the transformer to every parse tree
         debug - Affects verbosity (default: False)
         keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
@@ -61,7 +57,6 @@ class LarkOptions(object):
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
-        self.earley__all_derivations = o.pop('earley__all_derivations', True)
 
         assert self.parser in ('earley', 'lalr', None)
 

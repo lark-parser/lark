@@ -37,16 +37,21 @@ class Parser:
 
         self.postprocess = {}
         self.predictions = {}
+        self.FIRST = {}
+
         for rule in self.analysis.rules:
             if rule.origin != '$root':  # XXX kinda ugly
                 a = rule.alias
                 self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
                 self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
+                self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+
+
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.start_symbol
-        delayed_matches = defaultdict(set)
+        delayed_matches = defaultdict(list)
         match_after_ignore = set()
 
         text_line = 1
@@ -83,7 +88,7 @@ class Parser:
             for x in self.ignore:
                 m = x.match(stream, i)
                 if m:
-                    delayed_matches[m.end()] |= set(to_scan)
+                    delayed_matches[m.end()] += set(to_scan)
                     if m.end() == len(stream):
                         match_after_ignore.update(set(column.to_reduce))
 
@@ -98,22 +103,22 @@ class Parser:
                 m = item.expect.match(stream, i)
                 if m:
                     t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].add(item.advance(t))
+                    delayed_matches[m.end()].append(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
                         m = item.expect.match(s[:-j])
                         if m:
-                            delayed_matches[m.end()].add(item.advance(m.group(0)))
+                            delayed_matches[m.end()].append(item.advance(m.group(0)))
 
-            next_set = Column(i+1)
+            next_set = Column(i+1, self.FIRST)
             next_set.add(delayed_matches[i+1])
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             return next_set
 
         # Main loop starts
-        column0 = Column(0)
+        column0 = Column(0, self.FIRST)
         column0.add(predict(start_symbol, column0))
 
         column = column0

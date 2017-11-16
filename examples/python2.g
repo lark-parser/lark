@@ -149,16 +149,16 @@ COMMENT: /#[^\n]*/
 _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 %ignore /[\t \f]+/  // WS
-%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT 
 %ignore COMMENT
 
 
-STRING : /(?i)[ub]?r?("(?!"").*?(?<!\\\\)(\\\\\\\\)*?"|'(?!'').*?(?<!\\\\)(\\\\\\\\)*?')/
-LONG_STRING: /(?i)(?s)[ub]?r?(""".*?(?<!\\\\)(\\\\\\\\)*?"""|'''.*?(?<!\\\\)(\\\\\\\\)*?''')/
+STRING : /[ub]?r?("(?!"").*?(?<!\\\\)(\\\\\\\\)*?"|'(?!'').*?(?<!\\\\)(\\\\\\\\)*?')/i
+LONG_STRING.2: /[ub]?r?(""".*?(?<!\\\\)(\\\\\\\\)*?"""|'''.*?(?<!\\\\)(\\\\\\\\)*?''')/is
 
-DEC_NUMBER: /(?i)[1-9]\d*l?/
-HEX_NUMBER: /(?i)0x[\da-f]*l?/
-OCT_NUMBER: /(?i)0o?[0-7]*l?/
+DEC_NUMBER: /[1-9]\d*l?/i
+HEX_NUMBER: /0x[\da-f]*l?/i
+OCT_NUMBER: /0o?[0-7]*l?/i
 %import common.FLOAT -> FLOAT
 %import common.INT -> _INT
 %import common.CNAME -> NAME

@@ -68,16 +68,14 @@ class Pattern(object):
     if Py36:
         # Python 3.6 changed syntax for flags in regular expression
         def _get_flags(self, value):
-            if self.flags:
-                assert len(self.flags) == 1
-                return ('(?%s:%s)' % (self.flags[0], value))
+            for f in self.flags or ():
+                value = ('(?%s:%s)' % (f, value))
             return value
 
     else:
         def _get_flags(self, value):
-            if self.flags:
-                assert len(self.flags) == 1
-                return ('(?%s)' % self.flags) + value
+            for f in self.flags or ():
+                value = ('(?%s)' % f) + value
             return value
 
 class PatternStr(Pattern):

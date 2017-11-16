@@ -72,7 +72,7 @@ TOKENS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]?' % _RE_FLAGS,
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*',
@@ -287,21 +287,28 @@ class ExtractAnonTokens(InlineTransformer):
         return Token('TOKEN', token_name, -1)
 
 
+def _rfind(s, choices):
+    return max(s.rfind(c) for c in choices)
+
 def _literal_to_pattern(literal):
     v = literal.value
-    if v[-1] in _RE_FLAGS:
-        flags = v[-1]
-        v = v[:-1]
-    else:
-        flags = None
+    flag_start = _rfind(v, '/"')+1
+    assert flag_start > 0
+    flags = v[flag_start:]
+    assert all(f in _RE_FLAGS for f in flags), flags
 
+    v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
-    x = re.sub(r'(\\[wd/ ]|\\\[|\\\])', r'\\\1', x)
+    x = re.sub(r'(\\[wd/ .]|\\\[|\\\])', r'\\\1', x)
     x = x.replace("'", r"\'")
-    s = literal_eval("u'''%s'''" % x)
+    to_eval = "u'''%s'''" % x
+    try:
+        s = literal_eval(to_eval)
+    except SyntaxError as e:
+        raise ValueError(v, e)
     return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s, flags)
+             'REGEXP': PatternRE }[literal.type](s, flags or None)
 
 
 class PrepareLiterals(InlineTransformer):

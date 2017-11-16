@@ -30,7 +30,7 @@ nearley_grammar = r"""
     js: JS?
 
     NAME: /[a-zA-Z_$]\w*/
-    COMMENT: /\#[^\n]*/
+    COMMENT: /#[^\n]*/
     REGEXP: /\[.*?\]/
     STRING: /".*?"/
 

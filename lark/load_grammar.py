@@ -77,7 +77,7 @@ TOKENS = {
     '_TO': '->',
     '_IGNORE': r'%ignore',
     '_IMPORT': r'%import',
-    'NUMBER': '\d+',
+    'NUMBER': r'\d+',
 }
 
 RULES = {
@@ -294,7 +294,9 @@ def _literal_to_pattern(literal):
         flags = None
 
     assert v[0] == v[-1] and v[0] in '"/'
-    x = v[1:-1].replace("'", r"\'")
+    x = v[1:-1]
+    x = re.sub(r'(\\[wd/]|\\\[|\\\])', r'\\\1', x)
+    x = x.replace("'", r"\'")
     s = literal_eval("u'''%s'''" % x)
     return { 'STRING': PatternStr,
              'REGEXP': PatternRE }[literal.type](s, flags)

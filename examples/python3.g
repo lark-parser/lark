@@ -170,7 +170,7 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 
 %ignore /[\t \f]+/  // WS
-%ignore /\\\\[\t \f]*\r?\n/   // LINE_CONT 
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
 %ignore COMMENT
 
 

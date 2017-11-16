@@ -145,11 +145,11 @@ number: DEC_NUMBER | HEX_NUMBER | OCT_NUMBER | FLOAT | IMAG_NUMBER
 string: STRING | LONG_STRING
 // Tokens
 
-COMMENT: /\#[^\n]*/
+COMMENT: /#[^\n]*/
 _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 %ignore /[\t \f]+/  // WS
-%ignore /\\\\[\t \f]*\r?\n/   // LINE_CONT 
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
 %ignore COMMENT
 
 

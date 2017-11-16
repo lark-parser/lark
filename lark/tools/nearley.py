@@ -26,7 +26,7 @@ nearley_grammar = r"""
     rule: NAME
     string: STRING
     regexp: REGEXP
-    JS: /(?s){%.*?%}/
+    JS: /{%.*?%}/s
     js: JS?
 
     NAME: /[a-zA-Z_$]\w*/

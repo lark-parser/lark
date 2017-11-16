@@ -18,6 +18,8 @@ from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 
+_RE_FLAGS = 'imslux'
+
 _TOKEN_NAMES = {
     '.' : 'DOT',
     ',' : 'COMMA',
@@ -70,7 +72,7 @@ TOKENS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/i?',
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]?' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'//[^\n]*',
@@ -287,7 +289,7 @@ class ExtractAnonTokens(InlineTransformer):
 
 def _literal_to_pattern(literal):
     v = literal.value
-    if v[-1] in 'i':
+    if v[-1] in _RE_FLAGS:
         flags = v[-1]
         v = v[:-1]
     else:
@@ -295,7 +297,7 @@ def _literal_to_pattern(literal):
 
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
-    x = re.sub(r'(\\[wd/]|\\\[|\\\])', r'\\\1', x)
+    x = re.sub(r'(\\[wd/ ]|\\\[|\\\])', r'\\\1', x)
     x = x.replace("'", r"\'")
     s = literal_eval("u'''%s'''" % x)
     return { 'STRING': PatternStr,

@@ -114,8 +114,8 @@ class Column:
                 if item.rule.expansion and item_key in self.completed:
                     old_tree = self.completed[item_key].tree
                     if old_tree == item.tree:
-                        is_empty = len(self.FIRST[item.rule.origin])
-                        if is_empty:
+                        is_empty = not self.FIRST[item.rule.origin]
+                        if not is_empty:
                             continue
 
                     if old_tree.data != '_ambig':

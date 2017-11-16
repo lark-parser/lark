@@ -310,7 +310,7 @@ def _fix_escaping(s):
     try:
         s = literal_eval(to_eval)
     except SyntaxError as e:
-        raise ValueError(v, e)
+        raise ValueError(s, e)
 
     return s
 

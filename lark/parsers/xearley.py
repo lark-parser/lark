@@ -21,7 +21,7 @@
 from collections import defaultdict
 
 from ..common import ParseError, UnexpectedToken, Terminal
-from ..lexer import Token
+from ..lexer import Token, UnexpectedInput
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
 
@@ -115,6 +115,9 @@ class Parser:
             next_set.add(delayed_matches[i+1])
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
+            if not next_set and not delayed_matches:
+                raise UnexpectedInput(stream, i, text_line, text_column, to_scan)
+
             return next_set
 
         # Main loop starts
@@ -128,7 +131,7 @@ class Parser:
 
             if token == '\n':
                 text_line += 1
-                text_column = 0
+                text_column = 1
             else:
                 text_column += 1
 

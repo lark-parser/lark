@@ -137,14 +137,17 @@ class Column:
                 if isinstance(item.expect, Terminal):
                     self.to_scan.append(item)
                 else:
-                    if item not in self.added:
-                        self.added.add(item)
-                        self.to_predict.append(item)
+                    if item in self.added:
+                        continue
+                    self.added.add(item)
+                    self.to_predict.append(item)
 
             self.item_count += 1    # Only count if actually added
 
-    def __nonzero__(self):
+
+    def __bool__(self):
         return bool(self.item_count)
+    __nonzero__ = __bool__  # Py2 backwards-compatibility
 
 class Parser:
     def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None):

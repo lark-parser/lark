@@ -18,7 +18,7 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.common import GrammarError, ParseError
+from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
 from lark.tree import Tree, Transformer
 
@@ -718,6 +718,8 @@ def _make_parser_test(LEXER, PARSER):
                       %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
 
         def test_float_without_lexer(self):
+            expected_error = UnexpectedInput if LEXER == 'dynamic' else UnexpectedToken
+
             g = _Lark("""start: ["+"|"-"] float
                          float: digit* "." digit+ exp?
                               | digit+ exp
@@ -727,7 +729,7 @@ def _make_parser_test(LEXER, PARSER):
             g.parse("1.2")
             g.parse("-.2e9")
             g.parse("+2e-9")
-            self.assertRaises(ParseError, g.parse, "+2e-9e")
+            self.assertRaises( expected_error, g.parse, "+2e-9e")
 
         def test_keep_all_tokens(self):
             l = _Lark("""start: "a"+ """, keep_all_tokens=True)
@@ -963,19 +965,16 @@ def _make_parser_test(LEXER, PARSER):
 
         @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
         def test_regex_escaping(self):
-            expected_error = ParseError if LEXER == 'dynamic' else UnexpectedInput
-            # TODO Make dynamic parser raise UnexpectedInput if nothing scans?
-
             g = _Lark("start: /[ab]/")
             g.parse('a')
             g.parse('b')
 
-            self.assertRaises( expected_error, g.parse, 'c')
+            self.assertRaises( UnexpectedInput, g.parse, 'c')
 
             _Lark(r'start: /\w/').parse('a')
 
             g = _Lark(r'start: /\\w/')
-            self.assertRaises( expected_error, g.parse, 'a')
+            self.assertRaises( UnexpectedInput, g.parse, 'a')
             g.parse(r'\w')
 
             _Lark(r'start: /\[/').parse('[')

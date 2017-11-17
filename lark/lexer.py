@@ -11,7 +11,7 @@ class LexError(Exception):
 class UnexpectedInput(LexError):
     def __init__(self, seq, lex_pos, line, column, allowed=None):
         context = seq[lex_pos:lex_pos+5]
-        message = "No token defined for: '%s' in %r at line %d" % (seq[lex_pos], context, line)
+        message = "No token defined for: '%s' in %r at line %d col %d" % (seq[lex_pos], context, line, column)
 
         super(UnexpectedInput, self).__init__(message)
 

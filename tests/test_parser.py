@@ -962,6 +962,13 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse("int 1 ! This is a comment")    # A trailing ignore token can be tricky!
             self.assertEqual(tree.children, ['1'])
 
+            parser = _Lark(r"""
+                start : "a"*
+                %ignore "b"
+            """)
+            tree = parser.parse("bb")
+            self.assertEqual(tree.children, [])
+
 
         @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
         def test_regex_escaping(self):

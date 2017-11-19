@@ -141,7 +141,9 @@ class Parser:
                      if n.rule.origin==start_symbol and n.start is column0]
 
         if not solutions:
-            raise ParseError('Incomplete parse: Could not find a solution to input')
+            expected_tokens = [t.expect.name for t in column.to_scan]
+            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+
         elif len(solutions) == 1:
             tree = solutions[0]
         else:

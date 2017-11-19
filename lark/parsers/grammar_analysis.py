@@ -59,7 +59,6 @@ def calculate_sets(rules):
 
     Adapted from: http://lara.epfl.ch/w/cc09:algorithm_for_first_and_follow_sets"""
     symbols = {sym for rule in rules for sym in rule.expansion} | {rule.origin for rule in rules}
-    symbols.add('$root')    # what about other unused rules?
 
     # foreach grammar rule X ::= Y(1) ... Y(k)
     # if k=0 or {Y(1),...,Y(k)} subset of NULLABLE then

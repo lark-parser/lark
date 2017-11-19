@@ -82,7 +82,7 @@ class Parser:
                     column.add(new_items)
 
         def scan(i, token, column):
-            to_scan = column.to_scan.get_news()
+            to_scan = column.to_scan
 
             for x in self.ignore:
                 m = x.match(stream, i)

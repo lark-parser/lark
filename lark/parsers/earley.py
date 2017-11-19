@@ -94,11 +94,11 @@ class Column:
         self.i = i
         self.to_reduce = NewsList()
         self.to_predict = NewsList()
-        self.to_scan = NewsList()
+        self.to_scan = []
         self.item_count = 0
         self.FIRST = FIRST
 
-        self.added = set()
+        self.predicted = set()
         self.completed = {}
 
     def add(self, items):
@@ -137,9 +137,9 @@ class Column:
                 if isinstance(item.expect, Terminal):
                     self.to_scan.append(item)
                 else:
-                    if item in self.added:
+                    if item in self.predicted:
                         continue
-                    self.added.add(item)
+                    self.predicted.add(item)
                     self.to_predict.append(item)
 
             self.item_count += 1    # Only count if actually added
@@ -200,10 +200,8 @@ class Parser:
                     column.add(new_items)
 
         def scan(i, token, column):
-            to_scan = column.to_scan.get_news()
-
             next_set = Column(i, self.FIRST)
-            next_set.add(item.advance(token) for item in to_scan if item.expect.match(token))
+            next_set.add(item.advance(token) for item in column.to_scan if item.expect.match(token))
 
             if not next_set:
                 expect = {i.expect for i in column.to_scan}

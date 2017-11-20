@@ -141,7 +141,7 @@ arguments: argvalue ("," argvalue)*  ["," [ starargs | kwargs]]
          | kwargs
          | test comp_for
 
-starargs: "*" test ("," argvalue)* ["," kwargs]
+starargs: "*" test ("," "*" test)* ("," argvalue)* ["," kwargs]
 kwargs: "**" test
 
 ?argvalue: test ["=" test]
@@ -176,11 +176,12 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
-DEC_NUMBER: /[1-9]\d*l?/i
-HEX_NUMBER: /0x[\da-f]*l?/i
-OCT_NUMBER: /0o?[0-7]*l?/i
-FLOAT_NUMBER: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
-IMAG_NUMBER: /\d+j|${FLOAT_NUMBER}j/i
+DEC_NUMBER: /0|[1-9]\d*/i
+HEX_NUMBER.2: /0x[\da-f]*/i
+OCT_NUMBER.2: /0o[0-7]*/i
+BIN_NUMBER.2 : /0b[0-1]*/i
+FLOAT_NUMBER.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
+IMAG_NUMBER.2: /\d+j|${FLOAT_NUMBER}j/i
 
 _DEDENT: "<DEDENT>"
 _INDENT: "<INDENT>"

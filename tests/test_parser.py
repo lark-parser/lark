@@ -750,13 +750,13 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aA')
             self.assertEqual(tree.children, ['a', 'A'])
 
-            g = """!start: "a"i "a"
-                """
-            self.assertRaises(GrammarError, _Lark, g)
+            # g = """!start: "a"i "a"
+            #     """
+            # self.assertRaises(GrammarError, _Lark, g)
 
-            g = """!start: /a/i /a/
-                """
-            self.assertRaises(GrammarError, _Lark, g)
+            # g = """!start: /a/i /a/
+            #     """
+            # self.assertRaises(GrammarError, _Lark, g)
 
             g = """start: NAME "," "a"
                    NAME: /[a-z_]/i /[a-z0-9_]/i*

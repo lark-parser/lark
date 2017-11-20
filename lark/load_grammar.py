@@ -332,7 +332,7 @@ def _literal_to_pattern(literal):
         s = s.replace('\\\\', '\\')
 
     return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s, flags or None)
+             'REGEXP': PatternRE }[literal.type](s, flags)
 
 
 class PrepareLiterals(InlineTransformer):
@@ -368,7 +368,7 @@ class TokenTreeToPattern(Transformer):
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        assert all(i.flags is None for i in exps)
+        assert all(not i.flags for i in exps)
         return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)))
 
     def expr(self, args):

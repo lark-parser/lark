@@ -52,29 +52,29 @@ class ParserConf:
 
 
 class Pattern(object):
-    def __init__(self, value, flags=None):
+    def __init__(self, value, flags=()):
         self.value = value
-        self.flags = flags
+        self.flags = frozenset(flags)
 
     def __repr__(self):
         return repr(self.to_regexp())
 
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):
-        return hash((type(self), self.value))
+        return hash((type(self), self.value, self.flags))
     def __eq__(self, other):
-        return type(self) == type(other) and self.value == other.value
+        return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
     if Py36:
         # Python 3.6 changed syntax for flags in regular expression
         def _get_flags(self, value):
-            for f in self.flags or ():
+            for f in self.flags:
                 value = ('(?%s:%s)' % (f, value))
             return value
 
     else:
         def _get_flags(self, value):
-            for f in self.flags or ():
+            for f in self.flags:
                 value = ('(?%s)' % f) + value
             return value
 

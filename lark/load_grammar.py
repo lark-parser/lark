@@ -368,8 +368,9 @@ class TokenTreeToPattern(Transformer):
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        assert all(not i.flags for i in exps)
-        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)))
+        if len({i.flags for i in exps}) > 1:
+            raise GrammarError("Lark doesn't support joining tokens with conflicting flags!")
+        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
 
     def expr(self, args):
         inner, op = args

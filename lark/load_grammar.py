@@ -435,9 +435,9 @@ class Grammar:
 
         for name, (tree, priority) in term_defs:   # TODO transfer priority to rule?
             if name.startswith('_'):
-                options = RuleOptions(filter_out=True, priority=priority)
+                options = RuleOptions(filter_out=True, priority=-priority)
             else:
-                options = RuleOptions(keep_all_tokens=True, create_token=name, priority=priority)
+                options = RuleOptions(keep_all_tokens=True, create_token=name, priority=-priority)
 
             name = new_terminal_names[name]
             inner_name = name + '_inner'

@@ -84,23 +84,12 @@ def _antiscore_sum_drv(tree):
     if not isinstance(tree, Tree):
         return 0
 
-    # XXX These artifacts can appear due to imperfections in the ordering of Visitor_NoRecurse,
-    #     when confronted with duplicate (same-id) nodes. Fixing this ordering is possible, but would be
-    #     computationally inefficient. So we handle it here.
-    if tree.data == '_ambig':
-        _antiscore_sum_resolve_ambig(tree)
+    assert tree.data != '_ambig'
 
-    try:
-        priority = tree.rule.options.priority
-    except AttributeError:
-        # Probably trees that don't take part in this parse (better way to distinguish?)
-        priority = None
-
-    return (priority or 0) + sum(map(_antiscore_sum_drv, tree.children), 0)
+    return _sum_priority(tree)
 
 def _antiscore_sum_resolve_ambig(tree):
     assert tree.data == '_ambig'
-
     best = min(tree.children, key=_antiscore_sum_drv)
     assert best.data == 'drv'
     tree.set('drv', best.children)

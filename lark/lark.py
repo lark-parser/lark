@@ -57,6 +57,7 @@ class LarkOptions(object):
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
+        self.earley__predict_all = o.pop('earley__predict_all', False)
 
         assert self.parser in ('earley', 'lalr', None)
 

@@ -28,11 +28,12 @@ from .grammar_analysis import GrammarAnalyzer
 from .earley import ApplyCallbacks, Item, Column
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, ignore=()):
+    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, ignore=(), predict_all=False):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = list(ignore)
+        self.predict_all = predict_all
 
 
         self.postprocess = {}
@@ -107,9 +108,10 @@ class Parser:
                     for j in range(1, len(s)):
                         m = item.expect.match(s[:-j])
                         if m:
-                            delayed_matches[m.end()].append(item.advance(m.group(0)))
+                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                            delayed_matches[i+m.end()].append(item.advance(t))
 
-            next_set = Column(i+1, self.FIRST)
+            next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)
             next_set.add(delayed_matches[i+1])
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
@@ -119,7 +121,7 @@ class Parser:
             return next_set
 
         # Main loop starts
-        column0 = Column(0, self.FIRST)
+        column0 = Column(0, self.FIRST, predict_all=self.predict_all)
         column0.add(predict(start_symbol, column0))
 
         column = column0

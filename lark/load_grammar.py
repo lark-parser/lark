@@ -293,7 +293,6 @@ def _rfind(s, choices):
 
 
 def _fix_escaping(s):
-    s = s.replace('\\"', '"').replace("'", "\\'")
     w = ''
     i = iter(s)
     for n in i:
@@ -305,6 +304,7 @@ def _fix_escaping(s):
             elif n2 not in 'unftr':
                 w += '\\'
             w += n2
+    w = w.replace('\\"', '"').replace("'", "\\'")
 
     to_eval = "u'''%s'''" % w
     try:

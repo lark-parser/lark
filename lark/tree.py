@@ -104,7 +104,12 @@ class Transformer(object):
         return getattr(self, name)
 
     def transform(self, tree):
-        items = [self.transform(c) if isinstance(c, Tree) else c for c in tree.children]
+        items = []
+        for c in tree.children:
+            try:
+                items.append(self.transform(c) if isinstance(c, Tree) else c)
+            except Discard:
+                pass
         try:
             f = self._get_func(tree.data)
         except AttributeError:
@@ -118,6 +123,9 @@ class Transformer(object):
     def __mul__(self, other):
         return TransformerChain(self, other)
 
+
+class Discard(Exception):
+    pass
 
 class TransformerChain(object):
     def __init__(self, *transformers):
@@ -174,8 +182,14 @@ class Transformer_NoRecurse(Transformer):
             else:
                 return f(t)
 
-        for subtree in (subtrees):
-            subtree.children = [_t(c) if isinstance(c, Tree) else c for c in subtree.children]
+        for subtree in subtrees:
+            children = []
+            for c in subtree.children:
+                try:
+                    children.append(_t(c) if isinstance(c, Tree) else c)
+                except Discard:
+                    pass
+            subtree.children = children
 
         return _t(tree)
 

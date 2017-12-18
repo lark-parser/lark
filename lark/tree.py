@@ -182,7 +182,7 @@ class Transformer_NoRecurse(Transformer):
             else:
                 return f(t)
 
-        for subtree in reversed(subtrees):
+        for subtree in subtrees:
             children = []
             for c in subtree.children:
                 try:

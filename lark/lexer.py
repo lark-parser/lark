@@ -40,6 +40,14 @@ class Token(Str):
     def __deepcopy__(self, memo):
         return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
 
+    def __eq__(self, other):
+        if isinstance(other, Token) and self.type != other.type:
+            return False
+        
+        return Str.__eq__(self, other)
+
+    __hash__ = Str.__hash__
+
 class Regex:
     def __init__(self, pattern, flags=()):
         self.pattern = pattern

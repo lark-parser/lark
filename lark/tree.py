@@ -67,16 +67,25 @@ class Tree(object):
                     yield c
 
     def iter_subtrees(self):
+        # TODO: Re-write as a more efficient version
+
         visited = set()
         q = [self]
 
+        l = []
         while q:
             subtree = q.pop()
+            l.append( subtree )
             if id(subtree) in visited:
                 continue    # already been here from another branch
             visited.add(id(subtree))
-            yield subtree
             q += [c for c in subtree.children if isinstance(c, Tree)]
+
+        seen = set()
+        for x in reversed(l):
+            if id(x) not in seen:
+                yield x
+                seen.add(id(x))
 
 
     def __deepcopy__(self, memo):
@@ -100,7 +109,7 @@ class Transformer(object):
             if isinstance(c, Tree):
                 try:
                     items.append(self.transform(c))
-                except Erase:
+                except Discard:
                     pass
         try:
             f = self._get_func(tree.data)
@@ -116,7 +125,7 @@ class Transformer(object):
         return TransformerChain(self, other)
 
 
-class Erase(Exception):
+class Discard(Exception):
     pass
 
 class TransformerChain(object):
@@ -156,7 +165,7 @@ class Visitor_NoRecurse(Visitor):
     def visit(self, tree):
         subtrees = list(tree.iter_subtrees())
 
-        for subtree in reversed(subtrees):
+        for subtree in (subtrees):
             getattr(self, subtree.data, self.__default__)(subtree)
         return tree
 
@@ -174,13 +183,13 @@ class Transformer_NoRecurse(Transformer):
             else:
                 return f(t)
 
-        for subtree in reversed(subtrees):
+        for subtree in (subtrees):
             children = []
             for c in subtree.children:
                 if isinstance(c, Tree):
                     try:
                         children.append(_t(c))
-                    except Erase:
+                    except Discard:
                         pass
                 else:
                     children.append(c)

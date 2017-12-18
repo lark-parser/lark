@@ -711,6 +711,19 @@ def _make_parser_test(LEXER, PARSER):
                             """)
             x = g.parse('AB')
 
+        @unittest.skipIf(LEXER == None, "Scanless can't handle regexps")
+        def test_regex_quote(self):
+            g = r"""
+            start: SINGLE_QUOTED_STRING | DOUBLE_QUOTED_STRING
+            SINGLE_QUOTED_STRING  : /'[^']*'/
+            DOUBLE_QUOTED_STRING  : /"[^"]*"/
+            """
+
+            g = _Lark(g)
+            self.assertEqual( g.parse('"hello"').children, ['"hello"'])
+            self.assertEqual( g.parse("'hello'").children, ["'hello'"])
+
+
         def test_lexer_token_limit(self):
             "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
             tokens = {'A%d'%i:'"%d"'%i for i in range(300)}

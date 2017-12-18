@@ -126,6 +126,7 @@ class XEarley:
                                     parser_conf.callback,
                                     resolve_ambiguity=get_ambiguity_resolver(options),
                                     ignore=ignore,
+                                    predict_all=options.earley__predict_all
                                     )
 
     def _prepare_expansion(self, expansion):

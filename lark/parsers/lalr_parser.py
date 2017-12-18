@@ -7,6 +7,10 @@ from ..common import ParseError, UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
 
+class FinalReduce:
+    def __init__(self, value):
+        self.value = value
+
 class Parser:
     def __init__(self, parser_conf):
         assert all(o is None or o.priority is None for n,x,a,o in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -56,7 +60,7 @@ class _Parser:
             res = self.callbacks[rule](s)
 
             if end and len(state_stack) == 1 and rule.origin == self.start_symbol:
-                return res
+                return FinalReduce(res)
 
             _action, new_state = get_action(rule.origin)
             assert _action == ACTION_SHIFT
@@ -85,9 +89,9 @@ class _Parser:
             _action, rule = get_action('$end')
             assert _action == 'reduce'
             res = reduce(*rule, end=True)
-            if res:
+            if isinstance(res, FinalReduce):
                 assert state_stack == [self.init_state] and not value_stack, len(state_stack)
-                return res
+                return res.value
 
 
 

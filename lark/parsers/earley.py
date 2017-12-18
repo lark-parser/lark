@@ -90,7 +90,7 @@ class NewsList(list):
 
 class Column:
     "An entry in the table, aka Earley Chart. Contains lists of items."
-    def __init__(self, i, FIRST):
+    def __init__(self, i, FIRST, predict_all=False):
         self.i = i
         self.to_reduce = NewsList()
         self.to_predict = NewsList()
@@ -100,6 +100,7 @@ class Column:
 
         self.predicted = set()
         self.completed = {}
+        self.predict_all = predict_all
 
     def add(self, items):
         """Sort items into scan/predict/reduce newslists
@@ -108,9 +109,9 @@ class Column:
         """
         for item in items:
 
+            item_key = item, item.tree  # Elsewhere, tree is not part of the comparison
             if item.is_complete:
                 # XXX Potential bug: What happens if there's ambiguity in an empty rule?
-                item_key = item, item.tree  # Elsewhere, tree is not part of the comparison
                 if item.rule.expansion and item_key in self.completed:
                     old_tree = self.completed[item_key].tree
                     if old_tree == item.tree:
@@ -137,9 +138,10 @@ class Column:
                 if isinstance(item.expect, Terminal):
                     self.to_scan.append(item)
                 else:
-                    if item in self.predicted:
+                    k = item_key if self.predict_all else item
+                    if k in self.predicted:
                         continue
-                    self.predicted.add(item)
+                    self.predicted.add(k)
                     self.to_predict.append(item)
 
             self.item_count += 1    # Only count if actually added

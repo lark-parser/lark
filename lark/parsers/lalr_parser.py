@@ -19,14 +19,14 @@ class Parser:
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in analysis.rules}
 
-        self.parser = _Parser(analysis.states_idx, analysis.init_state_idx, analysis.start_symbol, callbacks)
+        self.parser = _Parser(analysis.states_idx, analysis.init_state_idx, analysis.end_state_idx, callbacks)
         self.parse = self.parser.parse
 
 class _Parser:
-    def __init__(self, states, init_state, start_symbol, callbacks):
+    def __init__(self, states, init_state, end_state, callbacks):
         self.states = states
         self.init_state = init_state
-        self.start_symbol = start_symbol
+        self.end_state = end_state
         self.callbacks = callbacks
 
     def parse(self, seq, set_state=None):
@@ -49,7 +49,7 @@ class _Parser:
 
                 raise UnexpectedToken(token, expected, seq, i)
 
-        def reduce(rule, size, end=False):
+        def reduce(rule, size):
             if size:
                 s = value_stack[-size:]
                 del state_stack[-size:]
@@ -57,15 +57,12 @@ class _Parser:
             else:
                 s = []
 
-            res = self.callbacks[rule](s)
-
-            if end and len(state_stack) == 1 and rule.origin == self.start_symbol:
-                return FinalReduce(res)
+            value = self.callbacks[rule](s)
 
             _action, new_state = get_action(rule.origin)
             assert _action == ACTION_SHIFT
             state_stack.append(new_state)
-            value_stack.append(res)
+            value_stack.append(value)
 
         # Main LALR-parser loop
         try:
@@ -73,6 +70,7 @@ class _Parser:
             i += 1
             while True:
                 action, arg = get_action(token.type)
+                assert arg != self.end_state
 
                 if action == ACTION_SHIFT:
                     state_stack.append(arg)
@@ -86,12 +84,10 @@ class _Parser:
             pass
 
         while True:
-            _action, rule = get_action('$end')
-            assert _action == 'reduce'
-            res = reduce(*rule, end=True)
-            if isinstance(res, FinalReduce):
-                assert state_stack == [self.init_state] and not value_stack, len(state_stack)
-                return res.value
-
-
-
+            _action, arg = get_action('$end')
+            if _action == ACTION_SHIFT:
+                assert arg == self.end_state
+                val ,= value_stack
+                return val
+            else:
+                reduce(*arg)

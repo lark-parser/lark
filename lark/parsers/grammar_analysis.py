@@ -125,7 +125,7 @@ class GrammarAnalyzer(object):
                 if not (is_terminal(sym) or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym)
 
-        self.init_state = self.expand_rule(start_symbol)
+        self.init_state = self.expand_rule('$root')
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(self.rules)
 

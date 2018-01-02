@@ -19,6 +19,7 @@ ACTION_SHIFT = 0
 class LALR_Analyzer(GrammarAnalyzer):
 
     def compute_lookahead(self):
+        self.end_states = []
 
         self.states = {}
         def step(state):
@@ -36,7 +37,10 @@ class LALR_Analyzer(GrammarAnalyzer):
                     if not rp.is_satisfied and not is_terminal(rp.next):
                         rps |= self.expand_rule(rp.next)
 
-                lookahead[sym].append(('shift', fzset(rps)))
+                new_state = fzset(rps)
+                lookahead[sym].append(('shift', new_state))
+                if sym == '$end':
+                    self.end_states.append( new_state )
                 yield fzset(rps)
 
             for k, v in lookahead.items():
@@ -58,6 +62,8 @@ class LALR_Analyzer(GrammarAnalyzer):
         for _ in bfs([self.init_state], step):
             pass
 
+        self.end_state ,= self.end_states
+
         # --
         self.enum = list(self.states)
         self.enum_rev = {s:i for i,s in enumerate(self.enum)}
@@ -71,3 +77,4 @@ class LALR_Analyzer(GrammarAnalyzer):
 
 
         self.init_state_idx = self.enum_rev[self.init_state]
+        self.end_state_idx = self.enum_rev[self.end_state]

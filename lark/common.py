@@ -33,7 +33,7 @@ class UnexpectedToken(ParseError):
 
 
 def is_terminal(sym):
-    return isinstance(sym, Terminal) or sym.isupper() or sym[0] == '$'
+    return isinstance(sym, Terminal) or sym.isupper() or sym == '$end'
 
 
 class LexerConf:

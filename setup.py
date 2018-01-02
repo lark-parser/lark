@@ -13,6 +13,8 @@ setup(
 
     package_data = { '': ['*.md', '*.g'] },
 
+    test_suite = 'tests.__main__',
+
     # metadata for upload to PyPI
     author = "Erez Shinan",
     author_email = "erezshin@gmail.com",

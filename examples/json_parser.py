@@ -1,7 +1,7 @@
 #
 # This example shows how to write a basic JSON parser
 #
-# The code is short and clear, but has good performance.
+# The code is short and clear, and outperforms every other parser (that's written in Python).
 # For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
 #
 
@@ -47,12 +47,12 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
-json_parser = Lark(json_grammar, parser='earley', lexer='standard')
-def parse(x):
-    return TreeToJson().transform(json_parser.parse(x))
+# json_parser = Lark(json_grammar, parser='earley', lexer='standard')
+# def parse(x):
+#     return TreeToJson().transform(json_parser.parse(x))
 
-# json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
-# parse = json_parser.parse
+json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
+parse = json_parser.parse
 
 def test():
     test_json = '''

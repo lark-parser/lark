@@ -14,6 +14,10 @@ TEST_PATH    = os.path.abspath(os.path.dirname(__file__))
 NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
+if not os.path.exists(NEARLEY_PATH):
+    print("Skipping Nearley tests!")
+    raise ImportError("Skipping Nearley tests!")
+
 class TestNearley(unittest.TestCase):
     def test_css(self):
         fn = os.path.join(NEARLEY_PATH, 'examples/csscolor.ne')

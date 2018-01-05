@@ -43,7 +43,7 @@ class Token(Str):
     def __eq__(self, other):
         if isinstance(other, Token) and self.type != other.type:
             return False
-        
+
         return Str.__eq__(self, other)
 
     __hash__ = Str.__hash__
@@ -74,7 +74,6 @@ def _create_unless(tokens):
     tokens_by_type = classify(tokens, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
-    delayed_strs = []
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
         unless = [] # {}
@@ -82,14 +81,13 @@ def _create_unless(tokens):
             s = strtok.pattern.value
             m = re.match(retok.pattern.to_regexp(), s)
             if m and m.group(0) == s:
-                if strtok.pattern.flags:
-                    delayed_strs.append(strtok)
-                embedded_strs.add(strtok.name)
                 unless.append(strtok)
+                if strtok.pattern.flags <= retok.pattern.flags:
+                    embedded_strs.add(strtok)
         if unless:
             callback[retok.name] = _create_unless_callback(unless)
 
-    tokens = [t for t in tokens if t.name not in embedded_strs] + delayed_strs
+    tokens = [t for t in tokens if t not in embedded_strs]
     return tokens, callback
 
 

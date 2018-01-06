@@ -1,20 +1,8 @@
 
 from ..utils import bfs, fzset
 from ..common import GrammarError, is_terminal
+from ..grammar import Rule
 
-class Rule(object):
-    """
-        origin : a symbol
-        expansion : a list of symbols
-    """
-    def __init__(self, origin, expansion, alias=None, options=None):
-        self.origin = origin
-        self.expansion = expansion
-        self.alias = alias
-        self.options = options
-
-    def __repr__(self):
-        return '<%s : %s>' % (self.origin, ' '.join(map(str,self.expansion)))
 
 class RulePtr(object):
     def __init__(self, rule, index):
@@ -106,28 +94,29 @@ def calculate_sets(rules):
 
 
 class GrammarAnalyzer(object):
-    def __init__(self, rule_tuples, start_symbol, debug=False):
+    def __init__(self, rules, start_symbol, debug=False):
+        assert len(rules) == len(set(rules))
+
         self.start_symbol = start_symbol
         self.debug = debug
-        rule_tuples = list(rule_tuples)
-        rule_tuples.append(('$root', [start_symbol, '$end']))
-        rule_tuples = [(t[0], t[1], None, None) if len(t)==2 else t for t in rule_tuples]
 
-        self.rules = set()
-        self.rules_by_origin = {o: [] for o, _x, _a, _opt in rule_tuples}
-        for origin, exp, alias, options in rule_tuples:
-            r =  Rule( origin, exp, alias, options )
-            self.rules.add(r)
-            self.rules_by_origin[origin].append(r)
+        root_rule = Rule('$root', [start_symbol, '$END'])
 
-        for r in self.rules:
+        self.rules_by_origin = {r.origin: [] for r in rules}
+        for r in rules:
+            self.rules_by_origin[r.origin].append(r)
+
+        self.rules_by_origin[root_rule.origin] = [root_rule]
+
+        for r in rules:
             for sym in r.expansion:
                 if not (is_terminal(sym) or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym)
 
         self.start_state = self.expand_rule('$root')
+        self.rules = rules
 
-        self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(self.rules)
+        self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules + [root_rule])
 
     def expand_rule(self, rule):
         "Returns all init_ptrs accessible by rule (recursive)"

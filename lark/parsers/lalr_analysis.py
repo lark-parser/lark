@@ -73,7 +73,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
                 new_state = fzset(rps)
                 lookahead[sym].append((Shift, new_state))
-                if sym == '$end':
+                if sym == '$END':
                     self.end_states.append( new_state )
                 yield fzset(rps)
 

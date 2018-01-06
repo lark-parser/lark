@@ -204,7 +204,7 @@ class ContextualLexer:
                 lexer = lexer_by_tokens[key]
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
-                state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$end']
+                state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$END']
                 lexer = Lexer(state_tokens, ignore=ignore)
                 lexer_by_tokens[key] = lexer
 

@@ -13,13 +13,13 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-from ..common import ParseError, UnexpectedToken, Terminal
+from ..common import ParseError, UnexpectedToken, is_terminal
 from ..tree import Tree, Visitor_NoRecurse, Transformer_NoRecurse
 from .grammar_analysis import GrammarAnalyzer
 
 
 class EndToken:
-    type = '$end'
+    type = '$END'
 
 class Derivation(Tree):
     _hash = None
@@ -135,7 +135,7 @@ class Column:
                     self.completed[item_key] = item
                 self.to_reduce.append(item)
             else:
-                if isinstance(item.expect, Terminal):
+                if is_terminal(item.expect):
                     self.to_scan.append(item)
                 else:
                     k = item_key if self.predict_all else item
@@ -152,7 +152,7 @@ class Column:
     __nonzero__ = __bool__  # Py2 backwards-compatibility
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None):
+    def __init__(self, rules, start_symbol, callback, term_matcher, resolve_ambiguity=None):
         self.analysis = GrammarAnalyzer(rules, start_symbol)
         self.start_symbol = start_symbol
         self.resolve_ambiguity = resolve_ambiguity
@@ -161,12 +161,13 @@ class Parser:
         self.predictions = {}
         self.FIRST = {}
         for rule in self.analysis.rules:
-            if rule.origin != '$root':  # XXX kinda ugly
-                a = rule.alias
-                self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
-                self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
+            a = rule.alias
+            self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
+            self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
-                self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+            self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+
+        self.term_matcher = term_matcher
 
 
     def parse(self, stream, start_symbol=None):
@@ -174,9 +175,10 @@ class Parser:
         start_symbol = start_symbol or self.start_symbol
 
         _Item = Item
+        match = self.term_matcher
 
         def predict(nonterm, column):
-            assert not isinstance(nonterm, Terminal), nonterm
+            assert not is_terminal(nonterm), nonterm
             return [_Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):
@@ -203,7 +205,7 @@ class Parser:
 
         def scan(i, token, column):
             next_set = Column(i, self.FIRST)
-            next_set.add(item.advance(token) for item in column.to_scan if item.expect.match(token))
+            next_set.add(item.advance(token) for item in column.to_scan if match(item.expect, token))
 
             if not next_set:
                 expect = {i.expect for i in column.to_scan}

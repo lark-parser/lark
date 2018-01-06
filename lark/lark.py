@@ -171,6 +171,7 @@ class Lark:
             for f in dir(callback):
                 if not (f.startswith('__') and f.endswith('__')):
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
+
         parser_conf = ParserConf(rules, callback, self.options.start)
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)

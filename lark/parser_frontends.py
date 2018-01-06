@@ -3,7 +3,7 @@ import sre_parse
 
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import is_terminal, GrammarError, ParserConf, Terminal_Regexp, Terminal_Token
+from .common import is_terminal, GrammarError, ParserConf
 from .parsers import lalr_parser, earley, xearley, resolve_ambig
 
 class WithLexer:
@@ -70,25 +70,26 @@ def tokenize_text(text):
 
 class Earley_NoLex:
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+        self._prepare_match(lexer_conf)
 
-        rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
-
-        self.parser = earley.Parser(rules,
+        self.parser = earley.Parser(parser_conf.rules,
                                     parser_conf.start,
                                     parser_conf.callback,
+                                    self.match,
                                     resolve_ambiguity=get_ambiguity_resolver(options))
 
-    def _prepare_expansion(self, expansion):
-        for sym in expansion:
-            if is_terminal(sym):
-                regexp = self.token_by_name[sym].pattern.to_regexp()
-                width = sre_parse.parse(regexp).getwidth()
-                if width != (1,1):
-                    raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
-                yield Terminal_Regexp(sym, regexp)
-            else:
-                yield sym
+
+    def match(self, term, text, index=0):
+        return self.regexps[term].match(text, index)
+
+    def _prepare_match(self, lexer_conf):
+        self.regexps = {}
+        for t in lexer_conf.tokens:
+            regexp = t.pattern.to_regexp()
+            width = sre_parse.parse(regexp).getwidth()
+            if width != (1,1):
+                raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
+            self.regexps[t.name] = re.compile(regexp)
 
     def parse(self, text):
         new_text = tokenize_text(text)
@@ -98,15 +99,14 @@ class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf)
 
-        rules = [(n, self._prepare_expansion(x), a, o) for n,x,a,o in parser_conf.rules]
-
-        self.parser = earley.Parser(rules,
+        self.parser = earley.Parser(parser_conf.rules,
                                     parser_conf.start,
                                     parser_conf.callback,
+                                    self.match,
                                     resolve_ambiguity=get_ambiguity_resolver(options))
 
-    def _prepare_expansion(self, expansion):
-        return [Terminal_Token(sym) if is_terminal(sym) else sym for sym in expansion]
+    def match(self, term, token):
+        return term == token.type
 
     def parse(self, text):
         tokens = self.lex(text)
@@ -117,27 +117,26 @@ class XEarley:
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
-        rules = [(n, list(self._prepare_expansion(x)), a, o) for n,x,a,o in parser_conf.rules]
+        self._prepare_match(lexer_conf)
 
-        ignore = [Terminal_Regexp(x, self.token_by_name[x].pattern.to_regexp()) for x in lexer_conf.ignore]
-
-        self.parser = xearley.Parser(rules,
+        self.parser = xearley.Parser(parser_conf.rules,
                                     parser_conf.start,
                                     parser_conf.callback,
+                                    self.match,
                                     resolve_ambiguity=get_ambiguity_resolver(options),
-                                    ignore=ignore,
+                                    ignore=lexer_conf.ignore,
                                     predict_all=options.earley__predict_all
                                     )
 
-    def _prepare_expansion(self, expansion):
-        for sym in expansion:
-            if is_terminal(sym):
-                regexp = self.token_by_name[sym].pattern.to_regexp()
-                width = sre_parse.parse(regexp).getwidth()
-                assert width
-                yield Terminal_Regexp(sym, regexp)
-            else:
-                yield sym
+    def match(self, term, text, index=0):
+        return self.regexps[term].match(text, index)
+
+    def _prepare_match(self, lexer_conf):
+        self.regexps = {}
+        for t in lexer_conf.tokens:
+            regexp = t.pattern.to_regexp()
+            assert sre_parse.parse(regexp).getwidth()
+            self.regexps[t.name] = re.compile(regexp)
 
     def parse(self, text):
         return self.parser.parse(text)

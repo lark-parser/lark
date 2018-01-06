@@ -33,7 +33,7 @@ class UnexpectedToken(ParseError):
 
 
 def is_terminal(sym):
-    return isinstance(sym, Terminal) or sym.isupper() or sym == '$end'
+    return sym.isupper()
 
 
 class LexerConf:
@@ -44,7 +44,6 @@ class LexerConf:
 
 class ParserConf:
     def __init__(self, rules, callback, start):
-        assert all(len(r) == 4 for r in rules)
         self.rules = rules
         self.callback = callback
         self.start = start
@@ -107,28 +106,4 @@ class TokenDef(object):
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
-
-
-class Terminal:
-    def __init__(self, data):
-        self.data = data
-
-    def __repr__(self):
-        return '%r' % self.data
-
-    def __eq__(self, other):
-        return isinstance(other, type(self)) and self.data == other.data
-    def __hash__(self):
-        return hash(self.data)
-
-
-class Terminal_Regexp(Terminal):
-    def __init__(self, name, regexp):
-        Terminal.__init__(self, regexp)
-        self.name = name
-        self.match = re.compile(regexp).match
-
-class Terminal_Token(Terminal):
-    def match(self, other):
-        return self.data == other.type
 

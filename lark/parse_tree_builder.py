@@ -1,6 +1,7 @@
 from .common import is_terminal, GrammarError
 from .utils import suppress
 from .lexer import Token
+from .grammar import Rule
 
 class NodeBuilder:
     def __init__(self, tree_class, name):
@@ -27,7 +28,7 @@ class Factory:
 
     def __call__(self, node_builder):
         return self.cls(node_builder, *self.args)
-                 
+
 
 class TokenWrapper:
     "Used for fixing the results of scanless parsing"
@@ -151,6 +152,6 @@ class ParseTreeBuilder:
                 raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
             setattr(callback, callback_name, f)
 
-            new_rules.append(( origin, expansion, callback_name, options ))
+            new_rules.append( Rule( origin, expansion, callback_name, options ))
 
         return new_rules, callback

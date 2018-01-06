@@ -5,7 +5,7 @@
 
 from ..common import ParseError, UnexpectedToken
 
-from .lalr_analysis import LALR_Analyzer, ACTION_SHIFT
+from .lalr_analysis import LALR_Analyzer, Shift
 
 class FinalReduce:
     def __init__(self, value):
@@ -19,14 +19,14 @@ class Parser:
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in analysis.rules}
 
-        self.parser = _Parser(analysis.states_idx, analysis.init_state_idx, analysis.end_state_idx, callbacks)
+        self.parser = _Parser(analysis.parse_table, callbacks)
         self.parse = self.parser.parse
 
 class _Parser:
-    def __init__(self, states, init_state, end_state, callbacks):
-        self.states = states
-        self.init_state = init_state
-        self.end_state = end_state
+    def __init__(self, parse_table, callbacks):
+        self.states = parse_table.states
+        self.start_state = parse_table.start_state
+        self.end_state = parse_table.end_state
         self.callbacks = callbacks
 
     def parse(self, seq, set_state=None):
@@ -35,10 +35,10 @@ class _Parser:
         stream = iter(seq)
         states = self.states
 
-        state_stack = [self.init_state]
+        state_stack = [self.start_state]
         value_stack = []
 
-        if set_state: set_state(self.init_state)
+        if set_state: set_state(self.start_state)
 
         def get_action(key):
             state = state_stack[-1]
@@ -49,7 +49,8 @@ class _Parser:
 
                 raise UnexpectedToken(token, expected, seq, i)
 
-        def reduce(rule, size):
+        def reduce(rule):
+            size = len(rule.expansion)
             if size:
                 s = value_stack[-size:]
                 del state_stack[-size:]
@@ -60,7 +61,7 @@ class _Parser:
             value = self.callbacks[rule](s)
 
             _action, new_state = get_action(rule.origin)
-            assert _action == ACTION_SHIFT
+            assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)
 
@@ -72,22 +73,22 @@ class _Parser:
                 action, arg = get_action(token.type)
                 assert arg != self.end_state
 
-                if action == ACTION_SHIFT:
+                if action is Shift:
                     state_stack.append(arg)
                     value_stack.append(token)
                     if set_state: set_state(arg)
                     token = next(stream)
                     i += 1
                 else:
-                    reduce(*arg)
+                    reduce(arg)
         except StopIteration:
             pass
 
         while True:
             _action, arg = get_action('$end')
-            if _action == ACTION_SHIFT:
+            if _action is Shift:
                 assert arg == self.end_state
                 val ,= value_stack
                 return val
             else:
-                reduce(*arg)
+                reduce(arg)

@@ -14,7 +14,41 @@ from ..common import GrammarError, is_terminal
 
 from .grammar_analysis import GrammarAnalyzer
 
-ACTION_SHIFT = 0
+class Action:
+    def __str__(self):
+        return self.__name__
+    def __repr__(self):
+        return str(self)
+
+class Shift(Action): pass
+class Reduce(Action): pass
+
+class ParseTable:
+    def __init__(self, states, start_state, end_state):
+        self.states = states
+        self.start_state = start_state
+        self.end_state = end_state
+
+class IntParseTable(ParseTable):
+
+    @classmethod
+    def from_ParseTable(cls, parse_table):
+        enum = list(parse_table.states)
+        state_to_idx = {s:i for i,s in enumerate(enum)}
+        int_states = {}
+
+        for s, la in parse_table.states.items():
+            la = {k:(v[0], state_to_idx[v[1]]) if v[0] is Shift else v
+                  for k,v in la.items()}
+            int_states[ state_to_idx[s] ] = la
+
+
+        start_state = state_to_idx[parse_table.start_state]
+        end_state = state_to_idx[parse_table.end_state]
+        return cls(int_states, start_state, end_state)
+
+
+
 
 class LALR_Analyzer(GrammarAnalyzer):
 
@@ -27,7 +61,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             sat, unsat = classify_bool(state, lambda rp: rp.is_satisfied)
             for rp in sat:
                 for term in self.FOLLOW.get(rp.rule.origin, ()):
-                    lookahead[term].append(('reduce', rp.rule))
+                    lookahead[term].append((Reduce, rp.rule))
 
             d = classify(unsat, lambda rp: rp.next)
             for sym, rps in d.items():
@@ -38,7 +72,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                         rps |= self.expand_rule(rp.next)
 
                 new_state = fzset(rps)
-                lookahead[sym].append(('shift', new_state))
+                lookahead[sym].append((Shift, new_state))
                 if sym == '$end':
                     self.end_states.append( new_state )
                 yield fzset(rps)
@@ -50,7 +84,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                     for x in v:
                         # XXX resolving shift/reduce into shift, like PLY
                         # Give a proper warning
-                        if x[0] == 'shift':
+                        if x[0] is Shift:
                             lookahead[k] = [x]
 
             for k, v in lookahead.items():
@@ -59,22 +93,15 @@ class LALR_Analyzer(GrammarAnalyzer):
 
             self.states[state] = {k:v[0] for k, v in lookahead.items()}
 
-        for _ in bfs([self.init_state], step):
+        for _ in bfs([self.start_state], step):
             pass
 
         self.end_state ,= self.end_states
 
-        # --
-        self.enum = list(self.states)
-        self.enum_rev = {s:i for i,s in enumerate(self.enum)}
-        self.states_idx = {}
+        self._parse_table = ParseTable(self.states, self.start_state, self.end_state)
 
-        for s, la in self.states.items():
-            la = {k:(ACTION_SHIFT, self.enum_rev[v[1]]) if v[0]=='shift'
-                    else (v[0], (v[1], len(v[1].expansion)))    # Reduce
-                  for k,v in la.items()}
-            self.states_idx[ self.enum_rev[s] ] = la
+        if self.debug:
+            self.parse_table = self._parse_table
+        else:
+            self.parse_table = IntParseTable.from_ParseTable(self._parse_table)
 
-
-        self.init_state_idx = self.enum_rev[self.init_state]
-        self.end_state_idx = self.enum_rev[self.end_state]

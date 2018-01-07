@@ -94,13 +94,14 @@ def calculate_sets(rules):
 
 
 class GrammarAnalyzer(object):
-    def __init__(self, rules, start_symbol, debug=False):
+    def __init__(self, parser_conf, debug=False):
+        rules = parser_conf.rules
         assert len(rules) == len(set(rules))
 
-        self.start_symbol = start_symbol
+        self.start_symbol = parser_conf.start
         self.debug = debug
 
-        root_rule = Rule('$root', [start_symbol, '$END'])
+        root_rule = Rule('$root', [self.start_symbol, '$END'])
 
         self.rules_by_origin = {r.origin: [] for r in rules}
         for r in rules:

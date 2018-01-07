@@ -18,9 +18,6 @@ from ..tree import Tree, Visitor_NoRecurse, Transformer_NoRecurse
 from .grammar_analysis import GrammarAnalyzer
 
 
-class EndToken:
-    type = '$END'
-
 class Derivation(Tree):
     _hash = None
 
@@ -35,8 +32,6 @@ class Derivation(Tree):
         if self._hash is None:
             self._hash = Tree.__hash__(self)
         return self._hash
-
-END_TOKEN = EndToken()
 
 class Item(object):
     "An Earley Item, the atom of the algorithm."
@@ -60,11 +55,8 @@ class Item(object):
         new_tree = Derivation(self.rule, self.tree.children + [tree])
         return self.__class__(self.rule, self.ptr+1, self.start, new_tree)
 
-    def similar(self, other):
-        return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
-
     def __eq__(self, other):
-        return self.similar(other) #and (self.tree == other.tree)
+        return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
 
     def __hash__(self):
         return hash((self.rule, self.ptr, id(self.start)))   # Always runs Derivation.__hash__
@@ -152,27 +144,24 @@ class Column:
     __nonzero__ = __bool__  # Py2 backwards-compatibility
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, term_matcher, resolve_ambiguity=None):
-        self.analysis = GrammarAnalyzer(rules, start_symbol)
-        self.start_symbol = start_symbol
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=None):
+        self.analysis = GrammarAnalyzer(parser_conf)
+        self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
 
+        self.FIRST = self.analysis.FIRST
         self.postprocess = {}
         self.predictions = {}
-        self.FIRST = {}
-        for rule in self.analysis.rules:
-            a = rule.alias
-            self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
+        for rule in parser_conf.rules:
+            self.postprocess[rule] = getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
-
-            self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
 
         self.term_matcher = term_matcher
 
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.start_symbol
+        start_symbol = start_symbol or self.parser_conf.start
 
         _Item = Item
         match = self.term_matcher
@@ -198,9 +187,8 @@ class Parser:
 
                 for item in to_reduce:
                     new_items = list(complete(item))
-                    for new_item in new_items:
-                        if new_item.similar(item):
-                            raise ParseError('Infinite recursion detected! (rule %s)' % new_item.rule)
+                    if item in new_items:
+                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
                     column.add(new_items)
 
         def scan(i, token, column):
@@ -252,24 +240,3 @@ class ApplyCallbacks(Transformer_NoRecurse):
             return callback(children)
         else:
             return Tree(rule.origin, children)
-
-# RULES = [
-#     ('a', ['d']),
-#     ('d', ['b']),
-#     ('b', ['C']),
-#     ('b', ['b', 'C']),
-#     ('b', ['C', 'b']),
-# ]
-# p = Parser(RULES, 'a')
-# for x in p.parse('CC'):
-#     print x.pretty()
-
-#---------------
-# RULES = [
-#     ('s', ['a', 'a']),
-#     ('a', ['b', 'b']),
-#     ('b', ['C'], lambda (x,): x),
-#     ('b', ['b', 'C']),
-# ]
-# p = Parser(RULES, 's', {})
-# print p.parse('CCCCC').pretty()

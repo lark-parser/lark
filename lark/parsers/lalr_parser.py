@@ -15,7 +15,7 @@ class Parser:
     def __init__(self, parser_conf):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
-        self.analysis = analysis = LALR_Analyzer(parser_conf.rules, parser_conf.start)
+        self.analysis = analysis = LALR_Analyzer(parser_conf)
         analysis.compute_lookahead()
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in analysis.rules}

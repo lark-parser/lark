@@ -28,31 +28,26 @@ from .grammar_analysis import GrammarAnalyzer
 from .earley import ApplyCallbacks, Item, Column
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False):
-        self.analysis = GrammarAnalyzer(rules, start_symbol)
-        self.start_symbol = start_symbol
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False):
+        self.analysis = GrammarAnalyzer(parser_conf)
+        self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = list(ignore)
         self.predict_all = predict_all
 
-
+        self.FIRST = self.analysis.FIRST
         self.postprocess = {}
         self.predictions = {}
-        self.FIRST = {}
-
-        for rule in self.analysis.rules:
-            a = rule.alias
-            self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
+        for rule in parser_conf.rules:
+            self.postprocess[rule] = getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
-
-            self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
 
         self.term_matcher = term_matcher
 
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.start_symbol
+        start_symbol = start_symbol or self.parser_conf.start
         delayed_matches = defaultdict(list)
         match = self.term_matcher
 
@@ -79,9 +74,8 @@ class Parser:
                     column.add( predict(nonterm, column) )
                 for item in to_reduce:
                     new_items = list(complete(item))
-                    for new_item in new_items:
-                        if new_item.similar(item):
-                            raise ParseError('Infinite recursion detected! (rule %s)' % new_item.rule)
+                    if item in new_items:
+                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
                     column.add(new_items)
 
         def scan(i, token, column):

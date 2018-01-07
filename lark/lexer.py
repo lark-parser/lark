@@ -111,35 +111,11 @@ def build_mres(tokens, match_whole=False):
     return _build_mres(tokens, len(tokens), match_whole)
 
 
-class LineCounter:
-    def __init__(self):
-        self.newline_char = '\n'
-        self.char_pos = 0
-        self.line = 1
-        self.column = 0
-        self.line_start_pos = 0
-
-    def feed(self, token, test_newline=True):
-        """Consume a token and calculat the new line & column.
-
-        As an optional optimization, set test_newline=False is token doesn't contain a newline.
-        """
-        if test_newline:
-            newlines = token.count(self.newline_char)
-            if newlines:
-                self.line += newlines
-                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
-
-        self.char_pos += len(token)
-        self.column = self.char_pos - self.line_start_pos
-
-
 
 class Lexer:
     def __init__(self, tokens, ignore=()):
         assert all(isinstance(t, TokenDef) for t in tokens), tokens
 
-        self.ignore = ignore
         tokens = list(tokens)
 
         # Sanitization
@@ -156,7 +132,7 @@ class Lexer:
 
         # Init
         self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
-        self.ignore_types = [t for t in ignore]
+        self.ignore_types = list(ignore)
 
         tokens.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
 
@@ -206,6 +182,30 @@ class ContextualLexer:
             l.lexer = self.lexers[self.parser_state]
 
 
+###{lexer
+
+class LineCounter:
+    def __init__(self):
+        self.newline_char = '\n'
+        self.char_pos = 0
+        self.line = 1
+        self.column = 0
+        self.line_start_pos = 0
+
+    def feed(self, token, test_newline=True):
+        """Consume a token and calculate the new line & column.
+
+        As an optional optimization, set test_newline=False is token doesn't contain a newline.
+        """
+        if test_newline:
+            newlines = token.count(self.newline_char)
+            if newlines:
+                self.line += newlines
+                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
+
+        self.char_pos += len(token)
+        self.column = self.char_pos - self.line_start_pos
+
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"
     def __init__(self, lexer):
@@ -235,4 +235,4 @@ class _Lex:
                 if line_ctr.char_pos < len(stream):
                     raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                 break
-
+###}

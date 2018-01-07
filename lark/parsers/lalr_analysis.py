@@ -15,13 +15,15 @@ from ..common import GrammarError, is_terminal
 from .grammar_analysis import GrammarAnalyzer
 
 class Action:
+    def __init__(self, name):
+        self.name = name
     def __str__(self):
-        return self.__name__
+        return self.name
     def __repr__(self):
         return str(self)
 
-class Shift(Action): pass
-class Reduce(Action): pass
+Shift = Action('Shift')
+Reduce = Action('Reduce')
 
 class ParseTable:
     def __init__(self, states, start_state, end_state):

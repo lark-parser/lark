@@ -7,10 +7,6 @@ from ..common import ParseError, UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, Shift
 
-class FinalReduce:
-    def __init__(self, value):
-        self.value = value
-
 class Parser:
     def __init__(self, parser_conf):
         assert all(r.options is None or r.options.priority is None
@@ -20,6 +16,7 @@ class Parser:
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in analysis.rules}
 
+        self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)
         self.parse = self.parser.parse
 

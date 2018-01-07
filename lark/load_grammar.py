@@ -12,6 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
+from .grammar import RuleOptions
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 
@@ -491,33 +492,6 @@ class Grammar:
         rules = {origin: (rule_tree_to_text.transform(tree), options) for origin, (tree, options) in rules.items()}
 
         return tokens, rules, self.ignore
-
-
-
-class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False, priority=None):
-        self.keep_all_tokens = keep_all_tokens
-        self.expand1 = expand1
-        self.create_token = create_token  # used for scanless postprocessing
-        self.priority = priority
-
-        self.filter_out = filter_out        # remove this rule from the tree
-                                            # used for "token"-rules in scanless
-    @classmethod
-    def from_rule(cls, name, *x):
-        if len(x) > 1:
-            priority, expansions = x
-            priority = int(priority)
-        else:
-            expansions ,= x
-            priority = None
-
-        keep_all_tokens = name.startswith('!')
-        name = name.lstrip('!')
-        expand1 = name.startswith('?')
-        name = name.lstrip('?')
-
-        return name, expansions, cls(keep_all_tokens, expand1, priority=priority)
 
 
 

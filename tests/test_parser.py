@@ -126,7 +126,7 @@ class TestParsers(unittest.TestCase):
         r = T().transform(g.parse("x"))
         self.assertEqual( r.children, ["<b>"] )
 
-            
+
         g = Lark("""start: a
                     ?a : b
                     b : "x"
@@ -142,14 +142,14 @@ class TestParsers(unittest.TestCase):
         r = T().transform(g.parse("xx"))
         self.assertEqual( r.children, ["<c>"] )
 
-            
+
         g = Lark("""start: a
                     ?a : b b -> c
                     b : "x"
                  """, parser='lalr', transformer=T())
         r = g.parse("xx")
         self.assertEqual( r.children, ["<c>"] )
- 
+
 
 
 
@@ -796,6 +796,39 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['a', 'A'])
 
 
+        def test_undefined_ignore(self):
+            g = """!start: "A"
+
+                %ignore B
+                """
+            self.assertRaises( GrammarError, _Lark, g)
+
+        @unittest.skipIf(LEXER==None, "TODO: Fix scanless parsing or get rid of it") # TODO
+        def test_line_and_column(self):
+            g = r"""!start: "A" bc "D"
+                !bc: "B\nC"
+                """
+            l = _Lark(g)
+            a, bc, d = l.parse("AB\nCD").children
+            self.assertEqual(a.line, 1)
+            self.assertEqual(a.column, 0)
+
+            bc ,= bc.children
+            self.assertEqual(bc.line, 1)
+            self.assertEqual(bc.column, 1)
+
+            self.assertEqual(d.line, 2)
+            self.assertEqual(d.column, 1)
+
+            # self.assertEqual(a.end_line, 1)
+            # self.assertEqual(a.end_col, 1)
+            # self.assertEqual(bc.end_line, 2)
+            # self.assertEqual(bc.end_col, 1)
+            # self.assertEqual(d.end_line, 2)
+            # self.assertEqual(d.end_col, 2)
+
+
+
         def test_reduce_cycle(self):
             """Tests an edge-condition in the LALR parser, in which a transition state looks exactly like the end state.
             It seems that the correct solution is to explicitely distinguish finalization in the reduce() function.
@@ -969,7 +1002,7 @@ def _make_parser_test(LEXER, PARSER):
 
             parser = _Lark(grammar)
 
-            tree = parser.parse("int 1 ! This is a comment\n")      
+            tree = parser.parse("int 1 ! This is a comment\n")
             self.assertEqual(tree.children, ['1'])
 
             tree = parser.parse("int 1 ! This is a comment")    # A trailing ignore token can be tricky!

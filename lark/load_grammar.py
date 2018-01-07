@@ -411,6 +411,7 @@ class Grammar:
         terms_to_ignore = {name:'__'+name for name in self.ignore}
         if terms_to_ignore:
             assert set(terms_to_ignore) <= {name for name, _t in term_defs}
+
             term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
             expr = Token('RULE', '__ignore')
             for r, tree, _o in rule_defs:
@@ -562,6 +563,7 @@ class GrammarLoader:
         d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
         rules, callback = ParseTreeBuilder(d, T).apply()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
+
         parser_conf = ParserConf(rules, callback, 'start')
         self.parser = LALR(lexer_conf, parser_conf)
 
@@ -636,13 +638,15 @@ class GrammarLoader:
             ignore_names.append(name)
             token_defs.append((name, (t, 0)))
 
-
         # Verify correctness 2
         token_names = set()
         for name, _ in token_defs:
             if name in token_names:
                 raise GrammarError("Token '%s' defined more than once" % name)
             token_names.add(name)
+
+        if set(ignore_names) > token_names:
+            raise GrammarError("Tokens %s were marked to ignore but were not defined!" % (set(ignore_names) - token_names))
 
         # Resolve token references
         resolve_token_references(token_defs)

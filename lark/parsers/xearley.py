@@ -127,7 +127,7 @@ class Parser:
 
             if token == '\n':
                 text_line += 1
-                text_column = 1
+                text_column = 0
             else:
                 text_column += 1
 

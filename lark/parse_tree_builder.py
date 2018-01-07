@@ -121,7 +121,7 @@ class ParseTreeBuilder:
 
             for expansion, alias in expansions:
                 if alias and origin.startswith('_'):
-                        raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
+                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
 
                 wrapper_chain = filter(None, [
                     (expand1 and not alias) and Expand1,

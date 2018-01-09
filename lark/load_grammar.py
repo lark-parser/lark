@@ -128,7 +128,7 @@ RULES = {
 
 class EBNF_to_BNF(InlineTransformer):
     def __init__(self):
-        self.new_rules = {}
+        self.new_rules = []
         self.rules_by_expr = {}
         self.prefix = 'anon'
         self.i = 0
@@ -141,7 +141,8 @@ class EBNF_to_BNF(InlineTransformer):
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
         t = Token('RULE', new_name, -1)
-        self.new_rules[new_name] = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])]), self.rule_options
+        tree = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])])
+        self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t
         return t
 
@@ -390,12 +391,6 @@ def _interleave(l, item):
 def _choice_of_rules(rules):
     return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
 
-def dict_update_safe(d1, d2):
-    for k, v in d2.items():
-        assert k not in d1
-        d1[k] = v
-
-
 class Grammar:
     def __init__(self, rule_defs, token_defs, ignore):
         self.token_defs = token_defs
@@ -468,38 +463,41 @@ class Grammar:
         # =================
         #  Compile Rules
         # =================
-        ebnf_to_bnf = EBNF_to_BNF()
-        simplify_rule = SimplifyRule_Visitor()
 
+        # 1. Pre-process terminals
         transformer = PrepareLiterals()
         if not lexer:
             transformer *= SplitLiterals()
         transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
 
-        rules = {}
+        # 2. Convert EBNF to BNF (and apply step 1)
+        ebnf_to_bnf = EBNF_to_BNF()
+        rules = []
         for name, rule_tree, options in rule_defs:
-            assert name not in rules, name
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
             tree = transformer.transform(rule_tree)
-            rules[name] = ebnf_to_bnf.transform(tree), options
+            rules.append((name, ebnf_to_bnf.transform(tree), options))
+        rules += ebnf_to_bnf.new_rules
 
-        dict_update_safe(rules, ebnf_to_bnf.new_rules)
+        assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
 
+        # 3. Compile tree to Rule objects
         rule_tree_to_text = RuleTreeToText()
 
-        new_rules = []
-        for origin, (tree, options) in rules.items():
+        simplify_rule = SimplifyRule_Visitor()
+        compiled_rules = []
+        for name, tree, options in rules:
             simplify_rule.visit(tree)
             expansions = rule_tree_to_text.transform(tree)
 
             for expansion, alias in expansions:
-                if alias and origin.startswith('_'):
-                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
+                if alias and name.startswith('_'):
+                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                rule = Rule(origin, expansion, alias, options)
-                new_rules.append(rule)
+                rule = Rule(name, expansion, alias, options)
+                compiled_rules.append(rule)
 
-        return tokens, new_rules, self.ignore
+        return tokens, compiled_rules, self.ignore
 
 
 
@@ -557,7 +555,7 @@ class GrammarLoader:
 
         rules = [options_from_rule(name, x) for name, x in RULES.items()]
         rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
-        callback = ParseTreeBuilder(rules, T).apply()
+        callback = ParseTreeBuilder(rules, T).create_callback()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, 'start')

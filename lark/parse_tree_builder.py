@@ -3,6 +3,8 @@ from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
 
+###{standalone
+
 class NodeBuilder:
     def __init__(self, tree_class, name):
         self.tree_class = tree_class
@@ -130,7 +132,7 @@ class ParseTreeBuilder:
             yield rule, wrapper_chain
 
 
-    def apply(self, transformer=None):
+    def create_callback(self, transformer=None):
         callback = Callback()
 
         for rule, wrapper_chain in self.rule_builders:
@@ -152,3 +154,5 @@ class ParseTreeBuilder:
             setattr(callback, internal_callback_name, f)
 
         return callback
+
+###}

@@ -4,12 +4,18 @@ import sys
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
+
+###{standalone
+def is_terminal(sym):
+    return sym.isupper()
+
 class GrammarError(Exception):
     pass
 
 class ParseError(Exception):
     pass
 
+###}
 
 class UnexpectedToken(ParseError):
     def __init__(self, token, expected, seq, index):
@@ -31,9 +37,6 @@ class UnexpectedToken(ParseError):
         super(UnexpectedToken, self).__init__(message)
 
 
-
-def is_terminal(sym):
-    return sym.isupper()
 
 
 class LexerConf:

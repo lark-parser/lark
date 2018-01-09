@@ -3,7 +3,7 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-from ..common import ParseError, UnexpectedToken
+from ..common import UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, Shift
 
@@ -19,6 +19,8 @@ class Parser:
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)
         self.parse = self.parser.parse
+
+###{standalone
 
 class _Parser:
     def __init__(self, parse_table, callbacks):
@@ -90,3 +92,5 @@ class _Parser:
                 return val
             else:
                 reduce(arg)
+
+###}

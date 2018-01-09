@@ -7,6 +7,7 @@ from copy import deepcopy
 
 from .utils import inline_args
 
+###{standalone
 class Tree(object):
     def __init__(self, data, children):
         self.data = data
@@ -33,6 +34,7 @@ class Tree(object):
 
     def pretty(self, indent_str='  '):
         return ''.join(self._pretty(0, indent_str))
+###}
 
     def expand_kids_by_index(self, *indices):
         for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
@@ -138,7 +140,7 @@ class TransformerChain(object):
 
     def __mul__(self, other):
         return TransformerChain(*self.transformers + (other,))
-        
+
 
 
 class InlineTransformer(Transformer):

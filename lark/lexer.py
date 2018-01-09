@@ -5,6 +5,7 @@ import re
 from .utils import Str, classify
 from .common import is_terminal, PatternStr, PatternRE, TokenDef
 
+###{standalone
 class LexError(Exception):
     pass
 
@@ -48,10 +49,60 @@ class Token(Str):
 
     __hash__ = Str.__hash__
 
-class Regex:
-    def __init__(self, pattern, flags=()):
-        self.pattern = pattern
-        self.flags = flags
+
+class LineCounter:
+    def __init__(self):
+        self.newline_char = '\n'
+        self.char_pos = 0
+        self.line = 1
+        self.column = 0
+        self.line_start_pos = 0
+
+    def feed(self, token, test_newline=True):
+        """Consume a token and calculate the new line & column.
+
+        As an optional optimization, set test_newline=False is token doesn't contain a newline.
+        """
+        if test_newline:
+            newlines = token.count(self.newline_char)
+            if newlines:
+                self.line += newlines
+                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
+
+        self.char_pos += len(token)
+        self.column = self.char_pos - self.line_start_pos
+
+class _Lex:
+    "Built to serve both Lexer and ContextualLexer"
+    def __init__(self, lexer):
+        self.lexer = lexer
+
+    def lex(self, stream, newline_types, ignore_types):
+        newline_types = list(newline_types)
+        newline_types = list(newline_types)
+        line_ctr = LineCounter()
+
+        while True:
+            lexer = self.lexer
+            for mre, type_from_index in lexer.mres:
+                m = mre.match(stream, line_ctr.char_pos)
+                if m:
+                    value = m.group(0)
+                    type_ = type_from_index[m.lastindex]
+                    if type_ not in ignore_types:
+                        t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                        if t.type in lexer.callback:
+                            t = lexer.callback[t.type](t)
+                        lexer = yield t
+
+                    line_ctr.feed(value, type_ in newline_types)
+                    break
+            else:
+                if line_ctr.char_pos < len(stream):
+                    raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                break
+###}
+
 
 def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
@@ -182,57 +233,3 @@ class ContextualLexer:
             l.lexer = self.lexers[self.parser_state]
 
 
-###{lexer
-
-class LineCounter:
-    def __init__(self):
-        self.newline_char = '\n'
-        self.char_pos = 0
-        self.line = 1
-        self.column = 0
-        self.line_start_pos = 0
-
-    def feed(self, token, test_newline=True):
-        """Consume a token and calculate the new line & column.
-
-        As an optional optimization, set test_newline=False is token doesn't contain a newline.
-        """
-        if test_newline:
-            newlines = token.count(self.newline_char)
-            if newlines:
-                self.line += newlines
-                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
-
-        self.char_pos += len(token)
-        self.column = self.char_pos - self.line_start_pos
-
-class _Lex:
-    "Built to serve both Lexer and ContextualLexer"
-    def __init__(self, lexer):
-        self.lexer = lexer
-
-    def lex(self, stream, newline_types, ignore_types):
-        newline_types = list(newline_types)
-        newline_types = list(newline_types)
-        line_ctr = LineCounter()
-
-        while True:
-            lexer = self.lexer
-            for mre, type_from_index in lexer.mres:
-                m = mre.match(stream, line_ctr.char_pos)
-                if m:
-                    value = m.group(0)
-                    type_ = type_from_index[m.lastindex]
-                    if type_ not in ignore_types:
-                        t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                        if t.type in lexer.callback:
-                            t = lexer.callback[t.type](t)
-                        lexer = yield t
-
-                    line_ctr.feed(value, type_ in newline_types)
-                    break
-            else:
-                if line_ctr.char_pos < len(stream):
-                    raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                break
-###}

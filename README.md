@@ -100,7 +100,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 #### Feature comparison
 
 | Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG? | Line/Column tracking |
-|:--------|:----------|:----|:--------|:------------|:------------
+|:--------|:----------|:----|:--------|:------------|:------------|:----------
 | **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! | Yes! |
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No | No |
 | [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* | No |

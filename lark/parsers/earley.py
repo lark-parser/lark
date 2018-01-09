@@ -25,8 +25,7 @@ class Derivation(Tree):
     _hash = None
 
     def __init__(self, rule, items=None):
-        Tree.__init__(self, 'drv', items or [])
-        self.rule = rule
+        Tree.__init__(self, 'drv', items or [], rule=rule)
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
         return self.rule.origin if self.rule else self.data

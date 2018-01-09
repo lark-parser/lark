@@ -109,6 +109,8 @@ class ParseTreeBuilder:
 
         self.rule_builders = list(self._init_builders(rules))
 
+        self.user_aliases = {}
+
     def _init_builders(self, rules):
         filter_out = set()
         for rule in rules:
@@ -144,6 +146,7 @@ class ParseTreeBuilder:
             except AttributeError:
                 f = NodeBuilder(self.tree_class, user_callback_name)
 
+            self.user_aliases[rule] = rule.alias
             rule.alias = internal_callback_name
 
             for w in wrapper_chain:

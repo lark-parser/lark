@@ -101,6 +101,7 @@ class Tree(object):
 
 
 
+###{standalone
 class Transformer(object):
     def _get_func(self, name):
         return getattr(self, name)
@@ -197,6 +198,7 @@ class Transformer_NoRecurse(Transformer):
 
     def __default__(self, t):
         return t
+###}
 
 
 def pydot__tree_to_png(tree, filename):

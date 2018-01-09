@@ -66,8 +66,8 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
  - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - **Earley** parser
-    - Can parse *ALL* context-free grammars
-    - Full support for ambiguity in grammar
+    - Can parse all context-free grammars
+    - Full support for ambiguous grammars
  - **LALR(1)** parser
     - Competitive with PLY
  - **EBNF** grammar
@@ -86,7 +86,7 @@ See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/
 
 #### Performance comparison
 
-Lower is better!
+Lark is the fastest and lightest (lower is better)
 
 ![Run-time Comparison](docs/comparison_runtime.png)
 
@@ -99,14 +99,14 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 #### Feature comparison
 
-| Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG?
+| Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG? | Line/Column tracking |
 |:--------|:----------|:----|:--------|:------------|:------------
-| **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! |
-| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No |
-| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* |
-| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Combinators | No | No | No |
-| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* |
+| **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! | Yes! |
+| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No | No |
+| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* | No |
+| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* | No |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Combinators | No | No | No | No |
+| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* | No |
 
 
 (\* *According to Wikipedia, it remains unanswered whether PEGs can really parse all deterministic CFGs*)

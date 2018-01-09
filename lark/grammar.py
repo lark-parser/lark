@@ -26,21 +26,6 @@ class RuleOptions:
 
         self.filter_out = filter_out        # remove this rule from the tree
                                             # used for "token"-rules in scanless
-    @classmethod
-    def from_rule(cls, name, *x):
-        if len(x) > 1:
-            priority, expansions = x
-            priority = int(priority)
-        else:
-            expansions ,= x
-            priority = None
-
-        keep_all_tokens = name.startswith('!')
-        name = name.lstrip('!')
-        expand1 = name.startswith('?')
-        name = name.lstrip('?')
-
-        return name, expansions, cls(keep_all_tokens, expand1, priority=priority)
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r, %r, %r)' % (

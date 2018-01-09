@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
-from .grammar import RuleOptions
+from .grammar import RuleOptions, Rule
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 
@@ -485,13 +485,21 @@ class Grammar:
 
         dict_update_safe(rules, ebnf_to_bnf.new_rules)
 
-        for tree, _o in rules.values():
-            simplify_rule.visit(tree)
-
         rule_tree_to_text = RuleTreeToText()
-        rules = {origin: (rule_tree_to_text.transform(tree), options) for origin, (tree, options) in rules.items()}
 
-        return tokens, rules, self.ignore
+        new_rules = []
+        for origin, (tree, options) in rules.items():
+            simplify_rule.visit(tree)
+            expansions = rule_tree_to_text.transform(tree)
+
+            for expansion, alias in expansions:
+                if alias and origin.startswith('_'):
+                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
+
+                rule = Rule(origin, expansion, alias, options)
+                new_rules.append(rule)
+
+        return tokens, new_rules, self.ignore
 
 
 
@@ -528,14 +536,28 @@ def resolve_token_references(token_defs):
         if not changed:
             break
 
+def options_from_rule(name, *x):
+    if len(x) > 1:
+        priority, expansions = x
+        priority = int(priority)
+    else:
+        expansions ,= x
+        priority = None
+
+    keep_all_tokens = name.startswith('!')
+    name = name.lstrip('!')
+    expand1 = name.startswith('?')
+    name = name.lstrip('?')
+
+    return name, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
 
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
-        rules = [RuleOptions.from_rule(name, x) for name, x in RULES.items()]
-        d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
-        rules, callback = ParseTreeBuilder(d, T).apply()
+        rules = [options_from_rule(name, x) for name, x in RULES.items()]
+        rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
+        callback = ParseTreeBuilder(rules, T).apply()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, 'start')
@@ -625,7 +647,7 @@ class GrammarLoader:
         # Resolve token references
         resolve_token_references(token_defs)
 
-        rules = [RuleOptions.from_rule(*x) for x in rule_defs]
+        rules = [options_from_rule(*x) for x in rule_defs]
 
         rule_names = set()
         for name, _x, _o in rules:

@@ -42,6 +42,7 @@ from collections import defaultdict
 
 import lark
 from lark import Lark
+from lark.parsers.lalr_analysis import Shift, Reduce
 
 from ..grammar import Rule
 
@@ -113,17 +114,15 @@ class GetRule:
         self.rule_id = rule_id
 
     def __repr__(self):
-        return 'RULE_ID[%d]' % self.rule_id
+        return 'RULES[%d]' % self.rule_id
 
+rule_ids = {}
+token_types = {}
 
-def get_rule_ids(x):
-    if isinstance(x, (tuple, list)):
-        return type(x)(map(get_rule_ids, x))
-    elif isinstance(x, dict):
-        return {get_rule_ids(k):get_rule_ids(v) for k, v in x.items()}
-    elif isinstance(x, Rule):
-        return GetRule(id(x))
-    return x
+def _get_token_type(token_type):
+    if token_type not in token_types:
+        token_types[token_type] = len(token_types)
+    return token_types[token_type]
 
 class ParserAtoms:
     def __init__(self, parser):
@@ -132,15 +131,22 @@ class ParserAtoms:
     def print_python(self):
         print('class ParseTable: pass')
         print('parse_table = ParseTable()')
-        print('parse_table.states = (')
-        pprint(get_rule_ids(self.parse_table.states))
+        print('STATES = {')
+        for state, actions in self.parse_table.states.items():
+            print('  %r: %r,' % (state, {_get_token_type(token): ((1, rule_ids[arg]) if action is Reduce else (0, arg))
+                            for token, (action, arg) in actions.items()}))
+        print('}')
+        print('TOKEN_TYPES = (')
+        pprint({v:k for k, v in token_types.items()})
         print(')')
+        print('parse_table.states = {s: {TOKEN_TYPES[t]: (a, RULES[x] if a is Reduce else x) for t, (a, x) in acts.items()}')
+        print('                      for s, acts in STATES.items()}')
         print('parse_table.start_state = %s' % self.parse_table.start_state)
         print('parse_table.end_state = %s' % self.parse_table.end_state)
         print('class Lark_StandAlone:')
         print('  def __init__(self, transformer=None, postlex=None):')
         print('     callback = parse_tree_builder.create_callback(transformer=transformer)')
-        print('     callbacks = {rule: getattr(callback, rule.alias or rule.origin, None) for rule in RULES}')
+        print('     callbacks = {rule: getattr(callback, rule.alias or rule.origin, None) for rule in RULES.values()}')
         print('     self.parser = _Parser(parse_table, callbacks)')
         print('     self.postlex = postlex')
         print('  def parse(self, stream):')
@@ -154,12 +160,12 @@ class TreeBuilderAtoms:
         self.ptb = lark._parse_tree_builder
 
     def print_python(self):
-        print('RULE_ID = {')
-        for r in self.rules:
-            print(' %d: Rule(%r, %r, %r, %r),' % (id(r), r.origin, r.expansion, self.ptb.user_aliases[r], r.options ))
+        print('RULES = {')
+        for i, r in enumerate(self.rules):
+            rule_ids[r] = i
+            print('  %d: Rule(%r, %r, %r, %r),' % (i, r.origin, r.expansion, self.ptb.user_aliases[r], r.options ))
         print('}')
-        print('RULES = list(RULE_ID.values())')
-        print('parse_tree_builder = ParseTreeBuilder(RULES, Tree)')
+        print('parse_tree_builder = ParseTreeBuilder(RULES.values(), Tree)')
 
 def main(fn, start):
     with codecs.open(fn, encoding='utf8') as f:

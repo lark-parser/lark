@@ -101,25 +101,23 @@ class _Lex:
                 if line_ctr.char_pos < len(stream):
                     raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                 break
-###}
 
+class UnlessCallback:
+    def __init__(self, mres):
+        self.mres = mres
 
-def _regexp_has_newline(r):
-    return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
-
-def _create_unless_callback(strs):
-    mres = build_mres(strs, match_whole=True)
-    def unless_callback(t):
-        # if t in strs:
-        #     t.type = strs[t]
-        for mre, type_from_index in mres:
+    def __call__(self, t):
+        for mre, type_from_index in self.mres:
             m = mre.match(t.value)
             if m:
                 value = m.group(0)
                 t.type = type_from_index[m.lastindex]
                 break
         return t
-    return unless_callback
+
+###}
+
+
 
 def _create_unless(tokens):
     tokens_by_type = classify(tokens, lambda t: type(t.pattern))
@@ -136,7 +134,7 @@ def _create_unless(tokens):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = _create_unless_callback(unless)
+            callback[retok.name] = UnlessCallback(build_mres(unless, match_whole=True))
 
     tokens = [t for t in tokens if t not in embedded_strs]
     return tokens, callback
@@ -161,7 +159,8 @@ def _build_mres(tokens, max_size, match_whole):
 def build_mres(tokens, match_whole=False):
     return _build_mres(tokens, len(tokens), match_whole)
 
-
+def _regexp_has_newline(r):
+    return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
 
 class Lexer:
     def __init__(self, tokens, ignore=()):

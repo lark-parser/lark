@@ -15,8 +15,6 @@ class GrammarError(Exception):
 class ParseError(Exception):
     pass
 
-###}
-
 class UnexpectedToken(ParseError):
     def __init__(self, token, expected, seq, index):
         self.token = token
@@ -36,6 +34,8 @@ class UnexpectedToken(ParseError):
 
         super(UnexpectedToken, self).__init__(message)
 
+
+###}
 
 
 

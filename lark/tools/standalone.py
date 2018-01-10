@@ -54,6 +54,7 @@ EXTRACT_STANDALONE_FILES = [
     'utils.py',
     'common.py',
     'tree.py',
+    'indenter.py',
     'lexer.py',
     'parse_tree_builder.py',
     'parsers/lalr_parser.py',
@@ -81,22 +82,27 @@ def extract_sections(lines):
 
 class LexerAtoms:
     def __init__(self, lexer):
-        assert not lexer.callback
         self.mres = [(p.pattern,d) for p,d in lexer.mres]
         self.newline_types = lexer.newline_types
         self.ignore_types = lexer.ignore_types
+        self.callback = {name:[(p.pattern,d) for p,d in c.mres]
+                         for name, c in lexer.callback.items()}
 
     def print_python(self):
         print('import re')
         print('MRES = (')
         pprint(self.mres)
         print(')')
+        print('LEXER_CALLBACK = (')
+        pprint(self.callback)
+        print(')')
         print('NEWLINE_TYPES = %s' % self.newline_types)
         print('IGNORE_TYPES = %s' % self.ignore_types)
         print('class LexerRegexps: pass')
         print('lexer_regexps = LexerRegexps()')
         print('lexer_regexps.mres = [(re.compile(p), d) for p, d in MRES]')
-        print('lexer_regexps.callback = {}')
+        print('lexer_regexps.callback = {n: UnlessCallback([(re.compile(p), d) for p, d in mres])')
+        print('                          for n, mres in LEXER_CALLBACK.items()}')
         print('lexer = _Lex(lexer_regexps)')
         print('def lex(stream):')
         print('    return lexer.lex(stream, NEWLINE_TYPES, IGNORE_TYPES)')
@@ -132,12 +138,15 @@ class ParserAtoms:
         print('parse_table.start_state = %s' % self.parse_table.start_state)
         print('parse_table.end_state = %s' % self.parse_table.end_state)
         print('class Lark_StandAlone:')
-        print('  def __init__(self, transformer=None):')
+        print('  def __init__(self, transformer=None, postlex=None):')
         print('     callback = parse_tree_builder.create_callback(transformer=transformer)')
         print('     callbacks = {rule: getattr(callback, rule.alias or rule.origin, None) for rule in RULES}')
         print('     self.parser = _Parser(parse_table, callbacks)')
+        print('     self.postlex = postlex')
         print('  def parse(self, stream):')
-        print('     return self.parser.parse(lex(stream))')
+        print('     tokens = lex(stream)')
+        print('     if self.postlex: tokens = self.postlex.process(tokens)')
+        print('     return self.parser.parse(tokens)')
 
 class TreeBuilderAtoms:
     def __init__(self, lark):
@@ -152,9 +161,9 @@ class TreeBuilderAtoms:
         print('RULES = list(RULE_ID.values())')
         print('parse_tree_builder = ParseTreeBuilder(RULES, Tree)')
 
-def main(fn):
+def main(fn, start):
     with codecs.open(fn, encoding='utf8') as f:
-        lark_inst = Lark(f, parser="lalr")
+        lark_inst = Lark(f, parser="lalr", start=start)
 
     lexer_atoms = LexerAtoms(lark_inst.parser.lexer)
     parser_atoms = ParserAtoms(lark_inst.parser.parser)
@@ -175,9 +184,14 @@ def main(fn):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Lark Stand-alone Generator Tool")
-        print("Usage: python -m lark.tools.standalone <grammar-file>")
+        print("Usage: python -m lark.tools.standalone <grammar-file> [<start>]")
         sys.exit(1)
 
-    fn ,= sys.argv[1:]
+    if len(sys.argv) == 3:
+        fn, start = sys.argv[1:]
+    elif len(sys.argv) == 2:
+        fn, start = sys.argv[1], 'start'
+    else:
+        assert False, sys.argv
 
-    main(fn)
+    main(fn, start)

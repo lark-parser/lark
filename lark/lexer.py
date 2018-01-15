@@ -79,7 +79,7 @@ class _Lex:
 
     def lex(self, stream, newline_types, ignore_types):
         newline_types = list(newline_types)
-        newline_types = list(newline_types)
+        ignore_types = list(ignore_types)
         line_ctr = LineCounter()
 
         while True:
@@ -93,7 +93,7 @@ class _Lex:
                         t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                         if t.type in lexer.callback:
                             t = lexer.callback[t.type](t)
-                        lexer = yield t
+                        yield t
 
                     line_ctr.feed(value, type_ in newline_types)
                     break

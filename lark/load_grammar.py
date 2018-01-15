@@ -196,7 +196,7 @@ class SimplifyRule_Visitor(Visitor):
                     tree.data = 'expansions'
                     tree.children = [self.visit(T('expansion', [option if i==j else other
                                                                 for j, other in enumerate(tree.children)]))
-                                     for option in child.children]
+                                     for option in set(child.children)]
                     break
             else:
                 break

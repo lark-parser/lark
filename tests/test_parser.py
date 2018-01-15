@@ -796,6 +796,16 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['a', 'A'])
 
 
+        def test_twice_empty(self):
+            g = """!start: [["A"]]
+                """
+            l = _Lark(g)
+            tree = l.parse('A')
+            self.assertEqual(tree.children, ['A'])
+
+            tree = l.parse('')
+            self.assertEqual(tree.children, [])
+
         def test_undefined_ignore(self):
             g = """!start: "A"
 
@@ -1014,6 +1024,7 @@ def _make_parser_test(LEXER, PARSER):
             """)
             tree = parser.parse("bb")
             self.assertEqual(tree.children, [])
+
 
 
         @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")

@@ -112,3 +112,10 @@ except NameError:
             return -1
 
 
+import sre_parse
+import sre_constants
+def get_regexp_width(regexp):
+    try:
+        return sre_parse.parse(regexp).getwidth()
+    except sre_constants.error:
+        raise ValueError(regexp)

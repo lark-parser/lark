@@ -1,5 +1,5 @@
 import re
-import sre_parse
+from .utils import get_regexp_width
 
 from .lexer import Lexer, ContextualLexer, Token
 
@@ -77,7 +77,7 @@ class Earley_NoLex:
         self.regexps = {}
         for t in lexer_conf.tokens:
             regexp = t.pattern.to_regexp()
-            width = sre_parse.parse(regexp).getwidth()
+            width = get_regexp_width(regexp)
             if width != (1,1):
                 raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
             self.regexps[t.name] = re.compile(regexp)
@@ -121,7 +121,10 @@ class XEarley:
         self.regexps = {}
         for t in lexer_conf.tokens:
             regexp = t.pattern.to_regexp()
-            assert sre_parse.parse(regexp).getwidth()
+            try:
+                assert get_regexp_width(regexp)
+            except ValueError:
+                raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
             self.regexps[t.name] = re.compile(regexp)
 
     def parse(self, text):

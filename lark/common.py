@@ -1,6 +1,7 @@
 import re
-import sre_parse
 import sys
+
+from .utils import get_regexp_width
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
@@ -95,10 +96,10 @@ class PatternRE(Pattern):
 
     @property
     def min_width(self):
-        return sre_parse.parse(self.to_regexp()).getwidth()[0]
+        return get_regexp_width(self.to_regexp())[0]
     @property
     def max_width(self):
-        return sre_parse.parse(self.to_regexp()).getwidth()[1]
+        return get_regexp_width(self.to_regexp())[1]
 
 class TokenDef(object):
     def __init__(self, name, pattern, priority=1):

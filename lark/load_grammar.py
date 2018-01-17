@@ -176,7 +176,6 @@ class SimplifyRule_Visitor(Visitor):
                 break
             tree.expand_kids_by_index(*to_expand)
 
-
     def expansion(self, tree):
         # rules_list unpacking
         # a : b (c|d) e
@@ -210,7 +209,10 @@ class SimplifyRule_Visitor(Visitor):
             tree.data = 'expansions'
             tree.children = aliases
 
-    expansions = _flatten
+    def expansions(self, tree):
+        self._flatten(tree)
+        tree.children = list(set(tree.children))
+
 
 class RuleTreeToText(Transformer):
     def expansions(self, x):

@@ -159,7 +159,7 @@ def _make_full_earley_test(LEXER):
             # Fails an Earley implementation without special handling for empty rules,
             # or re-processing of already completed rules.
             g = Lark(r"""start: B
-                         B: ("ab"|/[^b]/)*
+                         B: ("ab"|/[^b]/)+
                       """, lexer=LEXER)
 
             self.assertEqual( g.parse('abc').children[0], 'abc')

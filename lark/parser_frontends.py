@@ -122,9 +122,13 @@ class XEarley:
         for t in lexer_conf.tokens:
             regexp = t.pattern.to_regexp()
             try:
-                assert get_regexp_width(regexp)
+                width = get_regexp_width(regexp)[0]
             except ValueError:
                 raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
+            else:
+                if width == 0:
+                    raise ValueError("Dynamic Earley doesn't allow zero-width regexps")
+
             self.regexps[t.name] = re.compile(regexp)
 
     def parse(self, text):

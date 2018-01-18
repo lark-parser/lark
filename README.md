@@ -12,6 +12,7 @@ Lark can:
  - Build a parse-tree automagically, no construction code required
  - Outperform all other Python libraries when using LALR(1) (Yes, including PLY)
  - Run on every Python interpreter (it's pure-python)
+ - Generate a stand-alone parser (for LALR(1) grammars)
 
 And many more features. Read ahead and find out.
 
@@ -66,10 +67,11 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
 
  - Builds a parse-tree (AST) automagically, based on the structure of the grammar
  - **Earley** parser
-    - Can parse *ALL* context-free grammars
-    - Full support for ambiguity in grammar
+    - Can parse all context-free grammars
+    - Full support for ambiguous grammars
  - **LALR(1)** parser
-    - Competitive with PLY
+    - Fast and light, competitive with PLY
+    - Can generate a stand-alone parser
  - **EBNF** grammar
  - **Unicode** fully supported
  - **Python 2 & 3** compatible
@@ -86,7 +88,7 @@ See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/
 
 #### Performance comparison
 
-Lower is better!
+Lark is the fastest and lightest (lower is better)
 
 ![Run-time Comparison](docs/comparison_runtime.png)
 
@@ -99,17 +101,17 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 #### Feature comparison
 
-| Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG?
-|:--------|:----------|:----|:--------|:------------|:------------
-| **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! |
-| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No |
-| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* |
-| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* |
-| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Combinators | No | No | No |
-| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* |
+| Library | Algorithm | Grammar | Builds tree? | Supports ambiguity? | Can handle every CFG? | Line/Column tracking | Generates Stand-alone
+|:--------|:----------|:----|:--------|:------------|:------------|:----------|:----------
+| **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! | Yes! | Yes! (LALR only) |
+| [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No | No | No |
+| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* | No | No |
+| [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* | No | No |
+| [funcparserlib](https://github.com/vlasovskikh/funcparserlib) | Recursive-Descent | Combinators | No | No | No | No | No |
+| [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* | No | No |
 
 
-(\* *According to Wikipedia, it remains unanswered whether PEGs can really parse all deterministic CFGs*)
+(\* *PEGs cannot handle non-deterministic grammars. Also, according to Wikipedia, it remains unanswered whether PEGs can really parse all deterministic CFGs*)
 
 
 ### Projects using Lark

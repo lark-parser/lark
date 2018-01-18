@@ -12,6 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
+from .grammar import RuleOptions, Rule
 
 from .tree import Tree as T, Transformer, InlineTransformer, Visitor
 
@@ -127,7 +128,7 @@ RULES = {
 
 class EBNF_to_BNF(InlineTransformer):
     def __init__(self):
-        self.new_rules = {}
+        self.new_rules = []
         self.rules_by_expr = {}
         self.prefix = 'anon'
         self.i = 0
@@ -140,7 +141,8 @@ class EBNF_to_BNF(InlineTransformer):
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
         t = Token('RULE', new_name, -1)
-        self.new_rules[new_name] = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])]), self.rule_options
+        tree = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])])
+        self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t
         return t
 
@@ -174,7 +176,6 @@ class SimplifyRule_Visitor(Visitor):
                 break
             tree.expand_kids_by_index(*to_expand)
 
-
     def expansion(self, tree):
         # rules_list unpacking
         # a : b (c|d) e
@@ -194,7 +195,7 @@ class SimplifyRule_Visitor(Visitor):
                     tree.data = 'expansions'
                     tree.children = [self.visit(T('expansion', [option if i==j else other
                                                                 for j, other in enumerate(tree.children)]))
-                                     for option in child.children]
+                                     for option in set(child.children)]
                     break
             else:
                 break
@@ -208,7 +209,10 @@ class SimplifyRule_Visitor(Visitor):
             tree.data = 'expansions'
             tree.children = aliases
 
-    expansions = _flatten
+    def expansions(self, tree):
+        self._flatten(tree)
+        tree.children = list(set(tree.children))
+
 
 class RuleTreeToText(Transformer):
     def expansions(self, x):
@@ -389,12 +393,6 @@ def _interleave(l, item):
 def _choice_of_rules(rules):
     return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
 
-def dict_update_safe(d1, d2):
-    for k, v in d2.items():
-        assert k not in d1
-        d1[k] = v
-
-
 class Grammar:
     def __init__(self, rule_defs, token_defs, ignore):
         self.token_defs = token_defs
@@ -411,6 +409,7 @@ class Grammar:
         terms_to_ignore = {name:'__'+name for name in self.ignore}
         if terms_to_ignore:
             assert set(terms_to_ignore) <= {name for name, _t in term_defs}
+
             term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
             expr = Token('RULE', '__ignore')
             for r, tree, _o in rule_defs:
@@ -466,57 +465,41 @@ class Grammar:
         # =================
         #  Compile Rules
         # =================
-        ebnf_to_bnf = EBNF_to_BNF()
-        simplify_rule = SimplifyRule_Visitor()
 
+        # 1. Pre-process terminals
         transformer = PrepareLiterals()
         if not lexer:
             transformer *= SplitLiterals()
         transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
 
-        rules = {}
+        # 2. Convert EBNF to BNF (and apply step 1)
+        ebnf_to_bnf = EBNF_to_BNF()
+        rules = []
         for name, rule_tree, options in rule_defs:
-            assert name not in rules, name
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
             tree = transformer.transform(rule_tree)
-            rules[name] = ebnf_to_bnf.transform(tree), options
+            rules.append((name, ebnf_to_bnf.transform(tree), options))
+        rules += ebnf_to_bnf.new_rules
 
-        dict_update_safe(rules, ebnf_to_bnf.new_rules)
+        assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
 
-        for tree, _o in rules.values():
-            simplify_rule.visit(tree)
-
+        # 3. Compile tree to Rule objects
         rule_tree_to_text = RuleTreeToText()
-        rules = {origin: (rule_tree_to_text.transform(tree), options) for origin, (tree, options) in rules.items()}
 
-        return tokens, rules, self.ignore
+        simplify_rule = SimplifyRule_Visitor()
+        compiled_rules = []
+        for name, tree, options in rules:
+            simplify_rule.visit(tree)
+            expansions = rule_tree_to_text.transform(tree)
 
+            for expansion, alias in expansions:
+                if alias and name.startswith('_'):
+                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
+                rule = Rule(name, expansion, alias, options)
+                compiled_rules.append(rule)
 
-class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False, priority=None):
-        self.keep_all_tokens = keep_all_tokens
-        self.expand1 = expand1
-        self.create_token = create_token  # used for scanless postprocessing
-        self.priority = priority
-
-        self.filter_out = filter_out        # remove this rule from the tree
-                                            # used for "token"-rules in scanless
-    @classmethod
-    def from_rule(cls, name, *x):
-        if len(x) > 1:
-            priority, expansions = x
-            priority = int(priority)
-        else:
-            expansions ,= x
-            priority = None
-
-        keep_all_tokens = name.startswith('!')
-        name = name.lstrip('!')
-        expand1 = name.startswith('?')
-        name = name.lstrip('?')
-
-        return name, expansions, cls(keep_all_tokens, expand1, priority=priority)
+        return tokens, compiled_rules, self.ignore
 
 
 
@@ -553,15 +536,30 @@ def resolve_token_references(token_defs):
         if not changed:
             break
 
+def options_from_rule(name, *x):
+    if len(x) > 1:
+        priority, expansions = x
+        priority = int(priority)
+    else:
+        expansions ,= x
+        priority = None
+
+    keep_all_tokens = name.startswith('!')
+    name = name.lstrip('!')
+    expand1 = name.startswith('?')
+    name = name.lstrip('?')
+
+    return name, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
 
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
-        rules = [RuleOptions.from_rule(name, x) for name, x in RULES.items()]
-        d = {r: ([(x.split(), None) for x in xs], o) for r, xs, o in rules}
-        rules, callback = ParseTreeBuilder(d, T).apply()
+        rules = [options_from_rule(name, x) for name, x in RULES.items()]
+        rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
+        callback = ParseTreeBuilder(rules, T).create_callback()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
+
         parser_conf = ParserConf(rules, callback, 'start')
         self.parser = LALR(lexer_conf, parser_conf)
 
@@ -636,7 +634,6 @@ class GrammarLoader:
             ignore_names.append(name)
             token_defs.append((name, (t, 0)))
 
-
         # Verify correctness 2
         token_names = set()
         for name, _ in token_defs:
@@ -644,10 +641,13 @@ class GrammarLoader:
                 raise GrammarError("Token '%s' defined more than once" % name)
             token_names.add(name)
 
+        if set(ignore_names) > token_names:
+            raise GrammarError("Tokens %s were marked to ignore but were not defined!" % (set(ignore_names) - token_names))
+
         # Resolve token references
         resolve_token_references(token_defs)
 
-        rules = [RuleOptions.from_rule(*x) for x in rule_defs]
+        rules = [options_from_rule(*x) for x in rule_defs]
 
         rule_names = set()
         for name, _x, _o in rules:

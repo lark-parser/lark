@@ -1,6 +1,9 @@
 from .common import is_terminal, GrammarError
 from .utils import suppress
 from .lexer import Token
+from .grammar import Rule
+
+###{standalone
 
 class NodeBuilder:
     def __init__(self, tree_class, name):
@@ -27,7 +30,7 @@ class Factory:
 
     def __call__(self, node_builder):
         return self.cls(node_builder, *self.args)
-                 
+
 
 class TokenWrapper:
     "Used for fixing the results of scanless parsing"
@@ -106,51 +109,53 @@ class ParseTreeBuilder:
 
         self.rule_builders = list(self._init_builders(rules))
 
+        self.user_aliases = {}
+
     def _init_builders(self, rules):
         filter_out = set()
-        for origin, (expansions, options) in rules.items():
-            if options and options.filter_out:
-                assert origin.startswith('_')   # Just to make sure
-                filter_out.add(origin)
+        for rule in rules:
+            if rule.options and rule.options.filter_out:
+                assert rule.origin.startswith('_')   # Just to make sure
+                filter_out.add(rule.origin)
 
-        for origin, (expansions, options) in rules.items():
+        for rule in rules:
+            options = rule.options
             keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
             expand1 = options.expand1 if options else False
             create_token = options.create_token if options else False
 
-            for expansion, alias in expansions:
-                if alias and origin.startswith('_'):
-                        raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (origin, alias))
+            wrapper_chain = filter(None, [
+                (expand1 and not rule.alias) and Expand1,
+                create_token and Factory(TokenWrapper, create_token),
+                create_rule_handler(rule.expansion, keep_all_tokens, filter_out),
+                self.propagate_positions and PropagatePositions,
+            ])
 
-                wrapper_chain = filter(None, [
-                    (expand1 and not alias) and Expand1,
-                    create_token and Factory(TokenWrapper, create_token),
-                    create_rule_handler(expansion, keep_all_tokens, filter_out),
-                    self.propagate_positions and PropagatePositions,
-                ])
-
-                yield origin, expansion, options, alias or origin, wrapper_chain
+            yield rule, wrapper_chain
 
 
-    def apply(self, transformer=None):
+    def create_callback(self, transformer=None):
         callback = Callback()
 
-        new_rules = []
-        for origin, expansion, options, alias, wrapper_chain in self.rule_builders:
-            callback_name = '_callback_%s_%s' % (origin, '_'.join(expansion))
+        for rule, wrapper_chain in self.rule_builders:
+            internal_callback_name = '_callback_%s_%s' % (rule.origin, '_'.join(rule.expansion))
 
+            user_callback_name = rule.alias or rule.origin
             try:
-                f = transformer._get_func(alias)
+                f = transformer._get_func(user_callback_name)
             except AttributeError:
-                f = NodeBuilder(self.tree_class, alias)
+                f = NodeBuilder(self.tree_class, user_callback_name)
+
+            self.user_aliases[rule] = rule.alias
+            rule.alias = internal_callback_name
 
             for w in wrapper_chain:
                 f = w(f)
 
-            if hasattr(callback, callback_name):
-                raise GrammarError("Rule expansion '%s' already exists in rule %s" % (' '.join(expansion), origin))
-            setattr(callback, callback_name, f)
+            if hasattr(callback, internal_callback_name):
+                raise GrammarError("Rule '%s' already exists" % (rule,))
+            setattr(callback, internal_callback_name, f)
 
-            new_rules.append(( origin, expansion, callback_name, options ))
+        return callback
 
-        return new_rules, callback
+###}

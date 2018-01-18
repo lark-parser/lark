@@ -20,7 +20,7 @@
 
 from collections import defaultdict
 
-from ..common import ParseError, UnexpectedToken, Terminal
+from ..common import ParseError, UnexpectedToken, is_terminal
 from ..lexer import Token, UnexpectedInput
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
@@ -28,37 +28,34 @@ from .grammar_analysis import GrammarAnalyzer
 from .earley import ApplyCallbacks, Item, Column
 
 class Parser:
-    def __init__(self, rules, start_symbol, callback, resolve_ambiguity=None, ignore=(), predict_all=False):
-        self.analysis = GrammarAnalyzer(rules, start_symbol)
-        self.start_symbol = start_symbol
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False):
+        self.analysis = GrammarAnalyzer(parser_conf)
+        self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = list(ignore)
         self.predict_all = predict_all
 
-
+        self.FIRST = self.analysis.FIRST
         self.postprocess = {}
         self.predictions = {}
-        self.FIRST = {}
+        for rule in parser_conf.rules:
+            self.postprocess[rule] = getattr(parser_conf.callback, rule.alias)
+            self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
-        for rule in self.analysis.rules:
-            if rule.origin != '$root':  # XXX kinda ugly
-                a = rule.alias
-                self.postprocess[rule] = a if callable(a) else (a and getattr(callback, a))
-                self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
-
-                self.FIRST[rule.origin] = self.analysis.FIRST[rule.origin]
+        self.term_matcher = term_matcher
 
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.start_symbol
+        start_symbol = start_symbol or self.parser_conf.start
         delayed_matches = defaultdict(list)
+        match = self.term_matcher
 
         text_line = 1
         text_column = 0
 
         def predict(nonterm, column):
-            assert not isinstance(nonterm, Terminal), nonterm
+            assert not is_terminal(nonterm), nonterm
             return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):
@@ -77,16 +74,15 @@ class Parser:
                     column.add( predict(nonterm, column) )
                 for item in to_reduce:
                     new_items = list(complete(item))
-                    for new_item in new_items:
-                        if new_item.similar(item):
-                            raise ParseError('Infinite recursion detected! (rule %s)' % new_item.rule)
+                    if item in new_items:
+                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
                     column.add(new_items)
 
         def scan(i, token, column):
             to_scan = column.to_scan
 
             for x in self.ignore:
-                m = x.match(stream, i)
+                m = match(x, stream, i)
                 if m:
                     delayed_matches[m.end()] += set(to_scan)
                     delayed_matches[m.end()] += set(column.to_reduce)
@@ -99,16 +95,16 @@ class Parser:
                     #         delayed_matches[m.end()] += to_scan
 
             for item in to_scan:
-                m = item.expect.match(stream, i)
+                m = match(item.expect, stream, i)
                 if m:
-                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                    t = Token(item.expect, m.group(0), i, text_line, text_column)
                     delayed_matches[m.end()].append(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
-                        m = item.expect.match(s[:-j])
+                        m = match(item.expect, s[:-j])
                         if m:
-                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                            t = Token(item.expect, m.group(0), i, text_line, text_column)
                             delayed_matches[i+m.end()].append(item.advance(t))
 
             next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)
@@ -131,7 +127,7 @@ class Parser:
 
             if token == '\n':
                 text_line += 1
-                text_column = 1
+                text_column = 0
             else:
                 text_column += 1
 
@@ -143,7 +139,7 @@ class Parser:
                      if n.rule.origin==start_symbol and n.start is column0]
 
         if not solutions:
-            expected_tokens = [t.expect.name for t in column.to_scan]
+            expected_tokens = [t.expect for t in column.to_scan]
             raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
 
         elif len(solutions) == 1:

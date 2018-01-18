@@ -2,6 +2,7 @@
 
 from .lexer import Token
 
+###{standalone
 class Indenter:
     def __init__(self):
         self.paren_level = 0
@@ -50,3 +51,5 @@ class Indenter:
     @property
     def always_accept(self):
         return (self.NL_type,)
+
+###}

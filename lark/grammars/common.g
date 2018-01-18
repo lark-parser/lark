@@ -12,6 +12,7 @@ DECIMAL: INT "." INT? | "." INT
 // float = /-?\d+(\.\d+)?([eE][+-]?\d+)?/
 _EXP: ("e"|"E") SIGNED_INT
 FLOAT: INT _EXP | DECIMAL _EXP?
+SIGNED_FLOAT: ["+"|"-"] INT
 
 NUMBER: FLOAT | INT
 SIGNED_NUMBER: ["+"|"-"] NUMBER

@@ -1,15 +1,20 @@
 import re
-import sre_parse
 import sys
 
+from .utils import get_regexp_width
+
 Py36 = (sys.version_info[:2] >= (3, 6))
+
+
+###{standalone
+def is_terminal(sym):
+    return sym.isupper()
 
 class GrammarError(Exception):
     pass
 
 class ParseError(Exception):
     pass
-
 
 class UnexpectedToken(ParseError):
     def __init__(self, token, expected, seq, index):
@@ -31,9 +36,8 @@ class UnexpectedToken(ParseError):
         super(UnexpectedToken, self).__init__(message)
 
 
+###}
 
-def is_terminal(sym):
-    return isinstance(sym, Terminal) or sym.isupper() or sym == '$end'
 
 
 class LexerConf:
@@ -44,7 +48,6 @@ class LexerConf:
 
 class ParserConf:
     def __init__(self, rules, callback, start):
-        assert all(len(r) == 4 for r in rules)
         self.rules = rules
         self.callback = callback
         self.start = start
@@ -93,10 +96,10 @@ class PatternRE(Pattern):
 
     @property
     def min_width(self):
-        return sre_parse.parse(self.to_regexp()).getwidth()[0]
+        return get_regexp_width(self.to_regexp())[0]
     @property
     def max_width(self):
-        return sre_parse.parse(self.to_regexp()).getwidth()[1]
+        return get_regexp_width(self.to_regexp())[1]
 
 class TokenDef(object):
     def __init__(self, name, pattern, priority=1):
@@ -107,28 +110,4 @@ class TokenDef(object):
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
-
-
-class Terminal:
-    def __init__(self, data):
-        self.data = data
-
-    def __repr__(self):
-        return '%r' % self.data
-
-    def __eq__(self, other):
-        return isinstance(other, type(self)) and self.data == other.data
-    def __hash__(self):
-        return hash(self.data)
-
-
-class Terminal_Regexp(Terminal):
-    def __init__(self, name, regexp):
-        Terminal.__init__(self, regexp)
-        self.name = name
-        self.match = re.compile(regexp).match
-
-class Terminal_Token(Terminal):
-    def match(self, other):
-        return self.data == other.type
 

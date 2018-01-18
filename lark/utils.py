@@ -1,7 +1,4 @@
-import functools
-import types
 from collections import deque
-from contextlib import contextmanager
 
 class fzset(frozenset):
     def __repr__(self):
@@ -49,8 +46,13 @@ try:
 except NameError:   # Python 3
     STRING_TYPE = str
 
-Str = type(u'')
+###{standalone
 
+import types
+import functools
+from contextlib import contextmanager
+
+Str = type(u'')
 
 def inline_args(f):
     # print '@@', f.__name__, type(f), isinstance(f, types.FunctionType), isinstance(f, types.TypeType), isinstance(f, types.BuiltinFunctionType)
@@ -76,19 +78,6 @@ def inline_args(f):
         return _f
 
 
-
-try:
-    compare = cmp
-except NameError:
-    def compare(a, b):
-        if a == b:
-            return 0
-        elif a > b:
-            return 1
-        else:
-            return -1
-
-
 try:
     from contextlib import suppress     # Python 3
 except ImportError:
@@ -107,6 +96,26 @@ except ImportError:
         except excs:
             pass
 
+###}
 
 
 
+try:
+    compare = cmp
+except NameError:
+    def compare(a, b):
+        if a == b:
+            return 0
+        elif a > b:
+            return 1
+        else:
+            return -1
+
+
+import sre_parse
+import sre_constants
+def get_regexp_width(regexp):
+    try:
+        return sre_parse.parse(regexp).getwidth()
+    except sre_constants.error:
+        raise ValueError(regexp)

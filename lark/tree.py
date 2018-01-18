@@ -7,6 +7,7 @@ from copy import deepcopy
 
 from .utils import inline_args
 
+###{standalone
 class Tree(object):
     def __init__(self, data, children, rule=None):
         self.data = data
@@ -34,6 +35,7 @@ class Tree(object):
 
     def pretty(self, indent_str='  '):
         return ''.join(self._pretty(0, indent_str))
+###}
 
     def expand_kids_by_index(self, *indices):
         for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
@@ -100,6 +102,7 @@ class Tree(object):
 
 
 
+###{standalone
 class Transformer(object):
     def _get_func(self, name):
         return getattr(self, name)
@@ -139,7 +142,7 @@ class TransformerChain(object):
 
     def __mul__(self, other):
         return TransformerChain(*self.transformers + (other,))
-        
+
 
 
 class InlineTransformer(Transformer):
@@ -196,6 +199,7 @@ class Transformer_NoRecurse(Transformer):
 
     def __default__(self, t):
         return t
+###}
 
 
 def pydot__tree_to_png(tree, filename):

@@ -121,12 +121,13 @@ AWAIT: "await"
      | "{" [dictorsetmaker] "}" -> dict
      | NAME -> var
      | number | string+
+     | "(" test ")"
      | "..." -> ellipsis
      | "None"    -> const_none
      | "True"    -> const_true
      | "False"   -> const_false
 
-testlist_comp: (test|star_expr) ( comp_for | ("," (test|star_expr))* [","] )
+?testlist_comp: (test|star_expr) ( comp_for | ("," (test|star_expr))+ [","] | ",")
 subscriptlist: subscript ("," subscript)* [","]
 subscript: test | [test] ":" [test] [sliceop]
 sliceop: ":" [test]

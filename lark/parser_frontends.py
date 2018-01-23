@@ -1,10 +1,11 @@
 import re
 from .utils import get_regexp_width
 
-from parsers.grammar_analysis import GrammarAnalyzer
+from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import is_terminal, GrammarError, Terminal_Regexp, Terminal_Token
+from .common import GrammarError
+from .common import is_terminal, GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
 
@@ -137,31 +138,36 @@ class XEarley:
         return self.parser.parse(text)
 
 
+class Earley(WithLexer):
+    def __init__(self, lexer_conf, parser_conf, options=None):
+        self.init_traditional_lexer(lexer_conf)
+
+        self.parser = earley.Parser(parser_conf, self.match,
+                                    resolve_ambiguity=get_ambiguity_resolver(options))
+
+    def match(self, term, token):
+        return term == token.type
+
+    def parse(self, text):
+        tokens = self.lex(text)
+        return self.parser.parse(tokens)
+
 class CYK(WithLexer):
 
   def __init__(self, lexer_conf, parser_conf, options=None):
-    WithLexer.__init__(self, lexer_conf)
-    # TokenDef from synthetic rule to terminal value
-    self._token_by_name = {t.name: t for t in lexer_conf.tokens}
-    rules = [(lhs, self._prepare_expansion(rhs), cb, opt) for lhs, rhs, cb, opt in parser_conf.rules]
-    self._analysis = GrammarAnalyzer(rules, parser_conf.start)
+    self.init_traditional_lexer(lexer_conf)
+
+    self._analysis = GrammarAnalyzer(parser_conf)
     self._parser = cyk.Parser(self._analysis.rules, parser_conf.start)
 
     self._postprocess = {}
     for rule in self._analysis.rules:
-        if rule.origin != '$root':  # XXX kinda ugly
-            a = rule.alias
-            self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
-
-  def _prepare_expansion(self, expansion):
-    return [
-        Terminal_Regexp(sym, self._token_by_name[sym].pattern.to_regexp())
-        if is_terminal(sym) else sym for sym in expansion
-    ]
+        a = rule.alias
+        self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
 
   def parse(self, text):
-    tokenized = [token.value for token in self.lex(text)]
-    parse = self._parser.parse(tokenized)
+    tokens = list(self.lex(text))
+    parse = self._parser.parse(tokens)
     parse = self._transform(parse)
     return parse
 

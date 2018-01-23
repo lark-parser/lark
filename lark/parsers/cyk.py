@@ -78,11 +78,10 @@ class Grammar(object):
     """Context-free grammar."""
 
     def __init__(self, rules):
-        super(Grammar, self).__init__()
-        self.rules = rules
+        self.rules = frozenset(rules)
 
     def __eq__(self, other):
-        return set(self.rules) == set(other.rules)
+        return self.rules == other.rules
 
     def __str__(self):
         return '\n' + '\n'.join(sorted(repr(x) for x in self.rules)) + '\n'
@@ -111,11 +110,11 @@ class Parser(object):
     def __init__(self, rules, start):
         super(Parser, self).__init__()
         self.orig_rules = {rule.alias: rule for rule in rules}
-        rules = [self._ToRule(rule) for rule in rules]
-        self.grammar = ToCnf(Grammar(rules))
+        rules = [self._to_rule(rule) for rule in rules]
+        self.grammar = to_cnf(Grammar(rules))
         self.start = NT(start)
 
-    def _ToRule(self, lark_rule):
+    def _to_rule(self, lark_rule):
         """Converts a lark rule, (lhs, rhs, callback, options), to a Rule."""
         return Rule(
             NT(lark_rule.origin), [
@@ -129,26 +128,26 @@ class Parser(object):
         if all(r.lhs != self.start for r in table[(0, len(tokenized) - 1)]):
             raise ParseError('Parsing failed.')
         parse = trees[(0, len(tokenized) - 1)][NT(self.start)]
-        return self._ToTree(RevertCnf(parse))
+        return self._to_tree(revert_cnf(parse))
 
-    def _ToTree(self, rule_node):
+    def _to_tree(self, rule_node):
         """Converts a RuleNode parse tree to a lark Tree."""
         orig_rule = self.orig_rules[rule_node.rule.alias]
         children = []
         for i, child in enumerate(rule_node.children):
             if isinstance(child, RuleNode):
-                children.append(self._ToTree(child))
+                children.append(self._to_tree(child))
             else:
                 assert isinstance(child.s, Token)
                 children.append(child.s)
         return Tree(orig_rule.origin, children, rule=orig_rule)
 
 
-def PrintParse(node, indent=0):
+def print_parse(node, indent=0):
     if isinstance(node, RuleNode):
         print(' ' * (indent * 2) + str(node.rule.lhs))
         for child in node.children:
-            PrintParse(child, indent + 1)
+            print_parse(child, indent + 1)
     else:
         print(' ' * (indent * 2) + str(node.s))
 
@@ -247,7 +246,7 @@ class UnitSkipRule(Rule):
     __hash__ = Rule.__hash__
 
 
-def BuildUnitSkipRule(unit_rule, target_rule):
+def build_unit_skiprule(unit_rule, target_rule):
     skipped_rules = []
     if isinstance(unit_rule, UnitSkipRule):
         skipped_rules += unit_rule.skipped_rules
@@ -258,7 +257,7 @@ def BuildUnitSkipRule(unit_rule, target_rule):
                       weight=unit_rule.weight + target_rule.weight, alias=unit_rule.alias)
 
 
-def GetAnyNtUnitRule(g):
+def get_any_nt_unit_rule(g):
     """Returns a non-terminal unit rule from 'g', or None if there is none."""
     for rule in g.rules:
         if len(rule.rhs) == 1 and isinstance(rule.rhs[0], NT):
@@ -266,28 +265,25 @@ def GetAnyNtUnitRule(g):
     return None
 
 
-def RemoveUnitRule(g, rule):
+def _remove_unit_rule(g, rule):
     """Removes 'rule' from 'g' without changing the langugage produced by 'g'."""
     new_rules = [x for x in g.rules if x != rule]
     refs = [x for x in g.rules if x.lhs == rule.rhs[0]]
-    for ref in refs:
-        new_rules.append(BuildUnitSkipRule(rule, ref))
+    new_rules += [build_unit_skiprule(rule, ref) for ref in refs]
     return Grammar(new_rules)
 
 
-def Split(rule):
+def _split(rule):
     """Splits a rule whose len(rhs) > 2 into shorter rules."""
     rule_str = str(rule.lhs) + '__' + '_'.join(str(x) for x in rule.rhs)
     rule_name = '__SP_%s' % (rule_str) + '_%d'
-    new_rules = [Rule(rule.lhs, [rule.rhs[0], NT(rule_name % 1)], weight=rule.weight, alias=rule.alias)]
+    yield Rule(rule.lhs, [rule.rhs[0], NT(rule_name % 1)], weight=rule.weight, alias=rule.alias)
     for i in xrange(1, len(rule.rhs) - 2):
-        new_rules.append( Rule(NT(rule_name % i),
-                         [rule.rhs[i], NT(rule_name % (i + 1))], weight=0, alias='Split'))
-    new_rules.append(Rule(NT(rule_name % (len(rule.rhs) - 2)), rule.rhs[-2:], weight=0, alias='Split'))
-    return new_rules
+        yield Rule(NT(rule_name % i), [rule.rhs[i], NT(rule_name % (i + 1))], weight=0, alias='Split')
+    yield Rule(NT(rule_name % (len(rule.rhs) - 2)), rule.rhs[-2:], weight=0, alias='Split')
 
 
-def Term(g):
+def _term(g):
     """Applies the TERM rule on 'g' (see top comment)."""
     all_t = {x for rule in g.rules for x in rule.rhs if isinstance(x, T)}
     t_rules = {t: Rule(NT('__T_%s' % str(t)), [t], weight=0, alias='Term') for t in all_t}
@@ -302,46 +298,46 @@ def Term(g):
     return Grammar(new_rules)
 
 
-def Bin(g):
+def _bin(g):
     """Applies the BIN rule to 'g' (see top comment)."""
     new_rules = []
     for rule in g.rules:
         if len(rule.rhs) > 2:
-            new_rules.extend(Split(rule))
+            new_rules += _split(rule)
         else:
             new_rules.append(rule)
     return Grammar(new_rules)
 
 
-def Unit(g):
+def _unit(g):
     """Applies the UNIT rule to 'g' (see top comment)."""
-    nt_unit_rule = GetAnyNtUnitRule(g)
+    nt_unit_rule = get_any_nt_unit_rule(g)
     while nt_unit_rule:
-        g = RemoveUnitRule(g, nt_unit_rule)
-        nt_unit_rule = GetAnyNtUnitRule(g)
+        g = _remove_unit_rule(g, nt_unit_rule)
+        nt_unit_rule = get_any_nt_unit_rule(g)
     return g
 
 
-def ToCnf(g):
+def to_cnf(g):
     """Creates a CNF grammar from a general context-free grammar 'g'."""
-    g = Unit(Bin(Term(g)))
+    g = _unit(_bin(_term(g)))
     return CnfWrapper(g)
 
 
-def UnrollUnitSkipRule(lhs, orig_rhs, skipped_rules, children, weight, alias):
+def unroll_unit_skiprule(lhs, orig_rhs, skipped_rules, children, weight, alias):
     if not skipped_rules:
         return RuleNode(Rule(lhs, orig_rhs, weight=weight, alias=alias), children, weight=weight)
     else:
         weight = weight - skipped_rules[0].weight
         return RuleNode(
             Rule(lhs, [skipped_rules[0].lhs], weight=weight, alias=alias), [
-                UnrollUnitSkipRule(skipped_rules[0].lhs, orig_rhs,
+                unroll_unit_skiprule(skipped_rules[0].lhs, orig_rhs,
                                 skipped_rules[1:], children,
                                 skipped_rules[0].weight, skipped_rules[0].alias)
             ], weight=weight)
 
 
-def RevertCnf(node):
+def revert_cnf(node):
     """Reverts a parse tree (RuleNode) to its original non-CNF form (Node)."""
     if isinstance(node, T):
         return node
@@ -350,16 +346,15 @@ def RevertCnf(node):
         return node.children[0]
     else:
         children = []
-        reverted_children = [RevertCnf(x) for x in node.children]
-        for child in reverted_children:
+        for child in map(revert_cnf, node.children):
             # Reverts BIN rule.
             if isinstance(child, RuleNode) and child.rule.lhs.s.startswith('__SP_'):
-                children.extend(child.children)
+                children += child.children
             else:
                 children.append(child)
         # Reverts UNIT rule.
         if isinstance(node.rule, UnitSkipRule):
-            return UnrollUnitSkipRule(node.rule.lhs, node.rule.rhs,
+            return unroll_unit_skiprule(node.rule.lhs, node.rule.rhs,
                                     node.rule.skipped_rules, children,
                                     node.rule.weight, node.rule.alias)
         else:

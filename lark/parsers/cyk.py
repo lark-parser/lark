@@ -1,5 +1,10 @@
 """This module implements a CYK parser."""
 
+# Author: https://github.com/ehudt (2018)
+#
+# Adapted by Erez
+
+
 from collections import defaultdict
 import itertools
 
@@ -140,7 +145,9 @@ class Parser(object):
             else:
                 assert isinstance(child.s, Token)
                 children.append(child.s)
-        return Tree(orig_rule.origin, children, rule=orig_rule)
+        t = Tree(orig_rule.origin, children)
+        t.rule=orig_rule
+        return t
 
 
 def print_parse(node, indent=0):

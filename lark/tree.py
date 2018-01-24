@@ -9,10 +9,9 @@ from .utils import inline_args
 
 ###{standalone
 class Tree(object):
-    def __init__(self, data, children, rule=None):
+    def __init__(self, data, children):
         self.data = data
         self.children = list(children)
-        self.rule = rule
 
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)

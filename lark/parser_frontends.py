@@ -4,7 +4,6 @@ from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import GrammarError
 from .common import is_terminal, GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
@@ -137,20 +136,6 @@ class XEarley:
     def parse(self, text):
         return self.parser.parse(text)
 
-
-class Earley(WithLexer):
-    def __init__(self, lexer_conf, parser_conf, options=None):
-        self.init_traditional_lexer(lexer_conf)
-
-        self.parser = earley.Parser(parser_conf, self.match,
-                                    resolve_ambiguity=get_ambiguity_resolver(options))
-
-    def match(self, term, token):
-        return term == token.type
-
-    def parse(self, text):
-        tokens = self.lex(text)
-        return self.parser.parse(tokens)
 
 class CYK(WithLexer):
 

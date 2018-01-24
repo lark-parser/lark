@@ -100,13 +100,14 @@ comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
          | molecule "[" [subscriptlist] "]" -> getitem
          | molecule "." NAME -> getattr
          | atom
-?atom: "(" [yield_expr|testlist_comp] ")"
+?atom: "(" [yield_expr|testlist_comp] ")" -> tuple
     |   "[" [listmaker] "]"
     |   "{" [dictorsetmaker] "}"
     |   "`" testlist1 "`"
+    |   "(" test ")"
     |   NAME | number | string+
 listmaker: test ( list_for | ("," test)* [","] )
-?testlist_comp: test ( comp_for | ("," test)* [","] )
+?testlist_comp: test ( comp_for | ("," test)+ [","] | ",")
 lambdef: "lambda" [paramlist] ":" test
 ?subscriptlist: subscript ("," subscript)* [","]
 subscript: "." "." "." | test | [test] ":" [test] [sliceop]

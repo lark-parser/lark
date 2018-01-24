@@ -22,14 +22,14 @@ class Tree(object):
 
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [ indent_str*level, self._pretty_label(), '\t', '%s' % self.children[0], '\n']
+            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
 
         l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
             if isinstance(n, Tree):
                 l += n._pretty(level+1, indent_str)
             else:
-                l += [ indent_str*(level+1), '%s' % n, '\n' ]
+                l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
 
         return l
 

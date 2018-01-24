@@ -16,6 +16,7 @@ except ImportError:
 from .test_parser import (
         TestLalrStandard,
         TestEarleyStandard,
+        TestCykStandard,
         TestLalrContextual,
         TestEarleyScanless,
         TestEarleyDynamic,

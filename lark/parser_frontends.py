@@ -127,7 +127,7 @@ class XEarley:
                 raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
             else:
                 if width == 0:
-                    raise ValueError("Dynamic Earley doesn't allow zero-width regexps")
+                    raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
 
             self.regexps[t.name] = re.compile(regexp)
 

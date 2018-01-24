@@ -59,7 +59,7 @@ class LarkOptions(object):
         self.propagate_positions = o.pop('propagate_positions', False)
         self.earley__predict_all = o.pop('earley__predict_all', False)
 
-        assert self.parser in ('earley', 'lalr', None)
+        assert self.parser in ('earley', 'lalr', 'cyk', None)
 
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
@@ -131,6 +131,8 @@ class Lark:
                 self.options.lexer = 'standard'
             elif self.options.parser == 'earley':
                 self.options.lexer = 'dynamic'
+            elif self.options.parser == 'cyk':
+                self.options.lexer = 'standard'
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
@@ -140,7 +142,9 @@ class Lark:
             if self.options.parser == 'earley':
                 self.options.ambiguity = 'resolve'
         else:
-            assert self.options.parser == 'earley', "Only Earley supports disambiguation right now"
+            disambig_parsers = ['earley', 'cyk']
+            assert self.options.parser in disambig_parsers, (
+                'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', 'resolve__antiscore_sum')
 
         # Parse the grammar file and compose the grammars (TODO)

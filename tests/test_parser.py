@@ -382,6 +382,7 @@ def _make_parser_test(LEXER, PARSER):
             g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
 
+        @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
             """Verify that stack depth isn't an issue for EBNF grammars"""
             g = _Lark(r"""start: a+
@@ -455,6 +456,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_expand1_list(self):
             g = _Lark(r"""start: list
                             ?list: item*
@@ -473,6 +475,7 @@ def _make_parser_test(LEXER, PARSER):
             [list] = r.children
             self.assertSequenceEqual([item.data for item in list.children], ())
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_expand1_list_2(self):
             g = _Lark(r"""start: list
                             ?list: item* "!"?
@@ -492,6 +495,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual([item.data for item in list.children], ())
 
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_flatten_list(self):
             g = _Lark(r"""start: list
                             list: | item "," list
@@ -645,6 +649,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(x.children), 1, '/a/ should not be considered anonymous')
             self.assertEqual(x.children[0].type, "A")
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_maybe(self):
             g = _Lark("""start: ["a"] """)
             x = g.parse('a')
@@ -702,6 +707,7 @@ def _make_parser_test(LEXER, PARSER):
         #                  B: A
         #               """)
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty(self):
             # Fails an Earley implementation without special handling for empty rules,
             # or re-processing of already completed rules.
@@ -732,6 +738,8 @@ def _make_parser_test(LEXER, PARSER):
 
         def test_float_without_lexer(self):
             expected_error = UnexpectedInput if LEXER == 'dynamic' else UnexpectedToken
+            if PARSER == 'cyk':
+                expected_error = ParseError
 
             g = _Lark("""start: ["+"|"-"] float
                          float: digit* "." digit+ exp?
@@ -796,6 +804,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['a', 'A'])
 
 
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: [["A"]]
                 """
@@ -1001,6 +1010,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
         @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_ignore(self):
             grammar = r"""
             COMMENT: /(!|(\/\/))[^\n]*/
@@ -1024,7 +1034,6 @@ def _make_parser_test(LEXER, PARSER):
             """)
             tree = parser.parse("bb")
             self.assertEqual(tree.children, [])
-
 
 
         @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
@@ -1075,6 +1084,7 @@ def _make_parser_test(LEXER, PARSER):
 # Note: You still have to import them in __main__ for the tests to run
 _TO_TEST = [
         ('standard', 'earley'),
+        ('standard', 'cyk'),
         ('dynamic', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),

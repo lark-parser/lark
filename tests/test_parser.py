@@ -839,12 +839,13 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(d.line, 2)
             self.assertEqual(d.column, 1)
 
-            # self.assertEqual(a.end_line, 1)
-            # self.assertEqual(a.end_col, 1)
-            # self.assertEqual(bc.end_line, 2)
-            # self.assertEqual(bc.end_col, 1)
-            # self.assertEqual(d.end_line, 2)
-            # self.assertEqual(d.end_col, 2)
+            if LEXER != 'dynamic':
+                self.assertEqual(a.end_line, 1)
+                self.assertEqual(a.end_column, 1)
+                self.assertEqual(bc.end_line, 2)
+                self.assertEqual(bc.end_column, 1)
+                self.assertEqual(d.end_line, 2)
+                self.assertEqual(d.end_column, 2)
 
 
 

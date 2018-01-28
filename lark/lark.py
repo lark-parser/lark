@@ -39,7 +39,8 @@ class LarkOptions(object):
         postlex - Lexer post-processing (Requires standard lexer. Default: None)
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
-        propagate_positions - Experimental. Don't use yet.
+        propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
+        lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -58,6 +59,7 @@ class LarkOptions(object):
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
         self.earley__predict_all = o.pop('earley__predict_all', False)
+        self.lexer_callbacks = o.pop('lexer_callbacks', {})
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
@@ -153,7 +155,7 @@ class Lark:
         # Compile the EBNF grammar into BNF
         tokens, self.rules, self.ignore_tokens = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
 
-        self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex)
+        self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -165,7 +167,7 @@ class Lark:
     __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
-        return Lexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore)
+        return Lexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)

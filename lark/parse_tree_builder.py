@@ -92,7 +92,7 @@ class PropagatePositions:
             for a in reversed(children):
                 with suppress(AttributeError):
                     res.end_line = a.end_line
-                    res.end_col = a.end_col
+                    res.end_column = a.end_column
                 break
 
         return res

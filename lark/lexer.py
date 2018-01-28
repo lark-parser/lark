@@ -82,6 +82,7 @@ class _Lex:
         ignore_types = list(ignore_types)
         line_ctr = LineCounter()
 
+        t = None
         while True:
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
@@ -94,8 +95,15 @@ class _Lex:
                         if t.type in lexer.callback:
                             t = lexer.callback[t.type](t)
                         yield t
+                    else:
+                        if type_ in lexer.callback:
+                            t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                            lexer.callback[type_](t)
 
                     line_ctr.feed(value, type_ in newline_types)
+                    if t:
+                        t.end_line = line_ctr.line
+                        t.end_column = line_ctr.column
                     break
             else:
                 if line_ctr.char_pos < len(stream):
@@ -163,7 +171,7 @@ def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
 
 class Lexer:
-    def __init__(self, tokens, ignore=()):
+    def __init__(self, tokens, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TokenDef) for t in tokens), tokens
 
         tokens = list(tokens)
@@ -189,6 +197,10 @@ class Lexer:
         tokens, self.callback = _create_unless(tokens)
         assert all(self.callback.values())
 
+        for type_, f in user_callbacks.items():
+            assert type_ not in self.callback
+            self.callback[type_] = f
+
         self.tokens = tokens
 
         self.mres = build_mres(tokens)
@@ -198,7 +210,7 @@ class Lexer:
 
 
 class ContextualLexer:
-    def __init__(self, tokens, states, ignore=(), always_accept=()):
+    def __init__(self, tokens, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in tokens:
             assert t.name not in tokens_by_name, t
@@ -213,12 +225,12 @@ class ContextualLexer:
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$END']
-                lexer = Lexer(state_tokens, ignore=ignore)
+                lexer = Lexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = Lexer(tokens, ignore=ignore)
+        self.root_lexer = Lexer(tokens, ignore=ignore, user_callbacks=user_callbacks)
 
         self.set_parser_state(None) # Needs to be set on the outside
 

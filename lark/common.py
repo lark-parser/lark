@@ -41,10 +41,11 @@ class UnexpectedToken(ParseError):
 
 
 class LexerConf:
-    def __init__(self, tokens, ignore=(), postlex=None):
+    def __init__(self, tokens, ignore=(), postlex=None, callbacks={}):
         self.tokens = tokens
         self.ignore = ignore
         self.postlex = postlex
+        self.callbacks = callbacks
 
 class ParserConf:
     def __init__(self, rules, callback, start):

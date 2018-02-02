@@ -347,7 +347,7 @@ class PrepareLiterals(InlineTransformer):
         assert start.type == end.type == 'STRING'
         start = start.value[1:-1]
         end = end.value[1:-1]
-        assert len(start) == len(end) == 1
+        assert len(start) == len(end) == 1, (start, end, len(start), len(end))
         regexp = '[%s-%s]' % (start, end)
         return T('pattern', [PatternRE(regexp)])
 

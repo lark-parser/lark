@@ -77,7 +77,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 lookahead[sym].append((Shift, new_state))
                 if sym == '$END':
                     self.end_states.append( new_state )
-                yield fzset(rps)
+                yield new_state
 
             for k, v in lookahead.items():
                 if len(v) > 1:

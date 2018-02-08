@@ -143,10 +143,10 @@ class CYK(WithLexer):
     self.init_traditional_lexer(lexer_conf)
 
     self._analysis = GrammarAnalyzer(parser_conf)
-    self._parser = cyk.Parser(self._analysis.rules, parser_conf.start)
+    self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
 
     self._postprocess = {}
-    for rule in self._analysis.rules:
+    for rule in parser_conf.rules:
         a = rule.alias
         self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
 

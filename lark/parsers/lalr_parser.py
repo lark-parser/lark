@@ -14,7 +14,7 @@ class Parser:
         self.analysis = analysis = LALR_Analyzer(parser_conf)
         analysis.compute_lookahead()
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
-                          for rule in analysis.rules}
+                          for rule in parser_conf.rules}
 
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)

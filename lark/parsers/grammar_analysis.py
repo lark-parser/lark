@@ -1,5 +1,5 @@
 
-from ..utils import bfs, fzset
+from ..utils import bfs, fzset, classify
 from ..common import GrammarError, is_terminal
 from ..grammar import Rule
 
@@ -34,9 +34,6 @@ class RulePtr(object):
         return hash((self.rule, self.index))
 
 
-def pairs(lst):
-    return zip(lst[:-1], lst[1:])
-
 def update_set(set1, set2):
     copy = set(set1)
     set1 |= set2
@@ -68,6 +65,7 @@ def calculate_sets(rules):
         FIRST[sym]={sym} if is_terminal(sym) else set()
         FOLLOW[sym]=set()
 
+    # Calculate NULLABLE and FIRST
     changed = True
     while changed:
         changed = False
@@ -81,6 +79,14 @@ def calculate_sets(rules):
                 if set(rule.expansion[:i]) <= NULLABLE:
                     if update_set(FIRST[rule.origin], FIRST[sym]):
                         changed = True
+
+    # Calculate FOLLOW
+    changed = True
+    while changed:
+        changed = False
+
+        for rule in rules:
+            for i, sym in enumerate(rule.expansion):
                 if i==len(rule.expansion)-1 or set(rule.expansion[i:]) <= NULLABLE:
                     if update_set(FOLLOW[sym], FOLLOW[rule.origin]):
                         changed = True
@@ -95,29 +101,20 @@ def calculate_sets(rules):
 
 class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
-        rules = parser_conf.rules
-        assert len(rules) == len(set(rules))
-
-        self.start_symbol = parser_conf.start
         self.debug = debug
 
-        root_rule = Rule('$root', [self.start_symbol, '$END'])
+        rules = parser_conf.rules + [Rule('$root', [parser_conf.start, '$END'])]
+        self.rules_by_origin = classify(rules, lambda r: r.origin)
 
-        self.rules_by_origin = {r.origin: [] for r in rules}
-        for r in rules:
-            self.rules_by_origin[r.origin].append(r)
-
-        self.rules_by_origin[root_rule.origin] = [root_rule]
-
+        assert len(rules) == len(set(rules))
         for r in rules:
             for sym in r.expansion:
                 if not (is_terminal(sym) or sym in self.rules_by_origin):
-                    raise GrammarError("Using an undefined rule: %s" % sym)
+                    raise GrammarError("Using an undefined rule: %s" % sym) # TODO test validation
 
         self.start_state = self.expand_rule('$root')
-        self.rules = rules
 
-        self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules + [root_rule])
+        self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
     def expand_rule(self, rule):
         "Returns all init_ptrs accessible by rule (recursive)"

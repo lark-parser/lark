@@ -35,6 +35,9 @@ class RulePtr(object):
 
 
 def update_set(set1, set2):
+    if not set2:
+        return False
+
     copy = set(set1)
     set1 |= set2
     return set1 != copy

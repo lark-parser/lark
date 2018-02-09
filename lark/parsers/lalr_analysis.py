@@ -91,7 +91,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
             for k, v in lookahead.items():
                 if not len(v) == 1:
-                    raise GrammarError("Collision in %s: %s" %(k, v))
+                    raise GrammarError("Collision in %s: %s" %(k, ', '.join(['\n  * %s: %s' % x for x in v])))
 
             self.states[state] = {k:v[0] for k, v in lookahead.items()}
 

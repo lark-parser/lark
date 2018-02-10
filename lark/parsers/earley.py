@@ -153,7 +153,7 @@ class Parser:
         self.postprocess = {}
         self.predictions = {}
         for rule in parser_conf.rules:
-            self.postprocess[rule] = getattr(parser_conf.callback, rule.alias)
+            self.postprocess[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
 
         self.term_matcher = term_matcher

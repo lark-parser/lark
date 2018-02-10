@@ -1,10 +1,10 @@
-import re
 from collections import defaultdict
 
 from .tree import Tree
-from .common import is_terminal, ParserConf, PatternStr, Terminal
+from .common import is_terminal, ParserConf, PatternStr
 from .lexer import Token
 from .parsers import earley
+from .grammar import Rule
 
 
 
@@ -24,20 +24,6 @@ class Reconstructor:
         _tokens, rules, _grammar_extra = parser.grammar.compile(lexer='standard', start='whatever')
         tokens = {t.name:t for t in _tokens}
 
-        token_res = {t.name:re.compile(t.pattern.to_regexp()) for t in _tokens}
-
-        class MatchTerminal(Terminal):
-            def match(self, other):
-                if isinstance(other, Tree):
-                    return False
-                return token_res[self.data].match(other) is not None
-
-        class MatchTree(Terminal):
-            def match(self, other):
-                try:
-                    return self.data == other.data
-                except AttributeError:
-                    return False
 
         class WriteTokens:
             def __init__(self, name, expansion):
@@ -45,7 +31,7 @@ class Reconstructor:
                 self.expansion = expansion
 
             def f(self, args):
-                args2 = iter(args)
+                iter_args = iter(args)
                 to_write = []
                 for sym in self.expansion:
                     if is_discarded_terminal(sym):
@@ -53,7 +39,7 @@ class Reconstructor:
                         assert isinstance(t.pattern, PatternStr)
                         to_write.append(t.pattern.value)
                     else:
-                        x = next(args2)
+                        x = next(iter_args)
                         if isinstance(x, list):
                             to_write += x
                         else:
@@ -63,36 +49,38 @@ class Reconstructor:
                                 assert x.data == sym, x
                             to_write.append(x)
 
-                assert is_iter_empty(args2)
-
+                assert is_iter_empty(iter_args)
                 return to_write
 
+        expand1s = {r.origin for r in parser.rules if r.options and r.options.expand1}
+
         d = defaultdict(list)
-        for name, (expansions, _o) in rules.items():
-            for expansion, alias in expansions:
-                if alias:
-                    d[alias].append(expansion)
-                    d[name].append([alias])
-                else:
-                    d[name].append(expansion)
+        for r in rules:
+            if r.alias:
+                d[r.alias].append(r.expansion)
+                d[r.origin].append([r.alias])
+            else:
+                d[r.origin].append(r.expansion)
 
-        rules = []
-        expand1s = {name for name, (_x, options) in parser.rules.items()
-                    if options and options.expand1}
-
+        self.rules = []
         for name, expansions in d.items():
             for expansion in expansions:
-                reduced = [sym if sym.startswith('_') or sym in expand1s else
-                           MatchTerminal(sym) if is_terminal(sym) else MatchTree(sym)
+                reduced = [sym if sym.startswith('_') or sym in expand1s else sym.upper()
                            for sym in expansion if not is_discarded_terminal(sym)]
 
-                rules.append((name, reduced, WriteTokens(name, expansion).f, None))
-        self.rules = rules
+                self.rules.append(Rule(name, reduced, WriteTokens(name, expansion).f, None))
 
+
+    def _match(self, term, token):
+        if isinstance(token, Tree):
+            return token.data.upper() == term
+        elif isinstance(token, Token):
+            return term == token.type
+        assert False
 
     def _reconstruct(self, tree):
         # TODO: ambiguity?
-        parser = earley.Parser(self.rules, tree.data, {})
+        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match)
         res = parser.parse(tree.children)
         for item in res:
             if isinstance(item, Tree):

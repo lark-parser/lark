@@ -1074,6 +1074,60 @@ def _make_parser_test(LEXER, PARSER):
             _Lark(r'start: "\\\t"').parse('\\\t')
 
 
+        def test_ranged_repeat_rules(self):
+            g = u"""!start: "A"~3
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'AAA'), Tree('start', ["A", "A", "A"]))
+            self.assertRaises(ParseError, l.parse, u'AA')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
+
+
+            g = u"""!start: "A"~0..2
+                """
+            if PARSER != 'cyk': # XXX CYK currently doesn't support empty grammars
+                l = _Lark(g)
+                self.assertEqual(l.parse(u''), Tree('start', []))
+                self.assertEqual(l.parse(u'A'), Tree('start', ['A']))
+                self.assertEqual(l.parse(u'AA'), Tree('start', ['A', 'A']))
+                self.assertRaises((UnexpectedToken, UnexpectedInput), l.parse, u'AAA')
+
+            g = u"""!start: "A"~3..2
+                """
+            self.assertRaises(GrammarError, _Lark, g)
+
+            g = u"""!start: "A"~2..3 "B"~2
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'AABB'), Tree('start', ['A', 'A', 'B', 'B']))
+            self.assertEqual(l.parse(u'AAABB'), Tree('start', ['A', 'A', 'A', 'B', 'B']))
+            self.assertRaises(ParseError, l.parse, u'AAAB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
+
+
+        def test_ranged_repeat_terms(self):
+            g = u"""!start: AAA
+                    AAA: "A"~3
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'AAA'), Tree('start', ["AAA"]))
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AA')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
+
+            g = u"""!start: AABB CC
+                    AABB: "A"~0..2 "B"~2
+                    CC: "C"~1..2
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'AABBCC'), Tree('start', ['AABB', 'CC']))
+            self.assertEqual(l.parse(u'BBC'), Tree('start', ['BB', 'C']))
+            self.assertEqual(l.parse(u'ABBCC'), Tree('start', ['ABB', 'CC']))
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
 
 

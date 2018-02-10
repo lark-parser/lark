@@ -70,6 +70,7 @@ TOKENS = {
     '_COLON': ':',
     '_OR': r'\|',
     '_DOT': r'\.',
+    'TILDE': '~',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TOKEN': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
@@ -100,7 +101,10 @@ RULES = {
     '_expansion': ['', '_expansion expr'],
 
     '?expr': ['atom',
-              'atom OP'],
+              'atom OP',
+              'atom TILDE NUMBER',
+              'atom TILDE NUMBER _DOT _DOT NUMBER',
+              ],
 
     '?atom': ['_LPAR expansions _RPAR',
              'maybe',
@@ -146,7 +150,7 @@ class EBNF_to_BNF(InlineTransformer):
         self.rules_by_expr[expr] = t
         return t
 
-    def expr(self, rule, op):
+    def expr(self, rule, op, *args):
         if op.value == '?':
             return T('expansions', [rule, T('expansion', [])])
         elif op.value == '+':
@@ -162,6 +166,14 @@ class EBNF_to_BNF(InlineTransformer):
             # _c : _c c | c;
             new_name = self._add_recurse_rule('star', rule)
             return T('expansions', [new_name, T('expansion', [])])
+        elif op.value == '~':
+            if len(args) == 1:
+                mn = mx = int(args[0])
+            else:
+                mn, mx = map(int, args)
+                if mx < mn:
+                    raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
+            return T('expansions', [T('expansion', [rule] * n) for n in range(mn, mx+1)])
         assert False, op
 
 
@@ -377,7 +389,17 @@ class TokenTreeToPattern(Transformer):
         return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
 
     def expr(self, args):
-        inner, op = args
+        inner, op = args[:2]
+        if op == '~':
+            if len(args) == 3:
+                op = "{%d}" % int(args[2])
+            else:
+                mn, mx = map(int, args[2:])
+                if mx < mn:
+                    raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (inner, mn, mx))
+                op = "{%d,%d}" % (mn, mx)
+        else:
+            assert len(args) == 2
         return PatternRE('(?:%s)%s' % (inner.to_regexp(), op), inner.flags)
 
 

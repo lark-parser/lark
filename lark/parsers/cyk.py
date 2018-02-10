@@ -139,7 +139,7 @@ class Parser(object):
         """Converts a RuleNode parse tree to a lark Tree."""
         orig_rule = self.orig_rules[rule_node.rule.alias]
         children = []
-        for i, child in enumerate(rule_node.children):
+        for child in rule_node.children:
             if isinstance(child, RuleNode):
                 children.append(self._to_tree(child))
             else:

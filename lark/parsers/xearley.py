@@ -20,7 +20,7 @@
 
 from collections import defaultdict
 
-from ..common import ParseError, UnexpectedToken, is_terminal
+from ..common import ParseError, is_terminal
 from ..lexer import Token, UnexpectedInput
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
@@ -78,7 +78,7 @@ class Parser:
                         raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
                     column.add(new_items)
 
-        def scan(i, token, column):
+        def scan(i, column):
             to_scan = column.to_scan
 
             for x in self.ignore:
@@ -123,7 +123,7 @@ class Parser:
         column = column0
         for i, token in enumerate(stream):
             predict_and_complete(column)
-            column = scan(i, token, column)
+            column = scan(i, column)
 
             if token == '\n':
                 text_line += 1

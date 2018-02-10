@@ -4,7 +4,7 @@
 # When the parse ends successfully, a disambiguation stage resolves all ambiguity
 # (right now ambiguity resolution is not developed beyond the needs of lark)
 # Afterwards the parse tree is reduced (transformed) according to user callbacks.
-# I use the no-recursion version of Transformer and Visitor, because the tree might be
+# I use the no-recursion version of Transformer, because the tree might be
 # deeper than Python's recursion limit (a bit absurd, but that's life)
 #
 # The algorithm keeps track of each state set, using a corresponding Column instance.
@@ -14,7 +14,7 @@
 # Email : erezshin@gmail.com
 
 from ..common import ParseError, UnexpectedToken, is_terminal
-from ..tree import Tree, Visitor_NoRecurse, Transformer_NoRecurse
+from ..tree import Tree, Transformer_NoRecurse
 from .grammar_analysis import GrammarAnalyzer
 
 
@@ -234,9 +234,4 @@ class ApplyCallbacks(Transformer_NoRecurse):
         self.postprocess = postprocess
 
     def drv(self, tree):
-        children = tree.children
-        callback = self.postprocess[tree.rule]
-        if callback:
-            return callback(children)
-        else:
-            return Tree(rule.origin, children)
+        return self.postprocess[tree.rule](tree.children)

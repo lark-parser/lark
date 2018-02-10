@@ -139,36 +139,36 @@ class XEarley:
 
 class CYK(WithLexer):
 
-  def __init__(self, lexer_conf, parser_conf, options=None):
-    self.init_traditional_lexer(lexer_conf)
+    def __init__(self, lexer_conf, parser_conf, options=None):
+        self.init_traditional_lexer(lexer_conf)
 
-    self._analysis = GrammarAnalyzer(parser_conf)
-    self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
+        self._analysis = GrammarAnalyzer(parser_conf)
+        self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
 
-    self._postprocess = {}
-    for rule in parser_conf.rules:
-        a = rule.alias
-        self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
+        self._postprocess = {}
+        for rule in parser_conf.rules:
+            a = rule.alias
+            self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
 
-  def parse(self, text):
-    tokens = list(self.lex(text))
-    parse = self._parser.parse(tokens)
-    parse = self._transform(parse)
-    return parse
+    def parse(self, text):
+        tokens = list(self.lex(text))
+        parse = self._parser.parse(tokens)
+        parse = self._transform(parse)
+        return parse
 
-  def _transform(self, tree):
-    subtrees = list(tree.iter_subtrees())
-    for subtree in subtrees:
-      subtree.children = [self._apply_callback(c) if isinstance(c, Tree) else c for c in subtree.children]
+    def _transform(self, tree):
+        subtrees = list(tree.iter_subtrees())
+        for subtree in subtrees:
+            subtree.children = [self._apply_callback(c) if isinstance(c, Tree) else c for c in subtree.children]
 
-    return self._apply_callback(tree)
+        return self._apply_callback(tree)
 
-  def _apply_callback(self, tree):
-    children = tree.children
-    callback = self._postprocess[tree.rule.alias]
-    assert callback, tree.rule.alias
-    r = callback(children)
-    return r
+    def _apply_callback(self, tree):
+        children = tree.children
+        callback = self._postprocess[tree.rule.alias]
+        assert callback, tree.rule.alias
+        r = callback(children)
+        return r
 
 
 def get_frontend(parser, lexer):

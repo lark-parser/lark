@@ -81,7 +81,7 @@ class Earley_NoLex:
             regexp = t.pattern.to_regexp()
             width = get_regexp_width(regexp)
             if width != (1,1):
-                raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (sym, regexp, width))
+                raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (t.name, regexp, width))
             self.regexps[t.name] = re.compile(regexp)
 
     def parse(self, text):

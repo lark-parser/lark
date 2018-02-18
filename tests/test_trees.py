@@ -1,14 +1,14 @@
 from __future__ import absolute_import
 
-from unittest import TestCase
-import logging
 import copy
+import logging
 import pickle
+import unittest
 
 from lark.tree import Tree
 
 
-class TestTrees(TestCase):
+class TestTrees(unittest.TestCase):
     def setUp(self):
         self.tree1 = Tree('a', [Tree(x, y) for x, y in zip('bcd', 'xyz')])
 
@@ -23,4 +23,3 @@ class TestTrees(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

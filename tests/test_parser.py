@@ -21,6 +21,8 @@ from lark.lark import Lark
 from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
 from lark.tree import Tree, Transformer
+from lark.parsers.earley_forest import ForestToAmbiguousTreeVisitor
+from lark.parsers.earley import ApplyCallbacks
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -204,6 +206,7 @@ def _make_full_earley_test(LEXER):
         #     res = l.parse("aaa")
         #     self.assertEqual(res.children, ['aa', 'a'])
 
+
         def test_earley_scanless4(self):
             grammar = """
             start: A A?
@@ -240,10 +243,11 @@ def _make_full_earley_test(LEXER):
             """
 
             parser = Lark(grammar, parser='earley', lexer=LEXER, ambiguity='explicit')
-            res = parser.parse('ab')
-
-            self.assertEqual( res.data, '_ambig')
-            self.assertEqual( len(res.children), 2)
+            root_symbol = parser.parse('ab')
+            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol).go()
+            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
+            self.assertEqual( tree.data, '_ambig')
+            self.assertEqual( len(tree.children), 2)
 
         def test_ambiguity1(self):
             grammar = """
@@ -255,9 +259,34 @@ def _make_full_earley_test(LEXER):
 
             """
             l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
-            x = l.parse('cde')
-            assert x.data == '_ambig', x
-            assert len(x.children) == 2
+            root_symbol = l.parse('cde')
+            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol).go()
+            tree = ApplyCallbacks(l.parser.parser.postprocess).transform(ambig_tree)
+
+            assert tree.data == '_ambig', tree
+            assert len(tree.children) == 2
+
+        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        def test_ambiguity2(self):
+            grammar = """
+            ANY:  /[a-zA-Z0-9 ]+/
+            a.2: "A" b+
+            b.2: "B" 
+            c:   ANY
+
+            start: (a|c)*
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse('ABX')
+            expected = Tree('start', [
+                    Tree('a', [
+                        Tree('b', [])
+                    ]),
+                    Tree('c', [
+                        'X'
+                    ])
+                ])
+            self.assertEqual(res, expected)
 
         @unittest.skipIf(LEXER==None, "BUG in scanless parsing!")  # TODO fix bug!
         def test_fruitflies_ambig(self):
@@ -277,7 +306,9 @@ def _make_full_earley_test(LEXER):
                 %ignore WS
             """
             parser = Lark(grammar, ambiguity='explicit', lexer=LEXER)
-            res = parser.parse('fruit flies like bananas')
+            root_symbol = parser.parse('fruit flies like bananas')
+            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol).go()
+            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
 
             expected = Tree('_ambig', [
                     Tree('comparative', [
@@ -295,7 +326,7 @@ def _make_full_earley_test(LEXER):
             # print res.pretty()
             # print expected.pretty()
 
-            self.assertEqual(res, expected)
+            self.assertEqual(tree, expected)
 
 
         def test_explicit_ambiguity2(self):
@@ -307,7 +338,9 @@ def _make_full_earley_test(LEXER):
             text = """cat"""
 
             parser = Lark(grammar, start='start', ambiguity='explicit')
-            tree = parser.parse(text)
+            root_symbol = parser.parse(text)
+            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol).go()
+            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
             self.assertEqual(tree.data, '_ambig')
 
             combinations = {tuple(str(s) for s in t.children) for t in tree.children}

@@ -1,157 +1,37 @@
-"This module implements an Earley Parser"
+"""This module implements an scanerless Earley parser.
 
-# The parser uses a parse-forest to keep track of derivations and ambiguations.
-# When the parse ends successfully, a disambiguation stage resolves all ambiguity
-# (right now ambiguity resolution is not developed beyond the needs of lark)
-# Afterwards the parse tree is reduced (transformed) according to user callbacks.
-# I use the no-recursion version of Transformer, because the tree might be
-# deeper than Python's recursion limit (a bit absurd, but that's life)
-#
-# The algorithm keeps track of each state set, using a corresponding Column instance.
-# Column keeps track of new items using NewsList instances.
-#
+The core Earley algorithm used here is based on Elizabeth Scott's implementation, here:
+    https://www.sciencedirect.com/science/article/pii/S1571066108001497
+
+That is probably the best reference for understanding the algorithm here.
+
+The Earley parser outputs an SPPF-tree as per that document. The SPPF tree format
+is better documented here:
+    http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
+"""
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
 from ..common import ParseError, UnexpectedToken, is_terminal
-from ..tree import Tree, Transformer_NoRecurse
+from ..tree import Transformer_NoRecurse
 from .grammar_analysis import GrammarAnalyzer
+from .earley_common import Column, Item
+from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, TokenNode, PackedNode
 
-
-class Derivation(Tree):
-    _hash = None
-
-    def __init__(self, rule, items=None):
-        Tree.__init__(self, 'drv', items or [])
-        self.rule = rule
-
-    def _pretty_label(self):    # Nicer pretty for debugging the parser
-        return self.rule.origin if self.rule else self.data
-
-    def __hash__(self):
-        if self._hash is None:
-            self._hash = Tree.__hash__(self)
-        return self._hash
-
-class Item(object):
-    "An Earley Item, the atom of the algorithm."
-
-    def __init__(self, rule, ptr, start, tree):
-        self.rule = rule
-        self.ptr = ptr
-        self.start = start
-        self.tree = tree if tree is not None else Derivation(self.rule)
-
-    @property
-    def expect(self):
-        return self.rule.expansion[self.ptr]
-
-    @property
-    def is_complete(self):
-        return self.ptr == len(self.rule.expansion)
-
-    def advance(self, tree):
-        assert self.tree.data == 'drv'
-        new_tree = Derivation(self.rule, self.tree.children + [tree])
-        return self.__class__(self.rule, self.ptr+1, self.start, new_tree)
-
-    def __eq__(self, other):
-        return self.start is other.start and self.ptr == other.ptr and self.rule == other.rule
-
-    def __hash__(self):
-        return hash((self.rule, self.ptr, id(self.start)))   # Always runs Derivation.__hash__
-
-    def __repr__(self):
-        before = list(map(str, self.rule.expansion[:self.ptr]))
-        after = list(map(str, self.rule.expansion[self.ptr:]))
-        return '<(%d) %s : %s * %s>' % (id(self.start), self.rule.origin, ' '.join(before), ' '.join(after))
-
-class NewsList(list):
-    "Keeps track of newly added items (append-only)"
-
-    def __init__(self, initial=None):
-        list.__init__(self, initial or [])
-        self.last_iter = 0
-
-    def get_news(self):
-        i = self.last_iter
-        self.last_iter = len(self)
-        return self[i:]
-
-
-
-class Column:
-    "An entry in the table, aka Earley Chart. Contains lists of items."
-    def __init__(self, i, FIRST, predict_all=False):
-        self.i = i
-        self.to_reduce = NewsList()
-        self.to_predict = NewsList()
-        self.to_scan = []
-        self.item_count = 0
-        self.FIRST = FIRST
-
-        self.predicted = set()
-        self.completed = {}
-        self.predict_all = predict_all
-
-    def add(self, items):
-        """Sort items into scan/predict/reduce newslists
-
-        Makes sure only unique items are added.
-        """
-        for item in items:
-
-            item_key = item, item.tree  # Elsewhere, tree is not part of the comparison
-            if item.is_complete:
-                # XXX Potential bug: What happens if there's ambiguity in an empty rule?
-                if item.rule.expansion and item_key in self.completed:
-                    old_tree = self.completed[item_key].tree
-                    if old_tree == item.tree:
-                        is_empty = not self.FIRST[item.rule.origin]
-                        if not is_empty:
-                            continue
-
-                    if old_tree.data != '_ambig':
-                        new_tree = old_tree.copy()
-                        new_tree.rule = old_tree.rule
-                        old_tree.set('_ambig', [new_tree])
-                        old_tree.rule = None    # No longer a 'drv' node
-
-                    if item.tree.children[0] is old_tree:   # XXX a little hacky!
-                        raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
-
-                    if item.tree not in old_tree.children:
-                        old_tree.children.append(item.tree)
-                    # old_tree.children.append(item.tree)
-                else:
-                    self.completed[item_key] = item
-                self.to_reduce.append(item)
-            else:
-                if is_terminal(item.expect):
-                    self.to_scan.append(item)
-                else:
-                    k = item_key if self.predict_all else item
-                    if k in self.predicted:
-                        continue
-                    self.predicted.add(k)
-                    self.to_predict.append(item)
-
-            self.item_count += 1    # Only count if actually added
-
-
-    def __bool__(self):
-        return bool(self.item_count)
-    __nonzero__ = __bool__  # Py2 backwards-compatibility
+import collections
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=None):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, forest_sum_visitor = ForestSumVisitor):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
-        self.resolve_ambiguity = resolve_ambiguity
 
         self.FIRST = analysis.FIRST
         self.postprocess = {}
         self.predictions = {}
+
+        self.resolve_ambiguity = resolve_ambiguity
+        self.forest_sum_visitor = forest_sum_visitor
+
         for rule in parser_conf.rules:
             self.postprocess[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
@@ -162,72 +42,177 @@ class Parser:
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.parser_conf.start
-
-        _Item = Item
         match = self.term_matcher
+        held_completions = collections.defaultdict(list)
+        node_cache = {}
+        token_cache = {}
 
-        def predict(nonterm, column):
-            assert not is_terminal(nonterm), nonterm
-            return [_Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
+        def make_symbol_node(s, start, end):
+            label = (s, start.i, end.i)
+            if label in node_cache:
+                node = node_cache[label]
+            else:
+                node = node_cache[label] = SymbolNode(s, start, end)
+            return node
 
-        def complete(item):
-            name = item.rule.origin
-            return [i.advance(item.tree) for i in item.start.to_predict if i.expect == name]
+        def make_packed_node(lr0, rule, start, left, right):
+            return PackedNode(lr0, rule, start, left, right)
 
-        def predict_and_complete(column):
-            while True:
-                to_predict = {x.expect for x in column.to_predict.get_news()
-                              if x.ptr}  # if not part of an already predicted batch
-                to_reduce = set(column.to_reduce.get_news())
-                if not (to_predict or to_reduce):
-                    break
+        def make_token_node(token, start, end):
+            label = (token, start.i, end.i)
+            if label in token_cache:
+                node = token_cache[label]
+            else:
+                node = token_cache[label] = TokenNode(token, start, end)
+            return node
 
-                for nonterm in to_predict:
-                    column.add( predict(nonterm, column) )
+        def predict_and_complete(column, to_scan):
+            """The core Earley Predictor and Completer.
 
-                for item in to_reduce:
-                    new_items = list(complete(item))
-                    if item in new_items:
-                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
-                    column.add(new_items)
+            At each stage of the input, we handling any completed items (things
+            that matched on the last cycle) and use those to predict what should
+            come next in the input stream. The completions and any predicted
+            non-terminals are recursively processed until we reach a set of,
+            which can be added to the scan list for the next scanner cycle."""
+            held_completions.clear()
 
-        def scan(i, token, column):
-            next_set = Column(i, self.FIRST)
-            next_set.add(item.advance(token) for item in column.to_scan if match(item.expect, token))
+            # R (items) = Ei (column.items)
+            items = list(column.items)
+            while items:
+                item = items.pop()    # remove an element, A say, from R
 
-            if not next_set:
-                expect = {i.expect for i in column.to_scan}
-                raise UnexpectedToken(token, expect, stream, set(column.to_scan))
+                ### The Earley completer
+                if item.is_complete:   ### (item.s == string)
 
-            return next_set
+                    if item.node is None:
+                        item.node = make_symbol_node(item.s, item.start, column)
+                        item.node.add_family(make_packed_node(item.s, item.rule, item.start, None, None))
+
+                    # Empty has 0 length. If we complete an empty symbol in a particular
+                    # parse step, we need to be able to use that same empty symbol to complete
+                    # any predictions that result, that themselves require empty. Avoids
+                    # infinite recursion on empty symbols.
+                    # held_completions is 'H' in E.Scott's paper.
+                    is_empty_item = item.start.i == column.i
+                    if is_empty_item:
+                        held_completions[item.rule.origin] = item.node
+
+                    originators = [originator for originator in item.start.items if originator.expect == item.s]
+                    for originator in originators:
+                        new_item = originator.advance()
+                        new_item.node = make_symbol_node(new_item.s, originator.start, column)
+                        new_item.node.add_family(make_packed_node(new_item.s, new_item.rule, new_item.start, originator.node, item.node))
+                        if new_item.is_terminal:
+                            # Add (B :: aC.B, h, y) to Q
+                            to_scan.add(new_item)
+                        elif new_item not in column.items:
+                            # Add (B :: aC.B, h, y) to Ei and R
+                            column.add(new_item)
+                            items.append(new_item)
+
+                ### The Earley predictor
+                elif not item.is_terminal: ### (item.s == lr0)
+                    new_items = []
+                    for rule in self.predictions[item.expect]:
+                        new_item = Item(rule, 0, column, None)
+                        new_items.append(new_item)
+
+                    # Process any held completions (H).
+                    if item.expect in held_completions:
+                        new_item = item.advance()
+                        new_item.node = make_symbol_node(new_item.s, item.start, column)
+                        new_item.node.add_family(make_packed_node(new_item.s, new_item.rule, new_item.start, item.node, held_completions[item.expect]))
+                        new_items.append(new_item)
+
+                    for new_item in new_items:
+                        if new_item.is_terminal:
+                            to_scan.add(new_item)
+                        elif new_item not in column.items:
+                            column.add(new_item)
+                            items.append(new_item)
+
+        def scan(i, token, column, to_scan):
+            """The core Earley Scanner.
+
+            This is a custom implementation of the scanner that uses the
+            Lark lexer to match tokens. The scan list is built by the
+            Earley predictor, based on the previously completed tokens.
+            This ensures that at each phase of the parse we have a custom
+            lexer context, allowing for more complex ambiguities."""
+            next_set = Column(i+1, self.FIRST)
+            next_to_scan = set()
+            for item in set(to_scan):
+                if match(item.expect, token):
+                    token_node = make_token_node(token, item.start, next_set)
+                    new_item = item.advance()
+                    new_item.node = make_symbol_node(new_item.s, new_item.start, column)
+                    new_item.node.add_family(make_packed_node(new_item.s, item.rule, new_item.start, item.node, token_node))
+
+                    if new_item.is_terminal:
+                        # add (B ::= Aai+1.B, h, y) to Q'
+                        next_to_scan.add(new_item)
+                    else:
+                        # add (B ::= Aa+1.B, h, y) to Ei+1
+                        next_set.add(new_item)
+
+            if not next_set and not next_to_scan:
+                expect = {i.expect for i in to_scan}
+                raise UnexpectedToken(token, expect, stream, i)
+
+            return next_set, next_to_scan
 
         # Main loop starts
         column0 = Column(0, self.FIRST)
-        column0.add(predict(start_symbol, column0))
-
         column = column0
+
+        ## The scan buffer. 'Q' in E.Scott's paper.
+        to_scan = set()
+
+        ## Predict for the start_symbol.
+        # Add predicted items to the first Earley set (for the predictor) if they
+        # result in a non-terminal, or the scanner if they result in a terminal.
+        for rule in self.predictions[start_symbol]:
+            item = Item(rule, 0, column0, None)
+            if item.is_terminal:
+                to_scan.add(item)
+            else:
+                column.add(item)
+
+        ## The main Earley loop.
+        # Run the Prediction/Completion cycle for any Items in the current Earley set.
+        # Completions will be added to the SPPF tree, and predictions will be recursively
+        # processed down to terminals/empty nodes to be added to the scanner for the next
+        # step.
         for i, token in enumerate(stream):
-            predict_and_complete(column)
-            column = scan(i, token, column)
+            predict_and_complete(column, to_scan)
 
-        predict_and_complete(column)
+            # Clear the node_cache and token_cache, which are only relevant for each
+            # step in the Earley pass.
+            node_cache.clear()
+            token_cache.clear()
+            column, to_scan = scan(i, token, column, to_scan)
 
-        # Parse ended. Now build a parse tree
-        solutions = [n.tree for n in column.to_reduce
-                     if n.rule.origin==start_symbol and n.start is column0]
+        predict_and_complete(column, to_scan)
+
+        ## Column is now the final column in the parse. If the parse was successful, the start
+        # symbol should have been completed in the last step of the Earley cycle, and will be in
+        # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
+        solutions = [n.node for n in column.items if n.is_complete and n.node is not None and n.s == start_symbol and n.start is column0]
 
         if not solutions:
             raise ParseError('Incomplete parse: Could not find a solution to input')
-        elif len(solutions) == 1:
-            tree = solutions[0]
-        else:
-            tree = Tree('_ambig', solutions)
+        elif len(solutions) > 1:
+            raise ParseError('Earley should not generate multiple start symbol items!')
 
-        if self.resolve_ambiguity:
-            tree = self.resolve_ambiguity(tree)
+        ## If we're not resolving ambiguity, we just return the root of the SPPF tree to the caller.
+        # This means the caller can work directly with the SPPF tree.
+        if not self.resolve_ambiguity:
+            return solutions[0]
 
+        # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
+        # according to the rules.
+        tree = ForestToTreeVisitor(solutions[0], self.forest_sum_visitor).go()
         return ApplyCallbacks(self.postprocess).transform(tree)
-
 
 class ApplyCallbacks(Transformer_NoRecurse):
     def __init__(self, postprocess):

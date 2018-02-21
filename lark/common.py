@@ -8,7 +8,7 @@ Py36 = (sys.version_info[:2] >= (3, 6))
 
 ###{standalone
 def is_terminal(sym):
-    return sym.isupper()
+    return sym.isupper() if sym is not None else False
 
 class GrammarError(Exception):
     pass

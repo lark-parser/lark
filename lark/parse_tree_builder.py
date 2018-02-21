@@ -2,6 +2,7 @@ from .common import is_terminal, GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
+from itertools import repeat, product
 
 ###{standalone
 from functools import partial
@@ -92,6 +93,27 @@ def maybe_create_child_filter(expansion, filter_out, ambiguous):
     if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
         return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include)
 
+class AmbiguousExpander:
+    def __init__(self, to_expand, tree_class, node_builder):
+        self.node_builder = node_builder
+        self.tree_class = tree_class
+        self.to_expand = to_expand
+
+    def __call__(self, children):
+        def _is_ambig_tree(child):
+            return hasattr(child, 'data') and child.data == '_ambig'
+
+        ambiguous = [i for i in self.to_expand if _is_ambig_tree(children[i])]
+        if ambiguous:
+            expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
+            return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+        return self.node_builder(children)
+
+def maybe_create_ambiguous_expander(tree_class, expansion, filter_out):
+    to_expand = [i for i, sym in enumerate(expansion) if sym not in filter_out and _should_expand(sym)]
+
+    if to_expand:
+        return partial(AmbiguousExpander, to_expand, tree_class)
 
 class Callback(object):
     pass
@@ -117,12 +139,14 @@ class ParseTreeBuilder:
             keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
             expand_single_child = options.expand1 if options else False
             create_token = options.create_token if options else False
+            ambiguity = self.ambiguous
 
             wrapper_chain = filter(None, [
                 create_token and partial(CreateToken, create_token),
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, () if keep_all_tokens else filter_out, self.ambiguous),
                 self.propagate_positions and PropagatePositions,
+                ambiguity and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, () if keep_all_tokens else filter_out),
             ])
 
             yield rule, wrapper_chain

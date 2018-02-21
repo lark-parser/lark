@@ -58,7 +58,6 @@ class LarkOptions(object):
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
-        self.earley__predict_all = o.pop('earley__predict_all', False)
         self.lexer_callbacks = o.pop('lexer_callbacks', {})
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
@@ -172,7 +171,8 @@ class Lark:
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
 
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens)
+        ambiguity = self.options.ambiguity == 'explicit'
+        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, ambiguity)
         callback = self._parse_tree_builder.create_callback(self.options.transformer)
         if self.profiler:
             for f in dir(callback):

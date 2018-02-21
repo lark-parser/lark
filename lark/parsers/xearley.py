@@ -18,24 +18,25 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-from collections import defaultdict
+import collections
 
 from ..common import ParseError, is_terminal
 from ..lexer import Token, UnexpectedInput
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
-
-from .earley import ApplyCallbacks, Item, Column
+from .earley import ApplyCallbacks
+from .earley_common import Column, Item, LR0
+from .earley_forest import Forest, ForestToTreeVisitor
 
 class Parser:
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False):
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=()):
         self.analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = list(ignore)
-        self.predict_all = predict_all
 
         self.FIRST = self.analysis.FIRST
+        self.NULLABLE = self.analysis.NULLABLE
         self.postprocess = {}
         self.predictions = {}
         for rule in parser_conf.rules:
@@ -44,86 +45,124 @@ class Parser:
 
         self.term_matcher = term_matcher
 
-
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = start_symbol or self.parser_conf.start
-        delayed_matches = defaultdict(list)
+        delayed_matches = collections.defaultdict(list)
         match = self.term_matcher
+        forest = Forest()
+        held_completions = collections.defaultdict(list)
 
         text_line = 1
         text_column = 0
 
-        def predict(nonterm, column):
-            assert not is_terminal(nonterm), nonterm
-            return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
+        def add(column, items, to_scan, item):
+            if item not in column.items:
+                column.add(item)
+                items.append(item)
+            if is_terminal(item.s.expect):
+                to_scan.add(item)
 
-        def complete(item):
-            name = item.rule.origin
-            return [i.advance(item.tree) for i in item.start.to_predict if i.expect == name]
+        def predict(item, column, items, to_scan):
+            for rule in self.predictions[item.s.expect]:
+                lr0 = LR0(rule, 0)
+                new_item = Item(lr0, column, None)
+                add(column, items, to_scan, new_item)
 
-        def predict_and_complete(column):
-            while True:
-                to_predict = {x.expect for x in column.to_predict.get_news()
-                              if x.ptr}  # if not part of an already predicted batch
-                to_reduce = column.to_reduce.get_news()
-                if not (to_predict or to_reduce):
-                    break
+            for node in held_completions[item.s.expect]:
+                new_item = item.advance()
+                new_item.node = forest.make_intermediate_or_symbol_node(new_item.s, item.start, column)
+                new_item.node.add_family(new_item.s, new_item.start, item.node, node)
+                add(column, items, to_scan, new_item)
 
-                for nonterm in to_predict:
-                    column.add( predict(nonterm, column) )
-                for item in to_reduce:
-                    new_items = list(complete(item))
-                    if item in new_items:
-                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
-                    column.add(new_items)
+        def complete(item, column, items, to_scan):
+            if item.node is None:
+                item.node = forest.make_null_node(item.s, column)
 
-        def scan(i, column):
-            to_scan = column.to_scan
+            is_empty_item = item.start.i == column.i
+            if is_empty_item:
+                held_completions[item.s.rule.origin].append(item.node)
+
+            originators = [ originator for originator in item.start.items if originator.s.expect == item.s.rule.origin ]
+            for originator in originators:
+                new_item = originator.advance()
+                new_item.node = forest.make_intermediate_or_symbol_node(new_item.s, originator.start, column)
+                new_item.node.add_family(new_item.s, new_item.start, originator.node, item.node)
+                add(column, items, to_scan, new_item)
+
+        def predict_and_complete(column, to_scan):
+            held_completions.clear()
+            items = list(column.items) # R
+            while items:
+                item = items.pop(0)
+                if item.is_complete:
+                    complete(item, column, items, to_scan)
+                elif not is_terminal(item.s.expect):
+                    predict(item, column, items, to_scan)
+
+        def scan(i, column, to_scan):
+            for item in set(to_scan):
+                m = match(item.s.expect, stream, i)
+                if m:
+                    t = Token(item.s.expect, m.group(0), i, text_line, text_column)
+                    delayed_matches[m.end()].append((item, column, t))
+
+                    s = m.group(0)
+                    for j in range(1, len(s)):
+                        m = match(item.s.expect, s[:-j])
+                        if m:
+                            t = Token(item.s.expect, m.group(0), i, text_line, text_column)
+                            delayed_matches[i+m.end()].append((item, column, t))
+                    to_scan.remove(item)
 
             for x in self.ignore:
                 m = match(x, stream, i)
                 if m:
-                    delayed_matches[m.end()] += set(to_scan)
-                    delayed_matches[m.end()] += set(column.to_reduce)
+                    # Carry over any items currently in the scan buffer, to past # the end of the ignored items.
+                    delayed_matches[m.end()].extend([(item, column, None) for item in to_scan])
 
-                    # TODO add partial matches for ignore too?
-                    # s = m.group(0)
-                    # for j in range(1, len(s)):
-                    #     m = x.match(s[:-j])
-                    #     if m:
-                    #         delayed_matches[m.end()] += to_scan
+                    # If we're ignoring up to the end of the file, # carry over the start symbol if it already completed.
+                    delayed_matches[m.end()].extend([(item, column, None) for item in column.items if item.is_complete and item.s.rule.origin == start_symbol])
 
-            for item in to_scan:
-                m = match(item.expect, stream, i)
-                if m:
-                    t = Token(item.expect, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].append(item.advance(t))
+            next_set = Column(i + 1, self.FIRST)    # Ei+1
+            next_to_scan = set()                                                   # Q'
+            for item, start, token in delayed_matches[i+1]:
+                if token is not None:
+                    token_node = forest.make_token_node(token, start, next_set)
+                    new_item = item.advance()
+                    new_item.node = forest.make_intermediate_or_symbol_node(new_item.s, new_item.start, next_set)
+                    new_item.node.add_family(new_item.s, new_item.start, item.node, token_node)
+                else:
+                    new_item = item
 
-                    s = m.group(0)
-                    for j in range(1, len(s)):
-                        m = match(item.expect, s[:-j])
-                        if m:
-                            t = Token(item.expect, m.group(0), i, text_line, text_column)
-                            delayed_matches[i+m.end()].append(item.advance(t))
+                if new_item not in next_set.items:
+                    next_set.add(new_item)
+                if is_terminal(new_item.s.expect):
+                    next_to_scan.add(new_item)
 
-            next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)
-            next_set.add(delayed_matches[i+1])
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
-            if not next_set and not delayed_matches:
-                raise UnexpectedInput(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan))
+            if not next_set and not delayed_matches and not next_to_scan:
+                raise UnexpectedInput(stream, i, text_line, text_column, {item.s.expect for item in to_scan})
 
-            return next_set
+            return next_set, next_to_scan
 
         # Main loop starts
-        column0 = Column(0, self.FIRST, predict_all=self.predict_all)
-        column0.add(predict(start_symbol, column0))
-
+        column0 = Column(0, self.FIRST)
         column = column0
+        to_scan = set()
+
+	### Predict for the start_symbol
+        for rule in self.predictions[start_symbol]:
+            lr0 = LR0(rule, 0)
+            item = Item(lr0, column0, None)
+            column.add(item)
+            if is_terminal(item.s.expect):
+                to_scan.add(item)
+
         for i, token in enumerate(stream):
-            predict_and_complete(column)
-            column = scan(i, column)
+            predict_and_complete(column, to_scan)
+            column, to_scan = scan(i, column, to_scan)
 
             if token == '\n':
                 text_line += 1
@@ -131,25 +170,20 @@ class Parser:
             else:
                 text_column += 1
 
+        predict_and_complete(column, to_scan)
 
-        predict_and_complete(column)
-
-        # Parse ended. Now build a parse tree
-        solutions = [n.tree for n in column.to_reduce
-                     if n.rule.origin==start_symbol and n.start is column0]
+        solutions = [n.node for n in column.items if n.is_complete and n.node is not None and n.s.rule.origin == start_symbol and n.start is column0]
 
         if not solutions:
-            expected_tokens = [t.expect for t in column.to_scan]
+            expected_tokens = [t.s.expect for t in to_scan]
             raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+        elif len(solutions) > 1:
+            raise Exception('Earley should not generate more than one start symbol - bug')
 
-        elif len(solutions) == 1:
-            tree = solutions[0]
-        else:
-            tree = Tree('_ambig', solutions)
+        forest_visitor = ForestToTreeVisitor(forest, solutions[0])
+        tree = forest_visitor.go()
 
         if self.resolve_ambiguity:
             tree = self.resolve_ambiguity(tree)
 
         return ApplyCallbacks(self.postprocess).transform(tree)
-
-

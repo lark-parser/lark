@@ -254,6 +254,28 @@ def _make_full_earley_test(LEXER):
             assert x.data == '_ambig', x
             assert len(x.children) == 2
 
+        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        def test_ambiguity2(self):
+            grammar = """
+            ANY:  /[a-zA-Z0-9 ]+/
+            a.2: "A" b+
+            b.2: "B" 
+            c:   ANY
+
+            start: (a|c)*
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse('ABX')
+            expected = Tree('start', [
+                    Tree('a', [
+                        Tree('b', [])
+                    ]),
+                    Tree('c', [
+                        'X'
+                    ])
+                ])
+            self.assertEqual(res, expected)
+
         @unittest.skipIf(LEXER==None, "BUG in scanless parsing!")  # TODO fix bug!
         def test_fruitflies_ambig(self):
             grammar = """

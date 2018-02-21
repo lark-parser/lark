@@ -111,6 +111,21 @@ class Item(object):
     def __repr__(self):
         return '%s (%d)' % (repr(self.s), self.start.i)
 
+class TransitiveItem(Item):
+
+    def __init__(self, recognized, trule, originator, start):
+        super(TransitiveItem, self).__init__(trule.s, trule.start)
+        self.recognized = recognized 
+        self.reduction = originator
+        self.column = start
+        self.next_titem = None
+        self.parent = None
+
+    def __repr__(self):
+        before = self.s.before
+        after = self.s.after
+        return '<(%d) (%d) %s : %s -> %s * %s>' % (id(self), self.start.i, self.recognized.s.rule.origin, self.s.rule.origin, ' '.join(before), ' '.join(after))
+
 class Column:
     "An entry in the table, aka Earley Chart. Contains lists of items."
     def __init__(self, i, FIRST, predict_all=False):
@@ -120,6 +135,7 @@ class Column:
         self.to_reduce = collections.OrderedDict()
         self.to_predict = collections.OrderedDict()
         self.to_scan = collections.OrderedDict()
+        self.transitives = collections.OrderedDict()
         self.item_count = 0
         self.FIRST = FIRST
 
@@ -130,7 +146,9 @@ class Column:
 
         Makes sure only unique items are added.
         """
-        if item.is_complete:
+        if isinstance(item, TransitiveItem):
+            self.transitives.setdefault(item.s.rule.origin, item)
+        elif item.is_complete:
             self.to_reduce.setdefault(item, item)
         else:
             if is_terminal(item.s.expect):

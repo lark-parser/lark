@@ -122,13 +122,74 @@ class TokenNode(object):
     def __repr__(self):
         return "(%s, %s, %s)" % (self.token, self.start.i, self.end.i)
 
+class VirtualNode(object):
+    def __init__(self, s, start, end):
+        assert isinstance(s, LR0)
+        assert isinstance(start, Column)
+        assert isinstance(end, Column)
+        self.s = s
+        self.start = start
+        self.end = end
+        self.children = None
+            
+    def add_family(self, lr0, start, left, right):
+        # Note which production is responsible for this subtree,
+        # to help navigate the tree in case of ambiguity
+        packed_node = PackedNode(self, lr0, start, left, right)
+        if self.children is None:
+            self.children = [ packed_node ]
+        if packed_node not in self.children:
+            self.children.append(packed_node)
+        
+    def add_unique_path(self, transitive, node):
+        packed_node = None
+        production = transitive.reduction.s.advance()
+        if transitive.next_titem is not None:
+            target = transitive.next_titem.reduction if transitive.next_titem.node is None else transitive.next_titem
+
+            vn = VirtualNode(target.s, target.start, self.end)
+            vn.add_unique_path(transitive.next_titem, node)
+
+            if transitive.reduction.node is None:
+                self.add_family(production, target.start, None, vn)
+            else:
+                self.add_family(production, target.start, transitive.reduction.node, vn)
+            
+        elif transitive.reduction.node is not None:
+            self.add_family(production, transitive.reduction.start, transitive.reduction.node, node)
+        else:
+            self.add_family(production, transitive.reduction.start, None, node)
+
+    @property   
+    def is_ambiguous(self):
+        return len(self.children) > 1
+            
+    def __eq__(self, other):
+        if not isinstance(other, SymbolNode):
+            return False
+        return self is other or (self.s == other.s and self.start == other.start and self.end == other.end)
+
+    def __hash__(self):
+        return hash((hash(self.s), self.start.i, self.end.i))
+
+    def __repr__(self):
+        return "(%s, %d, %d)" % (self.s.rule.origin, self.start.i, self.end.i)
+
 class Forest(object):
     def __init__(self):
         self.node_cache = {}
         self.token_cache = {}
+        self.virtual_node_cache = {}
 
     def reset(self):
         pass
+
+    def make_virtual_node(self, end, transitive, node):
+        target = transitive.reduction if transitive.node is None else transitive
+        label = (target.s, target.start.i, end.i)
+        vn = self.virtual_node_cache.setdefault(label, VirtualNode(target.s, target.start, end))
+        vn.add_unique_path(transitive, node)
+        return vn
 
     def make_intermediate_or_symbol_node(self, lr0, start, end):
         assert isinstance(lr0, LR0)

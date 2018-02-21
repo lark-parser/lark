@@ -66,9 +66,7 @@ class _Parser:
             value_stack.append(value)
 
         # Main LALR-parser loop
-        try:
-            token = next(stream)
-            i += 1
+        for i, token in enumerate(stream):
             while True:
                 action, arg = get_action(token.type)
                 assert arg != self.end_state
@@ -77,12 +75,9 @@ class _Parser:
                     state_stack.append(arg)
                     value_stack.append(token)
                     if set_state: set_state(arg)
-                    token = next(stream)
-                    i += 1
+                    break # next token
                 else:
                     reduce(arg)
-        except StopIteration:
-            pass
 
         while True:
             _action, arg = get_action('$END')

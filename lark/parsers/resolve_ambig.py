@@ -14,6 +14,9 @@ def _compare_rules(rule1, rule2):
         c = -c
     return c
 
+def _compare_empty(tree1, tree2):
+    c = -compare(not bool(len(tree1.children)), not bool(len(tree2.children)))
+    return c
 
 def _sum_priority(tree):
     p = 0
@@ -38,6 +41,11 @@ def _compare_drv(tree1, tree2):
 
     assert tree1.data != '_ambig'
     assert tree2.data != '_ambig'
+
+    # Ranged rules ("A"0..4) can match empty and items at the same time, depreference the empty
+    c = _compare_empty(tree1, tree2)
+    if c:
+        return c
 
     p1 = _sum_priority(tree1)
     p2 = _sum_priority(tree2)

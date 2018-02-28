@@ -61,7 +61,10 @@ class ChildFilter:
         filtered = []
         for i, to_expand in self.to_include:
             if to_expand:
-                filtered += children[i].children
+                if filtered:
+                    filtered += children[i].children
+                else:   # Optimize for left-recursion
+                    filtered = children[i].children
             else:
                 filtered.append(children[i])
 

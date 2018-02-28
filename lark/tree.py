@@ -11,7 +11,7 @@ from .utils import inline_args
 class Tree(object):
     def __init__(self, data, children):
         self.data = data
-        self.children = list(children)
+        self.children = children
 
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)

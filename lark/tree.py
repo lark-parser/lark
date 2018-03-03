@@ -116,12 +116,13 @@ class Transformer(object):
         try:
             f = self._get_func(tree.data)
         except AttributeError:
-            return self.__default__(tree.data, items)
+            if hasattr(self, '__default__'):
+                return self.__default__(tree.data, items)
+            else:
+                tree.set(tree.data, items)
+                return tree
         else:
             return f(items)
-
-    def __default__(self, data, children):
-        return Tree(data, children)
 
     def __mul__(self, other):
         return TransformerChain(self, other)

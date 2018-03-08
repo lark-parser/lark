@@ -197,7 +197,7 @@ class Parser:
 
             if not next_set:
                 expect = {i.expect for i in column.to_scan}
-                raise UnexpectedToken(token, expect, stream, i)
+                raise UnexpectedToken(token, expect, stream, set(column.to_scan))
 
             return next_set
 

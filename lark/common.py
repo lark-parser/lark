@@ -17,11 +17,12 @@ class ParseError(Exception):
     pass
 
 class UnexpectedToken(ParseError):
-    def __init__(self, token, expected, seq, index):
+    def __init__(self, token, expected, seq, index, considered_rules=None):
         self.token = token
         self.expected = expected
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
+        self.considered_rules = considered_rules
 
         try:
             context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])

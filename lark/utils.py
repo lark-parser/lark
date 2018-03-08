@@ -50,6 +50,7 @@ except NameError:   # Python 3
 
 import types
 import functools
+import re
 from contextlib import contextmanager
 
 Str = type(u'')
@@ -95,6 +96,10 @@ except ImportError:
             yield
         except excs:
             pass
+
+def convert_camelcase(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 ###}
 

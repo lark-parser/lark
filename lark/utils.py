@@ -71,6 +71,12 @@ def inline_args(f):
         def _f(self, args):
             return f.__func__(self, *args)
         return _f
+    elif isinstance(f, functools.partial):
+        # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
+        # @functools.wraps(f)
+        def _f(self, args):
+            return f(*args)
+        return _f
     else:
         @functools.wraps(f.__call__.__func__)
         def _f(self, args):

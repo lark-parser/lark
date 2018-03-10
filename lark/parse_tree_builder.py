@@ -1,11 +1,11 @@
-from functools import partial
-
 from .common import is_terminal, GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
 
 ###{standalone
+from functools import partial
+
 
 class ExpandSingleChild:
     def __init__(self, node_builder):

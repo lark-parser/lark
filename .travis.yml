@@ -1,13 +1,11 @@
 language: python
 python:
   - "2.7"
-#  - "3.2"  3.2 doesn't support the u'' syntax
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
-  - "pypy"  # PyPy2 2.5.0
-  - "pypy3" # Pypy3 2.4.0
+  - "pypy"  # PyPy2 5.8.0
+  - "pypy3" # Pypy3 5.8.0-beta0
 script:
   - pip install -r nearley-requirements.txt
   - python -m tests

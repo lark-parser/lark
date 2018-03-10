@@ -4,6 +4,7 @@ import unittest
 import logging
 
 from .test_trees import TestTrees
+from .test_tools import TestStandalone
 
 try:
     from .test_nearley.test_nearley import TestNearley

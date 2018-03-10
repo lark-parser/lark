@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import unittest
 from unittest import TestCase
-import logging
 import copy
 import pickle
 

@@ -26,32 +26,35 @@ setup(
     long_description='''
 Lark is a modern general-purpose parsing library for Python.
 
-Lark focuses on simplicity and power. It lets you choose between two parsing algorithms:
+With Lark, you can parse any context-free grammar, efficiently, with very little code.
 
-Earley : Parses all context-free grammars (even ambiguous ones)! It is the default.
-LALR(1): Only LR grammars. Outperforms PLY and most if not all other pure-python parsing libraries.
-Both algorithms are written in Python and can be used interchangably with the same grammar (aside for algorithmic restrictions). See "Comparison to other parsers" for more details.
-
-Lark can automagically build an AST from your grammar, without any more code on your part.
-
-Features:
-
-- EBNF grammar with a little extra
-- Earley & LALR(1)
-- Builds an AST automagically based on the grammar
-- Automatic line & column tracking
-- Automatic token collision resolution (unless both tokens are regexps)
-- Python 2 & 3 compatible
-- Unicode fully supported
+Main Features:
+ - Builds a parse-tree (AST) automagically, based on the structure of the grammar
+ - Earley parser
+    - Can parse all context-free grammars
+    - Full support for ambiguous grammars
+ - LALR(1) parser
+    - Fast and light, competitive with PLY
+    - Can generate a stand-alone parser
+ - CYK parser, for highly ambiguous grammars
+ - EBNF grammar
+ - Unicode fully supported
+ - Python 2 & 3 compatible
+ - Automatic line & column tracking
+ - Standard library of terminals (strings, numbers, names, etc.)
+ - Import grammars from Nearley.js
+ - Extensive test suite
+ - And much more!
 ''',
 
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Text Processing :: General",
+        "Topic :: Text Processing :: Linguistic",
         "License :: OSI Approved :: MIT License",
     ],
 

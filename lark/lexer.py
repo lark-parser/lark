@@ -26,17 +26,20 @@ class UnexpectedInput(LexError):
 
 class Token(Str):
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
-        inst = Str.__new__(cls, value)
-        inst.type = type_
-        inst.pos_in_stream = pos_in_stream
-        inst.value = value
-        inst.line = line
-        inst.column = column
-        return inst
+        self = super(Token, cls).__new__(cls, value)
+        self.type = type_
+        self.pos_in_stream = pos_in_stream
+        self.value = value
+        self.line = line
+        self.column = column
+        return self
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
         return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
+
+    def __reduce__(self):
+        return (self.__class__, (self.type, self.pos_in_stream, self.value, self.line, self.column, ))
 
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)

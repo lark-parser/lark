@@ -113,7 +113,6 @@ class XEarley:
                                     self.match,
                                     resolve_ambiguity=get_ambiguity_resolver(options),
                                     ignore=lexer_conf.ignore,
-                                    predict_all=options.earley__predict_all
                                     )
 
     def match(self, term, text, index=0):

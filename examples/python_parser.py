@@ -21,8 +21,8 @@ class PythonIndenter(Indenter):
     tab_len = 8
 
 
-grammar2_filename = os.path.join(__path__, 'python2.g')
-grammar3_filename = os.path.join(__path__, 'python3.g')
+grammar2_filename = os.path.join(__path__, 'python2.lrk')
+grammar3_filename = os.path.join(__path__, 'python3.lrk')
 with open(grammar2_filename) as f:
     python_parser2 = Lark(f, parser='lalr', postlex=PythonIndenter(), start='file_input')
 with open(grammar3_filename) as f:

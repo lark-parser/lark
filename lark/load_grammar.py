@@ -402,6 +402,8 @@ class TokenTreeToPattern(Transformer):
             assert len(args) == 2
         return PatternRE('(?:%s)%s' % (inner.to_regexp(), op), inner.flags)
 
+    def alias(self, t):
+        raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
 def _interleave(l, item):
     for e in l:
@@ -455,6 +457,9 @@ class Grammar:
                         exp.children[i] = Token(sym.type, new_terminal_names[sym])
 
         for name, (tree, priority) in term_defs:   # TODO transfer priority to rule?
+            if any(tree.find_data('alias')):
+                raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
+
             if name.startswith('_'):
                 options = RuleOptions(filter_out=True, priority=-priority)
             else:
@@ -516,7 +521,7 @@ class Grammar:
 
             for expansion, alias in expansions:
                 if alias and name.startswith('_'):
-                    raise Exception("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
+                    raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
                 rule = Rule(name, expansion, alias, options)
                 compiled_rules.append(rule)

@@ -822,6 +822,12 @@ def _make_parser_test(LEXER, PARSER):
                 """
             self.assertRaises( GrammarError, _Lark, g)
 
+        def test_alias_in_terminal(self):
+            g = """start: TERM
+                TERM: "a" -> alias
+                """
+            self.assertRaises( GrammarError, _Lark, g)
+
         @unittest.skipIf(LEXER==None, "TODO: Fix scanless parsing or get rid of it") # TODO
         def test_line_and_column(self):
             g = r"""!start: "A" bc "D"

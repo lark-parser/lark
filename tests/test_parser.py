@@ -691,7 +691,6 @@ def _make_parser_test(LEXER, PARSER):
                       """)
             x = g.parse('\n')
 
-
         def test_backslash2(self):
             g = _Lark(r"""start: "\"" "-"
                       """)
@@ -803,6 +802,13 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aA')
             self.assertEqual(tree.children, ['a', 'A'])
 
+        def test_token_flags_verbose(self):
+            g = _Lark(r"""start: NL | ABC
+                          ABC: / [a-z] /x
+                          NL: /\n/
+                      """)
+            x = g.parse('a')
+            self.assertEqual(x.children, ['a'])
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):

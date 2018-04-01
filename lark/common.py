@@ -94,7 +94,12 @@ class PatternStr(Pattern):
 
 class PatternRE(Pattern):
     def to_regexp(self):
-        return self._get_flags(self.value)
+        regexp = self._get_flags(self.value)
+        regexp = regexp.replace('\f', '\\f')
+        regexp = regexp.replace('\t', '\\t')
+        regexp = regexp.replace('\r', '\\r')
+        regexp = regexp.replace('\n', '\\n')
+        return regexp
 
     @property
     def min_width(self):

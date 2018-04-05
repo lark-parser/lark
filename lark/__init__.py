@@ -4,4 +4,4 @@ from .lexer import UnexpectedInput, LexError
 from .lark import Lark
 from .utils import inline_args
 
-__version__ = "0.5.5"
+__version__ = "0.5.6"

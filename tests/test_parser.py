@@ -293,6 +293,30 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(res, expected)
 
 
+        def test_explicit_ambiguity(self):
+            grammar = r"""
+            start: NAME+
+
+            NAME: /\w+/
+
+            %ignore " "
+            """
+
+            text = """cat"""
+
+            parser = Lark(grammar, start='start', ambiguity='explicit')
+            tree = parser.parse(text)
+            self.assertEqual(tree.data, '_ambig')
+
+            combinations = {tuple(str(s) for s in t.children) for t in tree.children}
+            self.assertEqual(combinations, {
+                ('cat',),
+                ('ca', 't'),
+                ('c', 'at'),
+                ('c', 'a' ,'t')
+            })
+
+
 
 
 

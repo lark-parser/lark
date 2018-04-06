@@ -25,6 +25,8 @@ class UnexpectedInput(LexError):
         self.considered_rules = considered_rules
 
 class Token(Str):
+    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
+
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
         self = super(Token, cls).__new__(cls, value)
         self.type = type_
@@ -33,6 +35,26 @@ class Token(Str):
         self.line = line
         self.column = column
         return self
+
+    def __getstate__(self):
+        return {
+            'type': self.type,
+            'pos_in_stream': self.pos_in_stream,
+            'value': self.value,
+            'line': self.line,
+            'column': self.column,
+            'end_line': self.end_line,
+            'end_column': self.end_column
+        }
+
+    def __setstate__(self, state):
+        self.type = state['type']
+        self.pos_in_stream = state['pos_in_stream']
+        self.value = state['value']
+        self.line = state['line']
+        self.column = state['column']
+        self.end_line = state['end_line']
+        self.end_column = state['end_column']
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):

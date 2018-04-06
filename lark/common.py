@@ -53,6 +53,7 @@ class ParserConf:
         self.rules = rules
         self.callback = callback
         self.start = start
+        self.parsetable_class = None
 
 
 

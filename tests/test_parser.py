@@ -60,7 +60,7 @@ class TestParsers(unittest.TestCase):
                  """, propagate_positions=True)
 
         r = g.parse('a')
-        self.assertEqual( r.children[0].line, 1 )
+        self.assertEqual( r.children[0]['line'], 1 )
 
     def test_expand1(self):
 

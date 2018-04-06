@@ -21,12 +21,12 @@ from .grammar_analysis import GrammarAnalyzer
 class Derivation(Tree):
     _hash = None
 
-    def __init__(self, rule, items=None):
-        Tree.__init__(self, 'drv', items or [])
-        self.rule = rule
+    def __init__(self, rule, items=None, tags=None):
+        Tree.__init__(self, 'drv', items or [], tags)
+        self['rule'] = rule
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
-        return self.rule.origin if self.rule else self.data
+        return self['rule'].origin if self['rule'] else self.data
 
     def __hash__(self):
         if self._hash is None:
@@ -113,9 +113,8 @@ class Column:
 
                     if old_tree.data != '_ambig':
                         new_tree = old_tree.copy()
-                        new_tree.rule = old_tree.rule
                         old_tree.set('_ambig', [new_tree])
-                        old_tree.rule = None    # No longer a 'drv' node
+                        old_tree['rule'] = None    # No longer a 'drv' node
 
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
@@ -234,4 +233,4 @@ class ApplyCallbacks(Transformer_NoRecurse):
         self.postprocess = postprocess
 
     def drv(self, tree):
-        return self.postprocess[tree.rule](tree.children)
+        return self.postprocess[tree['rule']](tree.children)

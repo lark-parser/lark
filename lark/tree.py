@@ -3,18 +3,53 @@ try:
 except ImportError:
     pass
 
+from collections import deque
 from copy import deepcopy
 
 from .utils import inline_args
 
 ###{standalone
 class Tree(object):
-    def __init__(self, data, children):
+    __slots__ = ('data', 'children', 'tags')
+
+    def __init__(self, data, children, tags=None):
         self.data = data
         self.children = children
+        self.tags = tags
 
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def __len__(self):
+        return len(self.children)
+
+    def __hasitem__(self, tag):
+        return self.tags and tag in self.tags
+
+    def __getitem__(self, tag):
+        if self.tags is None:
+            raise KeyError(tag)
+        return self.tags[tag]
+
+    def __setitem__(self, tag, value):
+        if self.tags is None:
+            self.tags = {}
+        self.tags[tag] = value
+
+    def __getstate__(self):
+        return {
+            'data': self.data,
+            'children': self.children,
+            'tags': self.tags
+        }
+
+    def __setstate__(self, state):
+        self.data = state['data']
+        self.children = state['children']
+        self.tags = state['tags']
 
     def _pretty_label(self):
         return self.data
@@ -72,29 +107,52 @@ class Tree(object):
         # TODO: Re-write as a more efficient version
 
         visited = set()
-        q = [self]
+        q = deque()
+        q.append(self)
 
-        l = []
+        l = deque()
         while q:
             subtree = q.pop()
-            l.append( subtree )
-            if id(subtree) in visited:
+            l.appendleft(subtree)
+            id_ = id(subtree)
+            if id_ in visited:
                 continue    # already been here from another branch
-            visited.add(id(subtree))
-            q += [c for c in subtree.children if isinstance(c, Tree)]
+            visited.add(id_)
+            q.extend(c for c in subtree.children if isinstance(c, Tree))
 
         seen = set()
-        for x in reversed(l):
-            if id(x) not in seen:
+        for x in l:
+            id_ = id(x)
+            if id_ not in seen:
                 yield x
-                seen.add(id(x))
+                seen.add(id_)
 
+    def __copy__(self):
+        cls = self.__class__
+        new = cls.__new__(cls)
+
+        tags = self.tags.copy() if self.tags else None
+        Tree.__init__(new, self.data, self.children, tags)
+
+        if hasattr(new, '__dict__'):
+            new.__dict__.update(self.__dict__)
+
+        return new
 
     def __deepcopy__(self, memo):
-        return type(self)(self.data, deepcopy(self.children, memo))
+        new = self.__copy__()
+        memo[id(self)] = new
+        new.children = deepcopy(self.children, memo)
+        new.tags = deepcopy(self.tags, memo)
+
+        if hasattr(new, '__dict__'):
+            new.__dict__ = deepcopy(self.__dict__, memo)
+
+        return new
 
     def copy(self):
-        return type(self)(self.data, self.children)
+        return self.__copy__()
+
     def set(self, data, children):
         self.data = data
         self.children = children
@@ -104,7 +162,7 @@ class Tree(object):
 ###{standalone
 class Transformer(object):
     def _get_func(self, name):
-        return getattr(self, name)
+        return getattr(self, name, None)
 
     def transform(self, tree):
         items = []
@@ -113,15 +171,20 @@ class Transformer(object):
                 items.append(self.transform(c) if isinstance(c, Tree) else c)
             except Discard:
                 pass
-        try:
-            f = self._get_func(tree.data)
-        except AttributeError:
-            return self.__default__(tree.data, items)
+
+        f = self._get_func(tree.data)
+        if f is None:
+            return self.__default__(tree.data, items, tree)
         else:
             return f(items)
 
-    def __default__(self, data, children):
-        return Tree(data, children)
+    def __default__(self, name, items, original=None):
+        if original:
+            tree = original.copy()
+            tree.set(name, items)
+        else:
+            tree = Tree(name, items)
+        return tree
 
     def __mul__(self, other):
         return TransformerChain(self, other)
@@ -145,15 +208,19 @@ class TransformerChain(object):
 
 
 class InlineTransformer(Transformer):
-    def _get_func(self, name):  # use super()._get_func
-        return inline_args(getattr(self, name)).__get__(self)
+    def _get_func(self, name):
+        f = super(InlineTransformer, self)._get_func(name)
+        if f is None:
+            return None
+        return inline_args(f).__get__(self)
 
 
 class Visitor(object):
     def visit(self, tree):
+        recurse = self.visit
         for child in tree.children:
             if isinstance(child, Tree):
-                self.visit(child)
+                recurse(child)
 
         f = getattr(self, tree.data, self.__default__)
         f(tree)
@@ -167,20 +234,21 @@ class Visitor_NoRecurse(Visitor):
     def visit(self, tree):
         subtrees = list(tree.iter_subtrees())
 
-        for subtree in (subtrees):
+        for subtree in subtrees:
             getattr(self, subtree.data, self.__default__)(subtree)
+
         return tree
 
 
 class Transformer_NoRecurse(Transformer):
     def transform(self, tree):
+        # TODO: why materialize the iterator?
         subtrees = list(tree.iter_subtrees())
 
         def _t(t):
             # Assumes t is already transformed
-            try:
-                f = self._get_func(t.data)
-            except AttributeError:
+            f = self._get_func(t.data)
+            if f is None:
                 return self.__default__(t)
             else:
                 return f(t)

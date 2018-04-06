@@ -160,7 +160,7 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
     emit('class TransformNearley(Transformer):')
     for alias in n2l.alias_js_code:
         emit("    %s = var.get('%s').to_python()" % (alias, alias))
-    emit("    __default__ = lambda self, n, c: c if c else None")
+    emit("    __default__ = lambda self, n, c, *args: c if c else None")
 
     emit()
     emit('parser = Lark(grammar, start="n_%s")' % start)

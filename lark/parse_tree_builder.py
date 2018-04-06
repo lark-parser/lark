@@ -39,14 +39,14 @@ class PropagatePositions:
         if children:
             for a in children:
                 with suppress(AttributeError):
-                    res.line = a.line
-                    res.column = a.column
+                    res['line'] = a.line
+                    res['column'] = a.column
                 break
 
             for a in reversed(children):
                 with suppress(AttributeError):
-                    res.end_line = a.end_line
-                    res.end_column = a.end_column
+                    res['end_line'] = a.end_line
+                    res['end_column'] = a.end_column
                 break
 
         return res
@@ -121,9 +121,8 @@ class ParseTreeBuilder:
             internal_callback_name = '_callback_%s_%s' % (rule.origin, '_'.join(rule.expansion))
 
             user_callback_name = rule.alias or rule.origin
-            try:
-                f = transformer._get_func(user_callback_name)
-            except AttributeError:
+            f = transformer._get_func(user_callback_name) if transformer else None
+            if f is None:
                 f = partial(self.tree_class, user_callback_name)
 
             self.user_aliases[rule] = rule.alias

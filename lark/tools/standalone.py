@@ -126,7 +126,7 @@ def _get_token_type(token_type):
 
 class ParserAtoms:
     def __init__(self, parser):
-        self.parse_table = parser.analysis.parse_table
+        self.parse_table = parser.parse_table
 
     def print_python(self):
         print('class ParseTable: pass')

@@ -7,7 +7,10 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Email : erezshin@gmail.com
 
 import logging
+import sys
+from bisect import bisect_left, insort_left
 from collections import defaultdict
+from array import array
 
 from ..utils import classify, classify_bool, bfs, fzset
 from ..common import GrammarError, is_terminal
@@ -31,6 +34,114 @@ class ParseTable:
         self.start_state = start_state
         self.end_state = end_state
 
+class ArrayParseTable(ParseTable):
+    """
+    Stores the parse table in a array of 16bit ints with all the states
+    packed one after the other in the following structure:
+
+        ( token_id+ value+ )+
+
+    Values have its highest bit set if it's a reduce action.
+    """
+
+    class StateProxy(object):
+        __slots__ = ('tokens', 'idx_rules', 'table', 'offset', 'length')
+
+        def __init__(self, tokens, idx_rules, table, offset, length):
+            self.tokens = tokens
+            self.idx_rules = idx_rules
+            self.table = table
+            self.offset = offset
+            self.length = length
+
+        def iterkeys(self):
+            inv_tokens = {v:k for k,v in self.tokens.items()}
+            offset = self.offset
+            while offset < self.offset + self.length:
+                yield inv_tokens[ self.table[offset] ]
+                offset += 1
+
+        def itervalues(self):
+            for token in self.iterkeys(): yield token
+
+        def iteritems(self):
+            for token in self.iterkeys(): yield (token, self[token])
+
+        items = lambda self: list(self.iteritems())
+        keys = lambda self: list(self.iterkeys())
+        values = lambda self: list(self.itervalues())
+
+        if sys.version_info >= (3, 0):
+            keys = StateProxy.iterkeys
+            values = StateProxy.itervalues
+            items = StateProxy.iteritems
+
+        def __getitem__(self, token):
+            token_idx = self.tokens[token]
+            table = self.table
+            offset = self.offset
+            offset_end = offset + self.length
+
+            idx = bisect_left(table, token_idx, offset, offset_end)
+            if idx == offset_end or table[idx] != token_idx:
+                raise KeyError(token)
+
+            atom = table[idx + self.length]
+            if atom & 0x8000:
+                atom &= ~0x8000
+                return Reduce, self.idx_rules[atom]
+            else:
+                return Shift, atom
+
+
+    def __init__(self, states, start_state, end_state):
+        idx_states = dict( (s, i) for i,s in enumerate(states.keys()) )
+        assert len(idx_states) < 0x8000, "ArrayParseTable doesn't support more than 32767 states"
+
+        self.start_state = idx_states[start_state]
+        self.end_state = idx_states[end_state]
+
+        table = array('H')  # unsigned 16bit ints
+        tokens = tokens = {}
+        idx_tokens = []
+        rules = {}
+        idx_rules = []
+
+        self.states = {}
+        for state, productions in states.items():
+            # Sort the tokens based on the assigned index
+            subtokens = []
+            for token in productions:
+                if token not in tokens:
+                    tokens[token] = len(idx_tokens)
+                    idx_tokens.append(token)
+                    assert len(idx_tokens) < 0xFFFF, "ArrayParseTable doesn't support more than 65535 tokens"
+
+                insort_left(subtokens, tokens[token])
+
+            self.states[ idx_states[state] ] = ArrayParseTable.StateProxy(
+                tokens, idx_rules, table, len(table), len(subtokens))
+
+            values = []
+            for token_idx in subtokens:
+                token = idx_tokens[token_idx]
+                table.append(token_idx)
+
+                value = productions[token]
+                if value[0] is Shift:
+                    values.append(idx_states[ value[1] ])
+                else:
+                    if value[1] not in rules:
+                        rules[ value[1] ] = len(idx_rules)
+                        idx_rules.append(value[1])
+                        assert len(idx_rules) < 0x8000, "ArrayParseTable doesn't support more than 32767 rules"
+
+                    ptr = rules[ value[1] ] | 0x8000
+                    values.append(ptr)
+
+            table.extend(values)
+
+
 class IntParseTable(ParseTable):
 
     @classmethod
@@ -44,12 +155,9 @@ class IntParseTable(ParseTable):
                   for k,v in la.items()}
             int_states[ state_to_idx[s] ] = la
 
-
         start_state = state_to_idx[parse_table.start_state]
         end_state = state_to_idx[parse_table.end_state]
         return cls(int_states, start_state, end_state)
-
-
 
 
 class LALR_Analyzer(GrammarAnalyzer):
@@ -104,6 +212,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
         if self.debug:
             self.parse_table = self._parse_table
+        elif self.parser_conf.parsetable_class:
+            self.parse_table = self.parser_conf.parsetable_class(self.states, self.start_state, self.end_state)
         else:
             self.parse_table = IntParseTable.from_ParseTable(self._parse_table)
-

@@ -107,6 +107,7 @@ def calculate_sets(rules):
 class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
+        self.parser_conf = parser_conf
 
         rules = parser_conf.rules + [Rule('$root', [parser_conf.start, '$END'])]
         self.rules_by_origin = classify(rules, lambda r: r.origin)
@@ -136,7 +137,8 @@ class GrammarAnalyzer(object):
                     if not is_terminal(new_r):
                         yield new_r
 
-        _ = list(bfs([rule], _expand_rule))
+        for _ in bfs([rule], _expand_rule):
+            pass
 
         return fzset(init_ptrs)
 

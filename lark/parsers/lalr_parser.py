@@ -11,10 +11,14 @@ class Parser:
     def __init__(self, parser_conf):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
-        self.analysis = analysis = LALR_Analyzer(parser_conf)
+
+        analysis = LALR_Analyzer(parser_conf)
         analysis.compute_lookahead()
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in parser_conf.rules}
+
+        # Keeping the whole analysis around wastes tons of memory
+        self.parse_table = analysis.parse_table
 
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)

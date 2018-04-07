@@ -145,8 +145,7 @@ class Parser(object):
             else:
                 assert isinstance(child.s, Token)
                 children.append(child.s)
-        t = Tree(orig_rule.origin, children)
-        t.rule=orig_rule
+        t = Tree(orig_rule.origin, children, {'rule': orig_rule})
         return t
 
 

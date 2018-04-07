@@ -13,6 +13,7 @@ from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 
+
 class LarkOptions(object):
     """Specifies the options for Lark
 
@@ -41,6 +42,7 @@ class LarkOptions(object):
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
+        parsetable_class - Use a specific parse table (only with parser="lalr")
     """
     __doc__ += OPTIONS_DOC
     def __init__(self, options_dict):
@@ -60,6 +62,7 @@ class LarkOptions(object):
         self.propagate_positions = o.pop('propagate_positions', False)
         self.earley__predict_all = o.pop('earley__predict_all', False)
         self.lexer_callbacks = o.pop('lexer_callbacks', {})
+        self.parsetable_class = o.pop('parsetable_class', None)
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
@@ -180,7 +183,6 @@ class Lark:
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
 
         parser_conf = ParserConf(self.rules, callback, self.options.start)
-
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
 

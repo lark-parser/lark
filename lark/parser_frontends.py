@@ -15,9 +15,9 @@ class WithLexer:
 
     def init_contextual_lexer(self, lexer_conf, parser_conf):
         self.lexer_conf = lexer_conf
-        d = {idx:t.keys() for idx, t in self.parser.analysis.parse_table.states.items()}
+        state_map = {idx:list(t.keys()) for idx, t in self.parser.parse_table.states.items()}
         always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
-        self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore, always_accept=always_accept, user_callbacks=lexer_conf.callbacks)
+        self.lexer = ContextualLexer(lexer_conf.tokens, state_map, ignore=lexer_conf.ignore, always_accept=always_accept, user_callbacks=lexer_conf.callbacks)
 
     def lex(self, text):
         stream = self.lexer.lex(text)
@@ -29,6 +29,9 @@ class WithLexer:
 
 class LALR(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
+        if options:
+            parser_conf.parsetable_class = options.parsetable_class
+
         self.parser = lalr_parser.Parser(parser_conf)
         self.init_traditional_lexer(lexer_conf)
 
@@ -39,6 +42,9 @@ class LALR(WithLexer):
 
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
+        if options:
+            parser_conf.parsetable_class = options.parsetable_class
+
         self.parser = lalr_parser.Parser(parser_conf)
         self.init_contextual_lexer(lexer_conf, parser_conf)
 
@@ -165,8 +171,8 @@ class CYK(WithLexer):
 
     def _apply_callback(self, tree):
         children = tree.children
-        callback = self._postprocess[tree.rule.alias]
-        assert callback, tree.rule.alias
+        callback = self._postprocess[tree['rule'].alias]
+        assert callback, tree['rule'].alias
         r = callback(children)
         return r
 

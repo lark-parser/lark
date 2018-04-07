@@ -15,9 +15,9 @@ class WithLexer:
 
     def init_contextual_lexer(self, lexer_conf, parser_conf):
         self.lexer_conf = lexer_conf
-        d = {idx:t.keys() for idx, t in self.parser.analysis.parse_table.states.items()}
+        states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
-        self.lexer = ContextualLexer(lexer_conf.tokens, d, ignore=lexer_conf.ignore, always_accept=always_accept, user_callbacks=lexer_conf.callbacks)
+        self.lexer = ContextualLexer(lexer_conf.tokens, states, ignore=lexer_conf.ignore, always_accept=always_accept, user_callbacks=lexer_conf.callbacks)
 
     def lex(self, text):
         stream = self.lexer.lex(text)

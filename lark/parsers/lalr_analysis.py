@@ -105,10 +105,11 @@ class ArrayParseTable(ParseTable):
 
 
     def __init__(self, states, start_state, end_state):
-        states_idx = dict( (s, i) for i,s in enumerate(states.keys()) )
+        idx_states = dict( (s, i) for i,s in enumerate(states.keys()) )
+        assert len(idx_states) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 states'
 
-        self.start_state = states_idx[start_state]
-        self.end_state = states_idx[end_state]
+        self.start_state = idx_states[start_state]
+        self.end_state = idx_states[end_state]
 
         self.table = table = array('H')  # unsigned 16bit ints
 
@@ -120,7 +121,7 @@ class ArrayParseTable(ParseTable):
         self.states = {}
         for state, productions in states.items():
             # Create state proxy for the current offset
-            self.states[ states_idx[state] ] = ArrayParseTable.StateProxy(self, len(table))
+            self.states[ idx_states[state] ] = ArrayParseTable.StateProxy(self, len(table))
 
             # Prefix with the length of the state
             table.append(len(productions))
@@ -132,6 +133,7 @@ class ArrayParseTable(ParseTable):
                 if token not in tokens:
                     tokens[token] = len(idx_tokens)
                     idx_tokens.append(token)
+                    assert len(idx_tokens) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 tokens'
 
                 subtokens.append(tokens[token])
 
@@ -144,11 +146,12 @@ class ArrayParseTable(ParseTable):
                 table.append(token_idx)
 
                 if value[0] is Shift:
-                    table.append(states_idx[ value[1] ])
+                    table.append(idx_states[ value[1] ])
                 else:
                     if value[1] not in rules:
                         rules[ value[1] ] = len(idx_rules)
                         idx_rules.append(value[1])
+                        assert len(idx_rules) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 rules'
 
                     ptr = rules[ value[1] ] | 0x8000
                     table.append(ptr)

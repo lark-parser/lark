@@ -29,9 +29,15 @@ def _sum_priority(tree):
 def _compare_priority(tree1, tree2):
     tree1.iter_subtrees()
 
+def _maybe_rule(tree):
+    try:
+        return tree['rule']
+    except Exception:
+        return None
+
 def _compare_drv(tree1, tree2):
-    rule1 = getattr(tree1, 'rule', None)
-    rule2 = getattr(tree2, 'rule', None)
+    rule1 = _maybe_rule(tree1)
+    rule2 = _maybe_rule(tree2)
 
     if None == rule1 == rule2:
         return compare(tree1, tree2)

@@ -7,6 +7,8 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Email : erezshin@gmail.com
 
 import logging
+import sys
+from bisect import bisect_left, insort_left
 from collections import defaultdict
 from array import array
 
@@ -32,129 +34,112 @@ class ParseTable:
         self.start_state = start_state
         self.end_state = end_state
 
-
 class ArrayParseTable(ParseTable):
     """
     Stores the parse table in a array of 16bit ints with all the states
     packed one after the other in the following structure:
 
-        num_tokens [ token_id atom ]*
+        ( token_id+ value+ )+
 
-    The atom has its highest bit set if it's a reduce action.
+    Values have its highest bit set if it's a reduce action.
     """
 
     class StateProxy(object):
-        __slots__ = ('context', 'offset', 'cache')
+        __slots__ = ('tokens', 'idx_rules', 'table', 'offset', 'length')
 
-        def __init__(self, context, offset):
-            self.context = context
+        def __init__(self, tokens, idx_rules, table, offset, length):
+            self.tokens = tokens
+            self.idx_rules = idx_rules
+            self.table = table
             self.offset = offset
-            self.cache = {}
+            self.length = length
 
-        def keys(self):
-            ofs = self.offset
-            table = self.context.table
-            inv_tokens = {v:k for k,v in self.context.tokens.items()}
-            length = table[ofs]
-            ofs += 1
-            while length > 0:
-                yield inv_tokens[ table[ofs] ]
-                ofs += 2
-                length -= 1
+        def iterkeys(self):
+            inv_tokens = {v:k for k,v in self.tokens.items()}
+            offset = self.offset
+            while offset < self.offset + self.length:
+                yield inv_tokens[ self.table[offset] ]
+                offset += 1
 
-        def values(self):
-            for token in self.keys():
-                yield self[token]
+        def itervalues(self):
+            for token in self.iterkeys(): yield token
 
-        def items(self):
-            for token in self.keys():
-                yield (token, self[token])
+        def iteritems(self):
+            for token in self.iterkeys(): yield (token, self[token])
+
+        items = lambda self: list(self.iteritems())
+        keys = lambda self: list(self.iterkeys())
+        values = lambda self: list(self.itervalues())
+
+        if sys.version_info >= (3, 0):
+            keys = StateProxy.iterkeys
+            values = StateProxy.itervalues
+            items = StateProxy.iteritems
 
         def __getitem__(self, token):
-            if token in self.cache:
-                return self.cache[token]
+            token_idx = self.tokens[token]
+            table = self.table
+            offset = self.offset
+            offset_end = offset + self.length
 
-            token_idx = self.context.tokens[token]
-            table = self.context.table
-            ofs = self.offset
+            idx = bisect_left(table, token_idx, offset, offset_end)
+            if idx == offset_end or table[idx] != token_idx:
+                raise KeyError(token)
 
-            # tokens are sorted so use a binary search to find it
-            lo = 0
-            hi = table[ofs]
-            ofs += 1
-            while lo < hi:
-                mid = (lo+hi)//2
-                value = table[ofs + mid*2]
-                if value < token_idx:
-                    lo = mid + 1
-                elif value > token_idx:
-                    hi = mid
-                else:
-                    self.cache[token] = self._unpack(table[ofs + mid*2 + 1])
-                    return self.cache[token]
-
-            raise KeyError(token)
-
-        def _unpack(self, atom):
+            atom = table[idx + self.length]
             if atom & 0x8000:
                 atom &= ~0x8000
-                return Reduce, self.context.idx_rules[atom]
+                return Reduce, self.idx_rules[atom]
             else:
                 return Shift, atom
 
 
-
     def __init__(self, states, start_state, end_state):
         idx_states = dict( (s, i) for i,s in enumerate(states.keys()) )
-        assert len(idx_states) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 states'
+        assert len(idx_states) < 0x8000, "ArrayParseTable doesn't support more than 32767 states"
 
         self.start_state = idx_states[start_state]
         self.end_state = idx_states[end_state]
 
-        self.table = table = array('H')  # unsigned 16bit ints
-
-        self.tokens = tokens = {}
+        table = array('H')  # unsigned 16bit ints
+        tokens = tokens = {}
         idx_tokens = []
         rules = {}
-        self.idx_rules = idx_rules = []
+        idx_rules = []
 
         self.states = {}
         for state, productions in states.items():
-            # Create state proxy for the current offset
-            self.states[ idx_states[state] ] = ArrayParseTable.StateProxy(self, len(table))
-
-            # Prefix with the length of the state
-            table.append(len(productions))
-
-            # Sort the tokens based on the assigned index, indexing those
-            # that we haven't seen before
+            # Sort the tokens based on the assigned index
             subtokens = []
             for token in productions:
                 if token not in tokens:
                     tokens[token] = len(idx_tokens)
                     idx_tokens.append(token)
-                    assert len(idx_tokens) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 tokens'
+                    assert len(idx_tokens) < 0xFFFF, "ArrayParseTable doesn't support more than 65535 tokens"
 
-                subtokens.append(tokens[token])
+                insort_left(subtokens, tokens[token])
 
-            subtokens.sort()
+            self.states[ idx_states[state] ] = ArrayParseTable.StateProxy(
+                tokens, idx_rules, table, len(table), len(subtokens))
 
+            values = []
             for token_idx in subtokens:
                 token = idx_tokens[token_idx]
-                value = productions[token]
-
                 table.append(token_idx)
 
+                value = productions[token]
                 if value[0] is Shift:
-                    table.append(idx_states[ value[1] ])
+                    values.append(idx_states[ value[1] ])
                 else:
                     if value[1] not in rules:
                         rules[ value[1] ] = len(idx_rules)
                         idx_rules.append(value[1])
-                        assert len(idx_rules) < 0x8000, 'ArrayParseTable doesn\'t support more than 32767 rules'
+                        assert len(idx_rules) < 0x8000, "ArrayParseTable doesn't support more than 32767 rules"
 
                     ptr = rules[ value[1] ] | 0x8000
-                    table.append(ptr)
+                    values.append(ptr)
+
+            table.extend(values)
 
 
 class IntParseTable(ParseTable):

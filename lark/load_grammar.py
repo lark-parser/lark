@@ -14,7 +14,7 @@ from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule
 
-from .tree import Tree as T, Transformer, InlineTransformer, Visitor
+from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -145,14 +145,14 @@ class EBNF_to_BNF(InlineTransformer):
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
         t = Token('RULE', new_name, -1)
-        tree = T('expansions', [T('expansion', [expr]), T('expansion', [t, expr])])
+        tree = ST('expansions', [ST('expansion', [expr]), ST('expansion', [t, expr])])
         self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t
         return t
 
     def expr(self, rule, op, *args):
         if op.value == '?':
-            return T('expansions', [rule, T('expansion', [])])
+            return ST('expansions', [rule, ST('expansion', [])])
         elif op.value == '+':
             # a : b c+ d
             #   -->
@@ -165,7 +165,7 @@ class EBNF_to_BNF(InlineTransformer):
             # a : b _c? d
             # _c : _c c | c;
             new_name = self._add_recurse_rule('star', rule)
-            return T('expansions', [new_name, T('expansion', [])])
+            return ST('expansions', [new_name, ST('expansion', [])])
         elif op.value == '~':
             if len(args) == 1:
                 mn = mx = int(args[0])
@@ -173,7 +173,7 @@ class EBNF_to_BNF(InlineTransformer):
                 mn, mx = map(int, args)
                 if mx < mn:
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
-            return T('expansions', [T('expansion', [rule] * n) for n in range(mn, mx+1)])
+            return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx+1)])
         assert False, op
 
 
@@ -183,7 +183,7 @@ class SimplifyRule_Visitor(Visitor):
     def _flatten(tree):
         while True:
             to_expand = [i for i, child in enumerate(tree.children)
-                         if isinstance(child, T) and child.data == tree.data]
+                         if isinstance(child, Tree) and child.data == tree.data]
             if not to_expand:
                 break
             tree.expand_kids_by_index(*to_expand)
@@ -203,9 +203,9 @@ class SimplifyRule_Visitor(Visitor):
             self._flatten(tree)
 
             for i, child in enumerate(tree.children):
-                if isinstance(child, T) and child.data == 'expansions':
+                if isinstance(child, Tree) and child.data == 'expansions':
                     tree.data = 'expansions'
-                    tree.children = [self.visit(T('expansion', [option if i==j else other
+                    tree.children = [self.visit(ST('expansion', [option if i==j else other
                                                                 for j, other in enumerate(tree.children)]))
                                      for option in set(child.children)]
                     break
@@ -217,7 +217,7 @@ class SimplifyRule_Visitor(Visitor):
         if rule.data == 'expansions':
             aliases = []
             for child in tree.children[0].children:
-                aliases.append(T('alias', [child, alias_name]))
+                aliases.append(ST('alias', [child, alias_name]))
             tree.data = 'expansions'
             tree.children = aliases
 
@@ -239,7 +239,7 @@ class RuleTreeToText(Transformer):
 
 class CanonizeTree(InlineTransformer):
     def maybe(self, expr):
-        return T('expr', [expr, Token('OP', '?', -1)])
+        return ST('expr', [expr, Token('OP', '?', -1)])
 
     def tokenmods(self, *args):
         if len(args) == 1:
@@ -353,7 +353,7 @@ def _literal_to_pattern(literal):
 
 class PrepareLiterals(InlineTransformer):
     def literal(self, literal):
-        return T('pattern', [_literal_to_pattern(literal)])
+        return ST('pattern', [_literal_to_pattern(literal)])
 
     def range(self, start, end):
         assert start.type == end.type == 'STRING'
@@ -361,13 +361,13 @@ class PrepareLiterals(InlineTransformer):
         end = end.value[1:-1]
         assert len(start) == len(end) == 1, (start, end, len(start), len(end))
         regexp = '[%s-%s]' % (start, end)
-        return T('pattern', [PatternRE(regexp)])
+        return ST('pattern', [PatternRE(regexp)])
 
 class SplitLiterals(InlineTransformer):
     def pattern(self, p):
         if isinstance(p, PatternStr) and len(p.value)>1:
-            return T('expansion', [T('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
-        return T('pattern', [p])
+            return ST('expansion', [ST('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
+        return ST('pattern', [p])
 
 class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
@@ -408,14 +408,14 @@ class TokenTreeToPattern(Transformer):
 def _interleave(l, item):
     for e in l:
         yield e
-        if isinstance(e, T):
+        if isinstance(e, Tree):
             if e.data in ('literal', 'range'):
                 yield item
         elif is_terminal(e):
             yield item
 
 def _choice_of_rules(rules):
-    return T('expansions', [T('expansion', [Token('RULE', name)]) for name in rules])
+    return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
 class Grammar:
     def __init__(self, rule_defs, token_defs, ignore):
@@ -442,9 +442,9 @@ class Grammar:
                     if r == start:
                         exp.children = [expr] + exp.children
                 for exp in tree.find_data('expr'):
-                    exp.children[0] = T('expansion', list(_interleave(exp.children[:1], expr)))
+                    exp.children[0] = ST('expansion', list(_interleave(exp.children[:1], expr)))
 
-            _ignore_tree = T('expr', [_choice_of_rules(terms_to_ignore.values()), Token('OP', '?')])
+            _ignore_tree = ST('expr', [_choice_of_rules(terms_to_ignore.values()), Token('OP', '?')])
             rule_defs.append(('__ignore', _ignore_tree, None))
 
         # Convert all tokens to rules
@@ -584,7 +584,7 @@ class GrammarLoader:
 
         rules = [options_from_rule(name, x) for name, x in RULES.items()]
         rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
-        callback = ParseTreeBuilder(rules, T).create_callback()
+        callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, 'start')

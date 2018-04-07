@@ -99,6 +99,8 @@ class Tree(object):
         self.data = data
         self.children = children
 
+class SlottedTree(Tree):
+    __slots__ = 'data', 'children', 'rule'
 
 
 ###{standalone

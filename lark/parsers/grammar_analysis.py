@@ -3,8 +3,6 @@ from ..utils import bfs, fzset, classify
 from ..common import GrammarError, is_terminal
 from ..grammar import Rule
 
-import weakref
-
 
 class RulePtr(object):
     __slots__ = ('rule', 'index', 'next')

@@ -92,8 +92,8 @@ class ArrayParseTable(ParseTable):
                 else:
                     self.cache[token] = self._unpack(table[ofs + mid*2 + 1])
                     return self.cache[token]
-            else:
-                raise KeyError(token)
+
+            raise KeyError(token)
 
         def _unpack(self, atom):
             if atom & 0x8000:

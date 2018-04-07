@@ -145,16 +145,16 @@ class Column:
 
 class Parser:
     def __init__(self, parser_conf, term_matcher, resolve_ambiguity=None):
-        self.analysis = GrammarAnalyzer(parser_conf)
+        analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
 
-        self.FIRST = self.analysis.FIRST
+        self.FIRST = analysis.FIRST
         self.postprocess = {}
         self.predictions = {}
         for rule in parser_conf.rules:
             self.postprocess[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
-            self.predictions[rule.origin] = [x.rule for x in self.analysis.expand_rule(rule.origin)]
+            self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
         self.term_matcher = term_matcher
 

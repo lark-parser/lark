@@ -25,6 +25,8 @@ class UnexpectedInput(LexError):
         self.considered_rules = considered_rules
 
 class Token(Str):
+    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
+
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
         self = super(Token, cls).__new__(cls, value)
         self.type = type_

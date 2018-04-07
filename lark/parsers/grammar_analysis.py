@@ -5,6 +5,8 @@ from ..grammar import Rule
 
 
 class RulePtr(object):
+    __slots__ = ('rule', 'index')
+
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)

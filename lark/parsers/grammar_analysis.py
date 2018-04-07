@@ -5,7 +5,7 @@ from ..grammar import Rule
 
 
 class RulePtr(object):
-    __slots__ = ('rule', 'index', 'next')
+    __slots__ = ('rule', 'index')
 
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)

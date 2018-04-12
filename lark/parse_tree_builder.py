@@ -2,6 +2,7 @@ from .common import is_terminal, GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
+from .tree import Tree
 
 ###{standalone
 from functools import partial
@@ -38,15 +39,23 @@ class PropagatePositions:
 
         if children:
             for a in children:
-                with suppress(AttributeError):
-                    res.line = a.line
-                    res.column = a.column
+                if isinstance(a, Tree):
+                    res.meta.line = a.meta.line
+                    res.meta.column = a.meta.column
+                elif isinstance(a, Token):
+                    res.meta.line = a.line
+                    res.meta.column = a.column
                 break
 
             for a in reversed(children):
-                with suppress(AttributeError):
-                    res.end_line = a.end_line
-                    res.end_column = a.end_column
+                # with suppress(AttributeError):
+                if isinstance(a, Tree):
+                    res.meta.end_line = a.meta.end_line
+                    res.meta.end_column = a.meta.end_column
+                elif isinstance(a, Token):
+                    res.meta.end_line = a.end_line
+                    res.meta.end_column = a.end_column
+
                 break
 
         return res

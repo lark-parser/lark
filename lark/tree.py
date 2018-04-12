@@ -7,11 +7,23 @@ from copy import deepcopy
 
 from .utils import inline_args
 
+class Meta:
+    pass
+
 ###{standalone
 class Tree(object):
+    __slots__ = ('data', 'children', '_meta', 'rule')
+
     def __init__(self, data, children):
         self.data = data
         self.children = children
+        self._meta = None
+
+    @property
+    def meta(self):
+        if self._meta is None:
+            self._meta = Meta()
+        return self._meta
 
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)

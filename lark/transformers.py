@@ -6,32 +6,24 @@ class Discard(Exception):
     pass
 
 
-class Transformer:
-    def _get_userfunc(self, name):
-        return getattr(self, name)
-
+class Base:
     def _call_userfunc(self, tree):
-        # Assumes tree is already transformed
-        try:
-            f = self._get_userfunc(tree.data)
-        except AttributeError:
-            return self.__default__(tree)
-        else:
-            return f(tree)
-
-    def _transform(self, tree):
-        children = []
-        for c in tree.children:
-            try:
-                children.append(self._transform(c) if isinstance(c, Tree) else c)
-            except Discard:
-                pass
-
-        tree = Tree(tree.data, children)
-        return self._call_userfunc(tree)
+        return getattr(self, tree.data, self.__default__)(tree)
 
     def __default__(self, tree):
         return tree
+
+class Transformer(Base):
+    def _transform_children(self, children):
+        for c in children:
+            try:
+                yield self._transform(c) if isinstance(c, Tree) else c
+            except Discard:
+                pass
+
+    def _transform(self, tree):
+        tree = Tree(tree.data, list(self._transform_children(tree.children)))
+        return self._call_userfunc(tree)
 
     def transform(self, tree):
         return self._transform(tree)
@@ -43,7 +35,7 @@ class Transformer_Children(Transformer):
     def _call_userfunc(self, tree):
         # Assumes tree is already transformed
         try:
-            f = self._get_userfunc(tree.data)
+            f = getattr(self, tree.data)
         except AttributeError:
             return self.__default__(tree)
         else:
@@ -53,7 +45,7 @@ class Transformer_ChildrenInline(Transformer):
     def _call_userfunc(self, tree):
         # Assumes tree is already transformed
         try:
-            f = self._get_userfunc(tree.data)
+            f = getattr(self, tree.data)
         except AttributeError:
             return self.__default__(tree)
         else:
@@ -72,6 +64,45 @@ class TransformerChain(object):
     def __mul__(self, other):
         return TransformerChain(*self.transformers + (other,))
 
+class Visitor(Base):
+    # def visit(self, tree):
+    #     for child in tree.children:
+    #         if isinstance(child, Tree):
+    #             self.visit(child)
+
+    #     f = getattr(self, tree.data, self.__default__)
+    #     f(tree)
+    #     return tree
+
+    def visit(self, tree):
+        for subtree in tree.iter_subtrees():
+            self._call_userfunc(subtree)
+        return tree
+
+    def __default__(self, tree):
+        pass
+
+
+class InPlaceTransformer(Transformer):
+    # def _transform(self, tree):
+    #     children = []
+    #     for c in tree.children:
+    #         try:
+    #             children.append(self._transform(c) if isinstance(c, Tree) else c)
+    #         except Discard:
+    #             pass
+
+    #     tree.children = children
+    #     return self._call_userfunc(tree)
+
+    def _transform(self, tree):
+        return self._call_userfunc(tree)
+
+    def transform(self, tree):
+        for subtree in tree.iter_subtrees():
+            subtree.children = list(self._transform_children(subtree.children))
+
+        return self._transform(tree)
 
 
 #### XXX PSEUDOCODE TODO

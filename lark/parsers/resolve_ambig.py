@@ -1,7 +1,7 @@
 from ..utils import compare
 from functools import cmp_to_key
 
-from ..tree import Tree, Visitor_NoRecurse
+from ..tree import Tree
 
 
 # Standard ambiguity resolver (uses comparison)

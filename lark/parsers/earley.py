@@ -14,7 +14,8 @@
 # Email : erezshin@gmail.com
 
 from ..common import ParseError, UnexpectedToken, is_terminal
-from ..tree import Tree, Transformer_NoRecurse
+from ..tree import Tree
+from ..transformers import InPlaceTransformer
 from .grammar_analysis import GrammarAnalyzer
 
 
@@ -229,7 +230,7 @@ class Parser:
         return ApplyCallbacks(self.postprocess).transform(tree)
 
 
-class ApplyCallbacks(Transformer_NoRecurse):
+class ApplyCallbacks(InPlaceTransformer):
     def __init__(self, postprocess):
         self.postprocess = postprocess
 

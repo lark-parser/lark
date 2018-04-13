@@ -12,8 +12,6 @@ class Meta:
 
 ###{standalone
 class Tree(object):
-    __slots__ = ('data', 'children', '_meta', 'rule')
-
     def __init__(self, data, children):
         self.data = data
         self.children = children
@@ -141,77 +139,12 @@ class Transformer(object):
         return TransformerChain(self, other)
 
 
-class Discard(Exception):
-    pass
-
-class TransformerChain(object):
-    def __init__(self, *transformers):
-        self.transformers = transformers
-
-    def transform(self, tree):
-        for t in self.transformers:
-            tree = t.transform(tree)
-        return tree
-
-    def __mul__(self, other):
-        return TransformerChain(*self.transformers + (other,))
-
-
-
 class InlineTransformer(Transformer):
     def _get_func(self, name):  # use super()._get_func
         return inline_args(getattr(self, name)).__get__(self)
 
 
-class Visitor(object):
-    def visit(self, tree):
-        for child in tree.children:
-            if isinstance(child, Tree):
-                self.visit(child)
 
-        f = getattr(self, tree.data, self.__default__)
-        f(tree)
-        return tree
-
-    def __default__(self, tree):
-        pass
-
-
-class Visitor_NoRecurse(Visitor):
-    def visit(self, tree):
-        subtrees = list(tree.iter_subtrees())
-
-        for subtree in (subtrees):
-            getattr(self, subtree.data, self.__default__)(subtree)
-        return tree
-
-
-class Transformer_NoRecurse(Transformer):
-    def transform(self, tree):
-        subtrees = list(tree.iter_subtrees())
-
-        def _t(t):
-            # Assumes t is already transformed
-            try:
-                f = self._get_func(t.data)
-            except AttributeError:
-                return self.__default__(t)
-            else:
-                return f(t)
-
-        for subtree in subtrees:
-            children = []
-            for c in subtree.children:
-                try:
-                    children.append(_t(c) if isinstance(c, Tree) else c)
-                except Discard:
-                    pass
-            subtree.children = children
-
-        return _t(tree)
-
-    def __default__(self, t):
-        return t
 ###}
 
 

@@ -14,8 +14,8 @@ from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule
 
-from .tree import Tree, Visitor, SlottedTree as ST
-from .transformers import Transformer_Children, Transformer_ChildrenInline
+from .tree import Tree, SlottedTree as ST
+from .transformers import Transformer, Transformer_Children, Transformer_ChildrenInline, Visitor
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -200,17 +200,14 @@ class SimplifyRule_Visitor(Visitor):
         #   -->
         # expansions( expansion(b, c, e), expansion(b, d, e) )
 
-        while True:
-            self._flatten(tree)
+        self._flatten(tree)
 
-            for i, child in enumerate(tree.children):
-                if isinstance(child, Tree) and child.data == 'expansions':
-                    tree.data = 'expansions'
-                    tree.children = [self.visit(ST('expansion', [option if i==j else other
-                                                                for j, other in enumerate(tree.children)]))
-                                     for option in set(child.children)]
-                    break
-            else:
+        for i, child in enumerate(tree.children):
+            if isinstance(child, Tree) and child.data == 'expansions':
+                tree.data = 'expansions'
+                tree.children = [self.visit(ST('expansion', [option if i==j else other
+                                                            for j, other in enumerate(tree.children)]))
+                                    for option in set(child.children)]
                 break
 
     def alias(self, tree):
@@ -234,7 +231,7 @@ class RuleTreeToText(Transformer_Children):
         return [sym.value for sym in symbols], None
     def alias(self, x):
         (expansion, _alias), alias = x
-        assert _alias is None, (alias, expansion, '-', _alias)
+        assert _alias is None, (alias, expansion, '-', _alias)  # Double alias not allowed
         return expansion, alias.value
 
 

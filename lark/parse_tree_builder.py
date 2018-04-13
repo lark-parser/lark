@@ -145,7 +145,7 @@ class ParseTreeBuilder:
 
             user_callback_name = rule.alias or rule.origin
             try:
-                f = transformer._get_func(user_callback_name)
+                f = getattr(transformer, user_callback_name)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

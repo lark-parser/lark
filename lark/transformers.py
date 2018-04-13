@@ -79,9 +79,6 @@ class Visitor(Base):
             self._call_userfunc(subtree)
         return tree
 
-    def __default__(self, tree):
-        pass
-
 
 class InPlaceTransformer(Transformer):
     # def _transform(self, tree):

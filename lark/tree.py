@@ -113,40 +113,6 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule'
 
 
-###{standalone
-class Transformer(object):
-    def _get_func(self, name):
-        return getattr(self, name)
-
-    def transform(self, tree):
-        items = []
-        for c in tree.children:
-            try:
-                items.append(self.transform(c) if isinstance(c, Tree) else c)
-            except Discard:
-                pass
-        try:
-            f = self._get_func(tree.data)
-        except AttributeError:
-            return self.__default__(tree.data, items)
-        else:
-            return f(items)
-
-    def __default__(self, data, children):
-        return Tree(data, children)
-
-    def __mul__(self, other):
-        return TransformerChain(self, other)
-
-
-class InlineTransformer(Transformer):
-    def _get_func(self, name):  # use super()._get_func
-        return inline_args(getattr(self, name)).__get__(self)
-
-
-
-###}
-
 
 def pydot__tree_to_png(tree, filename):
     import pydot

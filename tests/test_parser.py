@@ -20,7 +20,9 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
-from lark.tree import Tree, Transformer
+from lark.tree import Tree
+from lark.transformers import Transformer_Children as Transformer
+# from lark.tree import Transformer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):

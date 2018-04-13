@@ -1,4 +1,5 @@
-from .tree import Tree, Transformer, InlineTransformer
+from .tree import Tree
+from .transformers import Transformer
 from .common import ParseError, GrammarError, UnexpectedToken
 from .lexer import UnexpectedInput, LexError
 from .lark import Lark

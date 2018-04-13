@@ -15,7 +15,7 @@ from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr
 from .grammar import RuleOptions, Rule
 
 from .tree import Tree, SlottedTree as ST
-from .transformers import Transformer, Transformer_Children, Transformer_ChildrenInline, Visitor
+from .transformers import Transformer, ChildrenTransformer, inline_args, Visitor
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -131,7 +131,8 @@ RULES = {
 }
 
 
-class EBNF_to_BNF(Transformer_ChildrenInline):
+@inline_args
+class EBNF_to_BNF(ChildrenTransformer):
     def __init__(self):
         self.new_rules = []
         self.rules_by_expr = {}
@@ -224,7 +225,7 @@ class SimplifyRule_Visitor(Visitor):
         tree.children = list(set(tree.children))
 
 
-class RuleTreeToText(Transformer_Children):
+class RuleTreeToText(ChildrenTransformer):
     def expansions(self, x):
         return x
     def expansion(self, symbols):
@@ -235,17 +236,13 @@ class RuleTreeToText(Transformer_Children):
         return expansion, alias.value
 
 
-class CanonizeTree(Transformer_ChildrenInline):
+@inline_args
+class CanonizeTree(ChildrenTransformer):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
 
-    def tokenmods(self, *args):
-        if len(args) == 1:
-            return list(args)
-        tokenmods, value = args
-        return tokenmods + [value]
-
-class ExtractAnonTokens(Transformer_ChildrenInline):
+@inline_args
+class ExtractAnonTokens(ChildrenTransformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -349,7 +346,8 @@ def _literal_to_pattern(literal):
              'REGEXP': PatternRE }[literal.type](s, flags)
 
 
-class PrepareLiterals(Transformer_ChildrenInline):
+@inline_args
+class PrepareLiterals(ChildrenTransformer):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
 
@@ -361,13 +359,14 @@ class PrepareLiterals(Transformer_ChildrenInline):
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 
-class SplitLiterals(Transformer_ChildrenInline):
+@inline_args
+class SplitLiterals(ChildrenTransformer):
     def pattern(self, p):
         if isinstance(p, PatternStr) and len(p.value)>1:
             return ST('expansion', [ST('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
         return ST('pattern', [p])
 
-class TokenTreeToPattern(Transformer_Children):
+class TokenTreeToPattern(ChildrenTransformer):
     def pattern(self, ps):
         p ,= ps
         return p

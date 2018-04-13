@@ -15,7 +15,7 @@
 
 from ..common import ParseError, UnexpectedToken, is_terminal
 from ..tree import Tree
-from ..transformers import InPlaceTransformer
+from ..transformers import Transformer_InPlace
 from .grammar_analysis import GrammarAnalyzer
 
 
@@ -230,7 +230,7 @@ class Parser:
         return ApplyCallbacks(self.postprocess).transform(tree)
 
 
-class ApplyCallbacks(InPlaceTransformer):
+class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):
         self.postprocess = postprocess
 

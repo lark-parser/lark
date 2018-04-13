@@ -1,5 +1,7 @@
+import inspect
 from functools import wraps
 
+from . import utils
 from .tree import Tree
 
 class Discard(Exception):
@@ -31,7 +33,7 @@ class Transformer(Base):
     def __mul__(self, other):
         return TransformerChain(self, other)
 
-class Transformer_Children(Transformer):
+class ChildrenTransformer(Transformer):
     def _call_userfunc(self, tree):
         # Assumes tree is already transformed
         try:
@@ -41,7 +43,7 @@ class Transformer_Children(Transformer):
         else:
             return f(tree.children)
 
-class Transformer_ChildrenInline(Transformer):
+class ChildrenInlineTransformer(Transformer):
     def _call_userfunc(self, tree):
         # Assumes tree is already transformed
         try:
@@ -64,34 +66,8 @@ class TransformerChain(object):
     def __mul__(self, other):
         return TransformerChain(*self.transformers + (other,))
 
-class Visitor(Base):
-    # def visit(self, tree):
-    #     for child in tree.children:
-    #         if isinstance(child, Tree):
-    #             self.visit(child)
 
-    #     f = getattr(self, tree.data, self.__default__)
-    #     f(tree)
-    #     return tree
-
-    def visit(self, tree):
-        for subtree in tree.iter_subtrees():
-            self._call_userfunc(subtree)
-        return tree
-
-
-class InPlaceTransformer(Transformer):
-    # def _transform(self, tree):
-    #     children = []
-    #     for c in tree.children:
-    #         try:
-    #             children.append(self._transform(c) if isinstance(c, Tree) else c)
-    #         except Discard:
-    #             pass
-
-    #     tree.children = children
-    #     return self._call_userfunc(tree)
-
+class Transformer_InPlace(Transformer):
     def _transform(self, tree):
         return self._call_userfunc(tree)
 
@@ -101,21 +77,33 @@ class InPlaceTransformer(Transformer):
 
         return self._transform(tree)
 
+class Visitor(Base):
+    def visit(self, tree):
+        for subtree in tree.iter_subtrees():
+            self._call_userfunc(subtree)
+        return tree
 
-#### XXX PSEUDOCODE TODO
-# def items(obj):
-#     if isinstance(obj, Transformer):
-#         def new_get_userfunc(self, name):
-#             uf = self._get_userfunc(name)
-#             def _f(tree):
-#                 return uf(tree.children)
-#             return _f
-#         obj._get_userfunc = new_get_userfunc
-#     else:
-#         assert callable(obj)
-#         # apply decorator
-#         def _f(tree):
-#             return obj(tree.children)
-#         return _f
+class Transformer_InPlaceRecursive(Transformer):
+    def _transform(self, tree):
+        tree.children = list(self._transform_children(tree.children))
+        return self._call_userfunc(tree)
 
+class Visitor_Recursive(Base):
+    def visit(self, tree):
+        for child in tree.children:
+            if isinstance(child, Tree):
+                self.visit(child)
+
+        f = getattr(self, tree.data, self.__default__)
+        f(tree)
+        return tree
+
+
+def inline_args(obj):
+    if inspect.isclass(obj) and issubclass(obj, ChildrenTransformer):
+        class _NewTransformer(ChildrenInlineTransformer, obj):
+            pass
+        return _NewTransformer
+    else:
+        return utils.inline_args(obj)
 

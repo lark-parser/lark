@@ -41,7 +41,7 @@ class Token(Str):
         return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.pos_in_stream, self.value, self.line, self.column, ))
+        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
 
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)

@@ -17,12 +17,13 @@ class ParseError(Exception):
     pass
 
 class UnexpectedToken(ParseError):
-    def __init__(self, token, expected, seq, index, considered_rules=None):
+    def __init__(self, token, expected, seq, index, considered_rules=None, state=None):
         self.token = token
         self.expected = expected
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.considered_rules = considered_rules
+        self.state = state
 
         try:
             context = ' '.join(['%r(%s)' % (t.value, t.type) for t in seq[index:index+5]])
@@ -36,7 +37,32 @@ class UnexpectedToken(ParseError):
 
         super(UnexpectedToken, self).__init__(message)
 
+    def match_examples(self, parse_fn, examples):
+        """ Given a parser instance and a dictionary mapping some label with
+            some malformed syntax examples, it'll return the label for the
+            example that bests matches the current error.
+        """
+        if not self.state:
+            return None
 
+        candidate = None
+        for label,example in examples.items():
+            if not isinstance(example, (tuple, list)):
+                example = [example]
+
+            for malformed in example:
+                try:
+                    parse_fn(malformed)
+                except UnexpectedToken as ut:
+                    if ut.state == self.state:
+                        if ut.token == self.token:
+                            return label
+                        elif not candidate:
+                            candidate = label
+                except:
+                    pass
+
+        return candidate
 ###}
 
 

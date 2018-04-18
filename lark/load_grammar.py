@@ -600,14 +600,22 @@ class GrammarLoader:
         except UnexpectedInput as e:
             raise GrammarError("Unexpected input %r at line %d column %d in %s" % (e.context, e.line, e.column, name))
         except UnexpectedToken as e:
-            if e.expected == ['_COLON']:
-                raise GrammarError("Missing colon at line %s column %s" % (e.line, e.column))
-            elif e.expected == ['RULE']:
-                raise GrammarError("Missing alias at line %s column %s" % (e.line, e.column))
+            context = e.get_context(grammar_text)
+            error = e.match_examples(self.parser.parse, {
+                'Unclosed parenthesis': ['a: (\n'],
+                'Umatched closing parenthesis': ['a: )\n', 'a: [)\n', 'a: (]\n'],
+                'Expecting rule or token definition (missing colon)': ['a\n', 'a->\n', 'A->\n', 'a A\n'],
+                'Alias expects lowercase name': ['a: -> "a"\n'],
+                'Unexpected colon': ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n'],
+                'Misplaced operator': ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n'],
+                'Expecting option ("|") or a new rule or token definition': ['a:a\n()\n'],
+                '%import expects a name': ['%import "a"\n'],
+                '%ignore expects a value': ['%ignore %import\n'],
+            })
+            if error:
+                raise GrammarError("%s at line %s column %s\n\n%s" % (error, e.line, e.column, context))
             elif 'STRING' in e.expected:
-                raise GrammarError("Expecting a value at line %s column %s" % (e.line, e.column))
-            elif e.expected == ['_OR']:
-                raise GrammarError("Newline without starting a new option (Expecting '|') at line %s column %s" % (e.line, e.column))
+                raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
             raise
 
         # Extract grammar items

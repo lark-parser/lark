@@ -1,7 +1,7 @@
 import re
 import sys
 
-from .utils import get_regexp_width
+from .utils import get_regexp_width, STRING_TYPE
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
@@ -42,27 +42,31 @@ class UnexpectedToken(ParseError):
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
         """
-        if not self.state:
-            return None
+        assert self.state, "Not supported for this exception"
 
         candidate = None
-        for label,example in examples.items():
-            if not isinstance(example, (tuple, list)):
-                example = [example]
+        for label, example in examples.items():
+            assert not isinstance(example, STRING_TYPE)
 
             for malformed in example:
                 try:
                     parse_fn(malformed)
                 except UnexpectedToken as ut:
                     if ut.state == self.state:
-                        if ut.token == self.token:
+                        if ut.token == self.token:  # Try exact match first
                             return label
                         elif not candidate:
                             candidate = label
-                except:
-                    pass
 
         return candidate
+
+    def get_context(self, text, span=10):
+        pos = self.token.pos_in_stream
+        start = max(pos - span, 0)
+        end = pos + span
+        before = text[start:pos].rsplit('\n', 1)[-1]
+        after = text[pos:end].split('\n', 1)[0]
+        return before + after + '\n' + ' ' * len(before) + '^\n'
 ###}
 
 

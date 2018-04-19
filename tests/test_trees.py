@@ -5,7 +5,7 @@ from unittest import TestCase
 import copy
 import pickle
 
-from lark.tree import Tree
+from lark.tree import Tree, Interpreter, visit_children_decor
 
 
 class TestTrees(TestCase):
@@ -19,6 +19,37 @@ class TestTrees(TestCase):
         s = copy.deepcopy(self.tree1)
         data = pickle.dumps(s)
         assert pickle.loads(data) == s
+
+
+    def test_interp(self):
+        t = Tree('a', [Tree('b', []), Tree('c', []), 'd'])
+
+        class Interp1(Interpreter):
+            def a(self, tree):
+                return self.visit_children(tree) + ['e']
+
+            def b(self, tree):
+                return 'B'
+
+            def c(self, tree):
+                return 'C'
+
+        self.assertEqual(Interp1().visit(t), list('BCde'))
+
+        class Interp2(Interpreter):
+            @visit_children_decor
+            def a(self, values):
+                return values + ['e']
+
+            def b(self, tree):
+                return 'B'
+
+            def c(self, tree):
+                return 'C'
+
+        self.assertEqual(Interp2().visit(t), list('BCde'))
+
+
 
 
 if __name__ == '__main__':

@@ -174,6 +174,30 @@ class Visitor_NoRecurse(Visitor):
         return tree
 
 
+from functools import wraps
+def visit_children_decor(func):
+    @wraps(func)
+    def inner(cls, tree):
+        values = cls.visit_children(tree)
+        return func(cls, values)
+    return inner
+
+class Interpreter(object):
+
+    def visit(self, tree):
+        return getattr(self, tree.data)(tree)
+
+    def visit_children(self, tree):
+        return [self.visit(child) if isinstance(child, Tree) else child
+                for child in tree.children]
+
+    def __getattr__(self, name):
+        return self.__default__
+
+    def __default__(self, tree):
+        self.visit_children(tree)
+
+
 class Transformer_NoRecurse(Transformer):
     def transform(self, tree):
         subtrees = list(tree.iter_subtrees())

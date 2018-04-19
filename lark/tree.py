@@ -174,6 +174,31 @@ class Visitor_NoRecurse(Visitor):
         return tree
 
 
+class ComplexVisitor(object):
+
+    def visit(self, tree):
+        return getattr(self, tree.data)(tree)
+
+    def visit_children(self, tree):
+        result = []
+        for child in tree.children:
+            if isinstance(child, Tree):
+                next_result = self.visit(child)
+                result = self.aggregate_result(result, next_result)
+        return result
+
+    def aggregate_result(self, aggregate, next_result):
+        if isinstance(aggregate, list):
+            return aggregate.append(next_result)
+        return next_result
+
+    def __getattr__(self, name):
+        return self.__default__
+
+    def __default__(self, tree):
+        self.visit_children(tree)
+
+
 class Transformer_NoRecurse(Transformer):
     def transform(self, tree):
         subtrees = list(tree.iter_subtrees())

@@ -173,8 +173,13 @@ class Visitor_NoRecurse(Visitor):
             getattr(self, subtree.data, self.__default__)(subtree)
         return tree
 
+def visit_children(func):
+    def inner(cls, tree):
+        values = cls.visit_children(tree)
+        return func(cls, values)
+    return inner
 
-class ComplexVisitor(object):
+class Interpreter(object):
 
     def visit(self, tree):
         return getattr(self, tree.data)(tree)
@@ -183,14 +188,8 @@ class ComplexVisitor(object):
         result = []
         for child in tree.children:
             if isinstance(child, Tree):
-                next_result = self.visit(child)
-                result = self.aggregate_result(result, next_result)
+                result.append(self.visit(child))
         return result
-
-    def aggregate_result(self, aggregate, next_result):
-        if isinstance(aggregate, list):
-            return aggregate.append(next_result)
-        return next_result
 
     def __getattr__(self, name):
         return self.__default__

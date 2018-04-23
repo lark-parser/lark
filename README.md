@@ -165,3 +165,5 @@ If you're interested in taking one of these on, let me know and I will provide m
 If you have any questions or want my assistance, you can email me at erezshin at gmail com.
 
 I'm also available for contract work.
+
+ -- [Erez](https://github.com/erezsh)

@@ -195,7 +195,7 @@ class Interpreter(object):
         return self.__default__
 
     def __default__(self, tree):
-        self.visit_children(tree)
+        return self.visit_children(tree)
 
 
 class Transformer_NoRecurse(Transformer):

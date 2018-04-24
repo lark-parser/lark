@@ -49,6 +49,14 @@ class TestTrees(TestCase):
 
         self.assertEqual(Interp2().visit(t), list('BCde'))
 
+        class Interp3(Interpreter):
+            def b(self, tree):
+                return 'B'
+
+            def c(self, tree):
+                return 'C'
+
+        self.assertEqual(Interp3().visit(t), list('BCd'))
 
 
 

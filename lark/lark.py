@@ -192,7 +192,7 @@ class Lark:
 
         Example:
 
-            >>> Lark.open("grammar_file.g", rel_to=__file__, parser="lalr")
+            >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
             Lark(...)
 
         """

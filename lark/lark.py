@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import time
 from collections import defaultdict
+from io import open
 
 from .utils import STRING_TYPE
 from .load_grammar import load_grammar
@@ -105,12 +106,12 @@ class Lark:
 
         # Some, but not all file-like objects have a 'name' attribute
         try:
-            source = grammar.name
+            self.source = grammar.name
         except AttributeError:
-            source = '<string>'
+            self.source = '<string>'
             cache_file = "larkcache_%s" % str(hash(grammar)%(2**32))
         else:
-            cache_file = "larkcache_%s" % os.path.basename(source)
+            cache_file = "larkcache_%s" % os.path.basename(self.source)
 
         # Drain file-like objects to get their contents
         try:
@@ -150,7 +151,7 @@ class Lark:
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', 'resolve__antiscore_sum')
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, source)
+        self.grammar = load_grammar(grammar, self.source)
 
         # Compile the EBNF grammar into BNF
         tokens, self.rules, self.ignore_tokens = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
@@ -182,6 +183,27 @@ class Lark:
         parser_conf = ParserConf(self.rules, callback, self.options.start)
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+
+    @classmethod
+    def open(cls, grammar_filename, rel_to=None, **options):
+        """Create an instance of Lark with the grammar given by its filename
+
+        If rel_to is provided, the function will find the grammar filename in relation to it.
+
+        Example:
+
+            >>> Lark.open("grammar_file.g", rel_to=__file__, parser="lalr")
+            Lark(...)
+
+        """
+        if rel_to:
+            basepath = os.path.dirname(rel_to)
+            grammar_filename = os.path.join(basepath, grammar_filename)
+        with open(grammar_filename) as f:
+            return cls(f, **options)
+
+    def __repr__(self):
+        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
 
 
     def lex(self, text):

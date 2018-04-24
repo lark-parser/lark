@@ -1173,6 +1173,18 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
+        @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX
+        def test_priority_vs_embedded(self):
+            g = """
+            A.2: "a"
+            WORD: ("a".."z")+
+
+            start: (A | WORD)+
+            """
+            l = _Lark(g)
+            t = l.parse('abc')
+            self.assertEqual(t.children, ['a', 'bc'])
+            self.assertEqual(t.children[0].type, 'A')
 
 
 

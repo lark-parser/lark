@@ -143,6 +143,8 @@ def _create_unless(tokens):
     for retok in tokens_by_type.get(PatternRE, []):
         unless = [] # {}
         for strtok in tokens_by_type.get(PatternStr, []):
+            if strtok.priority > retok.priority:
+                continue
             s = strtok.pattern.value
             m = re.match(retok.pattern.to_regexp(), s)
             if m and m.group(0) == s:

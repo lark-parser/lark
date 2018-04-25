@@ -1,12 +1,12 @@
 from lark import Lark
 
-parser = Lark(open('examples/lark.g'), parser="lalr")
+parser = Lark(open('examples/lark.lark'), parser="lalr")
 
 grammar_files = [
-    'examples/python2.g',
-    'examples/python3.g',
-    'examples/lark.g',
-    'lark/grammars/common.g',
+    'examples/python2.lark',
+    'examples/python3.lark',
+    'examples/lark.lark',
+    'lark/grammars/common.lark',
 ]
 
 def test():

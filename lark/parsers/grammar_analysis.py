@@ -5,6 +5,8 @@ from ..grammar import Rule
 
 
 class RulePtr(object):
+    __slots__ = ('rule', 'index')
+
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)
@@ -134,7 +136,8 @@ class GrammarAnalyzer(object):
                     if not is_terminal(new_r):
                         yield new_r
 
-        _ = list(bfs([rule], _expand_rule))
+        for _ in bfs([rule], _expand_rule):
+            pass
 
         return fzset(init_ptrs)
 

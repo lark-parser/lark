@@ -7,9 +7,11 @@
 - [indented\_tree.py](indented\_tree.py) - A demonstration of parsing indentation ("whitespace significant" language)
 - [fruitflies.py](fruitflies.py) - A demonstration of ambiguity
 - [turtle\_dsl.py](turtle_dsl.py) - Implements a LOGO-like toy language for Python's turtle, with interpreter.
+- [lark\_grammar.py](lark_grammar.py) + [lark.g](lark.g) - A reference implementation of the Lark grammar (using LALR(1) + standard lexer)
 
 ### Advanced
 
+- [error\_reporting\_lalr.py](error_reporting_lalr.py) - A demonstration of example-driven error reporting with the LALR parser
 - [python\_parser.py](python_parser.py) - A fully-working Python 2 & 3 parser (but not production ready yet!)
 - [conf.py](conf.py) - Demonstrates the power of LALR's contextual lexer on a toy configuration language
 - [reconstruct\_json.py](reconstruct_json.py) - Demonstrates the experimental text-reconstruction feature

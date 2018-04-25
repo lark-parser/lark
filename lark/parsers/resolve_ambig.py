@@ -9,11 +9,7 @@ from ..tree import Tree, Visitor_NoRecurse
 # Author: Erez Sh
 
 def _compare_rules(rule1, rule2):
-    c = -compare( len(rule1.expansion), len(rule2.expansion))
-    if rule1.origin.startswith('__'):   # XXX hack! We should set priority in parser, not here
-        c = -c
-    return c
-
+    return -compare( len(rule1.expansion), len(rule2.expansion))
 
 def _sum_priority(tree):
     p = 0

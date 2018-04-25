@@ -25,6 +25,8 @@ class UnexpectedInput(LexError):
         self.considered_rules = considered_rules
 
 class Token(Str):
+    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
+
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
         self = super(Token, cls).__new__(cls, value)
         self.type = type_
@@ -39,7 +41,7 @@ class Token(Str):
         return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.pos_in_stream, self.value, self.line, self.column, ))
+        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
 
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)
@@ -141,6 +143,8 @@ def _create_unless(tokens):
     for retok in tokens_by_type.get(PatternRE, []):
         unless = [] # {}
         for strtok in tokens_by_type.get(PatternStr, []):
+            if strtok.priority > retok.priority:
+                continue
             s = strtok.pattern.value
             m = re.match(retok.pattern.to_regexp(), s)
             if m and m.group(0) == s:

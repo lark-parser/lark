@@ -172,7 +172,7 @@ class Lark:
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
 
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens)
+        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr')
         callback = self._parse_tree_builder.create_callback(self.options.transformer)
         if self.profiler:
             for f in dir(callback):

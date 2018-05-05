@@ -8,8 +8,14 @@ class Symbol(object):
         assert isinstance(other, Symbol), other
         return self.is_term == other.is_term and self.name == other.name
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __hash__(self):
         return hash(self.name)
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.name)
 
 class Terminal(Symbol):
     is_term = True

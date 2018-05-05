@@ -110,7 +110,7 @@ class ParseTreeBuilder:
     def _init_builders(self, rules):
         filter_out = {rule.origin for rule in rules if rule.options and rule.options.filter_out}
         filter_out |= {sym for rule in rules for sym in rule.expansion if sym.is_term and sym.filter_out}
-        assert all(t.filter_out for t in filter_out)
+        assert all(t.name.startswith('_') for t in filter_out)
 
         for rule in rules:
             options = rule.options

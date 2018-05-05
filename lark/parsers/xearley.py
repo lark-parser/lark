@@ -98,14 +98,14 @@ class Parser:
             for item in to_scan:
                 m = match(item.expect, stream, i)
                 if m:
-                    t = Token(item.expect, m.group(0), i, text_line, text_column)
+                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                     delayed_matches[m.end()].append(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
                         m = match(item.expect, s[:-j])
                         if m:
-                            t = Token(item.expect, m.group(0), i, text_line, text_column)
+                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                             delayed_matches[i+m.end()].append(item.advance(t))
 
             next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)

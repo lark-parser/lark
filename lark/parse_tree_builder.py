@@ -1,4 +1,4 @@
-from .common import is_terminal, GrammarError
+from .common import GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule

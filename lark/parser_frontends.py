@@ -4,9 +4,10 @@ from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import is_terminal, GrammarError
+from .common import GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
+from .grammar import Terminal
 
 class WithLexer:
     def init_traditional_lexer(self, lexer_conf):
@@ -96,7 +97,7 @@ class Earley(WithLexer):
                                     resolve_ambiguity=get_ambiguity_resolver(options))
 
     def match(self, term, token):
-        return term == token.type
+        return term.name == token.type
 
     def parse(self, text):
         tokens = self.lex(text)
@@ -117,7 +118,7 @@ class XEarley:
                                     )
 
     def match(self, term, text, index=0):
-        return self.regexps[term].match(text, index)
+        return self.regexps[term.name].match(text, index)
 
     def _prepare_match(self, lexer_conf):
         self.regexps = {}

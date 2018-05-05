@@ -20,10 +20,11 @@
 
 from collections import defaultdict
 
-from ..common import ParseError, is_terminal
+from ..common import ParseError
 from ..lexer import Token, UnexpectedInput
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
+from ..grammar import NonTerminal, Terminal
 
 from .earley import ApplyCallbacks, Item, Column
 
@@ -32,7 +33,7 @@ class Parser:
         self.analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
-        self.ignore = list(ignore)
+        self.ignore = [Terminal(t) for t in ignore]
         self.predict_all = predict_all
 
         self.FIRST = self.analysis.FIRST
@@ -47,7 +48,7 @@ class Parser:
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.parser_conf.start
+        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
         delayed_matches = defaultdict(list)
         match = self.term_matcher
 
@@ -55,7 +56,7 @@ class Parser:
         text_column = 0
 
         def predict(nonterm, column):
-            assert not is_terminal(nonterm), nonterm
+            assert not nonterm.is_term, nonterm
             return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):

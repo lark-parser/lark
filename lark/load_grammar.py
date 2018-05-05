@@ -363,12 +363,6 @@ class PrepareLiterals(InlineTransformer):
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 
-class SplitLiterals(InlineTransformer):
-    def pattern(self, p):
-        if isinstance(p, PatternStr) and len(p.value)>1:
-            return ST('expansion', [ST('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
-        return ST('pattern', [p])
-
 class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
@@ -405,15 +399,6 @@ class TokenTreeToPattern(Transformer):
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
-def _interleave(l, item):
-    for e in l:
-        yield e
-        if isinstance(e, Tree):
-            if e.data in ('literal', 'range'):
-                yield item
-        elif is_terminal(e):
-            yield item
-
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
@@ -423,62 +408,9 @@ class Grammar:
         self.rule_defs = rule_defs
         self.ignore = ignore
 
-    def _prepare_scanless_grammar(self, start):
-        # XXX Pretty hacky! There should be a better way to write this method..
-
-        rule_defs = deepcopy(self.rule_defs)
-        term_defs = self.token_defs
-
-        # Implement the "%ignore" feature without a lexer..
-        terms_to_ignore = {name:'__'+name for name in self.ignore}
-        if terms_to_ignore:
-            assert set(terms_to_ignore) <= {name for name, _t in term_defs}
-
-            term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
-            expr = Token('RULE', '__ignore')
-            for r, tree, _o in rule_defs:
-                for exp in tree.find_data('expansion'):
-                    exp.children = list(_interleave(exp.children, expr))
-                    if r == start:
-                        exp.children = [expr] + exp.children
-                for exp in tree.find_data('expr'):
-                    exp.children[0] = ST('expansion', list(_interleave(exp.children[:1], expr)))
-
-            _ignore_tree = ST('expr', [_choice_of_rules(terms_to_ignore.values()), Token('OP', '?')])
-            rule_defs.append(('__ignore', _ignore_tree, None))
-
-        # Convert all tokens to rules
-        new_terminal_names = {name: '__token_'+name for name, _t in term_defs}
-
-        for name, tree, options in rule_defs:
-            for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
-                for i, sym in enumerate(exp.children):
-                    if sym in new_terminal_names:
-                        exp.children[i] = Token(sym.type, new_terminal_names[sym])
-
-        for name, (tree, priority) in term_defs:   # TODO transfer priority to rule?
-            if any(tree.find_data('alias')):
-                raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
-
-            if name.startswith('_'):
-                options = RuleOptions(filter_out=True, priority=-priority)
-            else:
-                options = RuleOptions(keep_all_tokens=True, create_token=name, priority=-priority)
-
-            name = new_terminal_names[name]
-            inner_name = name + '_inner'
-            rule_defs.append((name, _choice_of_rules([inner_name]), None))
-            rule_defs.append((inner_name, tree, options))
-
-        return [], rule_defs
-
-
-    def compile(self, lexer=False, start=None):
-        if not lexer:
-            token_defs, rule_defs = self._prepare_scanless_grammar(start)
-        else:
-            token_defs = list(self.token_defs)
-            rule_defs = self.rule_defs
+    def compile(self):
+        token_defs = list(self.token_defs)
+        rule_defs = self.rule_defs
 
         # =================
         #  Compile Tokens
@@ -495,8 +427,6 @@ class Grammar:
 
         # 1. Pre-process terminals
         transformer = PrepareLiterals()
-        if not lexer:
-            transformer *= SplitLiterals()
         transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
 
         # 2. Convert EBNF to BNF (and apply step 1)

@@ -19,10 +19,10 @@ from .test_parser import (
         TestEarleyStandard,
         TestCykStandard,
         TestLalrContextual,
-        TestEarleyScanless,
+        # TestEarleyScanless,
         TestEarleyDynamic,
 
-        TestFullEarleyScanless,
+        # TestFullEarleyScanless,
         TestFullEarleyDynamic,
 
         TestParsers,

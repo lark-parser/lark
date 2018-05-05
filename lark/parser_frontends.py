@@ -72,30 +72,6 @@ def tokenize_text(text):
             col_start_pos = i + ch.rindex('\n')
         yield Token('CHAR', ch, line=line, column=i - col_start_pos)
 
-class Earley_NoLex:
-    def __init__(self, lexer_conf, parser_conf, options=None):
-        self._prepare_match(lexer_conf)
-
-        self.parser = earley.Parser(parser_conf, self.match,
-                                    resolve_ambiguity=get_ambiguity_resolver(options))
-
-
-    def match(self, term, text, index=0):
-        return self.regexps[term.name].match(text, index)
-
-    def _prepare_match(self, lexer_conf):
-        self.regexps = {}
-        for t in lexer_conf.tokens:
-            regexp = t.pattern.to_regexp()
-            width = get_regexp_width(regexp)
-            if width != (1,1):
-                raise GrammarError('Scanless parsing (lexer=None) requires all tokens to have a width of 1 (terminal %s: %s is %s)' % (t.name, regexp, width))
-            self.regexps[t.name] = re.compile(regexp)
-
-    def parse(self, text):
-        token_stream = tokenize_text(text)
-        return self.parser.parse(token_stream)
-
 class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.init_traditional_lexer(lexer_conf)
@@ -190,9 +166,7 @@ def get_frontend(parser, lexer):
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':
-        if lexer is None:
-            return Earley_NoLex
-        elif lexer=='standard':
+        if lexer=='standard':
             return Earley
         elif lexer=='dynamic':
             return XEarley

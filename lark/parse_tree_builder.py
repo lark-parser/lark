@@ -18,17 +18,6 @@ class ExpandSingleChild:
             return self.node_builder(children)
 
 
-class CreateToken:
-    "Used for fixing the results of scanless parsing"
-
-    def __init__(self, token_name, node_builder):
-        self.node_builder = node_builder
-        self.token_name = token_name
-
-    def __call__(self, children):
-        return self.node_builder( [Token(self.token_name, ''.join(children))] )
-
-
 class PropagatePositions:
     def __init__(self, node_builder):
         self.node_builder = node_builder
@@ -116,10 +105,8 @@ class ParseTreeBuilder:
             options = rule.options
             keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
             expand_single_child = options.expand1 if options else False
-            create_token = options.create_token if options else False
 
             wrapper_chain = filter(None, [
-                create_token and partial(CreateToken, create_token),
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, () if keep_all_tokens else filter_out, self.ambiguous),
                 self.propagate_positions and PropagatePositions,

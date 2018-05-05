@@ -46,20 +46,17 @@ class Rule(object):
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False, priority=None):
+    def __init__(self, keep_all_tokens=False, expand1=False, filter_out=False, priority=None):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
-        self.create_token = create_token  # used for scanless postprocessing
         self.priority = priority
 
         self.filter_out = filter_out        # remove this rule from the tree
-                                            # used for "token"-rules in scanless
 
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r, %r, %r)' % (
+        return 'RuleOptions(%r, %r, %r, %r)' % (
             self.keep_all_tokens,
             self.expand1,
-            self.create_token,
             self.priority,
             self.filter_out
         )

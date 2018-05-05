@@ -13,6 +13,7 @@ from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal
+from .utils import classify
 
 from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
 
@@ -108,9 +109,13 @@ RULES = {
 
     '?atom': ['_LPAR expansions _RPAR',
              'maybe',
-             'name',
+             'terminal',
+             'nonterminal',
              'literal',
              'range'],
+
+    'terminal': ['TOKEN'],
+    'nonterminal': ['RULE'],
 
     '?name': ['RULE', 'TOKEN'],
 
@@ -514,6 +519,12 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
+class PrepareGrammar(InlineTransformer):
+    def terminal(self, name):
+        return name
+    def nonterminal(self, name):
+        return name
+
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
@@ -554,15 +565,16 @@ class GrammarLoader:
                 raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
             raise
 
-        # Extract grammar items
+        tree = PrepareGrammar().transform(tree)
 
-        token_defs = [c.children for c in tree.children if c.data=='token']
-        rule_defs = [c.children for c in tree.children if c.data=='rule']
-        statements = [c.children for c in tree.children if c.data=='statement']
-        assert len(token_defs) + len(rule_defs) + len(statements) == len(tree.children)
+        # Extract grammar items
+        defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
+        token_defs = defs.pop('token', [])
+        rule_defs = defs.pop('rule', [])
+        statements = defs.pop('statement', [])
+        assert not defs
 
         token_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in token_defs]
-
         token_defs = [(name.value, (t, int(p))) for name, p, t in token_defs]
 
         # Execute statements

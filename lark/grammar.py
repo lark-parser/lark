@@ -1,3 +1,25 @@
+class Symbol(object):
+    is_term = NotImplemented
+
+    def __init__(self, name):
+        self.name = name
+
+    def __eq__(self, other):
+        assert isinstance(other, Symbol), other
+        return self.is_term == other.is_term and self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+class Terminal(Symbol):
+    is_term = True
+
+    @property
+    def filter_out(self):
+        return self.name.startswith('_')
+
+class NonTerminal(Symbol):
+    is_term = False
 
 class Rule(object):
     """

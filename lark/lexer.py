@@ -3,7 +3,7 @@
 import re
 
 from .utils import Str, classify
-from .common import is_terminal, PatternStr, PatternRE, TokenDef
+from .common import PatternStr, PatternRE, TokenDef
 
 ###{standalone
 class LexError(Exception):
@@ -234,7 +234,7 @@ class ContextualLexer:
                 lexer = lexer_by_tokens[key]
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
-                state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$END']
+                state_tokens = [tokens_by_name[n] for n in accepts if n.is_term and n.name!='$END']
                 lexer = Lexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
                 lexer_by_tokens[key] = lexer
 

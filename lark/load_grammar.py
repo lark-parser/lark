@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
-from .grammar import RuleOptions, Rule
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal
 
 from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
 
@@ -523,7 +523,9 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                rule = Rule(name, expansion, alias, options)
+                expansion = [Terminal(x) if is_terminal(x) else NonTerminal(x) for x in expansion]
+
+                rule = Rule(NonTerminal(name), expansion, alias, options)
                 compiled_rules.append(rule)
 
         return tokens, compiled_rules, self.ignore
@@ -578,12 +580,16 @@ def options_from_rule(name, *x):
 
     return name, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
 
+
+def symbols_from_strcase(expansion):
+    return [Terminal(x) if is_terminal(x) else NonTerminal(x) for x in expansion]
+
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
-        rules = [options_from_rule(name, x) for name, x in RULES.items()]
-        rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
+        rules = [options_from_rule(name, x) for name, x in  RULES.items()]
+        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), None, o) for r, xs, o in rules for x in xs]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 

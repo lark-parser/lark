@@ -84,7 +84,7 @@ class ChildFilterLALR(ChildFilter):
         return self.node_builder(filtered)
 
 def _should_expand(sym):
-    return not is_terminal(sym) and sym.startswith('_')
+    return not sym.is_term and sym.name.startswith('_')
 
 def maybe_create_child_filter(expansion, filter_out, ambiguous):
     to_include = [(i, _should_expand(sym)) for i, sym in enumerate(expansion) if sym not in filter_out]
@@ -109,8 +109,8 @@ class ParseTreeBuilder:
 
     def _init_builders(self, rules):
         filter_out = {rule.origin for rule in rules if rule.options and rule.options.filter_out}
-        filter_out |= {sym for rule in rules for sym in rule.expansion if is_terminal(sym) and sym.startswith('_')}
-        assert all(x.startswith('_') for x in filter_out)
+        filter_out |= {sym for rule in rules for sym in rule.expansion if sym.is_term and sym.filter_out}
+        assert all(t.filter_out for t in filter_out)
 
         for rule in rules:
             options = rule.options
@@ -132,9 +132,9 @@ class ParseTreeBuilder:
         callback = Callback()
 
         for rule, wrapper_chain in self.rule_builders:
-            internal_callback_name = '_callback_%s_%s' % (rule.origin, '_'.join(rule.expansion))
+            internal_callback_name = '_callback_%s_%s' % (rule.origin, '_'.join(x.name for x in rule.expansion))
 
-            user_callback_name = rule.alias or rule.origin
+            user_callback_name = rule.alias or rule.origin.name
             try:
                 f = transformer._get_func(user_callback_name)
             except AttributeError:

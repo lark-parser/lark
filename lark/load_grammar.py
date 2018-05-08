@@ -13,7 +13,7 @@ from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify
+from .utils import classify, suppress
 
 from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
 
@@ -269,34 +269,31 @@ class PrepareAnonTerminals(InlineTransformer):
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
 
+        token_name = None
+
         if isinstance(p, PatternStr):
             try:
                 # If already defined, use the user-defined token name
                 token_name = self.token_reverse[p].name
             except KeyError:
-                # Try to assign an indicative anon-token name, otherwise use a numbered name
+                # Try to assign an indicative anon-token name
                 try:
                     token_name = _TOKEN_NAMES[value]
                 except KeyError:
                     if value.isalnum() and value[0].isalpha() and value.upper() not in self.token_set:
-                        token_name = '%s%d' % (value.upper(), self.i)
-                        try:
-                            # Make sure we don't have unicode in our token names
-                            token_name.encode('ascii')
-                        except UnicodeEncodeError:
-                            token_name = 'ANONSTR_%d' % self.i
-                    else:
-                        token_name = 'ANONSTR_%d' % self.i
-                    self.i += 1
+                        with suppress(UnicodeEncodeError):
+                            value.upper().encode('ascii') # Make sure we don't have unicode in our token names
+                            token_name = value.upper()
 
         elif isinstance(p, PatternRE):
             if p in self.token_reverse: # Kind of a wierd placement.name
                 token_name = self.token_reverse[p].name
-            else:
-                token_name = 'ANONRE_%d' % self.i
-                self.i += 1
         else:
             assert False, p
+
+        if token_name is None:
+            token_name = '__ANON_%d' % self.i
+            self.i += 1
 
         if token_name not in self.token_set:
             assert p not in self.token_reverse

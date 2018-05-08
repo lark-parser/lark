@@ -254,7 +254,7 @@ class CanonizeTree(InlineTransformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-class ExtractAnonTokens(InlineTransformer):
+class PrepareAnonTerminals(InlineTransformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -278,7 +278,7 @@ class ExtractAnonTokens(InlineTransformer):
                 try:
                     token_name = _TOKEN_NAMES[value]
                 except KeyError:
-                    if value.isalnum() and value[0].isalpha() and ('__'+value.upper()) not in self.token_set:
+                    if value.isalnum() and value[0].isalpha() and value.upper() not in self.token_set:
                         token_name = '%s%d' % (value.upper(), self.i)
                         try:
                             # Make sure we don't have unicode in our token names
@@ -288,8 +288,6 @@ class ExtractAnonTokens(InlineTransformer):
                     else:
                         token_name = 'ANONSTR_%d' % self.i
                     self.i += 1
-
-                token_name = '__' + token_name
 
         elif isinstance(p, PatternRE):
             if p in self.token_reverse: # Kind of a wierd placement.name
@@ -448,9 +446,7 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals()
-        transformer *= PrepareSymbols()
-        transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
+        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(tokens)   # Adds to tokens
 
         # 2. Convert EBNF to BNF (and apply step 1)
         ebnf_to_bnf = EBNF_to_BNF()

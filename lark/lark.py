@@ -23,9 +23,9 @@ class LarkOptions(object):
                  Note: "lalr" requires a lexer
 
         lexer - Decides whether or not to use a lexer stage
-            None: Don't use a lexer (scanless, only works with parser="earley")
             "standard": Use a standard lexer
             "contextual": Stronger lexer (only works with parser="lalr")
+            "dynamic": Flexible and powerful (only with parser="earley")
             "auto" (default): Choose for me based on grammar and parser
 
         ambiguity - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
@@ -131,7 +131,7 @@ class Lark:
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
-                self.options.lexer = 'standard'
+                self.options.lexer = 'contextual'
             elif self.options.parser == 'earley':
                 self.options.lexer = 'dynamic'
             elif self.options.parser == 'cyk':
@@ -139,7 +139,7 @@ class Lark:
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', None)
+        assert lexer in ('standard', 'contextual', 'dynamic')
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
@@ -154,7 +154,7 @@ class Lark:
         self.grammar = load_grammar(grammar, self.source)
 
         # Compile the EBNF grammar into BNF
-        tokens, self.rules, self.ignore_tokens = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
+        tokens, self.rules, self.ignore_tokens = self.grammar.compile()
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 

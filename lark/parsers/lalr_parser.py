@@ -59,7 +59,7 @@ class _Parser:
 
             value = self.callbacks[rule](s)
 
-            _action, new_state = get_action(rule.origin)
+            _action, new_state = get_action(rule.origin.name)
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)

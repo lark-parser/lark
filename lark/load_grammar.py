@@ -12,7 +12,8 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
-from .grammar import RuleOptions, Rule
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
+from .utils import classify, suppress
 
 from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
 
@@ -107,10 +108,16 @@ RULES = {
               ],
 
     '?atom': ['_LPAR expansions _RPAR',
-             'maybe',
-             'name',
-             'literal',
-             'range'],
+              'maybe',
+              'value'],
+
+    'value': ['terminal',
+              'nonterminal',
+              'literal',
+              'range'],
+
+    'terminal': ['TOKEN'],
+    'nonterminal': ['RULE'],
 
     '?name': ['RULE', 'TOKEN'],
 
@@ -144,7 +151,7 @@ class EBNF_to_BNF(InlineTransformer):
 
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
-        t = Token('RULE', new_name, -1)
+        t = NonTerminal(Token('RULE', new_name, -1))
         tree = ST('expansions', [ST('expansion', [expr]), ST('expansion', [t, expr])])
         self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t
@@ -230,7 +237,7 @@ class RuleTreeToText(Transformer):
     def expansions(self, x):
         return x
     def expansion(self, symbols):
-        return [sym.value for sym in symbols], None
+        return symbols, None
     def alias(self, x):
         (expansion, _alias), alias = x
         assert _alias is None, (alias, expansion, '-', _alias)
@@ -247,7 +254,7 @@ class CanonizeTree(InlineTransformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-class ExtractAnonTokens(InlineTransformer):
+class PrepareAnonTerminals(InlineTransformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -262,36 +269,31 @@ class ExtractAnonTokens(InlineTransformer):
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
 
+        token_name = None
+
         if isinstance(p, PatternStr):
             try:
                 # If already defined, use the user-defined token name
                 token_name = self.token_reverse[p].name
             except KeyError:
-                # Try to assign an indicative anon-token name, otherwise use a numbered name
+                # Try to assign an indicative anon-token name
                 try:
                     token_name = _TOKEN_NAMES[value]
                 except KeyError:
-                    if value.isalnum() and value[0].isalpha() and ('__'+value.upper()) not in self.token_set:
-                        token_name = '%s%d' % (value.upper(), self.i)
-                        try:
-                            # Make sure we don't have unicode in our token names
-                            token_name.encode('ascii')
-                        except UnicodeEncodeError:
-                            token_name = 'ANONSTR_%d' % self.i
-                    else:
-                        token_name = 'ANONSTR_%d' % self.i
-                    self.i += 1
-
-                token_name = '__' + token_name
+                    if value.isalnum() and value[0].isalpha() and value.upper() not in self.token_set:
+                        with suppress(UnicodeEncodeError):
+                            value.upper().encode('ascii') # Make sure we don't have unicode in our token names
+                            token_name = value.upper()
 
         elif isinstance(p, PatternRE):
             if p in self.token_reverse: # Kind of a wierd placement.name
                 token_name = self.token_reverse[p].name
-            else:
-                token_name = 'ANONRE_%d' % self.i
-                self.i += 1
         else:
             assert False, p
+
+        if token_name is None:
+            token_name = '__ANON_%d' % self.i
+            self.i += 1
 
         if token_name not in self.token_set:
             assert p not in self.token_reverse
@@ -300,7 +302,7 @@ class ExtractAnonTokens(InlineTransformer):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Token('TOKEN', token_name, -1)
+        return Terminal(Token('TOKEN', token_name, -1), filter_out=isinstance(p, PatternStr))
 
 
 def _rfind(s, choices):
@@ -344,7 +346,7 @@ def _literal_to_pattern(literal):
 
     s = _fix_escaping(x)
 
-    if v[0] == '"':
+    if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
 
     return { 'STRING': PatternStr,
@@ -363,11 +365,6 @@ class PrepareLiterals(InlineTransformer):
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 
-class SplitLiterals(InlineTransformer):
-    def pattern(self, p):
-        if isinstance(p, PatternStr) and len(p.value)>1:
-            return ST('expansion', [ST('pattern', [PatternStr(ch, flags=p.flags)]) for ch in p.value])
-        return ST('pattern', [p])
 
 class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
@@ -405,14 +402,19 @@ class TokenTreeToPattern(Transformer):
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
-def _interleave(l, item):
-    for e in l:
-        yield e
-        if isinstance(e, Tree):
-            if e.data in ('literal', 'range'):
-                yield item
-        elif is_terminal(e):
-            yield item
+    def value(self, v):
+        return v[0]
+
+class PrepareSymbols(Transformer):
+    def value(self, v):
+        v ,= v
+        if isinstance(v, Tree):
+            return v
+        elif v.type == 'RULE':
+            return NonTerminal(v.value)
+        elif v.type == 'TOKEN':
+            return Terminal(v.value, filter_out=v.startswith('_'))
+        assert False
 
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
@@ -423,62 +425,9 @@ class Grammar:
         self.rule_defs = rule_defs
         self.ignore = ignore
 
-    def _prepare_scanless_grammar(self, start):
-        # XXX Pretty hacky! There should be a better way to write this method..
-
-        rule_defs = deepcopy(self.rule_defs)
-        term_defs = self.token_defs
-
-        # Implement the "%ignore" feature without a lexer..
-        terms_to_ignore = {name:'__'+name for name in self.ignore}
-        if terms_to_ignore:
-            assert set(terms_to_ignore) <= {name for name, _t in term_defs}
-
-            term_defs = [(terms_to_ignore.get(name,name),t) for name,t in term_defs]
-            expr = Token('RULE', '__ignore')
-            for r, tree, _o in rule_defs:
-                for exp in tree.find_data('expansion'):
-                    exp.children = list(_interleave(exp.children, expr))
-                    if r == start:
-                        exp.children = [expr] + exp.children
-                for exp in tree.find_data('expr'):
-                    exp.children[0] = ST('expansion', list(_interleave(exp.children[:1], expr)))
-
-            _ignore_tree = ST('expr', [_choice_of_rules(terms_to_ignore.values()), Token('OP', '?')])
-            rule_defs.append(('__ignore', _ignore_tree, None))
-
-        # Convert all tokens to rules
-        new_terminal_names = {name: '__token_'+name for name, _t in term_defs}
-
-        for name, tree, options in rule_defs:
-            for exp in chain( tree.find_data('expansion'), tree.find_data('expr') ):
-                for i, sym in enumerate(exp.children):
-                    if sym in new_terminal_names:
-                        exp.children[i] = Token(sym.type, new_terminal_names[sym])
-
-        for name, (tree, priority) in term_defs:   # TODO transfer priority to rule?
-            if any(tree.find_data('alias')):
-                raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
-
-            if name.startswith('_'):
-                options = RuleOptions(filter_out=True, priority=-priority)
-            else:
-                options = RuleOptions(keep_all_tokens=True, create_token=name, priority=-priority)
-
-            name = new_terminal_names[name]
-            inner_name = name + '_inner'
-            rule_defs.append((name, _choice_of_rules([inner_name]), None))
-            rule_defs.append((inner_name, tree, options))
-
-        return [], rule_defs
-
-
-    def compile(self, lexer=False, start=None):
-        if not lexer:
-            token_defs, rule_defs = self._prepare_scanless_grammar(start)
-        else:
-            token_defs = list(self.token_defs)
-            rule_defs = self.rule_defs
+    def compile(self):
+        token_defs = list(self.token_defs)
+        rule_defs = self.rule_defs
 
         # =================
         #  Compile Tokens
@@ -494,10 +443,7 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals()
-        if not lexer:
-            transformer *= SplitLiterals()
-        transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
+        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(tokens)   # Adds to tokens
 
         # 2. Convert EBNF to BNF (and apply step 1)
         ebnf_to_bnf = EBNF_to_BNF()
@@ -523,7 +469,9 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                rule = Rule(name, expansion, alias, options)
+                assert all(isinstance(x, Symbol) for x in expansion), expansion
+
+                rule = Rule(NonTerminal(name), expansion, alias, options)
                 compiled_rules.append(rule)
 
         return tokens, compiled_rules, self.ignore
@@ -552,14 +500,14 @@ def resolve_token_references(token_defs):
     while True:
         changed = False
         for name, (token_tree, _p) in token_defs:
-            for exp in chain(token_tree.find_data('expansion'), token_tree.find_data('expr')):
-                for i, item in enumerate(exp.children):
-                    if isinstance(item, Token):
-                        if item.type == 'RULE':
-                            raise GrammarError("Rules aren't allowed inside tokens (%s in %s)" % (item, name))
-                        if item.type == 'TOKEN':
-                            exp.children[i] = token_dict[item]
-                            changed = True
+            for exp in token_tree.find_data('value'):
+                item ,= exp.children
+                if isinstance(item, Token):
+                    if item.type == 'RULE':
+                        raise GrammarError("Rules aren't allowed inside tokens (%s in %s)" % (item, name))
+                    if item.type == 'TOKEN':
+                        exp.children[0] = token_dict[item]
+                        changed = True
         if not changed:
             break
 
@@ -578,12 +526,23 @@ def options_from_rule(name, *x):
 
     return name, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
 
+
+def symbols_from_strcase(expansion):
+    return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
+
+class PrepareGrammar(InlineTransformer):
+    def terminal(self, name):
+        return name
+    def nonterminal(self, name):
+        return name
+
+
 class GrammarLoader:
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
 
-        rules = [options_from_rule(name, x) for name, x in RULES.items()]
-        rules = [Rule(r, x.split(), None, o) for r, xs, o in rules for x in xs]
+        rules = [options_from_rule(name, x) for name, x in  RULES.items()]
+        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), None, o) for r, xs, o in rules for x in xs]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 
@@ -618,15 +577,16 @@ class GrammarLoader:
                 raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
             raise
 
-        # Extract grammar items
+        tree = PrepareGrammar().transform(tree)
 
-        token_defs = [c.children for c in tree.children if c.data=='token']
-        rule_defs = [c.children for c in tree.children if c.data=='rule']
-        statements = [c.children for c in tree.children if c.data=='statement']
-        assert len(token_defs) + len(rule_defs) + len(statements) == len(tree.children)
+        # Extract grammar items
+        defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
+        token_defs = defs.pop('token', [])
+        rule_defs = defs.pop('rule', [])
+        statements = defs.pop('statement', [])
+        assert not defs
 
         token_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in token_defs]
-
         token_defs = [(name.value, (t, int(p))) for name, p, t in token_defs]
 
         # Execute statements
@@ -661,9 +621,11 @@ class GrammarLoader:
                 t2 ,= t.children
                 if t2.data=='expansion' and len(t2.children) == 1:
                     item ,= t2.children
-                    if isinstance(item, Token) and item.type == 'TOKEN':
-                        ignore_names.append(item.value)
-                        continue
+                    if item.data == 'value':
+                        item ,= item.children
+                        if isinstance(item, Token) and item.type == 'TOKEN':
+                            ignore_names.append(item.value)
+                            continue
 
             name = '__IGNORE_%d'% len(ignore_names)
             ignore_names.append(name)

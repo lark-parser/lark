@@ -1,3 +1,32 @@
+class Symbol(object):
+    is_term = NotImplemented
+
+    def __init__(self, name):
+        self.name = name
+
+    def __eq__(self, other):
+        assert isinstance(other, Symbol), other
+        return self.is_term == other.is_term and self.name == other.name
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, self.name)
+
+class Terminal(Symbol):
+    is_term = True
+
+    def __init__(self, name, filter_out=False):
+        self.name = name
+        self.filter_out = filter_out
+
+
+class NonTerminal(Symbol):
+    is_term = False
 
 class Rule(object):
     """
@@ -18,20 +47,14 @@ class Rule(object):
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, create_token=None, filter_out=False, priority=None):
+    def __init__(self, keep_all_tokens=False, expand1=False, priority=None):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
-        self.create_token = create_token  # used for scanless postprocessing
         self.priority = priority
 
-        self.filter_out = filter_out        # remove this rule from the tree
-                                            # used for "token"-rules in scanless
-
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r, %r, %r)' % (
+        return 'RuleOptions(%r, %r, %r)' % (
             self.keep_all_tokens,
             self.expand1,
-            self.create_token,
             self.priority,
-            self.filter_out
         )

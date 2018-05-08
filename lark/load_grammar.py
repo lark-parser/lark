@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
 from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify
 
 from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
@@ -108,11 +108,13 @@ RULES = {
               ],
 
     '?atom': ['_LPAR expansions _RPAR',
-             'maybe',
-             'terminal',
-             'nonterminal',
-             'literal',
-             'range'],
+              'maybe',
+              'value'],
+
+    'value': ['terminal',
+              'nonterminal',
+              'literal',
+              'range'],
 
     'terminal': ['TOKEN'],
     'nonterminal': ['RULE'],
@@ -149,7 +151,7 @@ class EBNF_to_BNF(InlineTransformer):
 
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
-        t = Token('RULE', new_name, -1)
+        t = NonTerminal(Token('RULE', new_name, -1))
         tree = ST('expansions', [ST('expansion', [expr]), ST('expansion', [t, expr])])
         self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t
@@ -235,7 +237,7 @@ class RuleTreeToText(Transformer):
     def expansions(self, x):
         return x
     def expansion(self, symbols):
-        return [sym.value for sym in symbols], None
+        return symbols, None
     def alias(self, x):
         (expansion, _alias), alias = x
         assert _alias is None, (alias, expansion, '-', _alias)
@@ -305,7 +307,7 @@ class ExtractAnonTokens(InlineTransformer):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Token('TOKEN', token_name, -1)
+        return Terminal(Token('TOKEN', token_name, -1))
 
 
 def _rfind(s, choices):
@@ -349,7 +351,7 @@ def _literal_to_pattern(literal):
 
     s = _fix_escaping(x)
 
-    if v[0] == '"':
+    if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
 
     return { 'STRING': PatternStr,
@@ -367,6 +369,7 @@ class PrepareLiterals(InlineTransformer):
         assert len(start) == len(end) == 1, (start, end, len(start), len(end))
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
+
 
 class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
@@ -404,6 +407,17 @@ class TokenTreeToPattern(Transformer):
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
+    def value(self, v):
+        return v[0]
+
+class PrepareSymbols(Transformer):
+    def value(self, v):
+        v ,= v
+        if isinstance(v, Tree):
+            return v
+        return {'TOKEN': Terminal,
+                'RULE': NonTerminal}[v.type](v.value)
+
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
@@ -432,6 +446,7 @@ class Grammar:
 
         # 1. Pre-process terminals
         transformer = PrepareLiterals()
+        transformer *= PrepareSymbols()
         transformer *= ExtractAnonTokens(tokens)   # Adds to tokens
 
         # 2. Convert EBNF to BNF (and apply step 1)
@@ -458,7 +473,7 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                expansion = [Terminal(x) if is_terminal(x) else NonTerminal(x) for x in expansion]
+                assert all(isinstance(x, Symbol) for x in expansion), expansion
 
                 rule = Rule(NonTerminal(name), expansion, alias, options)
                 compiled_rules.append(rule)
@@ -489,14 +504,14 @@ def resolve_token_references(token_defs):
     while True:
         changed = False
         for name, (token_tree, _p) in token_defs:
-            for exp in chain(token_tree.find_data('expansion'), token_tree.find_data('expr')):
-                for i, item in enumerate(exp.children):
-                    if isinstance(item, Token):
-                        if item.type == 'RULE':
-                            raise GrammarError("Rules aren't allowed inside tokens (%s in %s)" % (item, name))
-                        if item.type == 'TOKEN':
-                            exp.children[i] = token_dict[item]
-                            changed = True
+            for exp in token_tree.find_data('value'):
+                item ,= exp.children
+                if isinstance(item, Token):
+                    if item.type == 'RULE':
+                        raise GrammarError("Rules aren't allowed inside tokens (%s in %s)" % (item, name))
+                    if item.type == 'TOKEN':
+                        exp.children[0] = token_dict[item]
+                        changed = True
         if not changed:
             break
 
@@ -524,6 +539,7 @@ class PrepareGrammar(InlineTransformer):
         return name
     def nonterminal(self, name):
         return name
+
 
 class GrammarLoader:
     def __init__(self):
@@ -609,9 +625,11 @@ class GrammarLoader:
                 t2 ,= t.children
                 if t2.data=='expansion' and len(t2.children) == 1:
                     item ,= t2.children
-                    if isinstance(item, Token) and item.type == 'TOKEN':
-                        ignore_names.append(item.value)
-                        continue
+                    if item.data == 'value':
+                        item ,= item.children
+                        if isinstance(item, Token) and item.type == 'TOKEN':
+                            ignore_names.append(item.value)
+                            continue
 
             name = '__IGNORE_%d'% len(ignore_names)
             ignore_names.append(name)

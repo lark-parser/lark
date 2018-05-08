@@ -649,28 +649,25 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('b')
 
         def test_token_not_anon(self):
-            """Tests that "a" is matched as A, rather than an anonymous token.
-
-            That means that "a" is not filtered out, despite being an 'immediate string'.
-            Whether or not this is the intuitive behavior, I'm not sure yet.
-
-            Perhaps the right thing to do is report a collision (if such is relevant)
-
-            -Erez
+            """Tests that "a" is matched as an anonymous token, and not A.
             """
 
             g = _Lark("""start: "a"
                         A: "a" """)
             x = g.parse('a')
+            self.assertEqual(len(x.children), 0, '"a" should be considered anonymous')
 
-            self.assertEqual(len(x.children), 1, '"a" should not be considered anonymous')
+            g = _Lark("""start: "a" A
+                        A: "a" """)
+            x = g.parse('aa')
+            self.assertEqual(len(x.children), 1, 'only "a" should be considered anonymous')
             self.assertEqual(x.children[0].type, "A")
 
             g = _Lark("""start: /a/
                         A: /a/ """)
             x = g.parse('a')
-            self.assertEqual(len(x.children), 1, '/a/ should not be considered anonymous')
-            self.assertEqual(x.children[0].type, "A")
+            self.assertEqual(len(x.children), 1)
+            self.assertEqual(x.children[0].type, "A", "A isn't associated with /a/")
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_maybe(self):

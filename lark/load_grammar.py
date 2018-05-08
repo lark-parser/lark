@@ -307,7 +307,7 @@ class ExtractAnonTokens(InlineTransformer):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Terminal(Token('TOKEN', token_name, -1))
+        return Terminal(Token('TOKEN', token_name, -1), filter_out=isinstance(p, PatternStr))
 
 
 def _rfind(s, choices):
@@ -415,8 +415,11 @@ class PrepareSymbols(Transformer):
         v ,= v
         if isinstance(v, Tree):
             return v
-        return {'TOKEN': Terminal,
-                'RULE': NonTerminal}[v.type](v.value)
+        elif v.type == 'RULE':
+            return NonTerminal(v.value)
+        elif v.type == 'TOKEN':
+            return Terminal(v.value, filter_out=v.startswith('_'))
+        assert False
 
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
@@ -532,7 +535,7 @@ def options_from_rule(name, *x):
 
 
 def symbols_from_strcase(expansion):
-    return [Terminal(x) if is_terminal(x) else NonTerminal(x) for x in expansion]
+    return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
 class PrepareGrammar(InlineTransformer):
     def terminal(self, name):

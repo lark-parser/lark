@@ -20,9 +20,10 @@ class Symbol(object):
 class Terminal(Symbol):
     is_term = True
 
-    @property
-    def filter_out(self):
-        return self.name.startswith('_')
+    def __init__(self, name, filter_out=False):
+        self.name = name
+        self.filter_out = filter_out
+
 
 class NonTerminal(Symbol):
     is_term = False
@@ -46,17 +47,14 @@ class Rule(object):
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, filter_out=False, priority=None):
+    def __init__(self, keep_all_tokens=False, expand1=False, priority=None):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
 
-        self.filter_out = filter_out        # remove this rule from the tree
-
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r, %r)' % (
+        return 'RuleOptions(%r, %r, %r)' % (
             self.keep_all_tokens,
             self.expand1,
             self.priority,
-            self.filter_out
         )

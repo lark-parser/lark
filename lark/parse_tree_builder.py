@@ -75,8 +75,9 @@ class ChildFilterLALR(ChildFilter):
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
 
-def maybe_create_child_filter(expansion, filter_out, ambiguous):
-    to_include = [(i, _should_expand(sym)) for i, sym in enumerate(expansion) if sym not in filter_out]
+def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous):
+    to_include = [(i, _should_expand(sym)) for i, sym in enumerate(expansion)
+                  if keep_all_tokens or not (sym.is_term and sym.filter_out)]
 
     if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
         return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include)
@@ -97,10 +98,6 @@ class ParseTreeBuilder:
         self.user_aliases = {}
 
     def _init_builders(self, rules):
-        filter_out = {rule.origin for rule in rules if rule.options and rule.options.filter_out}
-        filter_out |= {sym for rule in rules for sym in rule.expansion if sym.is_term and sym.filter_out}
-        assert all(t.name.startswith('_') for t in filter_out)
-
         for rule in rules:
             options = rule.options
             keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
@@ -108,7 +105,7 @@ class ParseTreeBuilder:
 
             wrapper_chain = filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, () if keep_all_tokens else filter_out, self.ambiguous),
+                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
                 self.propagate_positions and PropagatePositions,
             ])
 

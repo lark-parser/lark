@@ -7,11 +7,6 @@ from .lexer import Lexer, ContextualLexer, Token
 from .common import GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
-from .grammar import Terminal, NonTerminal
-
-def terminals(seq):
-    # return [Terminal(t) for t in seq]
-    return seq
 
 class WithLexer:
     def init_traditional_lexer(self, lexer_conf):
@@ -23,8 +18,8 @@ class WithLexer:
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
         self.lexer = ContextualLexer(lexer_conf.tokens, states,
-                                     ignore=terminals(lexer_conf.ignore),
-                                     always_accept=terminals(always_accept),
+                                     ignore=lexer_conf.ignore,
+                                     always_accept=always_accept,
                                      user_callbacks=lexer_conf.callbacks)
 
     def lex(self, text):

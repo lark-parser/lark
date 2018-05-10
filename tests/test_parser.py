@@ -854,22 +854,22 @@ def _make_parser_test(LEXER, PARSER):
             l = _Lark(g)
             a, bc, d = l.parse("AB\nCD").children
             self.assertEqual(a.line, 1)
-            self.assertEqual(a.column, 0)
+            self.assertEqual(a.column, 1)
 
             bc ,= bc.children
             self.assertEqual(bc.line, 1)
-            self.assertEqual(bc.column, 1)
+            self.assertEqual(bc.column, 2)
 
             self.assertEqual(d.line, 2)
-            self.assertEqual(d.column, 1)
+            self.assertEqual(d.column, 2)
 
             if LEXER != 'dynamic':
                 self.assertEqual(a.end_line, 1)
-                self.assertEqual(a.end_column, 1)
+                self.assertEqual(a.end_column, 2)
                 self.assertEqual(bc.end_line, 2)
-                self.assertEqual(bc.end_column, 1)
+                self.assertEqual(bc.end_column, 2)
                 self.assertEqual(d.end_line, 2)
-                self.assertEqual(d.end_column, 2)
+                self.assertEqual(d.end_column, 3)
 
 
 

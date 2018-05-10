@@ -53,7 +53,7 @@ class Parser:
         match = self.term_matcher
 
         text_line = 1
-        text_column = 0
+        text_column = 1
 
         def predict(nonterm, column):
             assert not nonterm.is_term, nonterm
@@ -128,7 +128,7 @@ class Parser:
 
             if token == '\n':
                 text_line += 1
-                text_column = 0
+                text_column = 1
             else:
                 text_column += 1
 

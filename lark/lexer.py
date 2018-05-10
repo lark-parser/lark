@@ -63,7 +63,7 @@ class LineCounter:
         self.newline_char = '\n'
         self.char_pos = 0
         self.line = 1
-        self.column = 0
+        self.column = 1
         self.line_start_pos = 0
 
     def feed(self, token, test_newline=True):
@@ -78,7 +78,7 @@ class LineCounter:
                 self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
-        self.column = self.char_pos - self.line_start_pos
+        self.column = self.char_pos - self.line_start_pos + 1
 
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"

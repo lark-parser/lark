@@ -113,7 +113,6 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule'
 
 
-
 def pydot__tree_to_png(tree, filename):
     import pydot
     graph = pydot.Dot(graph_type='digraph', rankdir="LR")

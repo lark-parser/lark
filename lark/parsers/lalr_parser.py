@@ -2,7 +2,6 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-
 from ..common import UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, Shift
@@ -47,8 +46,7 @@ class _Parser:
                 return states[state][key]
             except KeyError:
                 expected = states[state].keys()
-
-                raise UnexpectedToken(token, expected, seq, i)
+                raise UnexpectedToken(token, expected, seq, i, state=state)
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -61,7 +59,7 @@ class _Parser:
 
             value = self.callbacks[rule](s)
 
-            _action, new_state = get_action(rule.origin)
+            _action, new_state = get_action(rule.origin.name)
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)

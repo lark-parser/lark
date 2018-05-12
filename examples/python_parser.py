@@ -10,7 +10,7 @@ import glob, time
 from lark import Lark
 from lark.indenter import Indenter
 
-__path__ = os.path.dirname(__file__)
+# __path__ = os.path.dirname(__file__)
 
 class PythonIndenter(Indenter):
     NL_type = '_NEWLINE'
@@ -20,17 +20,13 @@ class PythonIndenter(Indenter):
     DEDENT_type = '_DEDENT'
     tab_len = 8
 
+kwargs = dict(rel_to=__file__, postlex=PythonIndenter(), start='file_input')
 
-grammar2_filename = os.path.join(__path__, 'python2.g')
-grammar3_filename = os.path.join(__path__, 'python3.g')
-with open(grammar2_filename) as f:
-    python_parser2 = Lark(f, parser='lalr', postlex=PythonIndenter(), start='file_input')
-with open(grammar3_filename) as f:
-    python_parser3 = Lark(f, parser='lalr', postlex=PythonIndenter(), start='file_input')
+python_parser2 = Lark.open('python2.g', parser='lalr', **kwargs)
+python_parser3 = Lark.open('python3.g',parser='lalr', **kwargs)
+python_parser2_earley = Lark.open('python2.g', parser='earley', lexer='standard', **kwargs)
+print(python_parser3)
 
-
-with open(grammar2_filename) as f:
-    python_parser2_earley = Lark(f, parser='lalr', lexer='standard', postlex=PythonIndenter(), start='file_input')
 
 def _read(fn, *args):
     kwargs = {'encoding': 'iso-8859-1'}
@@ -82,6 +78,6 @@ def test_earley_equals_lalr():
 
 if __name__ == '__main__':
     test_python_lib()
-    # test_earley_equals_lalr()
+    test_earley_equals_lalr()
     # python_parser3.parse(_read(sys.argv[1]) + '\n')
 

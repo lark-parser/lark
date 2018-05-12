@@ -43,7 +43,7 @@ class Token(Str):
         return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.pos_in_stream, self.value, self.line, self.column, ))
+        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
 
     def __repr__(self):
         return 'Token(%s, %r)' % (self.type, self.value)
@@ -65,7 +65,7 @@ class LineCounter:
         self.newline_char = '\n'
         self.char_pos = 0
         self.line = 1
-        self.column = 0
+        self.column = 1
         self.line_start_pos = 0
 
     def feed(self, token, test_newline=True):
@@ -80,7 +80,7 @@ class LineCounter:
                 self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
-        self.column = self.char_pos - self.line_start_pos
+        self.column = self.char_pos - self.line_start_pos + 1
 
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"
@@ -146,6 +146,8 @@ def _create_unless(tokens):
     for retok in tokens_by_type.get(PatternRE, []):
         unless = [] # {}
         for strtok in tokens_by_type.get(PatternStr, []):
+            if strtok.priority > retok.priority:
+                continue
             s = strtok.pattern.value
             m = re.match(retok.pattern.to_regexp(), s)
             if m and m.group(0) == s:

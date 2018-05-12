@@ -13,10 +13,11 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-from ..common import ParseError, UnexpectedToken, is_terminal
 from ..tree import Tree
 from ..transformers import Transformer_InPlace
+from ..common import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
+from ..grammar import NonTerminal
 
 
 class Derivation(Tree):
@@ -128,7 +129,7 @@ class Column:
                     self.completed[item_key] = item
                 self.to_reduce.append(item)
             else:
-                if is_terminal(item.expect):
+                if item.expect.is_term:
                     self.to_scan.append(item)
                 else:
                     k = item_key if self.predict_all else item
@@ -162,13 +163,13 @@ class Parser:
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.parser_conf.start
+        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
 
         _Item = Item
         match = self.term_matcher
 
         def predict(nonterm, column):
-            assert not is_terminal(nonterm), nonterm
+            assert not nonterm.is_term, nonterm
             return [_Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):

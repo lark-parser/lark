@@ -10,6 +10,8 @@
 
 ### Advanced
 
+- [error\_reporting\_lalr.py](error_reporting_lalr.py) - A demonstration of example-driven error reporting with the LALR parser
 - [python\_parser.py](python_parser.py) - A fully-working Python 2 & 3 parser (but not production ready yet!)
-- [conf.py](conf.py) - Demonstrates the power of LALR's contextual lexer on a toy configuration language
+- [conf\_lalr.py](conf_lalr.py) - Demonstrates the power of LALR's contextual lexer on a toy configuration language
+- [conf\_earley.py](conf_earley.py) - Demonstrates the power of Earley's dynamic lexer on a toy configuration language
 - [reconstruct\_json.py](reconstruct_json.py) - Demonstrates the experimental text-reconstruction feature

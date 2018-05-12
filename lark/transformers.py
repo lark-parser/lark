@@ -78,6 +78,8 @@ class Transformer_InPlace(Transformer):
         return self._transform(tree)
 
 class Visitor(Base):
+    "Bottom-up visitor"
+
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
@@ -97,6 +99,31 @@ class Visitor_Recursive(Base):
         f = getattr(self, tree.data, self.__default__)
         f(tree)
         return tree
+
+
+from functools import wraps
+def visit_children_decor(func):
+    @wraps(func)
+    def inner(cls, tree):
+        values = cls.visit_children(tree)
+        return func(cls, values)
+    return inner
+
+class Interpreter(object):
+    "Top-down visitor"
+
+    def visit(self, tree):
+        return getattr(self, tree.data)(tree)
+
+    def visit_children(self, tree):
+        return [self.visit(child) if isinstance(child, Tree) else child
+                for child in tree.children]
+
+    def __getattr__(self, name):
+        return self.__default__
+
+    def __default__(self, tree):
+        return self.visit_children(tree)
 
 
 def inline_args(obj):

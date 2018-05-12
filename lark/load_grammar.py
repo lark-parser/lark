@@ -407,7 +407,7 @@ class TokenTreeToPattern(ChildrenTransformer):
     def value(self, v):
         return v[0]
 
-class PrepareSymbols(Transformer):
+class PrepareSymbols(ChildrenTransformer):
     def value(self, v):
         v ,= v
         if isinstance(v, Tree):
@@ -532,7 +532,8 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
-class PrepareGrammar(InlineTransformer):
+@inline_args
+class PrepareGrammar(ChildrenTransformer):
     def terminal(self, name):
         return name
     def nonterminal(self, name):

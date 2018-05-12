@@ -57,13 +57,13 @@ Str = type(u'')
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
-        return wraps(create_decorator(f, True))
+        return wraps(f)(create_decorator(f, True))
 
     elif isinstance(f, (type, types.BuiltinFunctionType)):
-        return wraps(create_decorator(f, False))
+        return wraps(f)(create_decorator(f, False))
 
     elif isinstance(f, types.MethodType):
-        return wraps(create_decorator(f.__func__, True))
+        return wraps(f)(create_decorator(f.__func__, True))
 
     elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445

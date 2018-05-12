@@ -21,7 +21,7 @@ from lark.lark import Lark
 from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
 from lark.tree import Tree
-from lark.transformers import Transformer, children_args
+from lark.visitors import Transformer, children_args
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):

@@ -6,7 +6,7 @@ import copy
 import pickle
 
 from lark.tree import Tree
-from lark.transformers import Interpreter, visit_children_decor
+from lark.visitors import Interpreter, visit_children_decor
 
 
 class TestTrees(TestCase):

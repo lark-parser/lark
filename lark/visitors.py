@@ -1,4 +1,4 @@
-import inspect
+from inspect import isclass
 from functools import wraps
 
 from .utils import smart_decorator
@@ -119,6 +119,7 @@ def _children_args__func(f):
         else:
             def f(args):
                 return _f(tree.children)
+        return f
 
     return smart_decorator(f, create_decorator)
 
@@ -136,7 +137,7 @@ def _children_args__class(cls):
 
 
 def children_args(obj):
-    decorator = _children_args__class if issubclass(obj, Base) else _children_args__func
+    decorator = _children_args__class if isclass(obj) and issubclass(obj, Base) else _children_args__func
     return decorator(obj)
 
 
@@ -150,6 +151,7 @@ def _children_args_inline__func(f):
         else:
             def f(args):
                 return _f(*tree.children)
+        return f
 
     return smart_decorator(f, create_decorator)
 
@@ -167,5 +169,5 @@ def _children_args_inline__class(cls):
     return cls
 
 def children_args_inline(obj):
-    decorator = _children_args_inline__class if issubclass(obj, Base) else _children_args_inline__func
+    decorator = _children_args_inline__class if isclass(obj) and issubclass(obj, Base) else _children_args_inline__func
     return decorator(obj)

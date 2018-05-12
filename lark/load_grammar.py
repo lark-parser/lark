@@ -16,7 +16,7 @@ from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
 from .tree import Tree, SlottedTree as ST
-from .transformers import Transformer, Visitor, children_args, children_args_inline
+from .visitors import Transformer, Visitor, children_args, children_args_inline
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -255,7 +255,6 @@ class CanonizeTree(Transformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-@children_args_inline
 class PrepareAnonTerminals(Transformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
@@ -266,6 +265,7 @@ class PrepareAnonTerminals(Transformer):
         self.i = 0
 
 
+    @children_args_inline
     def pattern(self, p):
         value = p.value
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
@@ -409,8 +409,8 @@ class TokenTreeToPattern(Transformer):
     def value(self, v):
         return v[0]
 
-@children_args
 class PrepareSymbols(Transformer):
+    @children_args
     def value(self, v):
         v ,= v
         if isinstance(v, Tree):

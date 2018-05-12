@@ -14,7 +14,7 @@
 # Email : erezshin@gmail.com
 
 from ..tree import Tree
-from ..transformers import Transformer_InPlace
+from ..visitors import Transformer_InPlace
 from ..common import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal

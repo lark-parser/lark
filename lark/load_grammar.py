@@ -16,7 +16,7 @@ from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
 from .tree import Tree, SlottedTree as ST
-from .transformers import Transformer, ChildrenTransformer, inline_args, Visitor
+from .transformers import Transformer, Visitor, children_args, children_args_inline
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -138,8 +138,8 @@ RULES = {
 }
 
 
-@inline_args
-class EBNF_to_BNF(ChildrenTransformer):
+@children_args_inline
+class EBNF_to_BNF(Transformer):
     def __init__(self):
         self.new_rules = []
         self.rules_by_expr = {}
@@ -232,7 +232,8 @@ class SimplifyRule_Visitor(Visitor):
         tree.children = list(set(tree.children))
 
 
-class RuleTreeToText(ChildrenTransformer):
+@children_args
+class RuleTreeToText(Transformer):
     def expansions(self, x):
         return x
     def expansion(self, symbols):
@@ -243,8 +244,8 @@ class RuleTreeToText(ChildrenTransformer):
         return expansion, alias.value
 
 
-@inline_args
-class CanonizeTree(ChildrenTransformer):
+@children_args_inline
+class CanonizeTree(Transformer):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
 
@@ -254,8 +255,8 @@ class CanonizeTree(ChildrenTransformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-@inline_args
-class PrepareAnonTerminals(ChildrenTransformer):
+@children_args_inline
+class PrepareAnonTerminals(Transformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -354,8 +355,8 @@ def _literal_to_pattern(literal):
              'REGEXP': PatternRE }[literal.type](s, flags)
 
 
-@inline_args
-class PrepareLiterals(ChildrenTransformer):
+@children_args_inline
+class PrepareLiterals(Transformer):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
 
@@ -368,7 +369,8 @@ class PrepareLiterals(ChildrenTransformer):
         return ST('pattern', [PatternRE(regexp)])
 
 
-class TokenTreeToPattern(ChildrenTransformer):
+@children_args
+class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
         return p
@@ -407,7 +409,8 @@ class TokenTreeToPattern(ChildrenTransformer):
     def value(self, v):
         return v[0]
 
-class PrepareSymbols(ChildrenTransformer):
+@children_args
+class PrepareSymbols(Transformer):
     def value(self, v):
         v ,= v
         if isinstance(v, Tree):
@@ -532,8 +535,8 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
-@inline_args
-class PrepareGrammar(ChildrenTransformer):
+@children_args_inline
+class PrepareGrammar(Transformer):
     def terminal(self, name):
         return name
     def nonterminal(self, name):

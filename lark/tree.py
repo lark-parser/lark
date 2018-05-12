@@ -5,8 +5,6 @@ except ImportError:
 
 from copy import deepcopy
 
-from .utils import inline_args
-
 class Meta:
     pass
 

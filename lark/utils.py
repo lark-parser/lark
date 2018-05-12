@@ -50,22 +50,22 @@ except NameError:   # Python 3
 ###{standalone
 
 import types
-import functools
+from functools import wraps, partial
 from contextlib import contextmanager
 
 Str = type(u'')
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
-        return functools.wraps(create_decorator(f, True))
+        return wraps(create_decorator(f, True))
 
     elif isinstance(f, (type, types.BuiltinFunctionType)):
-        return functools.wraps(create_decorator(f, False))
+        return wraps(create_decorator(f, False))
 
     elif isinstance(f, types.MethodType):
-        return functools.wraps(create_decorator(f.__func__, True))
+        return wraps(create_decorator(f.__func__, True))
 
-    elif isinstance(f, functools.partial):
+    elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
         return create_decorator(f.__func__, True)
 
@@ -73,16 +73,6 @@ def smart_decorator(f, create_decorator):
         return create_decorator(f.__func__.__call__, True)
 
 
-def inline_args(f):
-    def create_decorator(_f, with_self):
-        if with_self:
-            def f(self, args):
-                return _f(self, *args)
-        else:
-            def f(args):
-                return _f(*args)
-
-    return smart_decorator(f, create_decorator)
 
 
 try:

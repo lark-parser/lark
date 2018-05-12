@@ -55,34 +55,34 @@ from contextlib import contextmanager
 
 Str = type(u'')
 
-def inline_args(f):
-    # print '@@', f.__name__, type(f), isinstance(f, types.FunctionType), isinstance(f, types.TypeType), isinstance(f, types.BuiltinFunctionType)
+def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
-        @functools.wraps(f)
-        def _f_func(self, args):
-            return f(self, *args)
-        return _f_func
+        return functools.wraps(create_decorator(f, True))
+
     elif isinstance(f, (type, types.BuiltinFunctionType)):
-        @functools.wraps(f)
-        def _f_builtin(_self, args):
-            return f(*args)
-        return _f_builtin
+        return functools.wraps(create_decorator(f, False))
+
     elif isinstance(f, types.MethodType):
-        @functools.wraps(f.__func__)
-        def _f(self, args):
-            return f.__func__(self, *args)
-        return _f
+        return functools.wraps(create_decorator(f.__func__, True))
+
     elif isinstance(f, functools.partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        # @functools.wraps(f)
-        def _f(self, args):
-            return f(*args)
-        return _f
+        return create_decorator(f.__func__, True)
+
     else:
-        @functools.wraps(f.__call__.__func__)
-        def _f(self, args):
-            return f.__call__.__func__(self, *args)
-        return _f
+        return create_decorator(f.__func__.__call__, True)
+
+
+def inline_args(f):
+    def create_decorator(_f, with_self):
+        if with_self:
+            def f(self, args):
+                return _f(self, *args)
+        else:
+            def f(args):
+                return _f(*args)
+
+    return smart_decorator(f, create_decorator)
 
 
 try:

@@ -21,11 +21,10 @@ from ..grammar import NonTerminal
 
 
 class Derivation(Tree):
-    _hash = None
-
     def __init__(self, rule, items=None):
         Tree.__init__(self, 'drv', items or [])
-        self.rule = rule
+        self.meta.rule = rule
+        self._hash = None
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
         return self.rule.origin if self.rule else self.data
@@ -236,4 +235,4 @@ class ApplyCallbacks(Transformer_InPlace):
         self.postprocess = postprocess
 
     def drv(self, tree):
-        return self.postprocess[tree.rule](tree.children)
+        return self.postprocess[tree.meta.rule](tree.children)

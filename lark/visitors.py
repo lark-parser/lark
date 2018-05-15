@@ -1,4 +1,4 @@
-from inspect import isclass
+from inspect import isclass, getmembers, getmro
 from functools import wraps
 
 from .utils import smart_decorator
@@ -15,6 +15,30 @@ class Base:
     def __default__(self, tree):
         "Default operation on tree (for override)"
         return tree
+
+    @classmethod
+    def _apply_decorator(cls, decorator):
+        mro = getmro(cls)
+        assert mro[0] is cls
+        libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
+        for name, value in getmembers(cls):
+            if name.startswith('_') or name in libmembers:
+                continue
+
+            setattr(cls, name, decorator(value))
+        return cls
+
+
+class SimpleBase(Base):
+    def _call_userfunc(self, tree):
+        # Assumes tree is already transformed
+        try:
+            f = getattr(self, tree.data)
+        except AttributeError:
+            return self.__default__(tree)
+        else:
+            return f(tree.children)
+
 
 class Transformer(Base):
     def _transform_children(self, children):
@@ -33,6 +57,7 @@ class Transformer(Base):
 
     def __mul__(self, other):
         return TransformerChain(self, other)
+
 
 
 class TransformerChain(object):
@@ -110,8 +135,22 @@ class Interpreter(object):
 
 
 
-def _children_args__func(f):
-    @wraps(f)
+
+
+def _apply_decorator(obj, decorator):
+    try:
+        _apply = obj._apply_decorator
+    except AttributeError:
+        return decorator(obj)
+    else:
+        return _apply(decorator)
+
+
+def _children_args__func(func):
+    if getattr(func, '_children_args_decorated', False):
+        return func
+
+    @wraps(func)
     def create_decorator(_f, with_self):
         if with_self:
             def f(self, tree):
@@ -119,55 +158,34 @@ def _children_args__func(f):
         else:
             def f(args):
                 return _f(tree.children)
+        f._children_args_decorated = True
         return f
 
-    return smart_decorator(f, create_decorator)
-
-def _children_args__class(cls):
-    def _call_userfunc(self, tree):
-        # Assumes tree is already transformed
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
-            return self.__default__(tree)
-        else:
-            return f(tree.children)
-    cls._call_userfunc = _call_userfunc
-    return cls
-
+    return smart_decorator(func, create_decorator)
 
 def children_args(obj):
-    decorator = _children_args__class if isclass(obj) and issubclass(obj, Base) else _children_args__func
-    return decorator(obj)
+    return _apply_decorator(obj, _children_args__func)
 
 
 
-def _children_args_inline__func(f):
-    @wraps(f)
+def _children_args_inline__func(func):
+    if getattr(func, '_children_args_decorated', False):
+        return func
+
+    @wraps(func)
     def create_decorator(_f, with_self):
         if with_self:
             def f(self, tree):
                 return _f(self, *tree.children)
         else:
-            def f(args):
+            def f(self, tree):
+                print ('##', _f, tree)
                 return _f(*tree.children)
+        f._children_args_decorated = True
         return f
 
-    return smart_decorator(f, create_decorator)
+    return smart_decorator(func, create_decorator)
 
-
-def _children_args_inline__class(cls):
-    def _call_userfunc(self, tree):
-        # Assumes tree is already transformed
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
-            return self.__default__(tree)
-        else:
-            return f(*tree.children)
-    cls._call_userfunc = _call_userfunc
-    return cls
 
 def children_args_inline(obj):
-    decorator = _children_args_inline__class if isclass(obj) and issubclass(obj, Base) else _children_args_inline__func
-    return decorator(obj)
+    return _apply_decorator(obj, _children_args_inline__func)

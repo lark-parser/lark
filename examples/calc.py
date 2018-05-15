@@ -2,7 +2,7 @@
 # This example shows how to write a basic calculator with variables.
 #
 
-from lark import Lark, InlineTransformer
+from lark import Lark, Transformer, children_args_inline
 
 try:
     input = raw_input   # For Python2 compatibility
@@ -34,7 +34,7 @@ calc_grammar = """
     %ignore WS_INLINE
 """
 
-class CalculateTree(InlineTransformer):
+class CalculateTree(SimpleTransformer):
     from operator import add, sub, mul, truediv as div, neg
     number = float
 

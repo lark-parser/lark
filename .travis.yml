@@ -6,7 +6,7 @@ python:
   - "3.6"
   - "pypy"  # PyPy2 5.8.0
   - "pypy3" # Pypy3 5.8.0-beta0
-install: pip install tox-travis filefinder
+install: pip install tox-travis filefinder2
 script:
   - pip install filefinder2
   - tox

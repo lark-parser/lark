@@ -23,7 +23,10 @@ class LarkImporter:
         self._lfh = LarkFinder.path_hook((LarkLoader, self.extensions), )
 
         if self._lfh not in sys.path_hooks:
-            sys.path_hooks.insert(filefinder2.get_filefinder_index_in_path_hooks(), self._lfh)
+            if filefinder2.ff_path_hook in sys.path_hooks:
+                sys.path_hooks.insert(sys.path_hooks.index(filefinder2.ff_path_hook), self._lfh)
+            else:
+                sys.path_hooks.append(self._lfh)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # CAREFUL : Even though we remove the path from sys.path,

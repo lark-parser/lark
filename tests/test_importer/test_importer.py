@@ -1,8 +1,7 @@
 from lark.importer import LarkImporter
 
+import unittest
 
-import pytest
-import palimport.lark
 
 """
 Module testing that the calc.lark grammar actually parses string as expected
@@ -16,46 +15,47 @@ with LarkImporter():
         import calc
 
 
-def test_calc_add():
+class TestImporter(unittest.TestCase):
+    def test_calc_add(self):
 
-    assert calc.parser.parse("3 + 2", ).pretty() == """add
+        assert calc.parser.parse("3 + 2", ).pretty() == """add
   number\t3
   number\t2
 """
 
 
-def test_calc_sub():
+    def test_calc_sub(self):
 
-    assert calc.parser.parse("3 - 2", ).pretty() == """sub
+        assert calc.parser.parse("3 - 2", ).pretty() == """sub
   number\t3
   number\t2
 """
 
 
-def test_calc_mul():
+    def test_calc_mul(self):
 
-    assert calc.parser.parse("3 * 2", ).pretty() == """mul
+        assert calc.parser.parse("3 * 2", ).pretty() == """mul
   number\t3
   number\t2
 """
 
 
-def test_calc_div():
+    def test_calc_div(self):
 
-    assert calc.parser.parse("3 / 2", ).pretty() == """div
+        assert calc.parser.parse("3 / 2", ).pretty() == """div
   number\t3
   number\t2
 """
 
 
-def test_calc_assign():
+    def test_calc_assign(self):
 
-    assert calc.parser.parse("b = 2", ).pretty() == """assign_var
+        assert calc.parser.parse("b = 2", ).pretty() == """assign_var
   b
   number\t2
 """
 
 
 if __name__ == '__main__':
-    pytest.main(['-s'])
+    unittest.main()
 

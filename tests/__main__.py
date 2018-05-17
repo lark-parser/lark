@@ -14,6 +14,8 @@ except ImportError:
 # from .test_selectors import TestSelectors
 # from .test_grammars import TestPythonG, TestConfigG
 
+from .test_importer import TestImporter
+
 from .test_parser import (
         TestLalrStandard,
         TestEarleyStandard,

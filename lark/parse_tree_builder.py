@@ -3,9 +3,10 @@ from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
 from .tree import Tree
+from .visitors import InlineTransformer # XXX Deprecated
 
 ###{standalone
-from functools import partial
+from functools import partial, wraps
 
 
 class ExpandSingleChild:
@@ -95,6 +96,15 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous):
 class Callback(object):
     pass
 
+
+def inline_args(func):
+    @wraps(func)
+    def f(children):
+        return func(*children)
+    return f
+
+
+
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False):
         self.tree_class = tree_class
@@ -130,6 +140,10 @@ class ParseTreeBuilder:
             user_callback_name = rule.alias or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
+                assert not getattr(f, 'meta', False), "Meta args not supported for internal transformer"
+                # XXX InlineTransformer is deprecated!
+                if getattr(f, 'inline', False) or isinstance(transformer, InlineTransformer):
+                    f = inline_args(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

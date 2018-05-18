@@ -8,39 +8,23 @@ class Discard(Exception):
     pass
 
 
-class Base:
-    def _call_userfunc(self, tree):
-        return getattr(self, tree.data, self.__default__)(tree)
+# Transformers
 
-    def __default__(self, tree):
-        "Default operation on tree (for override)"
-        return tree
-
-    @classmethod
-    def _apply_decorator(cls, decorator):
-        mro = getmro(cls)
-        assert mro[0] is cls
-        libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
-        for name, value in getmembers(cls):
-            if name.startswith('_') or name in libmembers:
-                continue
-
-            setattr(cls, name, decorator(value))
-        return cls
-
-
-class SimpleBase(Base):
-    def _call_userfunc(self, tree):
+class Transformer:
+    def _call_userfunc(self, data, children, meta):
         # Assumes tree is already transformed
         try:
-            f = getattr(self, tree.data)
+            f = getattr(self, data)
         except AttributeError:
-            return self.__default__(tree)
+            return self.__default__(data, children, meta)
         else:
-            return f(tree.children)
+            if getattr(f, 'meta', False):
+                return f(children, meta)
+            elif getattr(f, 'inline', False):
+                return f(*children)
+            else:
+                return f(children)
 
-
-class Transformer(Base):
     def _transform_children(self, children):
         for c in children:
             try:
@@ -49,8 +33,8 @@ class Transformer(Base):
                 pass
 
     def _transform_tree(self, tree):
-        tree = Tree(tree.data, list(self._transform_children(tree.children)))
-        return self._call_userfunc(tree)
+        children = list(self._transform_children(tree.children))
+        return self._call_userfunc(tree.data, children, tree.meta)
 
     def transform(self, tree):
         return self._transform_tree(tree)
@@ -58,6 +42,32 @@ class Transformer(Base):
     def __mul__(self, other):
         return TransformerChain(self, other)
 
+    def __default__(self, data, children, meta):
+        "Default operation on tree (for override)"
+        return Tree(data, children, meta)
+
+    @classmethod
+    def _apply_decorator(cls, decorator, **kwargs):
+        mro = getmro(cls)
+        assert mro[0] is cls
+        libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
+        for name, value in getmembers(cls):
+            if name.startswith('_') or name in libmembers:
+                continue
+
+            setattr(cls, name, decorator(value, **kwargs))
+        return cls
+
+
+class InlineTransformer(Transformer):   # XXX Deprecated
+    def _call_userfunc(self, data, children, meta):
+        # Assumes tree is already transformed
+        try:
+            f = getattr(self, data)
+        except AttributeError:
+            return self.__default__(data, children, meta)
+        else:
+            return f(*children)
 
 
 class TransformerChain(object):
@@ -75,7 +85,7 @@ class TransformerChain(object):
 
 class Transformer_InPlace(Transformer):
     def _transform_tree(self, tree):           # Cancel recursion
-        return self._call_userfunc(tree)
+        return self._call_userfunc(tree.data, tree.children, tree.meta)
 
     def transform(self, tree):
         for subtree in tree.iter_subtrees():
@@ -87,11 +97,22 @@ class Transformer_InPlace(Transformer):
 class Transformer_InPlaceRecursive(Transformer):
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
-        return self._call_userfunc(tree)
+        return self._call_userfunc(tree.data, tree.children, tree.meta)
 
 
 
-class Visitor(Base):
+# Visitors
+
+class VisitorBase:
+    def _call_userfunc(self, tree):
+        return getattr(self, tree.data, self.__default__)(tree)
+
+    def __default__(self, tree):
+        "Default operation on tree (for override)"
+        return tree
+
+
+class Visitor(VisitorBase):
     "Bottom-up visitor"
 
     def visit(self, tree):
@@ -99,7 +120,7 @@ class Visitor(Base):
             self._call_userfunc(subtree)
         return tree
 
-class Visitor_Recursive(Base):
+class Visitor_Recursive(VisitorBase):
     def visit(self, tree):
         for child in tree.children:
             if isinstance(child, Tree):
@@ -110,6 +131,7 @@ class Visitor_Recursive(Base):
         return tree
 
 
+
 def visit_children_decor(func):
     @wraps(func)
     def inner(cls, tree):
@@ -117,7 +139,8 @@ def visit_children_decor(func):
         return func(cls, values)
     return inner
 
-class Interpreter(object):
+
+class Interpreter:
     "Top-down visitor"
 
     def visit(self, tree):
@@ -136,56 +159,58 @@ class Interpreter(object):
 
 
 
+# Decorators
 
-def _apply_decorator(obj, decorator):
+def _apply_decorator(obj, decorator, **kwargs):
     try:
         _apply = obj._apply_decorator
     except AttributeError:
-        return decorator(obj)
+        return decorator(obj, **kwargs)
     else:
-        return _apply(decorator)
+        return _apply(decorator, **kwargs)
 
 
-def _children_args__func(func):
-    if getattr(func, '_children_args_decorated', False):
-        return func
 
+def _inline_args__func(func):
     @wraps(func)
     def create_decorator(_f, with_self):
         if with_self:
-            def f(self, tree):
-                return _f(self, tree.children)
+            def f(self, children):
+                return _f(self, *children)
         else:
-            def f(args):
-                return _f(tree.children)
-        f._children_args_decorated = True
-        return f
-
-    return smart_decorator(func, create_decorator)
-
-def children_args(obj):
-    return _apply_decorator(obj, _children_args__func)
-
-
-
-def _children_args_inline__func(func):
-    if getattr(func, '_children_args_decorated', False):
-        return func
-
-    @wraps(func)
-    def create_decorator(_f, with_self):
-        if with_self:
-            def f(self, tree):
-                return _f(self, *tree.children)
-        else:
-            def f(self, tree):
-                print ('##', _f, tree)
-                return _f(*tree.children)
-        f._children_args_decorated = True
+            def f(self, children):
+                return _f(*children)
         return f
 
     return smart_decorator(func, create_decorator)
 
 
-def children_args_inline(obj):
-    return _apply_decorator(obj, _children_args_inline__func)
+def inline_args(obj):   # XXX Deprecated
+    return _apply_decorator(obj, _inline_args__func)
+
+
+
+def _visitor_args_func_dec(func, inline=False, meta=False):
+    assert not (inline and meta)
+    def create_decorator(_f, with_self):
+        if with_self:
+            def f(self, *args, **kwargs):
+                return _f(self, *args, **kwargs)
+        else:
+            def f(self, *args, **kwargs):
+                return _f(*args, **kwargs)
+        return f
+
+    f = smart_decorator(func, create_decorator)
+    f.inline = inline
+    f.meta = meta
+    return f
+
+def visitor_args(inline=False, meta=False):
+    if inline and meta:
+        raise ValueError("Visitor functions can either accept meta, or be inlined. Not both.")
+    def _visitor_args_dec(obj):
+        return _apply_decorator(obj, _visitor_args_func_dec, inline=inline, meta=meta)
+    return _visitor_args_dec
+
+

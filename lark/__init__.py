@@ -1,5 +1,6 @@
 from .tree import Tree
-from .visitors import Transformer, Visitor, children_args, children_args_inline
+from .visitors import Transformer, Visitor, visitor_args, Discard
+from .visitors import InlineTransformer, inline_args   # XXX Deprecated
 from .common import ParseError, GrammarError, UnexpectedToken
 from .lexer import UnexpectedInput, LexError
 from .lark import Lark

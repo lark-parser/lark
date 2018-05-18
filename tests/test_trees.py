@@ -6,7 +6,7 @@ import copy
 import pickle
 
 from lark.tree import Tree
-from lark.visitors import Transformer, Interpreter, visit_children_decor, children_args_inline, children_args
+from lark.visitors import Transformer, Interpreter, visit_children_decor, visitor_args
 
 
 class TestTrees(TestCase):
@@ -63,19 +63,18 @@ class TestTrees(TestCase):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
 
         class T(Transformer):
-            i = children_args_inline(int)
-            f = children_args_inline(float)
+            i = visitor_args(inline=True)(int)
+            f = visitor_args(inline=True)(float)
 
-            sub = lambda self, tree: tree.children[0] - tree.children[1]
+            sub = lambda self, values: values[0] - values[1]
 
-            def add(self, tree):
-                return sum(tree.children)
-
+            def add(self, values):
+                return sum(values)
 
         res = T().transform(t)
         self.assertEqual(res, 2.9)
 
-        @children_args_inline
+        @visitor_args(inline=True)
         class T(Transformer):
             i = int
             f = float
@@ -89,7 +88,7 @@ class TestTrees(TestCase):
         self.assertEqual(res, 2.9)
 
 
-        @children_args_inline
+        @visitor_args(inline=True)
         class T(Transformer):
             i = int
             f = float
@@ -98,19 +97,6 @@ class TestTrees(TestCase):
         res = T().transform(t)
         self.assertEqual(res, 2.9)
 
-
-        @children_args
-        class T(Transformer):
-            i = children_args_inline(int)
-            f = children_args_inline(float)
-
-            sub = lambda self, values: values[0] - values[1]
-
-            def add(self, values):
-                return sum(values)
-
-        res = T().transform(t)
-        self.assertEqual(res, 2.9)
 
 
 if __name__ == '__main__':

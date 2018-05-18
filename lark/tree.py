@@ -10,10 +10,10 @@ class Meta:
 
 ###{standalone
 class Tree(object):
-    def __init__(self, data, children):
+    def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
-        self._meta = None
+        self._meta = meta
 
     @property
     def meta(self):

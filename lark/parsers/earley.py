@@ -14,7 +14,7 @@
 # Email : erezshin@gmail.com
 
 from ..tree import Tree
-from ..visitors import Transformer_InPlace
+from ..visitors import Transformer_InPlace, visitor_args
 from ..common import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
@@ -114,9 +114,9 @@ class Column:
 
                     if old_tree.data != '_ambig':
                         new_tree = old_tree.copy()
-                        new_tree.rule = old_tree.rule
+                        new_tree.meta.rule = old_tree.meta.rule
                         old_tree.set('_ambig', [new_tree])
-                        old_tree.rule = None    # No longer a 'drv' node
+                        old_tree.meta.rule = None    # No longer a 'drv' node
 
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
@@ -234,5 +234,6 @@ class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):
         self.postprocess = postprocess
 
-    def drv(self, tree):
-        return self.postprocess[tree.meta.rule](tree.children)
+    @visitor_args(meta=True)
+    def drv(self, children, meta):
+        return self.postprocess[meta.rule](children)

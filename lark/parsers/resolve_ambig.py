@@ -26,8 +26,15 @@ def _compare_priority(tree1, tree2):
     tree1.iter_subtrees()
 
 def _compare_drv(tree1, tree2):
-    rule1 = getattr(tree1.meta, 'rule', None)
-    rule2 = getattr(tree2.meta, 'rule', None)
+    try:
+        rule1 = tree1.meta.rule
+    except AttributeError:
+        rule1 = None
+
+    try:
+        rule2 = tree2.meta.rule
+    except AttributeError:
+        rule2 = None
 
     if None == rule1 == rule2:
         return compare(tree1, tree2)

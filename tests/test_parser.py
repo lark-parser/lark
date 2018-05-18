@@ -21,7 +21,7 @@ from lark.lark import Lark
 from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
 from lark.tree import Tree
-from lark.visitors import Transformer, children_args
+from lark.visitors import Transformer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -93,7 +93,6 @@ class TestParsers(unittest.TestCase):
         self.assertEqual( r.children[0].data, "c" )
 
     def test_embedded_transformer(self):
-        @children_args
         class T(Transformer):
             def a(self, children):
                 return "<a>"

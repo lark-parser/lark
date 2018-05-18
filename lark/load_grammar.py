@@ -16,7 +16,7 @@ from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
 from .tree import Tree, SlottedTree as ST
-from .visitors import Transformer, Visitor, children_args, children_args_inline
+from .visitors import Transformer, Visitor, visitor_args
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -138,7 +138,7 @@ RULES = {
 }
 
 
-@children_args_inline
+@visitor_args(inline=True)
 class EBNF_to_BNF(Transformer):
     def __init__(self):
         self.new_rules = []
@@ -232,7 +232,6 @@ class SimplifyRule_Visitor(Visitor):
         tree.children = list(set(tree.children))
 
 
-@children_args
 class RuleTreeToText(Transformer):
     def expansions(self, x):
         return x
@@ -244,7 +243,7 @@ class RuleTreeToText(Transformer):
         return expansion, alias.value
 
 
-@children_args_inline
+@visitor_args(inline=True)
 class CanonizeTree(Transformer):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
@@ -265,7 +264,7 @@ class PrepareAnonTerminals(Transformer):
         self.i = 0
 
 
-    @children_args_inline
+    @visitor_args(inline=True)
     def pattern(self, p):
         value = p.value
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
@@ -355,7 +354,7 @@ def _literal_to_pattern(literal):
              'REGEXP': PatternRE }[literal.type](s, flags)
 
 
-@children_args_inline
+@visitor_args(inline=True)
 class PrepareLiterals(Transformer):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
@@ -369,7 +368,6 @@ class PrepareLiterals(Transformer):
         return ST('pattern', [PatternRE(regexp)])
 
 
-@children_args
 class TokenTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
@@ -410,7 +408,6 @@ class TokenTreeToPattern(Transformer):
         return v[0]
 
 class PrepareSymbols(Transformer):
-    @children_args
     def value(self, v):
         v ,= v
         if isinstance(v, Tree):
@@ -535,7 +532,7 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
-@children_args_inline
+@visitor_args(inline=True)
 class PrepareGrammar(Transformer):
     def terminal(self, name):
         return name

@@ -6,10 +6,10 @@ __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read(
 setup(
     name = "lark-parser",
     version = __version__,
-    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars'],
+    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark.importer'],
 
     requires = [],
-    install_requires = [],
+    install_requires = ['filefinder2'],
 
     package_data = { '': ['*.md', '*.g'] },
 

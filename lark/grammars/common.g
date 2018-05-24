@@ -20,6 +20,7 @@ SIGNED_NUMBER: ["+"|"-"] NUMBER
 //
 // Strings
 //
+//STRING: /"(\\\"|\\\\|[^"\n])*?"i?/
 STRING_INNER: ("\\\""|/[^"]/)
 ESCAPED_STRING: "\"" STRING_INNER* "\""
 

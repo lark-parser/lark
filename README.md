@@ -31,7 +31,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 Lark has no dependencies.
 
-[![Build Status](https://travis-ci.org/erezsh/lark.svg?branch=master)](https://travis-ci.org/erezsh/lark)
+[![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
 
 ### Hello World
 

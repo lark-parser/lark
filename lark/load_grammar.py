@@ -122,7 +122,7 @@ RULES = {
     'statement': ['ignore', 'import'],
     'ignore': ['_IGNORE expansions _NL'],
     'import': ['_IMPORT import_args _NL',
-               '_IMPORT import_args _TO TOKEN'],
+               '_IMPORT import_args _TO TOKEN _NL'],
     'import_args': ['_import_args'],
     '_import_args': ['name', '_import_args _DOT name'],
 
@@ -375,6 +375,7 @@ class TokenTreeToPattern(Transformer):
         return p
 
     def expansion(self, items):
+        assert items
         if len(items) == 1:
             return items[0]
         if len({i.flags for i in items}) > 1:
@@ -486,6 +487,11 @@ class Grammar:
 
         # Convert token-trees to strings/regexps
         transformer = PrepareLiterals() * TokenTreeToPattern()
+        for name, (token_tree, priority) in token_defs:
+            for t in token_tree.find_data('expansion'):
+                if not t.children:
+                    raise GrammarError("Tokens cannot be empty (%s)" % name)
+
         tokens = [TokenDef(name, transformer.transform(token_tree), priority)
                   for name, (token_tree, priority) in token_defs]
 

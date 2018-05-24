@@ -7,8 +7,6 @@ from PyQt5.Qt import *  # noqa
 from PyQt5.Qsci import QsciScintilla
 from PyQt5.Qsci import QsciLexerCustom
 
-from editor import Editor
-
 from lark import Lark, inline_args, Transformer
 
 
@@ -45,54 +43,30 @@ class LexerJson(QsciLexerCustom):
         self.token_styles = {
             "__COLON": 5,
             "__COMMA": 5,
-            "__FALSE1": 0,
             "__LBRACE": 5,
             "__LSQB": 5,
-            "__NULL2": 0,
             "__RBRACE": 5,
             "__RSQB": 5,
-            "__TRUE0": 0,
-            "ESCAPED_STRING": 4,
-            "SIGNED_NUMBER": 1,
+            "FALSE": 0,
+            "NULL": 0,
+            "TRUE": 0,
+            "STRING": 4,
+            "NUMBER": 1,
         }
 
     def create_grammar(self):
         grammar = '''
-            ?start: value
-            ?value: object
-                  | array
-                  | string
-                  | SIGNED_NUMBER      -> number
-                  | "true"             -> true
-                  | "false"            -> false
-                  | "null"             -> null
-            array  : "[" [value ("," value)*] "]"
-            object : "{" [pair ("," pair)*] "}"
-            pair   : string ":" value
-            string : ESCAPED_STRING
-            %import common.ESCAPED_STRING
-            %import common.SIGNED_NUMBER
+            anons: ":" "{" "}" "," "[" "]"
+            TRUE: "true"
+            FALSE: "false"
+            NULL: "NULL"
+            %import common.ESCAPED_STRING -> STRING
+            %import common.SIGNED_NUMBER  -> NUMBER
             %import common.WS
             %ignore WS
         '''
 
-        class TreeToJson(Transformer):
-            @inline_args
-            def string(self, s):
-                return s[1:-1].replace('\\"', '"')
-
-            array = list
-            pair = tuple
-            object = dict
-            number = inline_args(float)
-
-            def null(self, _): return None
-
-            def true(self, _): return True
-
-            def false(self, _): return False
-
-        self.lark = Lark(grammar, parser='lalr', transformer=TreeToJson())
+        self.lark = Lark(grammar, parser=None, lexer='standard')
         # All tokens: print([t.name for t in self.lark.parser.lexer.tokens])
 
     def defaultPaper(self, style):
@@ -173,11 +147,7 @@ class EditorAll(QsciScintilla):
         self.setLexer(lexer)
 
 
-def main():
-    app = QApplication(sys.argv)
-    ex = EditorAll()
-    ex.setWindowTitle(__file__)
-    ex.setText(textwrap.dedent("""\
+EXAMPLE_TEXT = textwrap.dedent("""\
         {
             "_id": "5b05ffcbcf8e597939b3f5ca",
             "about": "Excepteur consequat commodo esse voluptate aute aliquip ad sint deserunt commodo eiusmod irure. Sint aliquip sit magna duis eu est culpa aliqua excepteur ut tempor nulla. Aliqua ex pariatur id labore sit. Quis sit ex aliqua veniam exercitation laboris anim adipisicing. Lorem nisi reprehenderit ullamco labore qui sit ut aliqua tempor consequat pariatur proident.",
@@ -208,7 +178,13 @@ def main():
                 "nostrud"
             ]
         }\
-    """))
+    """)
+
+def main():
+    app = QApplication(sys.argv)
+    ex = EditorAll()
+    ex.setWindowTitle(__file__)
+    ex.setText(EXAMPLE_TEXT)
     ex.resize(800, 600)
     ex.show()
     sys.exit(app.exec_())

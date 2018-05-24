@@ -1,0 +1,2 @@
+PyQt5==5.10.1
+QScintilla==2.10.4

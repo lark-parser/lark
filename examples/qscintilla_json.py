@@ -1,20 +1,27 @@
+#
+# This example shows how to write a syntax-highlighted editor with Qt and Lark
+#
+# Requirements:
+#
+#   PyQt5==5.10.1
+#   QScintilla==2.10.4
+
 import sys
 import textwrap
-import re
 
 from PyQt5.Qt import *  # noqa
 
 from PyQt5.Qsci import QsciScintilla
 from PyQt5.Qsci import QsciLexerCustom
 
-from lark import Lark, inline_args, Transformer
+from lark import Lark
 
 
 class LexerJson(QsciLexerCustom):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.create_grammar()
+        self.create_parser()
         self.create_styles()
 
     def create_styles(self):
@@ -54,7 +61,7 @@ class LexerJson(QsciLexerCustom):
             "NUMBER": 1,
         }
 
-    def create_grammar(self):
+    def create_parser(self):
         grammar = '''
             anons: ":" "{" "}" "," "[" "]"
             TRUE: "true"

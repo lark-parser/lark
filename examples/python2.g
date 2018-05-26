@@ -149,10 +149,6 @@ string: STRING | LONG_STRING
 COMMENT: /#[^\n]*/
 _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
-%ignore /[\t \f]+/  // WS
-%ignore /\\[\t \f]*\r?\n/   // LINE_CONT 
-%ignore COMMENT
-
 STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING.2: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
@@ -164,6 +160,9 @@ OCT_NUMBER: /0o?[0-7]*l?/i
 %import common.CNAME -> NAME
 IMAG_NUMBER: (_INT | FLOAT) ("j"|"J")
 
-_DEDENT: "<DEDENT>"
-_INDENT: "<INDENT>"
+
+%ignore /[\t \f]+/  // WS
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT 
+%ignore COMMENT
+%declare _INDENT _DEDENT
 

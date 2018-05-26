@@ -178,7 +178,7 @@ def build_mres(tokens, match_whole=False):
     return _build_mres(tokens, len(tokens), match_whole)
 
 def _regexp_has_newline(r):
-    return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
+    return '\n' in r or '\\n' in r or ('(?s' in r and '.' in r)
 
 class Lexer:
     def __init__(self, tokens, ignore=(), user_callbacks={}):

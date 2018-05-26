@@ -14,8 +14,8 @@ from lark.indenter import Indenter
 
 class PythonIndenter(Indenter):
     NL_type = '_NEWLINE'
-    OPEN_PAREN_types = ['__LPAR', '__LSQB', '__LBRACE']
-    CLOSE_PAREN_types = ['__RPAR', '__RSQB', '__RBRACE']
+    OPEN_PAREN_types = ['LPAR', 'LSQB', 'LBRACE']
+    CLOSE_PAREN_types = ['RPAR', 'RSQB', 'RBRACE']
     INDENT_type = '_INDENT'
     DEDENT_type = '_DEDENT'
     tab_len = 8
@@ -78,6 +78,6 @@ def test_earley_equals_lalr():
 
 if __name__ == '__main__':
     test_python_lib()
-    test_earley_equals_lalr()
+    # test_earley_equals_lalr()
     # python_parser3.parse(_read(sys.argv[1]) + '\n')
 

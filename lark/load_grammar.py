@@ -22,7 +22,7 @@ IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 
 _RE_FLAGS = 'imslux'
 
-_TOKEN_NAMES = {
+_TERMINAL_NAMES = {
     '.' : 'DOT',
     ',' : 'COMMA',
     ':' : 'COLON',
@@ -62,7 +62,7 @@ _TOKEN_NAMES = {
 }
 
 # Grammar Parser
-TOKENS = {
+TERMINALS = {
     '_LPAR': r'\(',
     '_RPAR': r'\)',
     '_LBRA': r'\[',
@@ -73,7 +73,7 @@ TOKENS = {
     '_DOT': r'\.',
     'TILDE': '~',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
-    'TOKEN': '_?[A-Z][_A-Z0-9]*',
+    'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
     'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
@@ -81,6 +81,7 @@ TOKENS = {
     'COMMENT': r'//[^\n]*',
     '_TO': '->',
     '_IGNORE': r'%ignore',
+    '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
     'NUMBER': r'\d+',
 }
@@ -116,22 +117,24 @@ RULES = {
               'literal',
               'range'],
 
-    'terminal': ['TOKEN'],
+    'terminal': ['TERMINAL'],
     'nonterminal': ['RULE'],
 
-    '?name': ['RULE', 'TOKEN'],
+    '?name': ['RULE', 'TERMINAL'],
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOT _DOT STRING'],
 
-    'token': ['TOKEN _COLON expansions _NL',
-              'TOKEN _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import'],
+    'token': ['TERMINAL _COLON expansions _NL',
+              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
+    'statement': ['ignore', 'import', 'declare'],
     'ignore': ['_IGNORE expansions _NL'],
+    'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT import_args _NL',
-               '_IMPORT import_args _TO TOKEN'],
+               '_IMPORT import_args _TO TERMINAL _NL'],
     'import_args': ['_import_args'],
     '_import_args': ['name', '_import_args _DOT name'],
+    '_declare_args': ['name', '_declare_args name'],
 
     'literal': ['REGEXP', 'STRING'],
 }
@@ -278,7 +281,7 @@ class PrepareAnonTerminals(InlineTransformer):
             except KeyError:
                 # Try to assign an indicative anon-token name
                 try:
-                    token_name = _TOKEN_NAMES[value]
+                    token_name = _TERMINAL_NAMES[value]
                 except KeyError:
                     if value.isalnum() and value[0].isalpha() and value.upper() not in self.token_set:
                         with suppress(UnicodeEncodeError):
@@ -302,7 +305,7 @@ class PrepareAnonTerminals(InlineTransformer):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Terminal(Token('TOKEN', token_name, -1), filter_out=isinstance(p, PatternStr))
+        return Terminal(Token('TERMINAL', token_name, -1), filter_out=isinstance(p, PatternStr))
 
 
 def _rfind(s, choices):
@@ -376,7 +379,7 @@ class TokenTreeToPattern(Transformer):
             return items[0]
         if len({i.flags for i in items}) > 1:
             raise GrammarError("Lark doesn't support joining tokens with conflicting flags!")
-        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags)
+        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
 
     def expansions(self, exps):
         if len(exps) == 1:
@@ -412,7 +415,7 @@ class PrepareSymbols(Transformer):
             return v
         elif v.type == 'RULE':
             return NonTerminal(v.value)
-        elif v.type == 'TOKEN':
+        elif v.type == 'TERMINAL':
             return Terminal(v.value, filter_out=v.startswith('_'))
         assert False
 
@@ -435,8 +438,15 @@ class Grammar:
 
         # Convert token-trees to strings/regexps
         transformer = PrepareLiterals() * TokenTreeToPattern()
+        for name, (token_tree, priority) in token_defs:
+            if token_tree is None:  # Terminal added through %declare
+                continue
+            expansions = list(token_tree.find_data('expansion'))
+            if len(expansions) == 1 and not expansions[0].children:
+                raise GrammarError("Terminals cannot be empty (%s)" % name)
+
         tokens = [TokenDef(name, transformer.transform(token_tree), priority)
-                  for name, (token_tree, priority) in token_defs]
+                  for name, (token_tree, priority) in token_defs if token_tree]
 
         # =================
         #  Compile Rules
@@ -500,12 +510,14 @@ def resolve_token_references(token_defs):
     while True:
         changed = False
         for name, (token_tree, _p) in token_defs:
+            if token_tree is None:  # Terminal added through %declare
+                continue
             for exp in token_tree.find_data('value'):
                 item ,= exp.children
                 if isinstance(item, Token):
                     if item.type == 'RULE':
-                        raise GrammarError("Rules aren't allowed inside tokens (%s in %s)" % (item, name))
-                    if item.type == 'TOKEN':
+                        raise GrammarError("Rules aren't allowed inside terminals (%s in %s)" % (item, name))
+                    if item.type == 'TERMINAL':
                         exp.children[0] = token_dict[item]
                         changed = True
         if not changed:
@@ -539,7 +551,7 @@ class PrepareGrammar(InlineTransformer):
 
 class GrammarLoader:
     def __init__(self):
-        tokens = [TokenDef(name, PatternRE(value)) for name, value in TOKENS.items()]
+        tokens = [TokenDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), None, o) for r, xs, o in rules for x in xs]
@@ -591,6 +603,7 @@ class GrammarLoader:
 
         # Execute statements
         ignore = []
+        declared = []
         for (stmt,) in statements:
             if stmt.data == 'ignore':
                 t ,= stmt.children
@@ -603,6 +616,9 @@ class GrammarLoader:
                 token_options = dict(g.token_defs)[dotted_path[-1]]
                 assert isinstance(token_options, tuple) and len(token_options)==2
                 token_defs.append([name.value, token_options])
+            elif stmt.data == 'declare':
+                for t in stmt.children:
+                    token_defs.append([t.value, (None, None)])
             else:
                 assert False, stmt
 
@@ -613,7 +629,7 @@ class GrammarLoader:
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
 
         # Handle ignore tokens
-        # XXX A slightly hacky solution. Recognition of %ignore TOKEN as separate comes from the lexer's
+        # XXX A slightly hacky solution. Recognition of %ignore TERMINAL as separate comes from the lexer's
         #     inability to handle duplicate tokens (two names, one value)
         ignore_names = []
         for t in ignore:
@@ -623,7 +639,7 @@ class GrammarLoader:
                     item ,= t2.children
                     if item.data == 'value':
                         item ,= item.children
-                        if isinstance(item, Token) and item.type == 'TOKEN':
+                        if isinstance(item, Token) and item.type == 'TERMINAL':
                             ignore_names.append(item.value)
                             continue
 
@@ -656,7 +672,7 @@ class GrammarLoader:
 
         for name, expansions, _o in rules:
             used_symbols = {t for x in expansions.find_data('expansion')
-                              for t in x.scan_values(lambda t: t.type in ('RULE', 'TOKEN'))}
+                              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
             for sym in used_symbols:
                 if is_terminal(sym):
                     if sym not in token_names:

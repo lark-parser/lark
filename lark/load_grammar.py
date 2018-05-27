@@ -375,6 +375,7 @@ class TokenTreeToPattern(Transformer):
         return p
 
     def expansion(self, items):
+        assert items
         if len(items) == 1:
             return items[0]
         if len({i.flags for i in items}) > 1:
@@ -611,7 +612,7 @@ class GrammarLoader:
             elif stmt.data == 'import':
                 dotted_path = stmt.children[0].children
                 name = stmt.children[1] if len(stmt.children)>1 else dotted_path[-1]
-                grammar_path = os.path.join(*dotted_path[:-1]) + '.g'
+                grammar_path = os.path.join(*dotted_path[:-1]) + '.lark'
                 g = import_grammar(grammar_path)
                 token_options = dict(g.token_defs)[dotted_path[-1]]
                 assert isinstance(token_options, tuple) and len(token_options)==2

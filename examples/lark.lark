@@ -1,0 +1,49 @@
+start: (_item | _NL)*
+
+_item: rule
+     | token
+     | statement
+
+rule: RULE priority? ":" expansions _NL
+token: TOKEN priority? ":" expansions _NL
+
+priority: "." NUMBER
+
+statement: "%ignore" expansions _NL                -> ignore
+         | "%import" import_args ["->" TOKEN] _NL  -> import
+
+import_args: name ("." name)*
+
+?expansions: alias (_VBAR alias)*
+
+?alias: expansion ["->" RULE]
+
+?expansion: expr*
+
+?expr: atom [OP | "~" NUMBER [".." NUMBER]]
+
+?atom: "(" expansions ")"
+     | "[" expansions "]" -> maybe
+     | STRING ".." STRING -> literal_range
+     | name
+     | (REGEXP | STRING) -> literal
+
+name: RULE
+    | TOKEN
+
+_VBAR: _NL? "|"
+OP: /[+*][?]?|[?](?![a-z])/
+RULE: /!?[_?]?[a-z][_a-z0-9]*/
+TOKEN: /_?[A-Z][_A-Z0-9]*/
+STRING: _STRING "i"?
+REGEXP: /\/(?!\/)(\\\/|\\\\|[^\/\n])*?\/[imslux]*/
+_NL: /(\r?\n)+\s*/
+
+%import common.ESCAPED_STRING -> _STRING
+%import common.INT -> NUMBER
+%import common.WS_INLINE
+
+COMMENT: "//" /[^\n]/*
+
+%ignore WS_INLINE
+%ignore COMMENT

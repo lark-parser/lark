@@ -22,10 +22,9 @@ class PythonIndenter(Indenter):
 
 kwargs = dict(rel_to=__file__, postlex=PythonIndenter(), start='file_input')
 
-python_parser2 = Lark.open('python2.g', parser='lalr', **kwargs)
-python_parser3 = Lark.open('python3.g',parser='lalr', **kwargs)
-python_parser2_earley = Lark.open('python2.g', parser='earley', lexer='standard', **kwargs)
-print(python_parser3)
+python_parser2 = Lark.open('python2.lark', parser='lalr', **kwargs)
+python_parser3 = Lark.open('python3.lark',parser='lalr', **kwargs)
+python_parser2_earley = Lark.open('python2.lark', parser='earley', lexer='standard', **kwargs)
 
 
 def _read(fn, *args):

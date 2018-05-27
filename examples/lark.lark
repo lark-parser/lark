@@ -11,6 +11,7 @@ priority: "." NUMBER
 
 statement: "%ignore" expansions _NL                -> ignore
          | "%import" import_args ["->" TOKEN] _NL  -> import
+         | "%declare" name+                        -> declare
 
 import_args: name ("." name)*
 

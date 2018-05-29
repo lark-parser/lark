@@ -83,7 +83,7 @@ class Grammar(object):
     """Context-free grammar."""
 
     def __init__(self, rules):
-        self.rules = frozenset(rules)
+        self.rules = tuple(sorted(rules, key=lambda x: str(x)))
 
     def __eq__(self, other):
         return self.rules == other.rules

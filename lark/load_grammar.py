@@ -16,7 +16,8 @@ from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
 from .tree import Tree, SlottedTree as ST
-from .visitors import Transformer, Visitor, visitor_args
+from .visitors import Transformer, Visitor, v_args
+inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -138,7 +139,7 @@ RULES = {
 }
 
 
-@visitor_args(inline=True)
+@inline_args
 class EBNF_to_BNF(Transformer):
     def __init__(self):
         self.new_rules = []
@@ -243,7 +244,7 @@ class RuleTreeToText(Transformer):
         return expansion, alias.value
 
 
-@visitor_args(inline=True)
+@inline_args
 class CanonizeTree(Transformer):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
@@ -264,7 +265,7 @@ class PrepareAnonTerminals(Transformer):
         self.i = 0
 
 
-    @visitor_args(inline=True)
+    @inline_args
     def pattern(self, p):
         value = p.value
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
@@ -354,7 +355,7 @@ def _literal_to_pattern(literal):
              'REGEXP': PatternRE }[literal.type](s, flags)
 
 
-@visitor_args(inline=True)
+@inline_args
 class PrepareLiterals(Transformer):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
@@ -532,7 +533,7 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
-@visitor_args(inline=True)
+@inline_args
 class PrepareGrammar(Transformer):
     def terminal(self, name):
         return name

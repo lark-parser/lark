@@ -206,7 +206,7 @@ def _visitor_args_func_dec(func, inline=False, meta=False):
     f.meta = meta
     return f
 
-def visitor_args(inline=False, meta=False):
+def v_args(inline=False, meta=False):
     if inline and meta:
         raise ValueError("Visitor functions can either accept meta, or be inlined. Not both.")
     def _visitor_args_dec(obj):

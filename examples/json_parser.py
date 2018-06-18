@@ -7,7 +7,7 @@
 
 import sys
 
-from lark import Lark, Transformer, visitor_args
+from lark import Lark, Transformer, v_args
 
 json_grammar = r"""
     ?start: value
@@ -34,14 +34,14 @@ json_grammar = r"""
 """
 
 class TreeToJson(Transformer):
-    @visitor_args(inline=True)
+    @v_args(inline=True)
     def string(self, s):
         return s[1:-1].replace('\\"', '"')
 
     array = list
     pair = tuple
     object = dict
-    number = visitor_args(inline=True)(float)
+    number = v_args(inline=True)(float)
 
     null = lambda self, _: None
     true = lambda self, _: True

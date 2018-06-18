@@ -14,7 +14,7 @@
 # Email : erezshin@gmail.com
 
 from ..tree import Tree
-from ..visitors import Transformer_InPlace, visitor_args
+from ..visitors import Transformer_InPlace, v_args
 from ..common import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
@@ -234,6 +234,6 @@ class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):
         self.postprocess = postprocess
 
-    @visitor_args(meta=True)
+    @v_args(meta=True)
     def drv(self, children, meta):
         return self.postprocess[meta.rule](children)

@@ -207,6 +207,7 @@ class Lark:
 
 
     def lex(self, text):
+        "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"
         if not hasattr(self, 'lexer'):
             self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
@@ -216,6 +217,7 @@ class Lark:
             return stream
 
     def parse(self, text):
+        "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
         return self.parser.parse(text)
 
         # if self.profiler:

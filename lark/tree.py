@@ -45,6 +45,7 @@ class Tree(object):
 ###}
 
     def expand_kids_by_index(self, *indices):
+        "Expand (inline) children at the given indices"
         for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
             kid = self.children[i]
             self.children[i:i+1] = kid.children
@@ -62,9 +63,11 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def find_pred(self, pred):
+        "Find all nodes where pred(tree) == True"
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
+        "Find all nodes where tree.data == data"
         return self.find_pred(lambda t: t.data == data)
 
     def scan_values(self, pred):
@@ -108,10 +111,12 @@ class Tree(object):
         self.children = children
 
 class SlottedTree(Tree):
-    __slots__ = 'data', 'children', 'rule'
+    __slots__ = 'data', 'children', 'rule', '_meta'
 
 
 def pydot__tree_to_png(tree, filename):
+    "Creates a colorful image that represents the tree (data+children, without meta)"
+
     import pydot
     graph = pydot.Dot(graph_type='digraph', rankdir="LR")
 

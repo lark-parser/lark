@@ -3,7 +3,7 @@
 import re
 
 from .utils import Str, classify
-from .common import is_terminal, PatternStr, PatternRE, TokenDef
+from .common import PatternStr, PatternRE, TokenDef
 
 ###{standalone
 class LexError(Exception):

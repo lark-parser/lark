@@ -11,6 +11,14 @@ class Discard(Exception):
 # Transformers
 
 class Transformer:
+    """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
+
+    Calls its methods (provided by user via inheritance) according to tree.data
+    The returned value replaces the old one in the structure.
+
+    Can be used to implement map or reduce.
+    """
+
     def _call_userfunc(self, data, children, meta):
         # Assumes tree is already transformed
         try:
@@ -84,6 +92,7 @@ class TransformerChain(object):
 
 
 class Transformer_InPlace(Transformer):
+    "Non-recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):           # Cancel recursion
         return self._call_userfunc(tree.data, tree.children, tree.meta)
 
@@ -95,6 +104,7 @@ class Transformer_InPlace(Transformer):
 
 
 class Transformer_InPlaceRecursive(Transformer):
+    "Recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree.data, tree.children, tree.meta)
@@ -113,7 +123,12 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    "Bottom-up visitor"
+    """Bottom-up visitor, non-recursive
+
+    Visits the tree, starting with the leaves and finally the root (bottom-up)
+    Calls its methods (provided by user via inheritance) according to tree.data
+    """
+
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
@@ -121,6 +136,12 @@ class Visitor(VisitorBase):
         return tree
 
 class Visitor_Recursive(VisitorBase):
+    """Bottom-up visitor, recursive
+
+    Visits the tree, starting with the leaves and finally the root (bottom-up)
+    Calls its methods (provided by user via inheritance) according to tree.data
+    """
+
     def visit(self, tree):
         for child in tree.children:
             if isinstance(child, Tree):
@@ -133,6 +154,7 @@ class Visitor_Recursive(VisitorBase):
 
 
 def visit_children_decor(func):
+    "See Interpreter"
     @wraps(func)
     def inner(cls, tree):
         values = cls.visit_children(tree)
@@ -141,8 +163,14 @@ def visit_children_decor(func):
 
 
 class Interpreter:
-    "Top-down visitor"
+    """Top-down visitor, recursive
 
+    Visits the tree, starting with the root and finally the leaves (top-down)
+    Calls its methods (provided by user via inheritance) according to tree.data
+
+    Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
+    The user has to explicitly call visit_children, or use the @visit_children_decor
+    """
     def visit(self, tree):
         return getattr(self, tree.data)(tree)
 
@@ -207,6 +235,7 @@ def _visitor_args_func_dec(func, inline=False, meta=False):
     return f
 
 def v_args(inline=False, meta=False):
+    "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
     if inline and meta:
         raise ValueError("Visitor functions can either accept meta, or be inlined. Not both.")
     def _visitor_args_dec(obj):

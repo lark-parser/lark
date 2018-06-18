@@ -11,7 +11,7 @@ from .lexer import Token, UnexpectedInput
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
 from .parsers.lalr_parser import UnexpectedToken
-from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
+from .common import GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
@@ -23,6 +23,9 @@ __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 
 _RE_FLAGS = 'imslux'
+
+def is_terminal(sym):
+    return sym.isupper()
 
 _TERMINAL_NAMES = {
     '.' : 'DOT',

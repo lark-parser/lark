@@ -15,7 +15,9 @@ from .common import is_terminal, GrammarError, LexerConf, ParserConf, PatternStr
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
 
-from .tree import Tree, Transformer, InlineTransformer, Visitor, SlottedTree as ST
+from .tree import Tree, SlottedTree as ST
+from .visitors import Transformer, Visitor, v_args
+inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
@@ -140,7 +142,8 @@ RULES = {
 }
 
 
-class EBNF_to_BNF(InlineTransformer):
+@inline_args
+class EBNF_to_BNF(Transformer):
     def __init__(self):
         self.new_rules = []
         self.rules_by_expr = {}
@@ -209,17 +212,14 @@ class SimplifyRule_Visitor(Visitor):
         #   -->
         # expansions( expansion(b, c, e), expansion(b, d, e) )
 
-        while True:
-            self._flatten(tree)
+        self._flatten(tree)
 
-            for i, child in enumerate(tree.children):
-                if isinstance(child, Tree) and child.data == 'expansions':
-                    tree.data = 'expansions'
-                    tree.children = [self.visit(ST('expansion', [option if i==j else other
-                                                                for j, other in enumerate(tree.children)]))
-                                     for option in set(child.children)]
-                    break
-            else:
+        for i, child in enumerate(tree.children):
+            if isinstance(child, Tree) and child.data == 'expansions':
+                tree.data = 'expansions'
+                tree.children = [self.visit(ST('expansion', [option if i==j else other
+                                                            for j, other in enumerate(tree.children)]))
+                                    for option in set(child.children)]
                 break
 
     def alias(self, tree):
@@ -243,11 +243,12 @@ class RuleTreeToText(Transformer):
         return symbols, None
     def alias(self, x):
         (expansion, _alias), alias = x
-        assert _alias is None, (alias, expansion, '-', _alias)
+        assert _alias is None, (alias, expansion, '-', _alias)  # Double alias not allowed
         return expansion, alias.value
 
 
-class CanonizeTree(InlineTransformer):
+@inline_args
+class CanonizeTree(Transformer):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
 
@@ -257,7 +258,7 @@ class CanonizeTree(InlineTransformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-class PrepareAnonTerminals(InlineTransformer):
+class PrepareAnonTerminals(Transformer):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -267,6 +268,7 @@ class PrepareAnonTerminals(InlineTransformer):
         self.i = 0
 
 
+    @inline_args
     def pattern(self, p):
         value = p.value
         if p in self.token_reverse and p.flags != self.token_reverse[p].pattern.flags:
@@ -356,7 +358,8 @@ def _literal_to_pattern(literal):
              'REGEXP': PatternRE }[literal.type](s, flags)
 
 
-class PrepareLiterals(InlineTransformer):
+@inline_args
+class PrepareLiterals(Transformer):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
 
@@ -543,7 +546,8 @@ def options_from_rule(name, *x):
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
-class PrepareGrammar(InlineTransformer):
+@inline_args
+class PrepareGrammar(Transformer):
     def terminal(self, name):
         return name
     def nonterminal(self, name):

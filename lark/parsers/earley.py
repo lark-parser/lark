@@ -13,18 +13,18 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
+from ..tree import Tree
+from ..visitors import Transformer_InPlace, v_args
 from ..common import ParseError, UnexpectedToken
-from ..tree import Tree, Transformer_NoRecurse
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 
 
 class Derivation(Tree):
-    _hash = None
-
     def __init__(self, rule, items=None):
         Tree.__init__(self, 'drv', items or [])
-        self.rule = rule
+        self.meta.rule = rule
+        self._hash = None
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
         return self.rule.origin if self.rule else self.data
@@ -114,9 +114,9 @@ class Column:
 
                     if old_tree.data != '_ambig':
                         new_tree = old_tree.copy()
-                        new_tree.rule = old_tree.rule
+                        new_tree.meta.rule = old_tree.meta.rule
                         old_tree.set('_ambig', [new_tree])
-                        old_tree.rule = None    # No longer a 'drv' node
+                        old_tree.meta.rule = None    # No longer a 'drv' node
 
                     if item.tree.children[0] is old_tree:   # XXX a little hacky!
                         raise ParseError("Infinite recursion in grammar! (Rule %s)" % item.rule)
@@ -230,9 +230,10 @@ class Parser:
         return ApplyCallbacks(self.postprocess).transform(tree)
 
 
-class ApplyCallbacks(Transformer_NoRecurse):
+class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):
         self.postprocess = postprocess
 
-    def drv(self, tree):
-        return self.postprocess[tree.rule](tree.children)
+    @v_args(meta=True)
+    def drv(self, children, meta):
+        return self.postprocess[meta.rule](children)

@@ -34,6 +34,8 @@ class Token(Str):
         self.value = value
         self.line = line
         self.column = column
+        self.end_line = None
+        self.end_column = None
         return self
 
     @classmethod
@@ -112,6 +114,7 @@ class _Lex:
                     if t:
                         t.end_line = line_ctr.line
                         t.end_column = line_ctr.column
+
                     break
             else:
                 if line_ctr.char_pos < len(stream):

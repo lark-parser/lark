@@ -20,7 +20,8 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.common import GrammarError, ParseError, UnexpectedToken
 from lark.lexer import LexError, UnexpectedInput
-from lark.tree import Tree, Transformer
+from lark.tree import Tree
+from lark.visitors import Transformer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -57,7 +58,7 @@ class TestParsers(unittest.TestCase):
                  """, propagate_positions=True)
 
         r = g.parse('a')
-        self.assertEqual( r.children[0].line, 1 )
+        self.assertEqual( r.children[0].meta.line, 1 )
 
     def test_expand1(self):
 

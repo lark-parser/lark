@@ -2,9 +2,11 @@ from .common import GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule
+from .tree import Tree
+from .visitors import InlineTransformer # XXX Deprecated
 
 ###{standalone
-from functools import partial
+from functools import partial, wraps
 
 
 class ExpandSingleChild:
@@ -27,15 +29,23 @@ class PropagatePositions:
 
         if children:
             for a in children:
-                with suppress(AttributeError):
-                    res.line = a.line
-                    res.column = a.column
+                if isinstance(a, Tree):
+                    res.meta.line = a.meta.line
+                    res.meta.column = a.meta.column
+                elif isinstance(a, Token):
+                    res.meta.line = a.line
+                    res.meta.column = a.column
                 break
 
             for a in reversed(children):
-                with suppress(AttributeError):
-                    res.end_line = a.end_line
-                    res.end_column = a.end_column
+                # with suppress(AttributeError):
+                if isinstance(a, Tree):
+                    res.meta.end_line = a.meta.end_line
+                    res.meta.end_column = a.meta.end_column
+                elif isinstance(a, Token):
+                    res.meta.end_line = a.end_line
+                    res.meta.end_column = a.end_column
+
                 break
 
         return res
@@ -86,6 +96,15 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous):
 class Callback(object):
     pass
 
+
+def inline_args(func):
+    @wraps(func)
+    def f(children):
+        return func(*children)
+    return f
+
+
+
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False):
         self.tree_class = tree_class
@@ -120,7 +139,11 @@ class ParseTreeBuilder:
 
             user_callback_name = rule.alias or rule.origin.name
             try:
-                f = transformer._get_func(user_callback_name)
+                f = getattr(transformer, user_callback_name)
+                assert not getattr(f, 'meta', False), "Meta args not supported for internal transformer"
+                # XXX InlineTransformer is deprecated!
+                if getattr(f, 'inline', False) or isinstance(transformer, InlineTransformer):
+                    f = inline_args(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

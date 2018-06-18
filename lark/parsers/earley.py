@@ -15,7 +15,7 @@
 
 from ..tree import Tree
 from ..visitors import Transformer_InPlace, v_args
-from ..common import ParseError, UnexpectedToken
+from ..exceptions import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 
@@ -197,8 +197,8 @@ class Parser:
             next_set.add(item.advance(token) for item in column.to_scan if match(item.expect, token))
 
             if not next_set:
-                expect = {i.expect for i in column.to_scan}
-                raise UnexpectedToken(token, expect, stream, set(column.to_scan))
+                expect = {i.expect.name for i in column.to_scan}
+                raise UnexpectedToken(token, expect, considered_rules=set(column.to_scan))
 
             return next_set
 

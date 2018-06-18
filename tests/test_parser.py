@@ -18,8 +18,7 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.common import GrammarError, ParseError, UnexpectedToken
-from lark.lexer import LexError, UnexpectedInput
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, LexError, UnexpectedInput
 from lark.tree import Tree
 from lark.visitors import Transformer
 

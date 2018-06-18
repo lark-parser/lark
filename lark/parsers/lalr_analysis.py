@@ -10,7 +10,7 @@ import logging
 from collections import defaultdict
 
 from ..utils import classify, classify_bool, bfs, fzset
-from ..common import GrammarError
+from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
 

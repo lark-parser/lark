@@ -20,8 +20,8 @@
 
 from collections import defaultdict
 
-from ..common import ParseError
-from ..lexer import Token, UnexpectedInput
+from ..exceptions import ParseError, UnexpectedInput
+from ..lexer import Token
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal, Terminal

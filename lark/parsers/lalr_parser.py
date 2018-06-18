@@ -2,7 +2,7 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-from ..common import UnexpectedToken
+from ..exceptions import UnexpectedToken
 
 from .lalr_analysis import LALR_Analyzer, Shift
 
@@ -46,7 +46,7 @@ class _Parser:
                 return states[state][key]
             except KeyError:
                 expected = states[state].keys()
-                raise UnexpectedToken(token, expected, seq, i, state=state)
+                raise UnexpectedToken(token, expected, state=state)  # TODO filter out rules from expected
 
         def reduce(rule):
             size = len(rule.expansion)

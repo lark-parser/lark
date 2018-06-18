@@ -1,4 +1,4 @@
-from .common import GrammarError
+from .exceptions import GrammarError
 from .utils import suppress
 from .lexer import Token
 from .grammar import Rule

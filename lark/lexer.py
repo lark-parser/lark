@@ -4,26 +4,9 @@ import re
 
 from .utils import Str, classify
 from .common import PatternStr, PatternRE, TokenDef
+from .exceptions import UnexpectedCharacters
 
 ###{standalone
-class LexError(Exception):
-    pass
-
-class UnexpectedInput(LexError):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_rules=None):
-        context = seq[lex_pos:lex_pos+5]
-        message = "No token defined for: '%s' in %r at line %d col %d" % (seq[lex_pos], context, line, column)
-        if allowed:
-            message += '\n\nExpecting: %s\n' % allowed
-
-        super(UnexpectedInput, self).__init__(message)
-
-        self.line = line
-        self.column = column
-        self.context = context
-        self.allowed = allowed
-        self.considered_rules = considered_rules
-
 class Token(Str):
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
 
@@ -84,8 +67,9 @@ class LineCounter:
 
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"
-    def __init__(self, lexer):
+    def __init__(self, lexer, state=None):
         self.lexer = lexer
+        self.state = state
 
     def lex(self, stream, newline_types, ignore_types):
         newline_types = list(newline_types)
@@ -118,7 +102,7 @@ class _Lex:
                     break
             else:
                 if line_ctr.char_pos < len(stream):
-                    raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
                 break
 
 class UnlessCallback:
@@ -251,9 +235,10 @@ class ContextualLexer:
         self.parser_state = state
 
     def lex(self, stream):
-        l = _Lex(self.lexers[self.parser_state])
+        l = _Lex(self.lexers[self.parser_state], self.parser_state)
         for x in l.lex(stream, self.root_lexer.newline_types, self.root_lexer.ignore_types):
             yield x
             l.lexer = self.lexers[self.parser_state]
+            l.state = self.parser_state
 
 

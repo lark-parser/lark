@@ -1,6 +1,6 @@
 
 from ..utils import bfs, fzset, classify
-from ..common import GrammarError
+from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal
 
 

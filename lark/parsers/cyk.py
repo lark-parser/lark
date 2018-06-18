@@ -8,7 +8,7 @@
 from collections import defaultdict
 import itertools
 
-from ..common import ParseError
+from ..exceptions import ParseError
 from ..lexer import Token
 from ..tree import Tree
 from ..grammar import Terminal as T, NonTerminal as NT, Symbol

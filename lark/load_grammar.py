@@ -6,14 +6,15 @@ import re
 from ast import literal_eval
 from copy import deepcopy
 
-from .lexer import Token, UnexpectedInput
+from .lexer import Token
+
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR
-from .parsers.lalr_parser import UnexpectedToken
-from .common import GrammarError, LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
+from .common import LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args
@@ -576,7 +577,7 @@ class GrammarLoader:
 
         try:
             tree = self.canonize_tree.transform( self.parser.parse(grammar_text+'\n') )
-        except UnexpectedInput as e:
+        except UnexpectedCharacters as e:
             raise GrammarError("Unexpected input %r at line %d column %d in %s" % (e.context, e.line, e.column, name))
         except UnexpectedToken as e:
             context = e.get_context(grammar_text)

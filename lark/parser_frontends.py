@@ -4,7 +4,7 @@ from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import Lexer, ContextualLexer, Token
 
-from .common import GrammarError
+from .exceptions import GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
 

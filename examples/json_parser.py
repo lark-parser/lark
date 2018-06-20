@@ -51,7 +51,7 @@ class TreeToJson(Transformer):
 # def parse(x):
 #     return TreeToJson().transform(json_parser.parse(x))
 
-json_parser = Lark(json_grammar, parser='lalr', transformer=TreeToJson())
+json_parser = Lark(json_grammar, parser='lalr', lexer='standard', transformer=TreeToJson())
 parse = json_parser.parse
 
 def test():

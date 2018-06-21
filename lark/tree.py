@@ -118,7 +118,13 @@ class Transformer(object):
         try:
             f = self._get_func(tree.data)
         except AttributeError:
-            return self.__default__(tree.data, items)
+            result = self.__default__(tree.data, items)
+            if isinstance(result, Tree):
+                if hasattr(tree, "line"):       result.line = tree.line
+                if hasattr(tree, "column"):     result.column = tree.column
+                if hasattr(tree, "end_line"):   result.end_line = tree.end_line
+                if hasattr(tree, "end_column"): result.end_column = tree.end_column
+            return result
         else:
             return f(items)
 

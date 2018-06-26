@@ -4,4 +4,4 @@ from .visitors import InlineTransformer, inline_args   # XXX Deprecated
 from .exceptions import ParseError, LexError, GrammarError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from .lark import Lark
 
-__version__ = "0.5.6"
+__version__ = "0.6.0"

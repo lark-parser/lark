@@ -5,7 +5,8 @@ from unittest import TestCase
 import copy
 import pickle
 
-from lark.tree import Tree, Interpreter, visit_children_decor
+from lark.tree import Tree
+from lark.visitors import Transformer, Interpreter, visit_children_decor, v_args
 
 
 class TestTrees(TestCase):
@@ -57,6 +58,44 @@ class TestTrees(TestCase):
                 return 'C'
 
         self.assertEqual(Interp3().visit(t), list('BCd'))
+
+    def test_transformer(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        class T(Transformer):
+            i = v_args(inline=True)(int)
+            f = v_args(inline=True)(float)
+
+            sub = lambda self, values: values[0] - values[1]
+
+            def add(self, values):
+                return sum(values)
+
+        res = T().transform(t)
+        self.assertEqual(res, 2.9)
+
+        @v_args(inline=True)
+        class T(Transformer):
+            i = int
+            f = float
+            sub = lambda self, a, b: a-b
+
+            def add(self, a, b):
+                return a + b
+
+
+        res = T().transform(t)
+        self.assertEqual(res, 2.9)
+
+
+        @v_args(inline=True)
+        class T(Transformer):
+            i = int
+            f = float
+            from operator import sub, add
+
+        res = T().transform(t)
+        self.assertEqual(res, 2.9)
 
 
 

@@ -18,9 +18,9 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.common import GrammarError, ParseError, UnexpectedToken
-from lark.lexer import LexError, UnexpectedInput
-from lark.tree import Tree, Transformer
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, LexError, UnexpectedInput
+from lark.tree import Tree
+from lark.visitors import Transformer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -48,9 +48,6 @@ class TestParsers(unittest.TestCase):
 
         self.assertRaises(GrammarError, Lark, g, parser='lalr')
 
-        l = Lark(g, parser='earley', lexer=None)
-        self.assertRaises(ParseError, l.parse, 'a')
-
         l = Lark(g, parser='earley', lexer='dynamic')
         self.assertRaises(ParseError, l.parse, 'a')
 
@@ -60,7 +57,7 @@ class TestParsers(unittest.TestCase):
                  """, propagate_positions=True)
 
         r = g.parse('a')
-        self.assertEqual( r.children[0].line, 1 )
+        self.assertEqual( r.children[0].meta.line, 1 )
 
     def test_expand1(self):
 
@@ -155,7 +152,7 @@ class TestParsers(unittest.TestCase):
 
 def _make_full_earley_test(LEXER):
     class _TestFullEarley(unittest.TestCase):
-        def test_anon_in_scanless(self):
+        def test_anon(self):
             # Fails an Earley implementation without special handling for empty rules,
             # or re-processing of already completed rules.
             g = Lark(r"""start: B
@@ -164,14 +161,14 @@ def _make_full_earley_test(LEXER):
 
             self.assertEqual( g.parse('abc').children[0], 'abc')
 
-        def test_earley_scanless(self):
+        def test_earley(self):
             g = Lark("""start: A "b" c
                         A: "a"+
                         c: "abc"
                         """, parser="earley", lexer=LEXER)
             x = g.parse('aaaababc')
 
-        def test_earley_scanless2(self):
+        def test_earley2(self):
             grammar = """
             start: statement+
 
@@ -187,24 +184,19 @@ def _make_full_earley_test(LEXER):
             l.parse(program)
 
 
-        # XXX Fails for scanless mode
-        # XXX Decided not to fix, because
-        #       a) It's a subtle bug
-        #       b) Scanless is intended for deprecation
-        #
-        # def test_earley_scanless3(self):
-        #     "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
+        def test_earley3(self):
+            "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
 
-        #     grammar = """
-        #     start: A A
-        #     A: "a"+
-        #     """
+            grammar = """
+            start: A A
+            A: "a"+
+            """
 
-        #     l = Lark(grammar, parser='earley', lexer=LEXER)
-        #     res = l.parse("aaa")
-        #     self.assertEqual(res.children, ['aa', 'a'])
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse("aaa")
+            self.assertEqual(res.children, ['aa', 'a'])
 
-        def test_earley_scanless4(self):
+        def test_earley4(self):
             grammar = """
             start: A A?
             A: "a"+
@@ -259,7 +251,6 @@ def _make_full_earley_test(LEXER):
             assert x.data == '_ambig', x
             assert len(x.children) == 2
 
-        @unittest.skipIf(LEXER==None, "BUG in scanless parsing!")  # TODO fix bug!
         def test_fruitflies_ambig(self):
             grammar = """
                 start: noun verb noun        -> simple
@@ -350,7 +341,7 @@ def _make_full_earley_test(LEXER):
         #     assert x.data != '_ambig', x
         #     assert len(x.children) == 1
 
-    _NAME = "TestFullEarley" + (LEXER or 'Scanless').capitalize()
+    _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
 
@@ -402,7 +393,6 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             g.parse(u'\xa3\u0101\u00a3')
 
-        @unittest.skipIf(LEXER is None, "Regexps >1 not supported with scanless parsing")
         def test_unicode2(self):
             g = _Lark(r"""start: UNIA UNIB UNIA UNIC
                         UNIA: /\xa3/
@@ -614,11 +604,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
 
-        @unittest.skipIf(LEXER is None, "Known bug with scanless parsing")  # TODO
         def test_token_collision2(self):
-            # NOTE: This test reveals a bug in token reconstruction in Scanless Earley
-            #       I probably need to re-write grammar transformation
-
             g = _Lark("""
                     !start: "starts"
 
@@ -662,30 +648,26 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('aaaab')
             x = g.parse('b')
 
-        @unittest.skipIf(LEXER in (None, 'dynamic'), "Known bug with scanless parsing")  # TODO
         def test_token_not_anon(self):
-            """Tests that "a" is matched as A, rather than an anonymous token.
-
-            That means that "a" is not filtered out, despite being an 'immediate string'.
-            Whether or not this is the intuitive behavior, I'm not sure yet.
-
-            Perhaps the right thing to do is report a collision (if such is relevant)
-
-            -Erez
+            """Tests that "a" is matched as an anonymous token, and not A.
             """
 
             g = _Lark("""start: "a"
                         A: "a" """)
             x = g.parse('a')
+            self.assertEqual(len(x.children), 0, '"a" should be considered anonymous')
 
-            self.assertEqual(len(x.children), 1, '"a" should not be considered anonymous')
+            g = _Lark("""start: "a" A
+                        A: "a" """)
+            x = g.parse('aa')
+            self.assertEqual(len(x.children), 1, 'only "a" should be considered anonymous')
             self.assertEqual(x.children[0].type, "A")
 
             g = _Lark("""start: /a/
                         A: /a/ """)
             x = g.parse('a')
-            self.assertEqual(len(x.children), 1, '/a/ should not be considered anonymous')
-            self.assertEqual(x.children[0].type, "A")
+            self.assertEqual(len(x.children), 1)
+            self.assertEqual(x.children[0].type, "A", "A isn't associated with /a/")
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_maybe(self):
@@ -755,7 +737,6 @@ def _make_parser_test(LEXER, PARSER):
                             """)
             x = g.parse('AB')
 
-        @unittest.skipIf(LEXER == None, "Scanless can't handle regexps")
         def test_regex_quote(self):
             g = r"""
             start: SINGLE_QUOTED_STRING | DOUBLE_QUOTED_STRING
@@ -866,7 +847,6 @@ def _make_parser_test(LEXER, PARSER):
                 """
             self.assertRaises( GrammarError, _Lark, g)
 
-        @unittest.skipIf(LEXER==None, "TODO: Fix scanless parsing or get rid of it") # TODO
         def test_line_and_column(self):
             g = r"""!start: "A" bc "D"
                 !bc: "B\nC"
@@ -874,22 +854,22 @@ def _make_parser_test(LEXER, PARSER):
             l = _Lark(g)
             a, bc, d = l.parse("AB\nCD").children
             self.assertEqual(a.line, 1)
-            self.assertEqual(a.column, 0)
+            self.assertEqual(a.column, 1)
 
             bc ,= bc.children
             self.assertEqual(bc.line, 1)
-            self.assertEqual(bc.column, 1)
+            self.assertEqual(bc.column, 2)
 
             self.assertEqual(d.line, 2)
-            self.assertEqual(d.column, 1)
+            self.assertEqual(d.column, 2)
 
             if LEXER != 'dynamic':
                 self.assertEqual(a.end_line, 1)
-                self.assertEqual(a.end_column, 1)
+                self.assertEqual(a.end_column, 2)
                 self.assertEqual(bc.end_line, 2)
-                self.assertEqual(bc.end_column, 1)
+                self.assertEqual(bc.end_column, 2)
                 self.assertEqual(d.end_line, 2)
-                self.assertEqual(d.end_column, 2)
+                self.assertEqual(d.end_column, 3)
 
 
 
@@ -1054,7 +1034,6 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_ignore(self):
             grammar = r"""
@@ -1081,7 +1060,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, [])
 
 
-        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
         def test_regex_escaping(self):
             g = _Lark("start: /[ab]/")
             g.parse('a')
@@ -1188,7 +1166,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-    _NAME = "Test" + PARSER.capitalize() + (LEXER or 'Scanless').capitalize()
+    _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME
     globals()[_NAME] = _TestParser
 
@@ -1199,13 +1177,13 @@ _TO_TEST = [
         ('dynamic', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
-        (None, 'earley'),
+        # (None, 'earley'),
 ]
 
 for _LEXER, _PARSER in _TO_TEST:
     _make_parser_test(_LEXER, _PARSER)
 
-for _LEXER in (None, 'dynamic'):
+for _LEXER in ('dynamic',):
     _make_full_earley_test(_LEXER)
 
 if __name__ == '__main__':

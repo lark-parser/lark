@@ -2,7 +2,7 @@
 # This demonstrates example-driven error reporting with the LALR parser
 #
 
-from lark import Lark, UnexpectedToken
+from lark import Lark, UnexpectedInput
 
 from .json_parser import json_grammar   # Using the grammar from the json_parser example
 
@@ -32,11 +32,11 @@ class JsonTrailingComma(JsonSyntaxError):
 def parse(json_text):
     try:
         j = json_parser.parse(json_text)
-    except UnexpectedToken as ut:
-        exc_class = ut.match_examples(json_parser.parse, {
-            JsonMissingValue: ['{"foo": }'],
+    except UnexpectedInput as u:
+        exc_class = u.match_examples(json_parser.parse, {
             JsonMissingOpening: ['{"foo": ]}',
-                                 '{"foor": }}'],
+                                 '{"foor": }}',
+                                 '{"foo": }'],
             JsonMissingClosing: ['{"foo": [}',
                                  '{',
                                  '{"a": 1',
@@ -55,15 +55,10 @@ def parse(json_text):
         })
         if not exc_class:
             raise
-        raise exc_class(ut.get_context(json_text), ut.line, ut.column)
+        raise exc_class(u.get_context(json_text), u.line, u.column)
 
 
 def test():
-    try:
-        parse('{"key":')
-    except JsonMissingValue:
-        pass
-
     try:
         parse('{"key": "value"')
     except JsonMissingClosing:

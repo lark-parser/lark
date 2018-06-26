@@ -8,47 +8,19 @@
 from collections import defaultdict
 import itertools
 
-from ..common import ParseError, is_terminal
+from ..exceptions import ParseError
 from ..lexer import Token
 from ..tree import Tree
+from ..grammar import Terminal as T, NonTerminal as NT, Symbol
 
 try:
     xrange
 except NameError:
     xrange = range
 
-class Symbol(object):
-    """Any grammar symbol."""
-
-    def __init__(self, s):
-        self.s = s
-
-    def __repr__(self):
-        return '%s(%s)' % (type(self).__name__, str(self))
-
-    def __str__(self):
-        return str(self.s)
-
-    def __eq__(self, other):
-        return self.s == str(other)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((type(self), str(self.s)))
-
-
-class T(Symbol):
-    """Terminal."""
-
-    def match(self, s):
-        return self.s == s.type
-
-
-class NT(Symbol):
-    """Non-terminal."""
-    pass
+def match(t, s):
+    assert isinstance(t, T)
+    return t.name == s.type
 
 
 class Rule(object):
@@ -121,10 +93,12 @@ class Parser(object):
 
     def _to_rule(self, lark_rule):
         """Converts a lark rule, (lhs, rhs, callback, options), to a Rule."""
+        assert isinstance(lark_rule.origin, NT)
+        assert all(isinstance(x, Symbol) for x in lark_rule.expansion)
         return Rule(
-            NT(lark_rule.origin), [
-                T(x) if is_terminal(x) else NT(x) for x in lark_rule.expansion
-            ], weight=lark_rule.options.priority if lark_rule.options and lark_rule.options.priority else 0, alias=lark_rule.alias)
+            lark_rule.origin, lark_rule.expansion,
+            weight=lark_rule.options.priority if lark_rule.options and lark_rule.options.priority else 0,
+            alias=lark_rule.alias)
 
     def parse(self, tokenized):  # pylint: disable=invalid-name
         """Parses input, which is a list of tokens."""
@@ -132,7 +106,7 @@ class Parser(object):
         # Check if the parse succeeded.
         if all(r.lhs != self.start for r in table[(0, len(tokenized) - 1)]):
             raise ParseError('Parsing failed.')
-        parse = trees[(0, len(tokenized) - 1)][NT(self.start)]
+        parse = trees[(0, len(tokenized) - 1)][self.start]
         return self._to_tree(revert_cnf(parse))
 
     def _to_tree(self, rule_node):
@@ -143,8 +117,8 @@ class Parser(object):
             if isinstance(child, RuleNode):
                 children.append(self._to_tree(child))
             else:
-                assert isinstance(child.s, Token)
-                children.append(child.s)
+                assert isinstance(child.name, Token)
+                children.append(child.name)
         t = Tree(orig_rule.origin, children)
         t.rule=orig_rule
         return t
@@ -169,7 +143,7 @@ def _parse(s, g):
     # Populate base case with existing terminal production rules
     for i, w in enumerate(s):
         for terminal, rules in g.terminal_rules.items():
-            if terminal.match(w):
+            if match(terminal, w):
                 for rule in rules:
                     table[(i, i)].add(rule)
                     if (rule.lhs not in trees[(i, i)] or
@@ -349,13 +323,13 @@ def revert_cnf(node):
     if isinstance(node, T):
         return node
     # Reverts TERM rule.
-    if node.rule.lhs.s.startswith('__T_'):
+    if node.rule.lhs.name.startswith('__T_'):
         return node.children[0]
     else:
         children = []
         for child in map(revert_cnf, node.children):
             # Reverts BIN rule.
-            if isinstance(child, RuleNode) and child.rule.lhs.s.startswith('__SP_'):
+            if isinstance(child, RuleNode) and child.rule.lhs.name.startswith('__SP_'):
                 children += child.children
             else:
                 children.append(child)

@@ -1,7 +1,7 @@
 from ..utils import compare
 from functools import cmp_to_key
 
-from ..tree import Tree, Visitor_NoRecurse
+from ..tree import Tree
 
 
 # Standard ambiguity resolver (uses comparison)
@@ -16,7 +16,7 @@ def _sum_priority(tree):
 
     for n in tree.iter_subtrees():
         try:
-            p += n.rule.options.priority or 0
+            p += n.meta.rule.options.priority or 0
         except AttributeError:
             pass
 
@@ -26,8 +26,15 @@ def _compare_priority(tree1, tree2):
     tree1.iter_subtrees()
 
 def _compare_drv(tree1, tree2):
-    rule1 = getattr(tree1, 'rule', None)
-    rule2 = getattr(tree2, 'rule', None)
+    try:
+        rule1 = tree1.meta.rule
+    except AttributeError:
+        rule1 = None
+
+    try:
+        rule2 = tree2.meta.rule
+    except AttributeError:
+        rule2 = None
 
     if None == rule1 == rule2:
         return compare(tree1, tree2)
@@ -45,7 +52,7 @@ def _compare_drv(tree1, tree2):
     if c:
         return c
 
-    c = _compare_rules(tree1.rule, tree2.rule)
+    c = _compare_rules(tree1.meta.rule, tree2.meta.rule)
     if c:
         return c
 
@@ -65,7 +72,7 @@ def _standard_resolve_ambig(tree):
     best = max(tree.children, key=key_f)
     assert best.data == 'drv'
     tree.set('drv', best.children)
-    tree.rule = best.rule   # needed for applying callbacks
+    tree.meta.rule = best.meta.rule   # needed for applying callbacks
 
 def standard_resolve_ambig(tree):
     for ambig in tree.find_data('_ambig'):
@@ -93,7 +100,7 @@ def _antiscore_sum_resolve_ambig(tree):
     best = min(tree.children, key=_antiscore_sum_drv)
     assert best.data == 'drv'
     tree.set('drv', best.children)
-    tree.rule = best.rule   # needed for applying callbacks
+    tree.meta.rule = best.meta.rule   # needed for applying callbacks
 
 def antiscore_sum_resolve_ambig(tree):
     for ambig in tree.find_data('_ambig'):

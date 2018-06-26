@@ -1,7 +1,7 @@
 
 from ..utils import bfs, fzset, classify
-from ..common import GrammarError, is_terminal
-from ..grammar import Rule
+from ..exceptions import GrammarError
+from ..grammar import Rule, Terminal, NonTerminal
 
 
 class RulePtr(object):
@@ -67,7 +67,7 @@ def calculate_sets(rules):
     FIRST = {}
     FOLLOW = {}
     for sym in symbols:
-        FIRST[sym]={sym} if is_terminal(sym) else set()
+        FIRST[sym]={sym} if sym.is_term else set()
         FOLLOW[sym]=set()
 
     # Calculate NULLABLE and FIRST
@@ -108,16 +108,16 @@ class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 
-        rules = parser_conf.rules + [Rule('$root', [parser_conf.start, '$END'])]
+        rules = parser_conf.rules + [Rule(NonTerminal('$root'), [NonTerminal(parser_conf.start), Terminal('$END')])]
         self.rules_by_origin = classify(rules, lambda r: r.origin)
 
         assert len(rules) == len(set(rules))
         for r in rules:
             for sym in r.expansion:
-                if not (is_terminal(sym) or sym in self.rules_by_origin):
+                if not (sym.is_term or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym) # TODO test validation
 
-        self.start_state = self.expand_rule('$root')
+        self.start_state = self.expand_rule(NonTerminal('$root'))
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
@@ -125,7 +125,7 @@ class GrammarAnalyzer(object):
         "Returns all init_ptrs accessible by rule (recursive)"
         init_ptrs = set()
         def _expand_rule(rule):
-            assert not is_terminal(rule), rule
+            assert not rule.is_term, rule
 
             for r in self.rules_by_origin[rule]:
                 init_ptr = RulePtr(r, 0)
@@ -133,7 +133,7 @@ class GrammarAnalyzer(object):
 
                 if r.expansion: # if not empty rule
                     new_r = init_ptr.next
-                    if not is_terminal(new_r):
+                    if not new_r.is_term:
                         yield new_r
 
         for _ in bfs([rule], _expand_rule):
@@ -142,8 +142,8 @@ class GrammarAnalyzer(object):
         return fzset(init_ptrs)
 
     def _first(self, r):
-        if is_terminal(r):
+        if r.is_term:
             return {r}
         else:
-            return {rp.next for rp in self.expand_rule(r) if is_terminal(rp.next)}
+            return {rp.next for rp in self.expand_rule(r) if rp.next.is_term}
 

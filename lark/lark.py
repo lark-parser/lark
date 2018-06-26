@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import time
 from collections import defaultdict
+from io import open
 
 from .utils import STRING_TYPE
 from .load_grammar import load_grammar
@@ -22,9 +23,9 @@ class LarkOptions(object):
                  Note: "lalr" requires a lexer
 
         lexer - Decides whether or not to use a lexer stage
-            None: Don't use a lexer (scanless, only works with parser="earley")
             "standard": Use a standard lexer
             "contextual": Stronger lexer (only works with parser="lalr")
+            "dynamic": Flexible and powerful (only with parser="earley")
             "auto" (default): Choose for me based on grammar and parser
 
         ambiguity - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
@@ -105,12 +106,12 @@ class Lark:
 
         # Some, but not all file-like objects have a 'name' attribute
         try:
-            source = grammar.name
+            self.source = grammar.name
         except AttributeError:
-            source = '<string>'
+            self.source = '<string>'
             cache_file = "larkcache_%s" % str(hash(grammar)%(2**32))
         else:
-            cache_file = "larkcache_%s" % os.path.basename(source)
+            cache_file = "larkcache_%s" % os.path.basename(self.source)
 
         # Drain file-like objects to get their contents
         try:
@@ -130,7 +131,7 @@ class Lark:
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
-                self.options.lexer = 'standard'
+                self.options.lexer = 'contextual'
             elif self.options.parser == 'earley':
                 self.options.lexer = 'dynamic'
             elif self.options.parser == 'cyk':
@@ -138,7 +139,7 @@ class Lark:
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', None)
+        assert lexer in ('standard', 'contextual', 'dynamic')
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
@@ -150,10 +151,10 @@ class Lark:
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', 'resolve__antiscore_sum')
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, source)
+        self.grammar = load_grammar(grammar, self.source)
 
         # Compile the EBNF grammar into BNF
-        tokens, self.rules, self.ignore_tokens = self.grammar.compile(lexer=bool(lexer), start=self.options.start)
+        tokens, self.rules, self.ignore_tokens = self.grammar.compile()
 
         self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 
@@ -183,8 +184,30 @@ class Lark:
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
+    @classmethod
+    def open(cls, grammar_filename, rel_to=None, **options):
+        """Create an instance of Lark with the grammar given by its filename
+
+        If rel_to is provided, the function will find the grammar filename in relation to it.
+
+        Example:
+
+            >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
+            Lark(...)
+
+        """
+        if rel_to:
+            basepath = os.path.dirname(rel_to)
+            grammar_filename = os.path.join(basepath, grammar_filename)
+        with open(grammar_filename) as f:
+            return cls(f, **options)
+
+    def __repr__(self):
+        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
+
 
     def lex(self, text):
+        "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"
         if not hasattr(self, 'lexer'):
             self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
@@ -194,6 +217,7 @@ class Lark:
             return stream
 
     def parse(self, text):
+        "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
         return self.parser.parse(text)
 
         # if self.profiler:

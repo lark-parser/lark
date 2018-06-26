@@ -5,13 +5,21 @@ except ImportError:
 
 from copy import deepcopy
 
-from .utils import inline_args
+class Meta:
+    pass
 
 ###{standalone
 class Tree(object):
-    def __init__(self, data, children):
+    def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
+        self._meta = meta
+
+    @property
+    def meta(self):
+        if self._meta is None:
+            self._meta = Meta()
+        return self._meta
 
     def __repr__(self):
         return 'Tree(%s, %s)' % (self.data, self.children)
@@ -37,6 +45,7 @@ class Tree(object):
 ###}
 
     def expand_kids_by_index(self, *indices):
+        "Expand (inline) children at the given indices"
         for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
             kid = self.children[i]
             self.children[i:i+1] = kid.children
@@ -54,9 +63,11 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def find_pred(self, pred):
+        "Find all nodes where pred(tree) == True"
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
+        "Find all nodes where tree.data == data"
         return self.find_pred(lambda t: t.data == data)
 
     def scan_values(self, pred):
@@ -99,135 +110,28 @@ class Tree(object):
         self.data = data
         self.children = children
 
+    # XXX Deprecated! Here for backwards compatibility <0.6.0
+    @property
+    def line(self):
+        return self.meta.line
+    @property
+    def column(self):
+        return self.meta.column
+    @property
+    def end_line(self):
+        return self.meta.end_line
+    @property
+    def end_column(self):
+        return self.meta.end_column
+
+
 class SlottedTree(Tree):
-    __slots__ = 'data', 'children', 'rule'
-
-
-###{standalone
-class Transformer(object):
-    def _get_func(self, name):
-        return getattr(self, name)
-
-    def transform(self, tree):
-        items = []
-        for c in tree.children:
-            try:
-                items.append(self.transform(c) if isinstance(c, Tree) else c)
-            except Discard:
-                pass
-        try:
-            f = self._get_func(tree.data)
-        except AttributeError:
-            return self.__default__(tree.data, items)
-        else:
-            return f(items)
-
-    def __default__(self, data, children):
-        return Tree(data, children)
-
-    def __mul__(self, other):
-        return TransformerChain(self, other)
-
-
-class Discard(Exception):
-    pass
-
-class TransformerChain(object):
-    def __init__(self, *transformers):
-        self.transformers = transformers
-
-    def transform(self, tree):
-        for t in self.transformers:
-            tree = t.transform(tree)
-        return tree
-
-    def __mul__(self, other):
-        return TransformerChain(*self.transformers + (other,))
-
-
-
-class InlineTransformer(Transformer):
-    def _get_func(self, name):  # use super()._get_func
-        return inline_args(getattr(self, name)).__get__(self)
-
-
-class Visitor(object):
-    def visit(self, tree):
-        for child in tree.children:
-            if isinstance(child, Tree):
-                self.visit(child)
-
-        f = getattr(self, tree.data, self.__default__)
-        f(tree)
-        return tree
-
-    def __default__(self, tree):
-        pass
-
-
-class Visitor_NoRecurse(Visitor):
-    def visit(self, tree):
-        subtrees = list(tree.iter_subtrees())
-
-        for subtree in (subtrees):
-            getattr(self, subtree.data, self.__default__)(subtree)
-        return tree
-
-
-from functools import wraps
-def visit_children_decor(func):
-    @wraps(func)
-    def inner(cls, tree):
-        values = cls.visit_children(tree)
-        return func(cls, values)
-    return inner
-
-class Interpreter(object):
-
-    def visit(self, tree):
-        return getattr(self, tree.data)(tree)
-
-    def visit_children(self, tree):
-        return [self.visit(child) if isinstance(child, Tree) else child
-                for child in tree.children]
-
-    def __getattr__(self, name):
-        return self.__default__
-
-    def __default__(self, tree):
-        return self.visit_children(tree)
-
-
-class Transformer_NoRecurse(Transformer):
-    def transform(self, tree):
-        subtrees = list(tree.iter_subtrees())
-
-        def _t(t):
-            # Assumes t is already transformed
-            try:
-                f = self._get_func(t.data)
-            except AttributeError:
-                return self.__default__(t)
-            else:
-                return f(t)
-
-        for subtree in subtrees:
-            children = []
-            for c in subtree.children:
-                try:
-                    children.append(_t(c) if isinstance(c, Tree) else c)
-                except Discard:
-                    pass
-            subtree.children = children
-
-        return _t(tree)
-
-    def __default__(self, t):
-        return t
-###}
+    __slots__ = 'data', 'children', 'rule', '_meta'
 
 
 def pydot__tree_to_png(tree, filename):
+    "Creates a colorful image that represents the tree (data+children, without meta)"
+
     import pydot
     graph = pydot.Dot(graph_type='digraph', rankdir="LR")
 

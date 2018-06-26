@@ -3,27 +3,10 @@
 import re
 
 from .utils import Str, classify
-from .common import is_terminal, PatternStr, PatternRE, TokenDef
+from .common import PatternStr, PatternRE, TokenDef
+from .exceptions import UnexpectedCharacters
 
 ###{standalone
-class LexError(Exception):
-    pass
-
-class UnexpectedInput(LexError):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_rules=None):
-        context = seq[lex_pos:lex_pos+5]
-        message = "No token defined for: '%s' in %r at line %d col %d" % (seq[lex_pos], context, line, column)
-        if allowed:
-            message += '\n\nExpecting: %s\n' % allowed
-
-        super(UnexpectedInput, self).__init__(message)
-
-        self.line = line
-        self.column = column
-        self.context = context
-        self.allowed = allowed
-        self.considered_rules = considered_rules
-
 class Token(Str):
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
 
@@ -34,6 +17,8 @@ class Token(Str):
         self.value = value
         self.line = line
         self.column = column
+        self.end_line = None
+        self.end_column = None
         return self
 
     @classmethod
@@ -63,7 +48,7 @@ class LineCounter:
         self.newline_char = '\n'
         self.char_pos = 0
         self.line = 1
-        self.column = 0
+        self.column = 1
         self.line_start_pos = 0
 
     def feed(self, token, test_newline=True):
@@ -78,12 +63,13 @@ class LineCounter:
                 self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
-        self.column = self.char_pos - self.line_start_pos
+        self.column = self.char_pos - self.line_start_pos + 1
 
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"
-    def __init__(self, lexer):
+    def __init__(self, lexer, state=None):
         self.lexer = lexer
+        self.state = state
 
     def lex(self, stream, newline_types, ignore_types):
         newline_types = list(newline_types)
@@ -112,10 +98,11 @@ class _Lex:
                     if t:
                         t.end_line = line_ctr.line
                         t.end_column = line_ctr.column
+
                     break
             else:
                 if line_ctr.char_pos < len(stream):
-                    raise UnexpectedInput(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
                 break
 
 class UnlessCallback:
@@ -178,7 +165,7 @@ def build_mres(tokens, match_whole=False):
     return _build_mres(tokens, len(tokens), match_whole)
 
 def _regexp_has_newline(r):
-    return '\n' in r or '\\n' in r or ('(?s)' in r and '.' in r)
+    return '\n' in r or '\\n' in r or ('(?s' in r and '.' in r)
 
 class Lexer:
     def __init__(self, tokens, ignore=(), user_callbacks={}):
@@ -234,7 +221,7 @@ class ContextualLexer:
                 lexer = lexer_by_tokens[key]
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
-                state_tokens = [tokens_by_name[n] for n in accepts if is_terminal(n) and n!='$END']
+                state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
                 lexer = Lexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
                 lexer_by_tokens[key] = lexer
 
@@ -248,9 +235,10 @@ class ContextualLexer:
         self.parser_state = state
 
     def lex(self, stream):
-        l = _Lex(self.lexers[self.parser_state])
+        l = _Lex(self.lexers[self.parser_state], self.parser_state)
         for x in l.lex(stream, self.root_lexer.newline_types, self.root_lexer.ignore_types):
             yield x
             l.lexer = self.lexers[self.parser_state]
+            l.state = self.parser_state
 
 

@@ -20,10 +20,11 @@
 
 from collections import defaultdict
 
-from ..common import ParseError, is_terminal
-from ..lexer import Token, UnexpectedInput
+from ..exceptions import ParseError, UnexpectedInput
+from ..lexer import Token
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
+from ..grammar import NonTerminal, Terminal
 
 from .earley import ApplyCallbacks, Item, Column
 
@@ -32,7 +33,7 @@ class Parser:
         self.analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
-        self.ignore = list(ignore)
+        self.ignore = [Terminal(t) for t in ignore]
         self.predict_all = predict_all
 
         self.FIRST = self.analysis.FIRST
@@ -47,15 +48,15 @@ class Parser:
 
     def parse(self, stream, start_symbol=None):
         # Define parser functions
-        start_symbol = start_symbol or self.parser_conf.start
+        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
         delayed_matches = defaultdict(list)
         match = self.term_matcher
 
         text_line = 1
-        text_column = 0
+        text_column = 1
 
         def predict(nonterm, column):
-            assert not is_terminal(nonterm), nonterm
+            assert not nonterm.is_term, nonterm
             return [Item(rule, 0, column, None) for rule in self.predictions[nonterm]]
 
         def complete(item):
@@ -97,14 +98,14 @@ class Parser:
             for item in to_scan:
                 m = match(item.expect, stream, i)
                 if m:
-                    t = Token(item.expect, m.group(0), i, text_line, text_column)
+                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                     delayed_matches[m.end()].append(item.advance(t))
 
                     s = m.group(0)
                     for j in range(1, len(s)):
                         m = match(item.expect, s[:-j])
                         if m:
-                            t = Token(item.expect, m.group(0), i, text_line, text_column)
+                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                             delayed_matches[i+m.end()].append(item.advance(t))
 
             next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)
@@ -127,7 +128,7 @@ class Parser:
 
             if token == '\n':
                 text_line += 1
-                text_column = 0
+                text_column = 1
             else:
                 text_column += 1
 

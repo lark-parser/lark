@@ -127,7 +127,7 @@ AWAIT: "await"
      | "True"    -> const_true
      | "False"   -> const_false
 
-?testlist_comp: (test|star_expr) ( comp_for | ("," (test|star_expr))+ [","] | ",")
+?testlist_comp: (test|star_expr) [comp_for | ("," (test|star_expr))+ [","] | ","]
 subscriptlist: subscript ("," subscript)* [","]
 subscript: test | [test] ":" [test] [sliceop]
 sliceop: ":" [test]
@@ -170,10 +170,6 @@ COMMENT: /#[^\n]*/
 _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 
-%ignore /[\t \f]+/  // WS
-%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
-%ignore COMMENT
-
 STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
@@ -184,6 +180,8 @@ BIN_NUMBER.2 : /0b[0-1]*/i
 FLOAT_NUMBER.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
 IMAG_NUMBER.2: /\d+j|${FLOAT_NUMBER}j/i
 
-_DEDENT: "<DEDENT>"
-_INDENT: "<INDENT>"
+%ignore /[\t \f]+/  // WS
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
+%ignore COMMENT
+%declare _INDENT _DEDENT
 

@@ -168,7 +168,7 @@ class TreeBuilderAtoms:
         print('parse_tree_builder = ParseTreeBuilder(RULES.values(), Tree)')
 
 def main(fobj, start):
-    lark_inst = Lark(fobj, parser="lalr", start=start)
+    lark_inst = Lark(fobj, parser="lalr", lexer="standard", start=start)
 
     lexer_atoms = LexerAtoms(lark_inst.parser.lexer)
     parser_atoms = ParserAtoms(lark_inst.parser.parser)

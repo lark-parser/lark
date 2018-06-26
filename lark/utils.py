@@ -17,14 +17,15 @@ def classify_bool(seq, pred):
 
     return true_elems, false_elems
 
-def classify(seq, key=None):
+def classify(seq, key=None, value=None):
     d = {}
     for item in seq:
         k = key(item) if (key is not None) else item
+        v = value(item) if (value is not None) else item
         if k in d:
-            d[k].append(item)
+            d[k].append(v)
         else:
-            d[k] = [item]
+            d[k] = [v]
     return d
 
 def bfs(initial, expand):
@@ -49,39 +50,29 @@ except NameError:   # Python 3
 ###{standalone
 
 import types
-import functools
+from functools import wraps, partial
 from contextlib import contextmanager
 
 Str = type(u'')
 
-def inline_args(f):
-    # print '@@', f.__name__, type(f), isinstance(f, types.FunctionType), isinstance(f, types.TypeType), isinstance(f, types.BuiltinFunctionType)
+def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
-        @functools.wraps(f)
-        def _f_func(self, args):
-            return f(self, *args)
-        return _f_func
+        return wraps(f)(create_decorator(f, True))
+
     elif isinstance(f, (type, types.BuiltinFunctionType)):
-        @functools.wraps(f)
-        def _f_builtin(_self, args):
-            return f(*args)
-        return _f_builtin
+        return wraps(f)(create_decorator(f, False))
+
     elif isinstance(f, types.MethodType):
-        @functools.wraps(f.__func__)
-        def _f(self, args):
-            return f.__func__(self, *args)
-        return _f
-    elif isinstance(f, functools.partial):
+        return wraps(f)(create_decorator(f.__func__, True))
+
+    elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        # @functools.wraps(f)
-        def _f(self, args):
-            return f(*args)
-        return _f
+        return create_decorator(f.__func__, True)
+
     else:
-        @functools.wraps(f.__call__.__func__)
-        def _f(self, args):
-            return f.__call__.__func__(self, *args)
-        return _f
+        return create_decorator(f.__func__.__call__, True)
+
+
 
 
 try:

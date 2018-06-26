@@ -10,9 +10,9 @@ import logging
 from collections import defaultdict
 
 from ..utils import classify, classify_bool, bfs, fzset
-from ..common import GrammarError, is_terminal
+from ..exceptions import GrammarError
 
-from .grammar_analysis import GrammarAnalyzer
+from .grammar_analysis import GrammarAnalyzer, Terminal
 
 class Action:
     def __init__(self, name):
@@ -70,12 +70,12 @@ class LALR_Analyzer(GrammarAnalyzer):
                 rps = {rp.advance(sym) for rp in rps}
 
                 for rp in set(rps):
-                    if not rp.is_satisfied and not is_terminal(rp.next):
+                    if not rp.is_satisfied and not rp.next.is_term:
                         rps |= self.expand_rule(rp.next)
 
                 new_state = fzset(rps)
                 lookahead[sym].append((Shift, new_state))
-                if sym == '$END':
+                if sym == Terminal('$END'):
                     self.end_states.append( new_state )
                 yield new_state
 
@@ -93,7 +93,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 if not len(v) == 1:
                     raise GrammarError("Collision in %s: %s" %(k, ', '.join(['\n  * %s: %s' % x for x in v])))
 
-            self.states[state] = {k:v[0] for k, v in lookahead.items()}
+            self.states[state] = {k.name:v[0] for k, v in lookahead.items()}
 
         for _ in bfs([self.start_state], step):
             pass

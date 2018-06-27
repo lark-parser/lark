@@ -19,9 +19,9 @@ parser = Lark(r"""
         section: "[" NAME "]" _NL item+
         item: NAME "=" VALUE? _NL
         VALUE: /./+
+
         %import common.CNAME -> NAME
         %import common.NEWLINE -> _NL
-
         %import common.WS_INLINE
         %ignore WS_INLINE
     """, parser="earley")

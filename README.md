@@ -22,6 +22,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 - [Documentation wiki](https://github.com/erezsh/lark/wiki)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
+- [Cheatsheet (PDF)](/docs/lark_cheatsheet.pdf)
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 - [Forum @googlegroups](https://groups.google.com/forum/#!forum/lark-parser) (New)
 
@@ -33,16 +34,27 @@ Lark has no dependencies.
 
 [![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
 
+### Syntax Highlighting (new)
+
+Lark now provides syntax highlighting for its grammar files (\*.lark):
+
+- [Sublime Text & TextMate](https://github.com/lark-parser/lark_syntax)
+- [vscode](https://github.com/lark-parser/vscode-lark)
+
+
 ### Hello World
 
 Here is a little program to parse "Hello, World!" (Or any other similar phrase):
 
 ```python
 from lark import Lark
+
 l = Lark('''start: WORD "," WORD "!"
-            %import common.WORD
-            %ignore " "
+
+            %import common.WORD   // imports from terminal library
+            %ignore " "           // Disregard spaces in text
          ''')
+
 print( l.parse("Hello, World!") )
 ```
 
@@ -56,7 +68,7 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 
 ### Fruit flies like bananas
 
-Lark is very good at handling ambiguity. Here's how it parses the phrase "fruit flies like bananas":
+Lark is great at handling ambiguity. Let's parse the phrase "fruit flies like bananas":
 
 ![fruitflies.png](examples/fruitflies.png)
 
@@ -153,6 +165,7 @@ Lark is currently accepting pull-requests.
 
 There are many ways you can help the project:
 
+* Help solve issues
 * Improve the documentation
 * Write new grammars for Lark's library
 * Write a blog post introducing Lark to your audience

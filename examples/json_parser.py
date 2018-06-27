@@ -33,6 +33,7 @@ json_grammar = r"""
     %ignore WS
 """
 
+
 class TreeToJson(Transformer):
     @v_args(inline=True)
     def string(self, s):
@@ -47,12 +48,14 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
+
 # json_parser = Lark(json_grammar, parser='earley', lexer='standard')
 # def parse(x):
 #     return TreeToJson().transform(json_parser.parse(x))
 
 json_parser = Lark(json_grammar, parser='lalr', lexer='standard', transformer=TreeToJson())
 parse = json_parser.parse
+
 
 def test():
     test_json = '''
@@ -71,8 +74,8 @@ def test():
     import json
     assert j == json.loads(test_json)
 
+
 if __name__ == '__main__':
     # test()
     with open(sys.argv[1]) as f:
         print(parse(f.read()))
-

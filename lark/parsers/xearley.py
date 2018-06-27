@@ -28,13 +28,15 @@ from ..grammar import NonTerminal, Terminal
 
 from .earley import ApplyCallbacks, Item, Column
 
+
 class Parser:
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False):
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=None, ignore=(), predict_all=False, complete_lex=False):
         self.analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.ignore = [Terminal(t) for t in ignore]
         self.predict_all = predict_all
+        self.complete_lex = complete_lex
 
         self.FIRST = self.analysis.FIRST
         self.postprocess = {}
@@ -101,12 +103,13 @@ class Parser:
                     t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                     delayed_matches[m.end()].append(item.advance(t))
 
-                    s = m.group(0)
-                    for j in range(1, len(s)):
-                        m = match(item.expect, s[:-j])
-                        if m:
-                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                            delayed_matches[i+m.end()].append(item.advance(t))
+                    if self.complete_lex:
+                        s = m.group(0)
+                        for j in range(1, len(s)):
+                            m = match(item.expect, s[:-j])
+                            if m:
+                                t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                                delayed_matches[i+m.end()].append(item.advance(t))
 
             next_set = Column(i+1, self.FIRST, predict_all=self.predict_all)
             next_set.add(delayed_matches[i+1])
@@ -131,7 +134,6 @@ class Parser:
                 text_column = 1
             else:
                 text_column += 1
-
 
         predict_and_complete(column)
 

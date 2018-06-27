@@ -83,7 +83,7 @@ class Earley(WithLexer):
 
 
 class XEarley:
-    def __init__(self, lexer_conf, parser_conf, options=None):
+    def __init__(self, lexer_conf, parser_conf, options=None, **kw):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
 
         self._prepare_match(lexer_conf)
@@ -92,7 +92,8 @@ class XEarley:
                                     self.match,
                                     resolve_ambiguity=get_ambiguity_resolver(options),
                                     ignore=lexer_conf.ignore,
-                                    predict_all=options.earley__predict_all
+                                    predict_all=options.earley__predict_all,
+                                    **kw
                                     )
 
     def match(self, term, text, index=0):
@@ -114,6 +115,11 @@ class XEarley:
 
     def parse(self, text):
         return self.parser.parse(text)
+
+class XEarley_CompleteLex(XEarley):
+    def __init__(self, *args, **kw):
+        super(self).__init__(*args, complete_lex=True, **kw)
+
 
 
 class CYK(WithLexer):
@@ -165,6 +171,8 @@ def get_frontend(parser, lexer):
             return Earley
         elif lexer=='dynamic':
             return XEarley
+        elif lexer=='dynamic_complete':
+            return XEarley_CompleteLex
         elif lexer=='contextual':
             raise ValueError('The Earley parser does not support the contextual parser')
         else:

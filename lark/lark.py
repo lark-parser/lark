@@ -14,6 +14,7 @@ from .lexer import Lexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 
+
 class LarkOptions(object):
     """Specifies the options for Lark
 
@@ -26,6 +27,8 @@ class LarkOptions(object):
             "standard": Use a standard lexer
             "contextual": Stronger lexer (only works with parser="lalr")
             "dynamic": Flexible and powerful (only with parser="earley")
+            "dynamic_complete": Same as dynamic, but tries *every* variation
+                                of tokenizing possible. (only with parser="earley")
             "auto" (default): Choose for me based on grammar and parser
 
         ambiguity - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
@@ -139,7 +142,7 @@ class Lark:
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic')
+        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete')
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
@@ -213,8 +216,7 @@ class Lark:
         stream = self.lexer.lex(text)
         if self.options.postlex:
             return self.options.postlex.process(stream)
-        else:
-            return stream
+        return stream
 
     def parse(self, text):
         "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
@@ -231,4 +233,3 @@ class Lark:
         # else:
         #     l = list(self.lex(text))
         #     return self.parser.parse(l)
-

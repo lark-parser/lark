@@ -18,7 +18,7 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.exceptions import GrammarError, ParseError, UnexpectedToken, LexError, UnexpectedInput
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput
 from lark.tree import Tree
 from lark.visitors import Transformer
 
@@ -184,6 +184,7 @@ def _make_full_earley_test(LEXER):
             l.parse(program)
 
 
+        @unittest.skipIf(LEXER=='dynamic', "Only relevant for the dynamic_complete parser")
         def test_earley3(self):
             "Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)"
 
@@ -289,6 +290,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(res, expected)
 
 
+        @unittest.skipIf(LEXER=='dynamic', "Only relevant for the dynamic_complete parser")
         def test_explicit_ambiguity2(self):
             grammar = r"""
             start: NAME+
@@ -1175,6 +1177,7 @@ _TO_TEST = [
         ('standard', 'earley'),
         ('standard', 'cyk'),
         ('dynamic', 'earley'),
+        ('dynamic_complete', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
         # (None, 'earley'),

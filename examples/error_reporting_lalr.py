@@ -60,14 +60,14 @@ def parse(json_text):
 
 def test():
     try:
-        parse('{"key": "value"')
-    except JsonMissingClosing:
-        pass
+        parse('{"example1": "value"')
+    except JsonMissingClosing as e:
+        print(e)
 
     try:
-        parse('{"key": ] ')
-    except JsonMissingOpening:
-        pass
+        parse('{"example2": ] ')
+    except JsonMissingOpening as e:
+        print(e)
 
 
 if __name__ == '__main__':

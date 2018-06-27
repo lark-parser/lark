@@ -23,9 +23,9 @@ test_json = '''
     }
 '''
 
-def test_scanless():
+def test_earley():
 
-    json_parser = Lark(json_grammar, lexer=None)
+    json_parser = Lark(json_grammar)
     tree = json_parser.parse(test_json)
 
     # print ('@@', tree.pretty())
@@ -48,5 +48,5 @@ def test_lalr():
     print (new_json)
     print (json.loads(new_json) == json.loads(test_json))
 
-test_scanless()
+test_earley()
 test_lalr()

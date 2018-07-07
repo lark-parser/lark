@@ -1,6 +1,7 @@
 "Parses and creates Grammar objects"
 
 import os.path
+import sys
 from itertools import chain
 import re
 from ast import literal_eval
@@ -75,6 +76,7 @@ TERMINALS = {
     '_RBRA': r'\]',
     'OP': '[+*][?]?|[?](?![a-z])',
     '_COLON': ':',
+    '_COMMA': ',',
     '_OR': r'\|',
     '_DOT': r'\.',
     'TILDE': '~',
@@ -89,6 +91,7 @@ TERMINALS = {
     '_IGNORE': r'%ignore',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
+    '_FROM': r'%from',
     'NUMBER': r'\d+',
 }
 
@@ -133,15 +136,20 @@ RULES = {
 
     'token': ['TERMINAL _COLON expansions _NL',
               'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'declare'],
+    'statement': ['ignore', 'import', 'rel_import', 'from', 'rel_from', 'declare'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
+    'from': ['_FROM import_args _IMPORT list_name _NL'],
+    'rel_from': ['_FROM _DOT import_args _IMPORT list_name _NL'],
     'import': ['_IMPORT import_args _NL',
                '_IMPORT import_args _TO TERMINAL _NL'],
+    'rel_import': ['_IMPORT _DOT import_args _NL',
+                   '_IMPORT _DOT import_args _TO TERMINAL _NL'],
     'import_args': ['_import_args'],
+    'list_name': ['_list_name'],
     '_import_args': ['name', '_import_args _DOT name'],
+    '_list_name': ['name', '_list_name _COMMA name'],
     '_declare_args': ['name', '_declare_args name'],
-
     'literal': ['REGEXP', 'STRING'],
 }
 
@@ -497,13 +505,25 @@ class Grammar:
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path):
+def import_grammar(grammar_path, base_path=None):
     if grammar_path not in _imported_grammars:
-        for import_path in IMPORT_PATHS:
-            with open(os.path.join(import_path, grammar_path)) as f:
-                text = f.read()
-            grammar = load_grammar(text, grammar_path)
-            _imported_grammars[grammar_path] = grammar
+        if base_path is None:
+            import_paths = IMPORT_PATHS
+        else:
+            import_paths = [base_path] + IMPORT_PATHS
+        found = False
+        for import_path in import_paths:
+            try:
+                with open(os.path.join(import_path, grammar_path)) as f:
+                    text = f.read()
+                grammar = load_grammar(text, grammar_path)
+                _imported_grammars[grammar_path] = grammar
+                found = True
+                break
+            except FileNotFoundError:
+                pass
+        if not found:
+            raise FileNotFoundError(grammar_path)
 
     return _imported_grammars[grammar_path]
 
@@ -572,13 +592,14 @@ class GrammarLoader:
 
         self.canonize_tree = CanonizeTree()
 
-    def load_grammar(self, grammar_text, name='<?>'):
+    def load_grammar(self, grammar_text, grammar_name='<?>'):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
 
         try:
             tree = self.canonize_tree.transform( self.parser.parse(grammar_text+'\n') )
         except UnexpectedCharacters as e:
-            raise GrammarError("Unexpected input %r at line %d column %d in %s" % (e.context, e.line, e.column, name))
+            raise GrammarError("Unexpected input %r at line %d column %d in %s" %
+                               (e.context, e.line, e.column, grammar_name))
         except UnexpectedToken as e:
             context = e.get_context(grammar_text)
             error = e.match_examples(self.parser.parse, {
@@ -617,14 +638,39 @@ class GrammarLoader:
             if stmt.data == 'ignore':
                 t ,= stmt.children
                 ignore.append(t)
-            elif stmt.data == 'import':
+            elif stmt.data in ['import', 'rel_import']:
                 dotted_path = stmt.children[0].children
                 name = stmt.children[1] if len(stmt.children)>1 else dotted_path[-1]
                 grammar_path = os.path.join(*dotted_path[:-1]) + '.lark'
-                g = import_grammar(grammar_path)
+                if stmt.data == 'import':
+                    g = import_grammar(grammar_path)
+                else:
+                    if grammar_name == '<string>':
+                        base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                    else:
+                        base_file = grammar_name
+                    base_path = os.path.split(base_file)[0]
+                    g = import_grammar(grammar_path, base_path=base_path)
                 token_options = dict(g.token_defs)[dotted_path[-1]]
                 assert isinstance(token_options, tuple) and len(token_options)==2
                 token_defs.append([name.value, token_options])
+            elif stmt.data in ['from', 'rel_from']:
+                dotted_path = stmt.children[0].children
+                names = stmt.children[1].children
+                grammar_path = os.path.join(*dotted_path) + '.lark'
+                if stmt.data == 'from':
+                    g = import_grammar(grammar_path)
+                else:
+                    if grammar_name == '<string>':
+                        base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                    else:
+                        base_file = grammar_name
+                    base_path = os.path.split(base_file)[0]
+                    g = import_grammar(grammar_path, base_path=base_path)
+                for name in names:
+                    token_options = dict(g.token_defs)[name]
+                    assert isinstance(token_options, tuple) and len(token_options) == 2
+                    token_defs.append([name.value, token_options])
             elif stmt.data == 'declare':
                 for t in stmt.children:
                     token_defs.append([t.value, (None, None)])

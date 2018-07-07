@@ -936,6 +936,64 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('12 elephants')
             self.assertEqual(x.children, ['12', 'elephants'])
 
+
+        def test_relative_import_from(self):
+            grammar = """
+            start: NUMBER WORD
+
+            %from .grammars.test %import NUMBER
+            %import common.WORD
+            %import common.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 lions')
+            self.assertEqual(x.children, ['12', 'lions'])
+
+        def test_import_from_common(self):
+            grammar = """
+            start: NUMBER WORD
+
+            %from common %import NUMBER
+            %import common.WORD
+            %import common.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 toucans')
+            self.assertEqual(x.children, ['12', 'toucans'])
+
+
+        def test_relative_multi_import_from(self):
+            grammar = """
+           start: NUMBER WORD
+
+           %from .grammars.test %import NUMBER, WORD, WS
+           %ignore WS
+
+           """
+            l = _Lark(grammar)
+            x = l.parse('12 lions')
+            self.assertEqual(x.children, ['12', 'lions'])
+
+
+        def test_relative_import(self):
+            grammar = """
+            start: NUMBER WORD
+
+            %import .grammars.test.NUMBER
+            %import .grammars.test.WORD
+            %import .grammars.test.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 capybaras')
+            self.assertEqual(x.children, ['12', 'capybaras'])
+
+
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization(self):
             "Tests effect of priority on result"

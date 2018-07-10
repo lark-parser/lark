@@ -10,7 +10,7 @@ from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer
+from .lexer import Lexer, TraditionalLexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 
@@ -142,7 +142,7 @@ class Lark:
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete')
+        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete') or issubclass(lexer, Lexer)
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
@@ -171,7 +171,7 @@ class Lark:
     __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
-        return Lexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)

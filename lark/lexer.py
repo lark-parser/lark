@@ -168,6 +168,17 @@ def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s' in r and '.' in r)
 
 class Lexer:
+    """Lexer interface
+
+    Method Signatures:
+        lex(self, stream) -> Iterator[Token]
+
+        set_parser_state(self, state)   # Optional
+    """
+    set_parser_state = NotImplemented
+    lex = NotImplemented
+
+class TraditionalLexer(Lexer):
     def __init__(self, tokens, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TokenDef) for t in tokens), tokens
 
@@ -206,7 +217,7 @@ class Lexer:
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
 
-class ContextualLexer:
+class ContextualLexer(Lexer):
     def __init__(self, tokens, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in tokens:
@@ -222,12 +233,12 @@ class ContextualLexer:
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
-                lexer = Lexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
+                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = Lexer(tokens, ignore=ignore, user_callbacks=user_callbacks)
+        self.root_lexer = TraditionalLexer(tokens, ignore=ignore, user_callbacks=user_callbacks)
 
         self.set_parser_state(None) # Needs to be set on the outside
 

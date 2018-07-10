@@ -1,8 +1,9 @@
 import re
-from .utils import get_regexp_width
+from functools import partial
 
+from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import Lexer, ContextualLexer, Token
+from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
 
 from .exceptions import GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
@@ -11,7 +12,7 @@ from .tree import Tree
 class WithLexer:
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
-        self.lexer = Lexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
 
     def init_contextual_lexer(self, lexer_conf, parser_conf):
         self.lexer_conf = lexer_conf
@@ -29,25 +30,27 @@ class WithLexer:
         else:
             return stream
 
+    def parse(self, text):
+        token_stream = self.lex(text)
+        sps = self.lexer.set_parser_state
+        return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
 
-class LALR(WithLexer):
+class LALR_TraditionalLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.parser = lalr_parser.Parser(parser_conf)
         self.init_traditional_lexer(lexer_conf)
-
-    def parse(self, text):
-        token_stream = self.lex(text)
-        return self.parser.parse(token_stream)
-
 
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.parser = lalr_parser.Parser(parser_conf)
         self.init_contextual_lexer(lexer_conf, parser_conf)
 
-    def parse(self, text):
-        token_stream = self.lex(text)
-        return self.parser.parse(token_stream, self.lexer.set_parser_state)
+class LALR_CustomLexer(WithLexer):
+    def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
+        self.parser = lalr_parser.Parser(parser_conf)
+        self.lexer_conf = lexer_conf
+        self.lexer = lexer_cls(lexer_conf)
+
 
 def get_ambiguity_resolver(options):
     if not options or options.ambiguity == 'resolve':
@@ -76,10 +79,6 @@ class Earley(WithLexer):
 
     def match(self, term, token):
         return term.name == token.type
-
-    def parse(self, text):
-        tokens = self.lex(text)
-        return self.parser.parse(tokens)
 
 
 class XEarley:
@@ -161,9 +160,11 @@ def get_frontend(parser, lexer):
         if lexer is None:
             raise ValueError('The LALR parser requires use of a lexer')
         elif lexer == 'standard':
-            return LALR
+            return LALR_TraditionalLexer
         elif lexer == 'contextual':
             return LALR_ContextualLexer
+        elif issubclass(lexer, Lexer):
+            return partial(LALR_CustomLexer, lexer)
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':

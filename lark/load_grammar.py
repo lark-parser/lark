@@ -10,7 +10,7 @@ from .lexer import Token
 
 
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import LALR
+from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf, PatternStr, PatternRE, TokenDef
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress
@@ -568,7 +568,7 @@ class GrammarLoader:
         lexer_conf = LexerConf(tokens, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, 'start')
-        self.parser = LALR(lexer_conf, parser_conf)
+        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
 
         self.canonize_tree = CanonizeTree()
 

@@ -8,7 +8,7 @@
 # the spaces (and tabs) after the newline.
 #
 
-from lark.lark import Lark
+from lark import Lark
 from lark.indenter import Indenter
 
 tree_grammar = r"""

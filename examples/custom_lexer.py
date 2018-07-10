@@ -16,7 +16,6 @@ class TypeLexer(Lexer):
         pass
 
     def lex(self, data):
-        print(data)
         for obj in data:
             if isinstance(obj, int):
                 yield Token('INT', obj)
@@ -44,9 +43,12 @@ class ParseToDict(Transformer):
 def test():
     data = ['alice', 1, 27, 3, 'bob', 4, 'carrie', 'dan', 8, 6]
 
+    print(data)
+
     tree = parser.parse(data)
     res = ParseToDict().transform(tree)
 
+    print('-->')
     print(res) # prints {'alice': [1, 27, 3], 'bob': [4], 'carrie': [], 'dan': [8, 6]} 
 
 

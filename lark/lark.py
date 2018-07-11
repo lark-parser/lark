@@ -202,7 +202,7 @@ class Lark:
         if rel_to:
             basepath = os.path.dirname(rel_to)
             grammar_filename = os.path.join(basepath, grammar_filename)
-        with open(grammar_filename) as f:
+        with open(grammar_filename, encoding='utf8') as f:
             return cls(f, **options)
 
     def __repr__(self):

@@ -17,7 +17,7 @@ from .utils import classify, suppress
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
-from .visitors import Transformer, Visitor, v_args
+from .visitors import Transformer, Visitor, v_args, Transformer_InPlace
 inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
@@ -147,7 +147,7 @@ RULES = {
 
 
 @inline_args
-class EBNF_to_BNF(Transformer):
+class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
         self.new_rules = []
         self.rules_by_expr = {}
@@ -252,7 +252,7 @@ class RuleTreeToText(Transformer):
 
 
 @inline_args
-class CanonizeTree(Transformer):
+class CanonizeTree(Transformer_InPlace):
     def maybe(self, expr):
         return ST('expr', [expr, Token('OP', '?', -1)])
 
@@ -262,7 +262,7 @@ class CanonizeTree(Transformer):
         tokenmods, value = args
         return tokenmods + [value]
 
-class PrepareAnonTerminals(Transformer):
+class PrepareAnonTerminals(Transformer_InPlace):
     "Create a unique list of anonymous tokens. Attempt to give meaningful names to them when we add them"
 
     def __init__(self, tokens):
@@ -363,7 +363,7 @@ def _literal_to_pattern(literal):
 
 
 @inline_args
-class PrepareLiterals(Transformer):
+class PrepareLiterals(Transformer_InPlace):
     def literal(self, literal):
         return ST('pattern', [_literal_to_pattern(literal)])
 
@@ -416,7 +416,7 @@ class TokenTreeToPattern(Transformer):
     def value(self, v):
         return v[0]
 
-class PrepareSymbols(Transformer):
+class PrepareSymbols(Transformer_InPlace):
     def value(self, v):
         v ,= v
         if isinstance(v, Tree):
@@ -551,7 +551,7 @@ def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
 
 @inline_args
-class PrepareGrammar(Transformer):
+class PrepareGrammar(Transformer_InPlace):
     def terminal(self, name):
         return name
     def nonterminal(self, name):

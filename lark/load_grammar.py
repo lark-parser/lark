@@ -311,7 +311,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Terminal(Token('TERMINAL', token_name, -1), filter_out=isinstance(p, PatternStr))
+        return Terminal(token_name, filter_out=isinstance(p, PatternStr))
 
 
 def _rfind(s, choices):

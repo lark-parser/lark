@@ -20,7 +20,7 @@
 
 from collections import defaultdict
 
-from ..exceptions import ParseError, UnexpectedInput
+from ..exceptions import ParseError, UnexpectedCharacters
 from ..lexer import Token
 from ..tree import Tree
 from .grammar_analysis import GrammarAnalyzer
@@ -116,7 +116,7 @@ class Parser:
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             if not next_set and not delayed_matches:
-                raise UnexpectedInput(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan))
+                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan))
 
             return next_set
 

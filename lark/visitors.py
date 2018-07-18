@@ -19,17 +19,22 @@ class Transformer:
     Can be used to implement map or reduce.
     """
 
-    def _call_userfunc(self, data, children, meta):
+    def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
+        children = new_children if new_children is not None else tree.children
         try:
-            f = getattr(self, data)
+            f = getattr(self, tree.data)
         except AttributeError:
-            return self.__default__(data, children, meta)
+            return self.__default__(tree.data, children, tree.meta)
         else:
             if getattr(f, 'meta', False):
-                return f(children, meta)
+                return f(children, tree.meta)
             elif getattr(f, 'inline', False):
                 return f(*children)
+            elif getattr(f, 'whole_tree', False):
+                if new_children is not None:
+                    raise NotImplementedError("Doesn't work with the base Transformer class")
+                return f(tree)
             else:
                 return f(children)
 
@@ -42,7 +47,7 @@ class Transformer:
 
     def _transform_tree(self, tree):
         children = list(self._transform_children(tree.children))
-        return self._call_userfunc(tree.data, children, tree.meta)
+        return self._call_userfunc(tree, children)
 
     def transform(self, tree):
         return self._transform_tree(tree)
@@ -68,12 +73,13 @@ class Transformer:
 
 
 class InlineTransformer(Transformer):   # XXX Deprecated
-    def _call_userfunc(self, data, children, meta):
+    def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
+        children = new_children if new_children is not None else tree.children
         try:
-            f = getattr(self, data)
+            f = getattr(self, tree.data)
         except AttributeError:
-            return self.__default__(data, children, meta)
+            return self.__default__(tree.data, children, tree.meta)
         else:
             return f(*children)
 
@@ -94,7 +100,7 @@ class TransformerChain(object):
 class Transformer_InPlace(Transformer):
     "Non-recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):           # Cancel recursion
-        return self._call_userfunc(tree.data, tree.children, tree.meta)
+        return self._call_userfunc(tree)
 
     def transform(self, tree):
         for subtree in tree.iter_subtrees():
@@ -107,7 +113,7 @@ class Transformer_InPlaceRecursive(Transformer):
     "Recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
-        return self._call_userfunc(tree.data, tree.children, tree.meta)
+        return self._call_userfunc(tree)
 
 
 
@@ -218,8 +224,8 @@ def inline_args(obj):   # XXX Deprecated
 
 
 
-def _visitor_args_func_dec(func, inline=False, meta=False):
-    assert not (inline and meta)
+def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False):
+    assert [whole_tree, meta, inline].count(True) <= 1
     def create_decorator(_f, with_self):
         if with_self:
             def f(self, *args, **kwargs):
@@ -232,14 +238,15 @@ def _visitor_args_func_dec(func, inline=False, meta=False):
     f = smart_decorator(func, create_decorator)
     f.inline = inline
     f.meta = meta
+    f.whole_tree = whole_tree
     return f
 
-def v_args(inline=False, meta=False):
+def v_args(inline=False, meta=False, tree=False):
     "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
-    if inline and meta:
-        raise ValueError("Visitor functions can either accept meta, or be inlined. Not both.")
+    if [tree, meta, inline].count(True) > 1:
+        raise ValueError("Visitor functions can either accept tree, or meta, or be inlined. These cannot be combined.")
     def _visitor_args_dec(obj):
-        return _apply_decorator(obj, _visitor_args_func_dec, inline=inline, meta=meta)
+        return _apply_decorator(obj, _visitor_args_func_dec, inline=inline, meta=meta, whole_tree=tree)
     return _visitor_args_dec
 
 

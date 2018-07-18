@@ -27,7 +27,7 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
-        if children:
+        if children and isinstance(res, Tree):
             for a in children:
                 if isinstance(a, Tree):
                     res.meta.line = a.meta.line

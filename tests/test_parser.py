@@ -941,7 +941,7 @@ def _make_parser_test(LEXER, PARSER):
             grammar = """
             start: NUMBER WORD
 
-            %from .grammars.test.NUMBER
+            %import .grammars.test.NUMBER
             %import common.WORD
             %import common.WS
             %ignore WS

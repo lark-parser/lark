@@ -91,7 +91,6 @@ TERMINALS = {
     '_IGNORE': r'%ignore',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
-    '_FROM': r'%from',
     'NUMBER': r'\d+',
 }
 
@@ -136,19 +135,21 @@ RULES = {
 
     'token': ['TERMINAL _COLON expansions _NL',
               'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'rel_import', 'from', 'rel_from', 'declare'],
+    'statement': ['ignore', 'import', 'declare'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
-    'from': ['_FROM import_args _IMPORT list_name _NL'],
-    'rel_from': ['_FROM _DOT import_args _IMPORT list_name _NL'],
-    'import': ['_IMPORT import_args _NL',
-               '_IMPORT import_args _TO TERMINAL _NL'],
-    'rel_import': ['_IMPORT _DOT import_args _NL',
-                   '_IMPORT _DOT import_args _TO TERMINAL _NL'],
-    'import_args': ['_import_args'],
-    'list_name': ['_list_name'],
+    'import': ['_IMPORT _import_path _NL',
+               '_IMPORT _import_path _LPAR list_name _RPAR _NL',
+               '_IMPORT _import_path _TO TERMINAL _NL'],
+
+    '_import_path': ['import_common', 'import_rel'],
+    'import_common': ['_import_args'],
+    'import_rel': ['_DOT _import_args'],
     '_import_args': ['name', '_import_args _DOT name'],
+
+    'list_name': ['_list_name'],
     '_list_name': ['name', '_list_name _COMMA name'],
+
     '_declare_args': ['name', '_declare_args name'],
     'literal': ['REGEXP', 'STRING'],
 }
@@ -638,39 +639,33 @@ class GrammarLoader:
             if stmt.data == 'ignore':
                 t ,= stmt.children
                 ignore.append(t)
-            elif stmt.data in ['import', 'rel_import']:
+            elif stmt.data == 'import':
                 dotted_path = stmt.children[0].children
-                name = stmt.children[1] if len(stmt.children)>1 else dotted_path[-1]
-                grammar_path = os.path.join(*dotted_path[:-1]) + '.lark'
-                if stmt.data == 'import':
+
+                if len(stmt.children) > 1 and hasattr(stmt.children[1], 'children'):  # Multi import
+                    names = stmt.children[1].children
+                    aliases = names  # Can't have aliased multi import, so all aliases will be the same as names
+                    grammar_path = os.path.join(*dotted_path) + '.lark'
+                else:  # Single import
+                    names = [dotted_path[-1]]  # Get name from dotted path
+                    aliases = [stmt.children[1] if len(stmt.children) > 1 else dotted_path[-1]]  # Aliases if exist
+                    grammar_path = os.path.join(*dotted_path[:-1]) + '.lark'  # Exclude name from grammar path
+
+                if stmt.children[0].data == 'import_common':  # Regular import
                     g = import_grammar(grammar_path)
-                else:
-                    if grammar_name == '<string>':
+                else:  # Relative import
+                    if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
                         base_file = os.path.abspath(sys.modules['__main__'].__file__)
                     else:
-                        base_file = grammar_name
+                        base_file = grammar_name  # Import relative to grammar file path if external grammar file
                     base_path = os.path.split(base_file)[0]
                     g = import_grammar(grammar_path, base_path=base_path)
-                token_options = dict(g.token_defs)[dotted_path[-1]]
-                assert isinstance(token_options, tuple) and len(token_options)==2
-                token_defs.append([name.value, token_options])
-            elif stmt.data in ['from', 'rel_from']:
-                dotted_path = stmt.children[0].children
-                names = stmt.children[1].children
-                grammar_path = os.path.join(*dotted_path) + '.lark'
-                if stmt.data == 'from':
-                    g = import_grammar(grammar_path)
-                else:
-                    if grammar_name == '<string>':
-                        base_file = os.path.abspath(sys.modules['__main__'].__file__)
-                    else:
-                        base_file = grammar_name
-                    base_path = os.path.split(base_file)[0]
-                    g = import_grammar(grammar_path, base_path=base_path)
-                for name in names:
+
+                for name, alias in zip(names, aliases):
                     token_options = dict(g.token_defs)[name]
-                    assert isinstance(token_options, tuple) and len(token_options) == 2
-                    token_defs.append([name.value, token_options])
+                    assert isinstance(token_options, tuple) and len(token_options)==2
+                    token_defs.append([alias.value, token_options])
+
             elif stmt.data == 'declare':
                 for t in stmt.children:
                     token_defs.append([t.value, (None, None)])

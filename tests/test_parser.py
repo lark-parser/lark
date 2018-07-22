@@ -937,11 +937,11 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'elephants'])
 
 
-        def test_relative_import_from(self):
+        def test_relative_import(self):
             grammar = """
             start: NUMBER WORD
 
-            %from .grammars.test %import NUMBER
+            %from .grammars.test.NUMBER
             %import common.WORD
             %import common.WS
             %ignore WS
@@ -951,13 +951,11 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('12 lions')
             self.assertEqual(x.children, ['12', 'lions'])
 
-        def test_import_from_common(self):
+        def test_multi_import(self):
             grammar = """
             start: NUMBER WORD
 
-            %from common %import NUMBER
-            %import common.WORD
-            %import common.WS
+            %import common (NUMBER, WORD, WS)
             %ignore WS
 
             """
@@ -966,29 +964,14 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'toucans'])
 
 
-        def test_relative_multi_import_from(self):
+        def test_relative_multi_import(self):
             grammar = """
            start: NUMBER WORD
 
-           %from .grammars.test %import NUMBER, WORD, WS
+           %import .grammars.test (NUMBER, WORD, WS)
            %ignore WS
 
            """
-            l = _Lark(grammar)
-            x = l.parse('12 lions')
-            self.assertEqual(x.children, ['12', 'lions'])
-
-
-        def test_relative_import(self):
-            grammar = """
-            start: NUMBER WORD
-
-            %import .grammars.test.NUMBER
-            %import .grammars.test.WORD
-            %import .grammars.test.WS
-            %ignore WS
-
-            """
             l = _Lark(grammar)
             x = l.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])

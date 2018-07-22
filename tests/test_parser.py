@@ -976,6 +976,20 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 
+        def test_import_errors(self):
+            grammar = """
+            start: NUMBER WORD
+
+            %import .grammars.bad_test.NUMBER
+            """
+            self.assertRaises(IOError, _Lark, grammar)
+
+            grammar = """
+            start: NUMBER WORD
+
+            %import bad_test.NUMBER
+            """
+            self.assertRaises(IOError, _Lark, grammar)
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization(self):

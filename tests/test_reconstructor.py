@@ -10,14 +10,16 @@ common = """
 %ignore WS_INLINE
 """
 
+def _remove_ws(s):
+    return s.replace(' ', '').replace('\n','')
 
 class TestReconstructor(TestCase):
 
-    def reconstruct(self, grammar, code):
+    def assert_reconstruct(self, grammar, code):
         parser = Lark(grammar, parser='lalr')
         tree = parser.parse(code)
         new = Reconstructor(parser).reconstruct(tree)
-        self.assertEqual(code.replace(' ', ''), new.replace(' ', ''))
+        self.assertEqual(_remove_ws(code), _remove_ws(new))
 
     def test_starred_rule(self):
 
@@ -33,7 +35,7 @@ class TestReconstructor(TestCase):
         Elephants: 12
         """
 
-        self.reconstruct(g, code)
+        self.assert_reconstruct(g, code)
 
     def test_starred_group(self):
 
@@ -47,7 +49,7 @@ class TestReconstructor(TestCase):
         Elephants: 12
         """
 
-        self.reconstruct(g, code)
+        self.assert_reconstruct(g, code)
 
     def test_alias(self):
 
@@ -65,7 +67,7 @@ class TestReconstructor(TestCase):
         hello
         """
 
-        self.reconstruct(g, code)
+        self.assert_reconstruct(g, code)
 
     def test_json_example(self):
         test_json = '''

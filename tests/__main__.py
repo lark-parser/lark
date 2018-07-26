@@ -5,6 +5,7 @@ import logging
 
 from .test_trees import TestTrees
 from .test_tools import TestStandalone
+from .test_reconstructor import TestReconstructor
 
 try:
     from .test_nearley.test_nearley import TestNearley

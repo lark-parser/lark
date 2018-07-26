@@ -75,7 +75,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.column = getattr(token, 'column', '?')
         self.considered_rules = considered_rules
         self.state = state
-        self.pos_in_stream = token.pos_in_stream
+        self.pos_in_stream = getattr(token, 'pos_in_stream', None)
 
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected: %s\n"

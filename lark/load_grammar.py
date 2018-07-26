@@ -448,8 +448,10 @@ class Grammar:
         self.ignore = ignore
 
     def compile(self):
-        token_defs = list(self.token_defs)
-        rule_defs = self.rule_defs
+        # We change the trees in-place (to support huge grammars)
+        # So deepcopy allows calling compile more than once.
+        token_defs = deepcopy(list(self.token_defs))
+        rule_defs = deepcopy(self.rule_defs)
 
         # =================
         #  Compile Tokens

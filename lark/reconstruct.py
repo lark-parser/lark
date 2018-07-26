@@ -67,38 +67,42 @@ class MakeMatchTree:
 
 class Reconstructor:
     def __init__(self, parser):
-        # Recreate the rules to assume a standard lexer
-        _tokens, rules, _grammar_extra = parser.grammar.compile()
+        # XXX TODO calling compile twice returns different results!
+        tokens, rules, _grammar_extra = parser.grammar.compile()
 
-        expand1s = {r.origin for r in parser.rules if r.options and r.options.expand1}
+        self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
+        self.rules = list(self._build_recons_rules(rules))
 
-        d = defaultdict(list)
+    def _build_recons_rules(self, rules):
+        expand1s = {r.origin for r in rules if r.options and r.options.expand1}
+
+        aliases = defaultdict(list)
         for r in rules:
-            # Rules can match their alias
             if r.alias:
-                alias = NonTerminal(r.alias)
-                d[alias].append(r.expansion)
-                d[r.origin].append([alias])
-            else:
-                d[r.origin].append(r.expansion)
+                aliases[r.origin].append( r.alias )
 
-            # Expanded rules can match their own terminal
-            for sym in r.expansion:
-                if sym in expand1s:
-                    d[sym].append([Terminal(sym.name)])
+        rule_names = {r.origin for r in rules}
+        nonterminals = {sym for sym in rule_names
+                       if sym.name.startswith('_') or sym in expand1s or sym in aliases }
 
-        reduced_rules = defaultdict(list)
-        for name, expansions in d.items():
-            for expansion in expansions:
-                reduced = [sym if sym.name.startswith('_') or sym in expand1s else Terminal(sym.name)
-                           for sym in expansion if not is_discarded_terminal(sym)]
+        for r in rules:
+            recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
+                          for sym in r.expansion if not is_discarded_terminal(sym)]
 
-                reduced_rules[name, tuple(reduced)].append(expansion)
+            # Skip self-recursive constructs
+            if recons_exp == [r.origin]:
+                continue
 
-        self.rules = [Rule(name, list(reduced), MakeMatchTree(name.name, expansions[0]), None)
-                      for (name, reduced), expansions in reduced_rules.items()]
+            sym = NonTerminal(r.alias) if r.alias else r.origin
 
-        self.write_tokens = WriteTokensTransformer({t.name:t for t in _tokens})
+            yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
+
+        for origin, rule_aliases in aliases.items():
+            for alias in rule_aliases:
+                yield Rule(origin, [Terminal(alias)], MakeMatchTree(origin.name, [NonTerminal(alias)]))
+            
+            yield Rule(origin, [Terminal(origin.name)], MakeMatchTree(origin.name, [origin]))
+        
 
 
     def _match(self, term, token):

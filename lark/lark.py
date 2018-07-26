@@ -157,9 +157,9 @@ class Lark:
         self.grammar = load_grammar(grammar, self.source)
 
         # Compile the EBNF grammar into BNF
-        tokens, self.rules, self.ignore_tokens = self.grammar.compile()
+        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile()
 
-        self.lexer_conf = LexerConf(tokens, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
+        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 
         if self.options.parser:
             self.parser = self._build_parser()

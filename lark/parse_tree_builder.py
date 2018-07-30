@@ -134,8 +134,10 @@ class ParseTreeBuilder:
     def create_callback(self, transformer=None):
         callback = Callback()
 
+        i = 0
         for rule, wrapper_chain in self.rule_builders:
-            internal_callback_name = '_callback_%s_%s' % (rule.origin, '_'.join(x.name for x in rule.expansion))
+            internal_callback_name = '_cb%d_%s' % (i, rule.origin)
+            i += 1
 
             user_callback_name = rule.alias or rule.origin.name
             try:

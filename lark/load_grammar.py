@@ -235,6 +235,7 @@ class SimplifyRule_Visitor(Visitor):
                 tree.children = [self.visit(ST('expansion', [option if i==j else other
                                                             for j, other in enumerate(tree.children)]))
                                     for option in set(child.children)]
+                self._flatten(tree)
                 break
 
     def alias(self, tree):

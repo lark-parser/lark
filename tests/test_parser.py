@@ -148,6 +148,9 @@ class TestParsers(unittest.TestCase):
         self.assertEqual( r.children, ["<c>"] )
 
 
+    def test_alias(self):
+        Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)
+
 
 
 def _make_full_earley_test(LEXER):

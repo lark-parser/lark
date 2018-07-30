@@ -281,6 +281,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         self.token_set = {td.name for td in self.tokens}
         self.token_reverse = {td.pattern: td for td in tokens}
         self.i = 0
+        self.rule_options = None
 
 
     @inline_args
@@ -322,7 +323,9 @@ class PrepareAnonTerminals(Transformer_InPlace):
             self.token_reverse[p] = tokendef
             self.tokens.append(tokendef)
 
-        return Terminal(token_name, filter_out=isinstance(p, PatternStr))
+        filter_out = False if self.rule_options and self.rule_options.keep_all_tokens else isinstance(p, PatternStr)
+
+        return Terminal(token_name, filter_out=filter_out)
 
 
 def _rfind(s, choices):
@@ -474,13 +477,16 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(tokens)   # Adds to tokens
+        anon_tokens_transf = PrepareAnonTerminals(tokens)
+        transformer = PrepareLiterals() * PrepareSymbols() * anon_tokens_transf   # Adds to tokens
 
         # 2. Convert EBNF to BNF (and apply step 1)
         ebnf_to_bnf = EBNF_to_BNF()
         rules = []
         for name, rule_tree, options in rule_defs:
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = rule_options
+            anon_tokens_transf.rule_options = rule_options
             tree = transformer.transform(rule_tree)
             rules.append((name, ebnf_to_bnf.transform(tree), options))
         rules += ebnf_to_bnf.new_rules

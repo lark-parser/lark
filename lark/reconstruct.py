@@ -96,6 +96,10 @@ class Reconstructor:
 
             sym = NonTerminal(r.alias) if r.alias else r.origin
 
+            if sym in expand1s:
+                expand1s.remove(sym)
+                yield Rule(sym, [Terminal(sym.name)], MakeMatchTree(sym.name, [NonTerminal(sym.name)]))
+
             yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
 
         for origin, rule_aliases in aliases.items():
@@ -114,14 +118,8 @@ class Reconstructor:
         assert False
 
     def _reconstruct(self, tree):
-        if self._parser_cache is None:
-            # TODO: ambiguity?
-            parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match,
-                                   resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
-            self._parser_cache = parser
-        else:
-            parser = self._parser_cache
-            parser.parser_conf.start = tree.data
+        parser = self._parser_cache
+        parser.parser_conf.start = tree.data
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
@@ -133,5 +131,9 @@ class Reconstructor:
                 yield item
 
     def reconstruct(self, tree):
+        # TODO: ambiguity?
+        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match,
+                               resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+        self._parser_cache = parser
         return ''.join(self._reconstruct(tree))
 

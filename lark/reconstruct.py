@@ -72,7 +72,7 @@ class Reconstructor:
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
         self.rules = list(self._build_recons_rules(rules))
-        self._parser_cache = {}  # Cache for reconstructor parser trees
+        self._parser_cache = None  # Cache for reconstructor parser trees
 
     def _build_recons_rules(self, rules):
         expand1s = {r.origin for r in rules if r.options and r.options.expand1}
@@ -114,12 +114,14 @@ class Reconstructor:
         assert False
 
     def _reconstruct(self, tree):
-        # TODO: ambiguity?
-        if tree.data in self._parser_cache:
-            parser = self._parser_cache[tree.data]
+        if self._parser_cache is None:
+            # TODO: ambiguity?
+            parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match,
+                                   resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+            self._parser_cache = parser
         else:
-            parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match, resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
-            self._parser_cache[tree.data] = parser
+            parser = self._parser_cache
+            parser.parser_conf.start = tree.data
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)

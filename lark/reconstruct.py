@@ -91,7 +91,7 @@ class Reconstructor:
                           for sym in r.expansion if not is_discarded_terminal(sym)]
 
             # Skip self-recursive constructs
-            if recons_exp == [r.origin]:
+            if recons_exp == [r.origin] and r.alias is None:
                 continue
 
             sym = NonTerminal(r.alias) if r.alias else r.origin

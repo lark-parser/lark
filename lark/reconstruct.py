@@ -4,8 +4,10 @@ from .tree import Tree
 from .visitors import Transformer_InPlace
 from .common import ParserConf, PatternStr
 from .lexer import Token
-from .parsers import earley, resolve_ambig
+# from .parsers import earley, resolve_ambig
 from .grammar import Rule, Terminal, NonTerminal
+
+from .parser_frontends import Earley, CYK, LALR_TraditionalLexer
 
 
 
@@ -34,18 +36,22 @@ class WriteTokensTransformer(Transformer_InPlace):
         for sym in meta.orig_expansion:
             if is_discarded_terminal(sym):
                 t = self.tokens[sym.name]
-                assert isinstance(t.pattern, PatternStr), t
-                to_write.append(t.pattern.value)
+                if isinstance(t.pattern, PatternStr):
+                    value = t.pattern.value
+                else:
+                    assert t.name == '_NEWLINE'
+                    value = '\n'
+                to_write.append(value)
             else:
                 x = next(iter_args)
                 if isinstance(x, list):
                     to_write += x
                 else:
                     if isinstance(x, Token):
-                        assert Terminal(x.type) == sym, x
+                        assert x.type == sym.name, (x.type, sym, x)
                     else:
                         assert NonTerminal(x.data) == sym, (sym, x)
-                    to_write.append(x)
+                    to_write.append(x.value)
 
         assert is_iter_empty(iter_args)
         return to_write
@@ -133,16 +139,29 @@ class Reconstructor:
             return term == Terminal(token.type)
         assert False
 
+    def match2(self, term, token):
+        return term.name == token.type
+
+
     def _reconstruct(self, tree):
         try:
             parser = self._parser_cache[tree.data]
         except KeyError:
             rules = self.rules + self.rules_for_root[tree.data]
-            parser = earley.Parser(ParserConf(rules, None, tree.data), self._match,
-                               resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+            # parser = earley.Parser(ParserConf(rules, None, tree.data), self.match2,
+            #                    resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+            parser = Earley(None, ParserConf(rules, None, tree.data))
             self._parser_cache[tree.data] = parser
 
-        unreduced_tree = parser.parse(tree.children)   # find a full derivation
+        x = []
+        for c in tree.children:
+            if isinstance(c, Tree):
+                x.append(Token(c.data, c))
+            elif isinstance(c, Token):
+                x.append(Token(c.type, c))
+            else:
+                assert False, c
+        unreduced_tree = parser.parse(x)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:

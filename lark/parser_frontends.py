@@ -15,7 +15,8 @@ class WithLexer:
 
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        if self.lexer_conf:
+            self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
 
     def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
@@ -33,8 +34,12 @@ class WithLexer:
         return stream
 
     def parse(self, text):
-        token_stream = self.lex(text)
-        sps = self.lexer.set_parser_state
+        if self.lexer_conf:
+            token_stream = self.lex(text)
+            sps = self.lexer.set_parser_state
+        else:
+            token_stream = text
+            sps = None
         return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
 
 class LALR_TraditionalLexer(WithLexer):

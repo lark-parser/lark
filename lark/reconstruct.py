@@ -130,26 +130,11 @@ class Reconstructor:
             
             yield make_recons_rule_to_term(origin, origin)
         
-
-
-    def _match(self, term, token):
-        if isinstance(token, Tree):
-            return Terminal(token.data) == term
-        elif isinstance(token, Token):
-            return term == Terminal(token.type)
-        assert False
-
-    def match2(self, term, token):
-        return term.name == token.type
-
-
     def _reconstruct(self, tree):
         try:
             parser = self._parser_cache[tree.data]
         except KeyError:
             rules = self.rules + self.rules_for_root[tree.data]
-            # parser = earley.Parser(ParserConf(rules, None, tree.data), self.match2,
-            #                    resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
             parser = Earley(None, ParserConf(rules, None, tree.data))
             self._parser_cache[tree.data] = parser
 

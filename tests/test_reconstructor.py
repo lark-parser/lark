@@ -1,17 +1,19 @@
 import json
 import unittest
 from unittest import TestCase
+
 from lark import Lark
 from lark.reconstruct import Reconstructor
-
 
 common = """
 %import common (WS_INLINE, NUMBER, WORD)
 %ignore WS_INLINE
 """
 
+
 def _remove_ws(s):
-    return s.replace(' ', '').replace('\n','')
+    return s.replace(' ', '').replace('\n', '')
+
 
 class TestReconstructor(TestCase):
 
@@ -22,7 +24,6 @@ class TestReconstructor(TestCase):
         self.assertEqual(_remove_ws(code), _remove_ws(new))
 
     def test_starred_rule(self):
-
         g = """
         start: item*
         item: NL
@@ -38,7 +39,6 @@ class TestReconstructor(TestCase):
         self.assert_reconstruct(g, code)
 
     def test_starred_group(self):
-
         g = """
         start: (rule | _NL)*
         rule: WORD ":" NUMBER
@@ -52,7 +52,6 @@ class TestReconstructor(TestCase):
         self.assert_reconstruct(g, code)
 
     def test_alias(self):
-
         g = """
         start: line*
         line: NL
@@ -68,6 +67,36 @@ class TestReconstructor(TestCase):
         """
 
         self.assert_reconstruct(g, code)
+
+    def test_keep_tokens(self):
+        g = """
+        start: (NL | stmt)*
+        stmt: var op var
+        !op: ("+" | "-" | "*" | "/")
+        var: WORD
+        NL: /(\\r?\\n)+\s*/
+        """ + common
+
+        code = """
+        a+b
+        """
+
+        self.assert_reconstruct(g, code)
+
+    def test_expand_rule(self):
+        g = """
+        ?start: (NL | mult_stmt)*
+        ?mult_stmt: sum_stmt ["*" sum_stmt]
+        ?sum_stmt: var ["+" var]
+        var: WORD
+        NL: /(\\r?\\n)+\s*/
+        """ + common
+
+        code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
+
+        for c in code:
+            with self.subTest(c):
+                self.assert_reconstruct(g, c)
 
     def test_json_example(self):
         test_json = '''

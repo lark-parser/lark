@@ -72,6 +72,7 @@ class Reconstructor:
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
         self.rules = list(self._build_recons_rules(rules))
+        self._parser_cache = None  # Cache for reconstructor parser trees
 
     def _build_recons_rules(self, rules):
         expand1s = {r.origin for r in rules if r.options and r.options.expand1}
@@ -84,18 +85,25 @@ class Reconstructor:
         rule_names = {r.origin for r in rules}
         nonterminals = {sym for sym in rule_names
                        if sym.name.startswith('_') or sym in expand1s or sym in aliases }
-
+        seen = set()
         for r in rules:
             recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
                           for sym in r.expansion if not is_discarded_terminal(sym)]
 
             # Skip self-recursive constructs
-            if recons_exp == [r.origin]:
+            if recons_exp == [r.origin] and r.alias is None:
                 continue
 
             sym = NonTerminal(r.alias) if r.alias else r.origin
 
-            yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
+            if sym in expand1s:
+                if sym.name not in seen:
+                    yield Rule(sym, [Terminal(sym.name)], MakeMatchTree(sym.name, [NonTerminal(sym.name)]))
+                    seen.add(sym.name)
+                if sym.name == 'start' or not(len(r.expansion)==1 and isinstance(recons_exp[0], NonTerminal)):
+                    yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
+            else:
+                yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:
@@ -113,8 +121,8 @@ class Reconstructor:
         assert False
 
     def _reconstruct(self, tree):
-        # TODO: ambiguity?
-        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match, resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+        parser = self._parser_cache
+        parser.parser_conf.start = tree.data
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
@@ -126,5 +134,9 @@ class Reconstructor:
                 yield item
 
     def reconstruct(self, tree):
+        # TODO: ambiguity?
+        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match,
+                               resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+        self._parser_cache = parser
         return ''.join(self._reconstruct(tree))
 

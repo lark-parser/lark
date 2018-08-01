@@ -34,7 +34,7 @@ class WriteTokensTransformer(Transformer_InPlace):
         for sym in meta.orig_expansion:
             if is_discarded_terminal(sym):
                 t = self.tokens[sym.name]
-                assert isinstance(t.pattern, PatternStr)
+                assert isinstance(t.pattern, PatternStr), t
                 to_write.append(t.pattern.value)
             else:
                 x = next(iter_args)
@@ -113,7 +113,10 @@ class Reconstructor:
                     yield make_recons_rule_to_term(sym, sym)
                     seen.add(sym.name)
             else:
-                yield rule
+                if sym.name.startswith('_') or sym in expand1s:
+                    yield rule
+                else:
+                    self.rules_for_root[sym.name].append(rule)
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:

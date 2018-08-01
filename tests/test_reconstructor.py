@@ -92,11 +92,11 @@ class TestReconstructor(TestCase):
         NL: /(\\r?\\n)+\s*/
         """ + common
 
-        code = """
-        a*b
-        """
+        code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
 
-        self.assert_reconstruct(g, code)
+        for c in code:
+            with self.subTest(c):
+                self.assert_reconstruct(g, c)
 
     def test_json_example(self):
         test_json = '''

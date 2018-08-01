@@ -95,8 +95,8 @@ class TestReconstructor(TestCase):
         code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
 
         for c in code:
-            with self.subTest(c):
-                self.assert_reconstruct(g, c)
+            # with self.subTest(c):
+            self.assert_reconstruct(g, c)
 
     def test_json_example(self):
         test_json = '''

@@ -85,7 +85,7 @@ class Reconstructor:
         rule_names = {r.origin for r in rules}
         nonterminals = {sym for sym in rule_names
                        if sym.name.startswith('_') or sym in expand1s or sym in aliases }
-        seen = set()
+
         for r in rules:
             recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
                           for sym in r.expansion if not is_discarded_terminal(sym)]
@@ -97,13 +97,10 @@ class Reconstructor:
             sym = NonTerminal(r.alias) if r.alias else r.origin
 
             if sym in expand1s:
-                if sym.name not in seen:
-                    yield Rule(sym, [Terminal(sym.name)], MakeMatchTree(sym.name, [NonTerminal(sym.name)]))
-                    seen.add(sym.name)
-                if sym.name == 'start' or not(len(r.expansion)==1 and isinstance(recons_exp[0], NonTerminal)):
-                    yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
-            else:
-                yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
+                expand1s.remove(sym)
+                yield Rule(sym, [Terminal(sym.name)], MakeMatchTree(sym.name, [NonTerminal(sym.name)]))
+
+            yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:

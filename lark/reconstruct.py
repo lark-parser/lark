@@ -65,14 +65,23 @@ class MakeMatchTree:
         t.meta.orig_expansion = self.expansion
         return t
 
+
+def make_recons_rule(origin, expansion, old_expansion):
+    return Rule(origin, expansion, MakeMatchTree(origin.name, old_expansion))
+
+def make_recons_rule_to_term(origin, term):
+    return make_recons_rule(origin, [Terminal(term.name)], [term])
+
 class Reconstructor:
     def __init__(self, parser):
         # XXX TODO calling compile twice returns different results!
         tokens, rules, _grammar_extra = parser.grammar.compile()
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
+        self.rules_for_root = defaultdict(list)
         self.rules = list(self._build_recons_rules(rules))
-        self._parser_cache = None  # Cache for reconstructor parser trees
+        self._parser_cache = {}  # Cache for reconstructor parser trees
+
 
     def _build_recons_rules(self, rules):
         expand1s = {r.origin for r in rules if r.options and r.options.expand1}
@@ -95,21 +104,22 @@ class Reconstructor:
                 continue
 
             sym = NonTerminal(r.alias) if r.alias else r.origin
+            rule = make_recons_rule(sym, recons_exp, r.expansion)
 
-            if sym in expand1s:
+            if sym in expand1s and len(recons_exp) != 1:
+                self.rules_for_root[sym.name].append(rule)
+
                 if sym.name not in seen:
-                    yield Rule(sym, [Terminal(sym.name)], MakeMatchTree(sym.name, [NonTerminal(sym.name)]))
+                    yield make_recons_rule_to_term(sym, sym)
                     seen.add(sym.name)
-                if sym.name == 'start' or not(len(r.expansion)==1 and isinstance(recons_exp[0], NonTerminal)):
-                    yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
             else:
-                yield Rule(sym, recons_exp, MakeMatchTree(sym.name, r.expansion))
+                yield rule
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:
-                yield Rule(origin, [Terminal(alias)], MakeMatchTree(origin.name, [NonTerminal(alias)]))
+                yield make_recons_rule_to_term(origin, NonTerminal(alias))
             
-            yield Rule(origin, [Terminal(origin.name)], MakeMatchTree(origin.name, [origin]))
+            yield make_recons_rule_to_term(origin, origin)
         
 
 
@@ -121,8 +131,14 @@ class Reconstructor:
         assert False
 
     def _reconstruct(self, tree):
-        parser = self._parser_cache
-        parser.parser_conf.start = tree.data
+        try:
+            parser = self._parser_cache[tree.data]
+        except KeyError:
+            rules = self.rules + self.rules_for_root[tree.data]
+            parser = earley.Parser(ParserConf(rules, None, tree.data), self._match,
+                               resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+            self._parser_cache[tree.data] = parser
+
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
@@ -135,8 +151,5 @@ class Reconstructor:
 
     def reconstruct(self, tree):
         # TODO: ambiguity?
-        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match,
-                               resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
-        self._parser_cache = parser
         return ''.join(self._reconstruct(tree))
 

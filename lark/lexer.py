@@ -4,7 +4,7 @@ import re
 
 from .utils import Str, classify
 from .common import PatternStr, PatternRE, TokenDef
-from .exceptions import UnexpectedCharacters
+from .exceptions import UnexpectedCharacters, LexError
 
 ###{standalone
 class Token(Str):

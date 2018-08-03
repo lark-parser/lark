@@ -140,17 +140,78 @@ print(EvalExpressions().transform( t ))
 
 
 Here are the classes that implement the transformer interface:
+
 - Transformer - Recursively transforms the tree. This is the one you probably want.
 - Transformer_InPlace - Non-recursive. Changes the tree in-place instead of returning new instances
 - Transformer_InPlaceRecursive - Recursive. Changes the tree in-place instead of returning new instances
+
+### v_args
+
+`v_args` is a decorator.
+
+By default, callback methods of transformers/visitors accept one argument: a list of the node's children. `v_args` can modify this behavior.
+
+When used on a transformer/visitor class definition, it applies to all the callback methods inside it.
+
+`v_args` accepts one of three flags:
+
+- `inline` - Children are provided as `*args` instead of a list argument (not recommended for very long lists).
+- `meta` - Provides two arguments: `children` and `meta` (instead of just the first)
+- `tree` - Provides the entire tree as the argument, instead of the children.
+
+Examples:
+
+```python
+@v_args(inline=True)
+class SolveArith(Transformer):
+    def add(self, left, right):
+        return left + right
+
+
+class ReverseNotation(Transformer_InPlace):
+    @v_args(tree=True):
+    def tree_node(self, tree):
+        tree.children = tree.children[::-1]
+```
+
+### Discard
+
+When raising the `Discard` exception in a transformer callback, that node is discarded and won't appear in the parent.
 
 ## Token
 
 When using a lexer, the resulting tokens in the trees will be of the Token class, which inherits from Python's string. So, normal string comparisons and operations will work as expected. Tokens also have other useful attributes:
 
-* type - Name of the token (as specified in grammar).
-* pos_in_stream - the index of the token in the text
-* line - The line of the token in the text (starting with 1)
-* column - The column of the token in the text (starting with 1)
-* end_line - The line where the token ends
-* end_column - The column where the token ends
+* `type` - Name of the token (as specified in grammar).
+* `pos_in_stream` - the index of the token in the text
+* `line` - The line of the token in the text (starting with 1)
+* `column` - The column of the token in the text (starting with 1)
+* `end_line` - The line where the token ends
+* `end_column` - The column where the token ends
+
+
+## UnexpectedInput
+
+- `UnexpectedInput`
+    - `UnexpectedToken` - The parser recieved an unexpected token
+    - `UnexpectedCharacters` - The lexer encountered an unexpected string
+
+After catching one of these exceptions, you may call the following helper methods to create a nicer error message:
+
+### Methods
+
+#### get_context(text, span)
+
+Returns a pretty string pinpointing the error in the text, with `span` amount of context characters around it.
+
+(The parser doesn't hold a copy of the text it has to parse, so you have to provide it again)
+
+#### match_examples(parse_fn, examples)
+
+Allows you to detect what's wrong in the input text by matching against example errors.
+
+Accepts the parse function (usually `lark_instance.parse`) and a dictionary of `{'example_string': value}`.
+
+The function will iterate the dictionary until it finds a matching error, and return the corresponding value.
+
+For an example usage, see: [examples/error_reporting_lalr.py](https://github.com/lark-parser/lark/blob/master/examples/error_reporting_lalr.py)

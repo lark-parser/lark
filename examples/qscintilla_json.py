@@ -48,12 +48,12 @@ class LexerJson(QsciLexerCustom):
             self.setFont(self.parent().font(), style)
 
         self.token_styles = {
-            "__COLON": 5,
-            "__COMMA": 5,
-            "__LBRACE": 5,
-            "__LSQB": 5,
-            "__RBRACE": 5,
-            "__RSQB": 5,
+            "COLON": 5,
+            "COMMA": 5,
+            "LBRACE": 5,
+            "LSQB": 5,
+            "RBRACE": 5,
+            "RSQB": 5,
             "FALSE": 0,
             "NULL": 0,
             "TRUE": 0,

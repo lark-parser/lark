@@ -598,8 +598,9 @@ class GrammarLoader:
         try:
             tree = self.canonize_tree.transform( self.parser.parse(grammar_text+'\n') )
         except UnexpectedCharacters as e:
+            context = e.get_context(grammar_text)
             raise GrammarError("Unexpected input %r at line %d column %d in %s" %
-                               (e.context, e.line, e.column, grammar_name))
+                               (context, e.line, e.column, grammar_name))
         except UnexpectedToken as e:
             context = e.get_context(grammar_text)
             error = e.match_examples(self.parser.parse, {

@@ -1,7 +1,7 @@
 import re
 import sys
 
-from .utils import get_regexp_width, STRING_TYPE
+from .utils import get_regexp_width
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
@@ -39,6 +39,9 @@ class Pattern(object):
         return hash((type(self), self.value, self.flags))
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
+
+    def to_regexp(self):
+        raise NotImplementedError()
 
     if Py36:
         # Python 3.6 changed syntax for flags in regular expression

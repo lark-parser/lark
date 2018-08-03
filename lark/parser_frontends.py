@@ -5,16 +5,19 @@ from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
 
-from .exceptions import GrammarError
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
 
 class WithLexer:
+    lexer = None
+    parser = None
+    lexer_conf = None
+
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
         self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
 
-    def init_contextual_lexer(self, lexer_conf, parser_conf):
+    def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
@@ -27,8 +30,7 @@ class WithLexer:
         stream = self.lexer.lex(text)
         if self.lexer_conf.postlex:
             return self.lexer_conf.postlex.process(stream)
-        else:
-            return stream
+        return stream
 
     def parse(self, text):
         token_stream = self.lex(text)
@@ -43,7 +45,7 @@ class LALR_TraditionalLexer(WithLexer):
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.parser = lalr_parser.Parser(parser_conf)
-        self.init_contextual_lexer(lexer_conf, parser_conf)
+        self.init_contextual_lexer(lexer_conf)
 
 class LALR_CustomLexer(WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):

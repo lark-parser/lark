@@ -13,6 +13,8 @@ class LexError(LarkError):
     pass
 
 class UnexpectedInput(LarkError):
+    pos_in_stream = None
+
     def get_context(self, text, span=40):
         pos = self.pos_in_stream
         start = max(pos - span, 0)

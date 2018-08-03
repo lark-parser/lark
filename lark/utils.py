@@ -105,8 +105,7 @@ except NameError:
             return 0
         elif a > b:
             return 1
-        else:
-            return -1
+        return -1
 
 
 import sre_parse

@@ -113,7 +113,6 @@ class UnlessCallback:
         for mre, type_from_index in self.mres:
             m = mre.match(t.value)
             if m:
-                value = m.group(0)
                 t.type = type_from_index[m.lastindex]
                 break
         return t

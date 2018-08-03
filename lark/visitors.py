@@ -1,4 +1,4 @@
-from inspect import isclass, getmembers, getmro
+from inspect import getmembers, getmro
 from functools import wraps
 
 from .utils import smart_decorator

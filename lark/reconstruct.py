@@ -54,7 +54,7 @@ class WriteTokensTransformer(Transformer_InPlace):
 class MatchTree(Tree):
     pass
 
-class MakeMatchTree:
+class MakeMatchTree(object):
     def __init__(self, name, expansion):
         self.name = name
         self.expansion = expansion
@@ -65,7 +65,7 @@ class MakeMatchTree:
         t.meta.orig_expansion = self.expansion
         return t
 
-class Reconstructor:
+class Reconstructor(object):
     def __init__(self, parser):
         # XXX TODO calling compile twice returns different results!
         tokens, rules, _grammar_extra = parser.grammar.compile()
@@ -100,9 +100,9 @@ class Reconstructor:
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:
                 yield Rule(origin, [Terminal(alias)], MakeMatchTree(origin.name, [NonTerminal(alias)]))
-            
+
             yield Rule(origin, [Terminal(origin.name)], MakeMatchTree(origin.name, [origin]))
-        
+
 
 
     def _match(self, term, token):

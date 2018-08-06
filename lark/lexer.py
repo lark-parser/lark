@@ -43,7 +43,7 @@ class Token(Str):
     __hash__ = Str.__hash__
 
 
-class LineCounter:
+class LineCounter(object):
     def __init__(self):
         self.newline_char = '\n'
         self.char_pos = 0
@@ -65,7 +65,7 @@ class LineCounter:
         self.char_pos += len(token)
         self.column = self.char_pos - self.line_start_pos + 1
 
-class _Lex:
+class _Lex(object):
     "Built to serve both Lexer and ContextualLexer"
     def __init__(self, lexer, state=None):
         self.lexer = lexer
@@ -105,7 +105,7 @@ class _Lex:
                     raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
                 break
 
-class UnlessCallback:
+class UnlessCallback(object):
     def __init__(self, mres):
         self.mres = mres
 
@@ -166,7 +166,7 @@ def build_mres(tokens, match_whole=False):
 def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or ('(?s' in r and '.' in r)
 
-class Lexer:
+class Lexer(object):
     """Lexer interface
 
     Method Signatures:

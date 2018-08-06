@@ -9,7 +9,7 @@ from .visitors import InlineTransformer # XXX Deprecated
 from functools import partial, wraps
 
 
-class ExpandSingleChild:
+class ExpandSingleChild(object):
     def __init__(self, node_builder):
         self.node_builder = node_builder
 
@@ -20,7 +20,7 @@ class ExpandSingleChild:
             return self.node_builder(children)
 
 
-class PropagatePositions:
+class PropagatePositions(object):
     def __init__(self, node_builder):
         self.node_builder = node_builder
 
@@ -51,7 +51,7 @@ class PropagatePositions:
         return res
 
 
-class ChildFilter:
+class ChildFilter(object):
     def __init__(self, to_include, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
@@ -105,7 +105,7 @@ def inline_args(func):
 
 
 
-class ParseTreeBuilder:
+class ParseTreeBuilder(object):
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions

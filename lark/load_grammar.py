@@ -442,7 +442,7 @@ class PrepareSymbols(Transformer_InPlace):
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
-class Grammar:
+class Grammar(object):
     def __init__(self, rule_defs, token_defs, ignore):
         self.token_defs = token_defs
         self.rule_defs = rule_defs
@@ -578,7 +578,7 @@ class PrepareGrammar(Transformer_InPlace):
         return name
 
 
-class GrammarLoader:
+class GrammarLoader(object):
     def __init__(self):
         tokens = [TokenDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 

@@ -46,7 +46,7 @@ class Rule(object):
         return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
 
 
-class RuleOptions:
+class RuleOptions(object):
     def __init__(self, keep_all_tokens=False, expand1=False, priority=None):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1

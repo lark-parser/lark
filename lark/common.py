@@ -11,14 +11,14 @@ Py36 = (sys.version_info[:2] >= (3, 6))
 
 
 
-class LexerConf:
+class LexerConf(object):
     def __init__(self, tokens, ignore=(), postlex=None, callbacks=None):
         self.tokens = tokens
         self.ignore = ignore
         self.postlex = postlex
         self.callbacks = callbacks or {}
 
-class ParserConf:
+class ParserConf(object):
     def __init__(self, rules, callback, start):
         self.rules = rules
         self.callback = callback

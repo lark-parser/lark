@@ -5,11 +5,13 @@ except ImportError:
 
 from copy import deepcopy
 
-class Meta:
+class Meta(object):
     pass
 
 ###{standalone
-class Tree(object):
+class SlottedTree(object):
+    __slots__ = 'data', 'children', 'rule', '_meta'
+
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -22,18 +24,18 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%s, %s)' % (self.data, self.children)
+        return '{self.__class__.__name__}({self.data}, {self.children})'.format(self=self)
 
     def _pretty_label(self):
         return self.data
 
     def _pretty(self, level, indent_str):
-        if len(self.children) == 1 and not isinstance(self.children[0], Tree):
+        if len(self.children) == 1 and not isinstance(self.children[0], SlottedTree):
             return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
 
         l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
-            if isinstance(n, Tree):
+            if isinstance(n, SlottedTree):
                 l += n._pretty(level+1, indent_str)
             else:
                 l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
@@ -72,7 +74,7 @@ class Tree(object):
 
     def scan_values(self, pred):
         for c in self.children:
-            if isinstance(c, Tree):
+            if isinstance(c, SlottedTree):
                 for t in c.scan_values(pred):
                     yield t
             else:
@@ -92,7 +94,7 @@ class Tree(object):
             if id(subtree) in visited:
                 continue    # already been here from another branch
             visited.add(id(subtree))
-            q += [c for c in subtree.children if isinstance(c, Tree)]
+            q += [c for c in subtree.children if isinstance(c, SlottedTree)]
 
         seen = set()
         for x in reversed(l):
@@ -125,8 +127,8 @@ class Tree(object):
         return self.meta.end_column
 
 
-class SlottedTree(Tree):
-    __slots__ = 'data', 'children', 'rule', '_meta'
+class Tree(SlottedTree):
+    pass
 
 
 def pydot__tree_to_png(tree, filename):

@@ -9,13 +9,17 @@ class Meta(object):
     pass
 
 ###{standalone
-class SlottedTree(object):
+class Tree(object):
     __slots__ = 'data', 'children', 'rule', '_meta'
+
+    def __getstate__(self):
+        return (None, { slot: getattr(self, slot) for slot in self.__slots__ })
 
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
         self._meta = meta
+        self.rule = None
 
     @property
     def meta(self):
@@ -30,12 +34,12 @@ class SlottedTree(object):
         return self.data
 
     def _pretty(self, level, indent_str):
-        if len(self.children) == 1 and not isinstance(self.children[0], SlottedTree):
+        if len(self.children) == 1 and not isinstance(self.children[0], Tree):
             return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
 
         l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
-            if isinstance(n, SlottedTree):
+            if isinstance(n, Tree):
                 l += n._pretty(level+1, indent_str)
             else:
                 l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
@@ -74,7 +78,7 @@ class SlottedTree(object):
 
     def scan_values(self, pred):
         for c in self.children:
-            if isinstance(c, SlottedTree):
+            if isinstance(c, Tree):
                 for t in c.scan_values(pred):
                     yield t
             else:
@@ -94,7 +98,7 @@ class SlottedTree(object):
             if id(subtree) in visited:
                 continue    # already been here from another branch
             visited.add(id(subtree))
-            q += [c for c in subtree.children if isinstance(c, SlottedTree)]
+            q += [c for c in subtree.children if isinstance(c, Tree)]
 
         seen = set()
         for x in reversed(l):
@@ -125,10 +129,6 @@ class SlottedTree(object):
     @property
     def end_column(self):
         return self.meta.end_column
-
-
-class Tree(SlottedTree):
-    pass
 
 
 def pydot__tree_to_png(tree, filename):

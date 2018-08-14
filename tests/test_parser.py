@@ -1224,6 +1224,19 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(t.children, ['a', 'bc'])
             self.assertEqual(t.children[0].type, 'A')
 
+        def test_line_counting(self):
+            p = _Lark("start: /[^x]+/")
+
+            text = 'hello\nworld'
+            t = p.parse(text)
+            tok = t.children[0]
+            self.assertEqual(tok, text)
+            self.assertEqual(tok.line, 1)
+            self.assertEqual(tok.column, 1)
+            if _LEXER != 'dynamic':
+                self.assertEqual(tok.end_line, 2)
+                self.assertEqual(tok.end_column, 6)
+
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

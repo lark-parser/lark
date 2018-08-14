@@ -105,6 +105,10 @@ class _Lex:
                     raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
                 break
 
+        if t:
+            t.end_line = line_ctr.line
+            t.end_column = line_ctr.column
+
 class UnlessCallback:
     def __init__(self, mres):
         self.mres = mres
@@ -164,7 +168,13 @@ def build_mres(tokens, match_whole=False):
     return _build_mres(tokens, len(tokens), match_whole)
 
 def _regexp_has_newline(r):
-    return '\n' in r or '\\n' in r or ('(?s' in r and '.' in r)
+    """Expressions that may indicate newlines in a regexp:
+        - newlines (\n)
+        - escaped newline (\n)
+        - anything but ([^...])
+        - any-char (.) when the flag (?s) exists
+    """
+    return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 class Lexer:
     """Lexer interface

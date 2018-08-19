@@ -27,7 +27,7 @@ class Derivation(Tree):
         self._hash = None
 
     def _pretty_label(self):    # Nicer pretty for debugging the parser
-        return self.rule.origin if self.rule else self.data
+        return self.meta.rule.origin.name if self.meta.rule else self.data
 
     def __hash__(self):
         if self._hash is None:

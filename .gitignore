@@ -1,0 +1,3 @@
+*.pyc
+
+/lark_parser.egg-info/**

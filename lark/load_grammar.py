@@ -172,7 +172,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
         new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
         self.i += 1
-        t = NonTerminal(Token('RULE', new_name, -1))
+        t = NonTerminal(new_name)
         tree = ST('expansions', [ST('expansion', [expr]), ST('expansion', [t, expr])])
         self.new_rules.append((new_name, tree, self.rule_options))
         self.rules_by_expr[expr] = t

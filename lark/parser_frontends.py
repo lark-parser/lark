@@ -119,7 +119,7 @@ class XEarley:
 
 class XEarley_CompleteLex(XEarley):
     def __init__(self, *args, **kw):
-        super(self).__init__(*args, complete_lex=True, **kw)
+        super(XEarley_CompleteLex, self).__init__(*args, complete_lex=True, **kw)
 
 
 

@@ -52,6 +52,7 @@ _larkdir = path.join(_dir, path.pardir)
 
 EXTRACT_STANDALONE_FILES = [
     'tools/standalone.py',
+    'exceptions.py',
     'utils.py',
     'common.py',
     'tree.py',
@@ -160,6 +161,7 @@ class TreeBuilderAtoms:
         self.ptb = lark._parse_tree_builder
 
     def print_python(self):
+        print('class InlineTransformer: pass')
         print('RULES = {')
         for i, r in enumerate(self.rules):
             rule_ids[r] = i

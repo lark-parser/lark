@@ -1,5 +1,6 @@
 from .utils import STRING_TYPE
 
+###{standalone
 class LarkError(Exception):
     pass
 
@@ -85,4 +86,4 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         super(UnexpectedToken, self).__init__(message)
 
-
+###}

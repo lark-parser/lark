@@ -42,12 +42,12 @@ def bfs(initial, expand):
 
 
 
+###{standalone
 try:
     STRING_TYPE = basestring
 except NameError:   # Python 3
     STRING_TYPE = str
 
-###{standalone
 
 import types
 from functools import wraps, partial

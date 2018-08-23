@@ -5,10 +5,10 @@ except ImportError:
 
 from copy import deepcopy
 
+###{standalone
 class Meta:
     pass
 
-###{standalone
 class Tree(object):
     def __init__(self, data, children, meta=None):
         self.data = data
@@ -42,14 +42,6 @@ class Tree(object):
 
     def pretty(self, indent_str='  '):
         return ''.join(self._pretty(0, indent_str))
-###}
-
-    def expand_kids_by_index(self, *indices):
-        "Expand (inline) children at the given indices"
-        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
-            kid = self.children[i]
-            self.children[i:i+1] = kid.children
-
     def __eq__(self, other):
         try:
             return self.data == other.data and self.children == other.children
@@ -61,6 +53,13 @@ class Tree(object):
 
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
+###}
+
+    def expand_kids_by_index(self, *indices):
+        "Expand (inline) children at the given indices"
+        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
+            kid = self.children[i]
+            self.children[i:i+1] = kid.children
 
     def find_pred(self, pred):
         "Find all nodes where pred(tree) == True"

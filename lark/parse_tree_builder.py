@@ -26,27 +26,36 @@ class PropagatePositions:
 
     def __call__(self, children):
         res = self.node_builder(children)
+        res.meta.empty = True
 
         if children and isinstance(res, Tree):
-            for a in children:
-                if isinstance(a, Tree):
-                    res.meta.line = a.meta.line
-                    res.meta.column = a.meta.column
-                elif isinstance(a, Token):
-                    res.meta.line = a.line
-                    res.meta.column = a.column
-                break
+            for c in children:
+                if isinstance(c, Tree) and c.children and not c.meta.empty:
+                    res.meta.line = c.meta.line
+                    res.meta.column = c.meta.column
+                    res.meta.start_pos = c.meta.start_pos
+                    res.meta.empty = False
+                    break
+                elif isinstance(c, Token):
+                    res.meta.line = c.line
+                    res.meta.column = c.column
+                    res.meta.start_pos = c.pos_in_stream
+                    res.meta.empty = False
+                    break
 
-            for a in reversed(children):
-                # with suppress(AttributeError):
-                if isinstance(a, Tree):
-                    res.meta.end_line = a.meta.end_line
-                    res.meta.end_column = a.meta.end_column
-                elif isinstance(a, Token):
-                    res.meta.end_line = a.end_line
-                    res.meta.end_column = a.end_column
-
-                break
+            for c in reversed(children):
+                if isinstance(c, Tree) and c.children and not c.meta.empty:
+                    res.meta.end_line = c.meta.end_line
+                    res.meta.end_column = c.meta.end_column
+                    res.meta.end_pos = c.meta.end_pos
+                    res.meta.empty = False
+                    break
+                elif isinstance(c, Token):
+                    res.meta.end_line = c.end_line
+                    res.meta.end_column = c.end_column
+                    res.meta.end_pos = c.pos_in_stream + len(c.value)
+                    res.meta.empty = False
+                    break
 
         return res
 

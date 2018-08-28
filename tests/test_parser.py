@@ -353,7 +353,7 @@ def _make_full_earley_test(LEXER):
 
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):
-        return Lark(grammar, lexer=LEXER, parser=PARSER, **kwargs)
+        return Lark(grammar, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*

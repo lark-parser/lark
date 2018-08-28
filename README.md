@@ -25,6 +25,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 - [Cheatsheet (PDF)](/docs/lark_cheatsheet.pdf)
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 - [Forum @googlegroups](https://groups.google.com/forum/#!forum/lark-parser) (New)
+- [Gitter chat](https://gitter.im/lark-parser/Lobby) (New)
 
 ### Install Lark
 

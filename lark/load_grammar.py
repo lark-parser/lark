@@ -306,6 +306,9 @@ class PrepareAnonTerminals(Transformer_InPlace):
                             value.upper().encode('ascii') # Make sure we don't have unicode in our token names
                             token_name = value.upper()
 
+                if token_name in self.token_set:
+                    token_name = None
+
         elif isinstance(p, PatternRE):
             if p in self.token_reverse: # Kind of a wierd placement.name
                 token_name = self.token_reverse[p].name

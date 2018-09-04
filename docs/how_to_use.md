@@ -27,7 +27,7 @@ Here is some mock usage of them. You can see a real example in the [[examples]]
 ```python
 from lark import Lark, Transformer
 
-gramamr = """start: rules and more rules
+grammar = """start: rules and more rules
 
              rule1: other rules AND TOKENS
                   | rule1 "+" rule2             -> add

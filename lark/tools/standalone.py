@@ -165,7 +165,7 @@ class TreeBuilderAtoms:
         print('RULES = {')
         for i, r in enumerate(self.rules):
             rule_ids[r] = i
-            print('  %d: Rule(%r, %r, %r, %r),' % (i, r.origin, r.expansion, self.ptb.user_aliases[r], r.options ))
+            print('  %d: Rule(%r, [%s], %r, %r),' % (i, r.origin, ', '.join(s.fullrepr for s in r.expansion), self.ptb.user_aliases[r], r.options ))
         print('}')
         print('parse_tree_builder = ParseTreeBuilder(RULES.values(), Tree)')
 

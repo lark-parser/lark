@@ -17,12 +17,18 @@ class Symbol(object):
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.name)
 
+    fullrepr = property(__repr__)
+
 class Terminal(Symbol):
     is_term = True
 
     def __init__(self, name, filter_out=False):
         self.name = name
         self.filter_out = filter_out
+
+    @property
+    def fullrepr(self):
+        return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
 
 
 class NonTerminal(Symbol):

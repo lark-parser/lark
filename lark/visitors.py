@@ -1,12 +1,13 @@
-from inspect import getmembers, getmro
 from functools import wraps
 
 from .utils import smart_decorator
 from .tree import Tree
 
+###{standalone
+from inspect import getmembers, getmro
+
 class Discard(Exception):
     pass
-
 
 # Transformers
 
@@ -250,3 +251,4 @@ def v_args(inline=False, meta=False, tree=False):
     return _visitor_args_dec
 
 
+###}

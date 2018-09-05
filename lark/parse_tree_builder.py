@@ -106,7 +106,7 @@ class Callback(object):
     pass
 
 
-def inline_args(func):
+def ptb_inline_args(func):
     @wraps(func)
     def f(children):
         return func(*children)
@@ -154,7 +154,7 @@ class ParseTreeBuilder:
                 assert not getattr(f, 'meta', False), "Meta args not supported for internal transformer"
                 # XXX InlineTransformer is deprecated!
                 if getattr(f, 'inline', False) or isinstance(transformer, InlineTransformer):
-                    f = inline_args(f)
+                    f = ptb_inline_args(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

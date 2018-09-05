@@ -73,6 +73,7 @@ def smart_decorator(f, create_decorator):
         return create_decorator(f.__func__.__call__, True)
 
 
+###}
 
 
 try:
@@ -93,7 +94,6 @@ except ImportError:
         except excs:
             pass
 
-###}
 
 
 

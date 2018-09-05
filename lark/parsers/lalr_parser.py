@@ -45,7 +45,7 @@ class _Parser:
             try:
                 return states[state][key]
             except KeyError:
-                expected = states[state].keys()
+                expected = [s for s in states[state].keys() if s.isupper()]
                 raise UnexpectedToken(token, expected, state=state)  # TODO filter out rules from expected
 
         def reduce(rule):

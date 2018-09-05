@@ -81,8 +81,8 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
 
         message = ("Unexpected token %r at line %s, column %s.\n"
-                   "Expected: %s\n"
-                   % (token, self.line, self.column, ', '.join(self.expected)))
+                   "Expected one of: \n\t* %s\n"
+                   % (token, self.line, self.column, '\n\t* '.join(self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
 

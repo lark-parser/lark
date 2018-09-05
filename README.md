@@ -134,6 +134,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
+ - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL engine by Dailymotion (Lark is used to parse the GraphQL schemas definitions)
 
 Using Lark? Send me a message and I'll add your project!
 

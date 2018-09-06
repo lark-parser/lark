@@ -17,6 +17,18 @@ class TestStandalone(TestCase):
     def setUp(self):
         pass
 
+    def _create_standalone(self, grammar):
+        code_buf = StringIO()
+        temp = sys.stdout
+        sys.stdout = code_buf
+        standalone.main(StringIO(grammar), 'start')
+        sys.stdout = temp
+        code = code_buf.getvalue()
+
+        context = {}
+        exec(code, context)
+        return context
+
     def test_simple(self):
         grammar = """
             start: NUMBER WORD
@@ -28,20 +40,35 @@ class TestStandalone(TestCase):
 
         """
 
-        code_buf = StringIO()
-        temp = sys.stdout
-        sys.stdout = code_buf
-        standalone.main(StringIO(grammar), 'start')
-        sys.stdout = temp
-        code = code_buf.getvalue()
+        context = self._create_standalone(grammar)
 
-        context = {}
-        exec(code, context)
         _Lark = context['Lark_StandAlone']
-
         l = _Lark()
         x = l.parse('12 elephants')
         self.assertEqual(x.children, ['12', 'elephants'])
+
+    def test_contextual(self):
+        grammar = """
+        start: a b
+        a: "A" "B"
+        b: "AB"
+        """
+
+        context = self._create_standalone(grammar)
+
+        _Lark = context['Lark_StandAlone']
+        l = _Lark()
+        x = l.parse('ABAB')
+
+        class T(context['Transformer']):
+            def a(self, items):
+                return 'a'
+            def b(self, items):
+                return 'b'
+            start = list
+
+        x = T().transform(x)
+        self.assertEqual(x, ['a', 'b'])
 
 
 if __name__ == '__main__':

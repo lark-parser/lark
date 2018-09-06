@@ -83,7 +83,7 @@ def extract_sections(lines):
 
     return {name:''.join(text) for name, text in sections.items()}
 
-class LexerAtoms:
+class TraditionalLexerAtoms:
     def __init__(self, lexer):
         self.mres = [(p.pattern,d) for p,d in lexer.mres]
         self.newline_types = lexer.newline_types
@@ -93,23 +93,59 @@ class LexerAtoms:
 
     def print_python(self):
         print('import re')
+        print('class LexerRegexps: pass')
+        print('NEWLINE_TYPES = %s' % self.newline_types)
+        print('IGNORE_TYPES = %s' % self.ignore_types)
+        self._print_python('lexer')
+
+    def _print_python(self, var_name):
         print('MRES = (')
         pprint(self.mres)
         print(')')
         print('LEXER_CALLBACK = (')
         pprint(self.callback)
         print(')')
-        print('NEWLINE_TYPES = %s' % self.newline_types)
-        print('IGNORE_TYPES = %s' % self.ignore_types)
-        print('class LexerRegexps: pass')
         print('lexer_regexps = LexerRegexps()')
         print('lexer_regexps.mres = [(re.compile(p), d) for p, d in MRES]')
         print('lexer_regexps.callback = {n: UnlessCallback([(re.compile(p), d) for p, d in mres])')
         print('                          for n, mres in LEXER_CALLBACK.items()}')
-        print('lexer = _Lex(lexer_regexps)')
-        print('def lex(stream):')
-        print('    return lexer.lex(stream, NEWLINE_TYPES, IGNORE_TYPES)')
+        print('%s = (lexer_regexps)' % var_name)
 
+
+class ContextualLexerAtoms:
+    def __init__(self, lexer):
+        self.lexer_atoms = {state: TraditionalLexerAtoms(lexer) for state, lexer in lexer.lexers.items()}
+        self.root_lexer_atoms = TraditionalLexerAtoms(lexer.root_lexer)
+
+    def print_python(self):
+        print('import re')
+        print('class LexerRegexps: pass')
+        print('NEWLINE_TYPES = %s' % self.root_lexer_atoms.newline_types)
+        print('IGNORE_TYPES = %s' % self.root_lexer_atoms.ignore_types)
+
+        print('LEXERS = {}')
+        for state, lexer_atoms in self.lexer_atoms.items():
+            lexer_atoms._print_python('LEXERS[%d]' % state)
+
+        print('class ContextualLexer:')
+        print('    def __init__(self):')
+        print('        self.lexers = LEXERS')
+        print('        self.set_parser_state(None)')
+        print('    def set_parser_state(self, state):')
+        print('        self.parser_state = state')
+        print('    def lex(self, stream):')
+        print('        newline_types = NEWLINE_TYPES')
+        print('        ignore_types = IGNORE_TYPES')
+        print('        lexers = LEXERS')
+        print('        l = _Lex(lexers[self.parser_state], self.parser_state)')
+        print('        for x in l.lex(stream, newline_types, ignore_types):')
+        print('            yield x')
+        print('            l.lexer = lexers[self.parser_state]')
+        print('            l.state = self.parser_state')
+
+        print('CON_LEXER = ContextualLexer()')
+        print('def lex(stream):')
+        print('    return CON_LEXER.lex(stream)')
 
 class GetRule:
     def __init__(self, rule_id):
@@ -153,8 +189,9 @@ class ParserAtoms:
         print('     self.postlex = postlex')
         print('  def parse(self, stream):')
         print('     tokens = lex(stream)')
+        print('     sps = CON_LEXER.set_parser_state')
         print('     if self.postlex: tokens = self.postlex.process(tokens)')
-        print('     return self.parser.parse(tokens)')
+        print('     return self.parser.parse(tokens, sps)')
 
 class TreeBuilderAtoms:
     def __init__(self, lark):
@@ -171,9 +208,9 @@ class TreeBuilderAtoms:
         print('parse_tree_builder = ParseTreeBuilder(RULES.values(), Tree)')
 
 def main(fobj, start):
-    lark_inst = Lark(fobj, parser="lalr", lexer="standard", start=start)
+    lark_inst = Lark(fobj, parser="lalr", lexer="contextual", start=start)
 
-    lexer_atoms = LexerAtoms(lark_inst.parser.lexer)
+    lexer_atoms = ContextualLexerAtoms(lark_inst.parser.lexer)
     parser_atoms = ParserAtoms(lark_inst.parser.parser)
     tree_builder_atoms = TreeBuilderAtoms(lark_inst)
 

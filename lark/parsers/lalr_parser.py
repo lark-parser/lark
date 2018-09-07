@@ -3,6 +3,7 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from ..exceptions import UnexpectedToken
+from ..lexer import Token
 
 from .lalr_analysis import LALR_Analyzer, Shift
 
@@ -78,7 +79,7 @@ class _Parser:
                 else:
                     reduce(arg)
 
-        token = '<EOF>'
+        token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
         while True:
             _action, arg = get_action('$END')
             if _action is Shift:

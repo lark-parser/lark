@@ -31,7 +31,6 @@ class _Parser:
         self.callbacks = callbacks
 
     def parse(self, seq, set_state=None):
-        i = 0
         token = None
         stream = iter(seq)
         states = self.states
@@ -66,7 +65,7 @@ class _Parser:
             value_stack.append(value)
 
         # Main LALR-parser loop
-        for i, token in enumerate(stream):
+        for token in stream:
             while True:
                 action, arg = get_action(token.type)
                 assert arg != self.end_state

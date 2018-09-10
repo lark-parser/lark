@@ -284,6 +284,7 @@ class TraditionalLexer(Lexer):
 
         self.mres = build_mres(terminals)
 
+
     def lex(self, stream):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 

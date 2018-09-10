@@ -54,7 +54,6 @@ EXTRACT_STANDALONE_FILES = [
     'tools/standalone.py',
     'exceptions.py',
     'utils.py',
-    'common.py',
     'tree.py',
     'visitors.py',
     'indenter.py',
@@ -83,12 +82,15 @@ def extract_sections(lines):
 
     return {name:''.join(text) for name, text in sections.items()}
 
+def _prepare_mres(mres):
+    return [(p.pattern,{i: t for i, t in d.items()}) for p,d in mres]
+
 class TraditionalLexerAtoms:
     def __init__(self, lexer):
-        self.mres = [(p.pattern,d) for p,d in lexer.mres]
+        self.mres = _prepare_mres(lexer.mres)
         self.newline_types = lexer.newline_types
         self.ignore_types = lexer.ignore_types
-        self.callback = {name:[(p.pattern,d) for p,d in c.mres]
+        self.callback = {name:_prepare_mres(c.mres)
                          for name, c in lexer.callback.items()}
 
     def print_python(self):

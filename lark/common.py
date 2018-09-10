@@ -1,8 +1,4 @@
 
-###{standalone
-###}
-
-
 
 class LexerConf:
     def __init__(self, tokens, ignore=(), postlex=None, callbacks=None):

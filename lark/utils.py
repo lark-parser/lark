@@ -1,4 +1,7 @@
+import sys
 from collections import deque
+
+Py36 = (sys.version_info[:2] >= (3, 6))
 
 class fzset(frozenset):
     def __repr__(self):

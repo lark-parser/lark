@@ -2,9 +2,70 @@
 
 import re
 
-from .utils import Str, classify
-from .common import PatternStr, PatternRE, TokenDef
+from .utils import Str, classify, get_regexp_width, Py36
 from .exceptions import UnexpectedCharacters, LexError
+
+class Pattern(object):
+    def __init__(self, value, flags=()):
+        self.value = value
+        self.flags = frozenset(flags)
+
+    def __repr__(self):
+        return repr(self.to_regexp())
+
+    # Pattern Hashing assumes all subclasses have a different priority!
+    def __hash__(self):
+        return hash((type(self), self.value, self.flags))
+    def __eq__(self, other):
+        return type(self) == type(other) and self.value == other.value and self.flags == other.flags
+
+    def to_regexp(self):
+        raise NotImplementedError()
+
+    if Py36:
+        # Python 3.6 changed syntax for flags in regular expression
+        def _get_flags(self, value):
+            for f in self.flags:
+                value = ('(?%s:%s)' % (f, value))
+            return value
+
+    else:
+        def _get_flags(self, value):
+            for f in self.flags:
+                value = ('(?%s)' % f) + value
+            return value
+
+class PatternStr(Pattern):
+    def to_regexp(self):
+        return self._get_flags(re.escape(self.value))
+
+    @property
+    def min_width(self):
+        return len(self.value)
+    max_width = min_width
+
+class PatternRE(Pattern):
+    def to_regexp(self):
+        return self._get_flags(self.value)
+
+    @property
+    def min_width(self):
+        return get_regexp_width(self.to_regexp())[0]
+    @property
+    def max_width(self):
+        return get_regexp_width(self.to_regexp())[1]
+
+class TerminalDef(object):
+    def __init__(self, name, pattern, priority=1):
+        assert isinstance(pattern, Pattern), pattern
+        self.name = name
+        self.pattern = pattern
+        self.priority = priority
+
+    def __repr__(self):
+        return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+
+
 
 ###{standalone
 class Token(Str):
@@ -125,8 +186,8 @@ class UnlessCallback:
 
 
 
-def _create_unless(tokens):
-    tokens_by_type = classify(tokens, lambda t: type(t.pattern))
+def _create_unless(terminals):
+    tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
     callback = {}
@@ -144,33 +205,34 @@ def _create_unless(tokens):
         if unless:
             callback[retok.name] = UnlessCallback(build_mres(unless, match_whole=True))
 
-    tokens = [t for t in tokens if t not in embedded_strs]
-    return tokens, callback
+    terminals = [t for t in terminals if t not in embedded_strs]
+    return terminals, callback
 
 
-def _build_mres(tokens, max_size, match_whole):
+def _build_mres(terminals, max_size, match_whole):
     # Python sets an unreasonable group limit (currently 100) in its re module
     # Worse, the only way to know we reached it is by catching an AssertionError!
     # This function recursively tries less and less groups until it's successful.
     postfix = '$' if match_whole else ''
     mres = []
-    while tokens:
+    while terminals:
         try:
-            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in tokens[:max_size]))
+            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]))
         except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(tokens, max_size//2, match_whole)
+            return _build_mres(terminals, max_size//2, match_whole)
 
+        # terms_from_name = {t.name: t for t in terminals[:max_size]}
         mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
-        tokens = tokens[max_size:]
+        terminals = terminals[max_size:]
     return mres
 
-def build_mres(tokens, match_whole=False):
-    return _build_mres(tokens, len(tokens), match_whole)
+def build_mres(terminals, match_whole=False):
+    return _build_mres(terminals, len(terminals), match_whole)
 
 def _regexp_has_newline(r):
     """Expressions that may indicate newlines in a regexp:
         - newlines (\n)
-        - escaped newline (\n)
+        - escaped newline (\\n)
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
     """
@@ -188,48 +250,48 @@ class Lexer:
     lex = NotImplemented
 
 class TraditionalLexer(Lexer):
-    def __init__(self, tokens, ignore=(), user_callbacks={}):
-        assert all(isinstance(t, TokenDef) for t in tokens), tokens
+    def __init__(self, terminals, ignore=(), user_callbacks={}):
+        assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
-        tokens = list(tokens)
+        terminals = list(terminals)
 
         # Sanitization
-        for t in tokens:
+        for t in terminals:
             try:
                 re.compile(t.pattern.to_regexp())
             except:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
             if t.pattern.min_width == 0:
-                raise LexError("Lexer does not allow zero-width tokens. (%s: %s)" % (t.name, t.pattern))
+                raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
 
-        assert set(ignore) <= {t.name for t in tokens}
+        assert set(ignore) <= {t.name for t in terminals}
 
         # Init
-        self.newline_types = [t.name for t in tokens if _regexp_has_newline(t.pattern.to_regexp())]
+        self.newline_types = [t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = list(ignore)
 
-        tokens.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
 
-        tokens, self.callback = _create_unless(tokens)
+        terminals, self.callback = _create_unless(terminals)
         assert all(self.callback.values())
 
         for type_, f in user_callbacks.items():
             assert type_ not in self.callback
             self.callback[type_] = f
 
-        self.tokens = tokens
+        self.terminals = terminals
 
-        self.mres = build_mres(tokens)
+        self.mres = build_mres(terminals)
 
     def lex(self, stream):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
 
 class ContextualLexer(Lexer):
-    def __init__(self, tokens, states, ignore=(), always_accept=(), user_callbacks={}):
+    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
-        for t in tokens:
+        for t in terminals:
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
 
@@ -247,7 +309,7 @@ class ContextualLexer(Lexer):
 
             self.lexers[state] = lexer
 
-        self.root_lexer = TraditionalLexer(tokens, ignore=ignore, user_callbacks=user_callbacks)
+        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks)
 
         self.set_parser_state(None) # Needs to be set on the outside
 

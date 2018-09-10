@@ -2,8 +2,8 @@ from collections import defaultdict
 
 from .tree import Tree
 from .visitors import Transformer_InPlace
-from .common import ParserConf, PatternStr
-from .lexer import Token
+from .common import ParserConf
+from .lexer import Token, PatternStr
 from .parsers import earley, resolve_ambig
 from .grammar import Rule, Terminal, NonTerminal
 

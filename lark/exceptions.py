@@ -53,7 +53,7 @@ class UnexpectedInput(LarkError):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None):
-        message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
+        message = "No terminal defined for %s at line %d col %d" % (repr(seq[lex_pos]), line, column)
 
         self.line = line
         self.column = column

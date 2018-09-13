@@ -176,6 +176,12 @@ There are many ways you can help the project:
 
 If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
 
+## Donate
+
+If you like Lark and feel like donating, you can do so at my [patreon page](https://www.patreon.com/erezsh).
+
+If you wish for a specific feature to get a higher priority, you can request it in a follow-up email, and I'll consider it favorably.
+
 ## Contact
 
 If you have any questions or want my assistance, you can email me at erezshin at gmail com.

@@ -179,7 +179,7 @@ class _Lex:
                                 state=self.state) )
 
                         # parser_errors.append( f'\nLexer error (last line={last_error_line}): {error}' )
-                        parser_errors.append( f'\nLexer error: {error}' )
+                        parser_errors.append( '\nLexer error: %s' % error )
 
                     char_error_offset += 1
                     column_error_offset += 1

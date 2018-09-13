@@ -49,8 +49,8 @@ class _Parser:
                 expected = [s for s in states[state].keys() if s.isupper()]
 
                 # TODO filter out rules from expected
-                error = str( UnexpectedToken(token, expected, state=state) )
-                parser_errors.append( f'\nParser error: {error}' )
+                error = str(UnexpectedToken(token, expected, state=state))
+                parser_errors.append('\nParser error: %s' % error)
 
                 # Just take the first expected key
                 for s in states[state].keys():

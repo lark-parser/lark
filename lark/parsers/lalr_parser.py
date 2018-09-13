@@ -2,7 +2,7 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-from ..exceptions import UnexpectedToken
+from ..exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
 from ..lexer import Token
 
 from .. errors import parser_errors
@@ -49,8 +49,7 @@ class _Parser:
                 expected = [s for s in states[state].keys() if s.isupper()]
 
                 # TODO filter out rules from expected
-                error = str(UnexpectedToken(token, expected, state=state))
-                parser_errors.append('\nParser error: %s' % error)
+                parser_errors.append(UnexpectedToken(token, expected, state=state))
 
                 # Just take the first expected key
                 for s in states[state].keys():
@@ -89,9 +88,16 @@ class _Parser:
                     reduce(arg)
 
         if parser_errors:
-            # Comment it out to show the duplicated error messages removed
-            parser_errors[:] = [error for index, error in enumerate(parser_errors) if error != parser_errors[index-1]]
-            raise RuntimeError(''.join( parser_errors ))
+            error_messages = []
+            for index, error in enumerate(parser_errors):
+                # Comment out this if to show the duplicated error messages removed
+                if not index or index > 0 and error != parser_errors[index-1]:
+                    if type(error) is UnexpectedCharacters:
+                        error_messages.append('\nLexer error: %s' % error)
+                    elif type(error) is UnexpectedToken:
+                        error_messages.append('\nParser error: %s' % error)
+
+            raise LarkError(''.join( error_messages ))
 
         token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
         while True:

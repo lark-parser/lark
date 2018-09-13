@@ -172,14 +172,13 @@ class _Lex:
             else:
                 if line_ctr.char_pos < len(stream):
                     if last_error_line != line_ctr.line:
-                        error = str( UnexpectedCharacters(original_stream,
+                        parser_errors.append( UnexpectedCharacters( original_stream,
                                 line_ctr.char_pos + char_error_offset,
                                 line_ctr.line + line_error_offset,
                                 line_ctr.column + column_error_offset,
-                                state=self.state) )
-
-                        # parser_errors.append( f'\nLexer error (last line={last_error_line}): {error}' )
-                        parser_errors.append( '\nLexer error: %s' % error )
+                                state=self.state
+                            )
+                        )
 
                     char_error_offset += 1
                     column_error_offset += 1

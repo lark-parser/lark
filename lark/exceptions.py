@@ -8,7 +8,13 @@ class GrammarError(LarkError):
     pass
 
 class ParseError(LarkError):
-    pass
+    def __eq__(self, other):
+        """ Determines whether this object is equal to another one based on their hashes. """
+        if isinstance(self, LarkError) is isinstance(other, LarkError):
+            return str(self) == str(other)
+
+        raise TypeError("'=' not supported between instances of '%s' and '%s'" % (
+                self.__class__.__name__, other.__class__.__name__))
 
 class LexError(LarkError):
     pass

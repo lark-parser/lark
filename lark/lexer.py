@@ -141,6 +141,7 @@ class _Lex:
         char_error_offset = 0
         line_error_offset = 0
         column_error_offset = 0
+        last_error_line = -1
         original_stream = stream
 
         t = None
@@ -170,13 +171,16 @@ class _Lex:
                     break
             else:
                 if line_ctr.char_pos < len(stream):
-                    error = str( UnexpectedCharacters(original_stream,
-                            line_ctr.char_pos + char_error_offset,
-                            line_ctr.line + line_error_offset,
-                            line_ctr.column + column_error_offset,
-                            state=self.state) )
+                    if last_error_line != line_ctr.line:
+                        error = str( UnexpectedCharacters(original_stream,
+                                line_ctr.char_pos + char_error_offset,
+                                line_ctr.line + line_error_offset,
+                                line_ctr.column + column_error_offset,
+                                state=self.state) )
 
-                    parser_errors.append( f'\nLexer error: {error}' )
+                        # parser_errors.append( f'\nLexer error (last line={last_error_line}): {error}' )
+                        parser_errors.append( f'\nLexer error: {error}' )
+
                     char_error_offset += 1
                     column_error_offset += 1
 
@@ -184,7 +188,9 @@ class _Lex:
                         line_error_offset += 1
                         column_error_offset = 0
 
+                    last_error_line = line_ctr.line
                     stream = stream[0:line_ctr.char_pos] + stream[line_ctr.char_pos+1:]
+
                 else:
                     break
 

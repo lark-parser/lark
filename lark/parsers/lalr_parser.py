@@ -5,6 +5,7 @@
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
 
+from .. errors import parser_errors
 from .lalr_analysis import LALR_Analyzer, Shift
 
 class Parser:
@@ -46,7 +47,16 @@ class _Parser:
                 return states[state][key]
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
-                raise UnexpectedToken(token, expected, state=state)  # TODO filter out rules from expected
+
+                # TODO filter out rules from expected
+                error = str( UnexpectedToken(token, expected, state=state) )
+                parser_errors.append( f'\nParser error: {error}' )
+
+                # Just take the first expected key
+                for s in states[state].keys():
+                    if s.isupper():
+                        # print(f"Returning key {s} - {states[state][s]} - for {state} and {key}")
+                        return states[state][s]
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -77,6 +87,9 @@ class _Parser:
                     break # next token
                 else:
                     reduce(arg)
+
+        if parser_errors:
+            raise RuntimeError(''.join( parser_errors ))
 
         token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
         while True:

@@ -5,6 +5,8 @@ import re
 from .utils import Str, classify, get_regexp_width, Py36
 from .exceptions import UnexpectedCharacters, LexError
 
+from . errors import parser_errors
+
 class Pattern(object):
     def __init__(self, value, flags=()):
         self.value = value
@@ -136,11 +138,16 @@ class _Lex:
         newline_types = list(newline_types)
         ignore_types = list(ignore_types)
         line_ctr = LineCounter()
+        char_error_offset = 0
+        line_error_offset = 0
+        column_error_offset = 0
+        original_stream = stream
 
         t = None
         while True:
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
+                # print(f'stream {stream[0:50]}, mre {mre}')
                 m = mre.match(stream, line_ctr.char_pos)
                 if m:
                     value = m.group(0)
@@ -163,8 +170,23 @@ class _Lex:
                     break
             else:
                 if line_ctr.char_pos < len(stream):
-                    raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
-                break
+                    error = str( UnexpectedCharacters(original_stream,
+                            line_ctr.char_pos + char_error_offset,
+                            line_ctr.line + line_error_offset,
+                            line_ctr.column + column_error_offset,
+                            state=self.state) )
+
+                    parser_errors.append( f'\nLexer error: {error}' )
+                    char_error_offset += 1
+                    column_error_offset += 1
+
+                    if stream[line_ctr.char_pos] == '\n':
+                        line_error_offset += 1
+                        column_error_offset = 0
+
+                    stream = stream[0:line_ctr.char_pos] + stream[line_ctr.char_pos+1:]
+                else:
+                    break
 
         if t:
             t.end_line = line_ctr.line

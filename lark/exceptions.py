@@ -62,7 +62,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         self.pos_in_stream = lex_pos
         self.state = state
 
-        message += '\n\n' + self.get_context(seq)
+        message += '\n' + self.get_context(seq)
         if allowed:
             message += '\nExpecting: %s\n' % allowed
 

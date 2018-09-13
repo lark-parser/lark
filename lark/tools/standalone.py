@@ -57,6 +57,7 @@ EXTRACT_STANDALONE_FILES = [
     'tree.py',
     'visitors.py',
     'indenter.py',
+    'errors.py',
     'lexer.py',
     'parse_tree_builder.py',
     'parsers/lalr_parser.py',

@@ -50,6 +50,7 @@ class _Parser:
 
                 # TODO filter out rules from expected
                 parser_errors.append(UnexpectedToken(token, expected, state=state))
+                # print(f'parser_errors {parser_errors}')
 
                 # Just take the first expected key
                 for s in states[state].keys():
@@ -73,12 +74,26 @@ class _Parser:
             state_stack.append(new_state)
             value_stack.append(value)
 
+        def raise_parsing_errors():
+            # print(f'parser_errors: {parser_errors}')
+            if parser_errors:
+                error_messages = []
+                for index, error in enumerate(parser_errors):
+                    # Comment out this if to show the duplicated error messages removed
+                    if not index or index > 0 and error != parser_errors[index-1]:
+                        if type(error) is UnexpectedCharacters:
+                            error_messages.append('\nLexer error: %s' % error)
+                        elif type(error) is UnexpectedToken:
+                            error_messages.append('\nParser error: %s' % error)
+
+                raise LarkError(''.join( error_messages ))
+
         # Main LALR-parser loop
         for token in stream:
             while True:
                 action, arg = get_action(token.type)
-                assert arg != self.end_state
-
+                if arg == self.end_state:
+                    break
                 if action is Shift:
                     state_stack.append(arg)
                     value_stack.append(token)
@@ -87,26 +102,19 @@ class _Parser:
                 else:
                     reduce(arg)
 
-        if parser_errors:
-            error_messages = []
-            for index, error in enumerate(parser_errors):
-                # Comment out this if to show the duplicated error messages removed
-                if not index or index > 0 and error != parser_errors[index-1]:
-                    if type(error) is UnexpectedCharacters:
-                        error_messages.append('\nLexer error: %s' % error)
-                    elif type(error) is UnexpectedToken:
-                        error_messages.append('\nParser error: %s' % error)
-
-            raise LarkError(''.join( error_messages ))
-
+        raise_parsing_errors()
         token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
+
         while True:
             _action, arg = get_action('$END')
             if _action is Shift:
-                assert arg == self.end_state
+                if arg != self.end_state:
+                    raise_parsing_errors()
+                    assert arg == self.end_state
                 val ,= value_stack
                 return val
             else:
                 reduce(arg)
 
+        raise_parsing_errors()
 ###}

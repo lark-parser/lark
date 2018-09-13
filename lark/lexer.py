@@ -180,6 +180,7 @@ class _Lex:
                             )
                         )
 
+                    # print(f'parser_errors: {parser_errors}')
                     char_error_offset += 1
                     column_error_offset += 1
 

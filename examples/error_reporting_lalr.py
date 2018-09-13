@@ -61,12 +61,12 @@ def parse(json_text):
 def test():
     try:
         parse('{"example1": "value"')
-    except JsonMissingClosing as e:
+    except Exception as e:
         print(e)
 
     try:
         parse('{"example2": ] ')
-    except JsonMissingOpening as e:
+    except Exception as e:
         print(e)
 
 

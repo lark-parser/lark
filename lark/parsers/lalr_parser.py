@@ -55,7 +55,7 @@ class _Parser:
                 # Just take the first expected key
                 for s in states[state].keys():
                     if s.isupper():
-                        # print(f"Returning key {s} - {states[state][s]} - for {state} and {key}")
+                        # print(f"For {state} and {key}, returning key {s} - {states[state][s]}")
                         return states[state][s]
 
         def reduce(rule):
@@ -89,6 +89,8 @@ class _Parser:
                     reduce(arg)
 
         if parser_errors:
+            # Comment it out to show the duplicated error messages removed
+            parser_errors[:] = [error for index, error in enumerate(parser_errors) if error != parser_errors[index-1]]
             raise RuntimeError(''.join( parser_errors ))
 
         token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)

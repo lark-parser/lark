@@ -5,6 +5,7 @@
 import sys
 
 from ..exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
+from ..tree import Tree
 from ..lexer import Token
 
 from .. errors import parser_errors
@@ -83,6 +84,16 @@ class _Parser:
             state_stack.append(new_state)
             value_stack.append(value)
 
+        def print_partial_tree():
+            delimiter = '\n--------------\n'
+            for item in value_stack:
+                if isinstance(item, Tree):
+                    print(f'\npartial tree:{delimiter}{item.pretty()}', file=sys.stderr)
+                else:
+                    print(f'\nloose token:{delimiter}{repr(item)}', file=sys.stderr)
+
+            print(f'\n--------------', file=sys.stderr)
+
         def raise_parsing_errors():
             # print(f'parser_errors: {parser_errors}', file=sys.stderr)
             if parser_errors[-1]:
@@ -94,7 +105,7 @@ class _Parser:
                             error_messages.append('\nLexer error: %s' % exception)
                         elif type(exception) is UnexpectedToken:
                             error_messages.append('\nParser error: %s' % exception)
-
+                print_partial_tree()
                 raise SyntaxError(''.join( error_messages ))
 
         try:

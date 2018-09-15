@@ -133,42 +133,39 @@ class _Lex:
         self.state = state
 
     def lex(self, stream, newline_types, ignore_types):
-        newline_types = list(newline_types)
-        ignore_types = list(ignore_types)
+        newline_types = frozenset(newline_types)
+        ignore_types = frozenset(ignore_types)
         line_ctr = LineCounter()
 
-        t = None
-        while True:
+        while line_ctr.char_pos < len(stream):
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
                 m = mre.match(stream, line_ctr.char_pos)
-                if m:
-                    value = m.group(0)
-                    type_ = type_from_index[m.lastindex]
-                    if type_ not in ignore_types:
+                if not m:
+                    continue
+
+                t = None
+                value = m.group(0)
+                type_ = type_from_index[m.lastindex]
+                if type_ not in ignore_types:
+                    t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    if t.type in lexer.callback:
+                        t = lexer.callback[t.type](t)
+                    yield t
+                else:
+                    if type_ in lexer.callback:
                         t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                        if t.type in lexer.callback:
-                            t = lexer.callback[t.type](t)
-                        yield t
-                    else:
-                        if type_ in lexer.callback:
-                            t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                            lexer.callback[type_](t)
+                        lexer.callback[type_](t)
 
-                    line_ctr.feed(value, type_ in newline_types)
-                    if t:
-                        t.end_line = line_ctr.line
-                        t.end_column = line_ctr.column
+                line_ctr.feed(value, type_ in newline_types)
+                if t:
+                    t.end_line = line_ctr.line
+                    t.end_column = line_ctr.column
 
-                    break
-            else:
-                if line_ctr.char_pos < len(stream):
-                    raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
                 break
+            else:
+                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
 
-        if t:
-            t.end_line = line_ctr.line
-            t.end_column = line_ctr.column
 
 class UnlessCallback:
     def __init__(self, mres):

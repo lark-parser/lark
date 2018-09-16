@@ -151,7 +151,7 @@ class _Lex:
         while True:
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
-                log(2, 'stream %s, mre %s', stream[0:50], mre)
+                log(2, 'stream %s, mre %s', repr(stream[0:50]), mre)
                 m = mre.match(stream, line_ctr.char_pos)
                 if m:
                     value = m.group(0)

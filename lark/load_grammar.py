@@ -12,13 +12,14 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress
+from .utils import classify, suppress, getLogger
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace
 inline_args = v_args(inline=True)
 
+log = getLogger(__name__)
 __path__ = os.path.dirname(__file__)
 IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 
@@ -499,6 +500,7 @@ class Grammar:
             expansions = rule_tree_to_text.transform(tree)
 
             for expansion, alias in expansions:
+                log(2, "expansion: %s", expansion)
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 

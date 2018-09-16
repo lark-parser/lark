@@ -1,12 +1,14 @@
 import re
 from functools import partial
+from pprint import pformat
 
-from .utils import get_regexp_width
+from .utils import get_regexp_width, getLogger
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
 
 from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
 from .tree import Tree
+log = getLogger(__name__)
 
 class WithLexer:
     lexer = None
@@ -19,6 +21,7 @@ class WithLexer:
 
     def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
+        if log.debug_level & 2: log(2, "self.parser._parse_table.states:\n%s", pformat(self.parser._parse_table.states))
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
         self.lexer = ContextualLexer(lexer_conf.tokens, states,

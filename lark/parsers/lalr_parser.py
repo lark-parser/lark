@@ -73,14 +73,18 @@ class _Parser:
 
         def reduce(rule):
             size = len(rule.expansion)
+            log(2, "rule: %s", rule)
+            log(2, "rule.expansion: %s", rule.expansion)
             if size:
                 s = value_stack[-size:]
+
                 del state_stack[-size:]
                 del value_stack[-size:]
             else:
                 s = []
 
             value = self.callbacks[rule](s)
+            log(2, "callbacks[rule](s): %s", value)
 
             _action, new_state = get_action(rule.origin.name)
             assert _action is Shift
@@ -115,9 +119,9 @@ class _Parser:
             # Main LALR-parser loop
             log( 2, '' ); index = -1
             for token in stream:
-                index += 1; x = token; log( 2, repr("[@%s,%s:%s='%s'<%s>,%s:%s]"), index, x.pos_in_stream, x.pos_in_stream+len(x.value)-1, x.value, x.type, x.line, x.column )
+                index += 1; x = token; log( 2, "[@%s,%s:%s=%s<%s>,%s:%s]", index, x.pos_in_stream, x.pos_in_stream+len(x.value)-1, repr(x.value), x.type, x.line, x.column )
                 while True:
-                    log( 2, 'token %s %s', type(token), token)
+                    log( 2, 'token %s %s', type(token), repr(token))
                     action, arg = get_action(token.type)
                     if arg == self.end_state:
                         break

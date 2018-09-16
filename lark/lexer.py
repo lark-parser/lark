@@ -3,10 +3,12 @@
 import re
 import sys
 
-from .utils import Str, classify, get_regexp_width, Py36
+from .utils import Str, classify, get_regexp_width, Py36, getLogger
 from .exceptions import UnexpectedCharacters, LexError
 
 from . errors import parser_errors
+
+log = getLogger(__name__)
 
 class Pattern(object):
     def __init__(self, value, flags=()):
@@ -149,7 +151,7 @@ class _Lex:
         while True:
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
-                # print(f'stream {stream[0:50]}, mre {mre}', file=sys.stderr)
+                log(2, 'stream %s, mre %s', stream[0:50], mre)
                 m = mre.match(stream, line_ctr.char_pos)
                 if m:
                     value = m.group(0)
@@ -181,7 +183,7 @@ class _Lex:
                             )
                         )
 
-                    # print(f'parser_errors: {parser_errors}', file=sys.stderr)
+                    log(2, 'parser_errors: %s', parser_errors)
                     char_error_offset += 1
                     column_error_offset += 1
 
@@ -309,7 +311,7 @@ class TraditionalLexer(Lexer):
             assert type_ not in self.callback
             self.callback[type_] = f
 
-        # print('tokens/terminals ' + str(terminals), file=sys.stderr)
+        log(2, 'tokens/terminals ' + str(terminals))
         self.terminals = terminals
 
         self.mres = build_mres(terminals)

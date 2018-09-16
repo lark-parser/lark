@@ -1,6 +1,8 @@
 import sys
 from collections import deque
 
+from .logging import getLogger
+
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 class fzset(frozenset):

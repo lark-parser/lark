@@ -7,9 +7,12 @@ import sys
 from ..exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
 from ..tree import Tree
 from ..lexer import Token
+from ..utils import getLogger
 
 from .. errors import parser_errors
 from .lalr_analysis import LALR_Analyzer, Shift
+
+log = getLogger(__name__)
 
 class Parser:
     def __init__(self, parser_conf):
@@ -60,12 +63,12 @@ class _Parser:
 
                 # TODO filter out rules from expected
                 parser_errors[-1].append(UnexpectedToken(token, expected, state=state))
-                # print(f'parser_errors {parser_errors}', file=sys.stderr)
+                log(2, 'parser_errors %s', parser_errors)
 
                 # Just take the first expected key
                 for s in states[state].keys():
                     if s.isupper():
-                        # print(f"For {state} and {key}, returning key {s} - {states[state][s]}", file=sys.stderr)
+                        log( 2, 'For %s and %s, returning key %s - %s', state, key, s, states[state][s] )
                         return states[state][s]
 
         def reduce(rule):
@@ -88,14 +91,14 @@ class _Parser:
             delimiter = '\n--------------\n'
             for item in value_stack:
                 if isinstance(item, Tree):
-                    print(f'\npartial tree:{delimiter}{item.pretty()}', file=sys.stderr)
+                    sys.stderr.write('\npartial tree:%s%s\n' % (delimiter, item.pretty()))
                 else:
-                    print(f'\nloose token:{delimiter}{repr(item)}', file=sys.stderr)
+                    sys.stderr.write('\nloose token:%s%s\n' % (delimiter, repr(item)))
 
-            print(f'\n--------------', file=sys.stderr)
+            sys.stderr.write(delimiter)
 
         def raise_parsing_errors():
-            # print(f'parser_errors: {parser_errors}', file=sys.stderr)
+            log(2, 'parser_errors: %s', parser_errors)
             if parser_errors[-1]:
                 error_messages = []
                 for index, exception in enumerate(parser_errors[-1]):
@@ -110,11 +113,11 @@ class _Parser:
 
         try:
             # Main LALR-parser loop
-            # print('', file=sys.stderr); index = -1
+            log( 2, '' ); index = -1
             for token in stream:
-                # index += 1; x = token; print(repr(f"[@{index},{x.pos_in_stream}:{x.pos_in_stream+len(x.value)-1}='{x.value}'<{x.type}>,{x.line}:{x.column}]"), file=sys.stderr)
+                index += 1; x = token; log( 2, repr("[@%s,%s:%s='%s'<%s>,%s:%s]"), index, x.pos_in_stream, x.pos_in_stream+len(x.value)-1, x.value, x.type, x.line, x.column )
                 while True:
-                    # print(f'token {type(token)} {token}', file=sys.stderr)
+                    log( 2, 'token %s %s', type(token), token)
                     action, arg = get_action(token.type)
                     if arg == self.end_state:
                         break

@@ -62,7 +62,7 @@ class _Parser:
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
                 exception = UnexpectedToken(token, expected, state=state)
-                log(2, 'exception %s', exception)
+                log(2, 'error_reporting %s, exception %s', self.error_reporting, exception)
 
                 if self.error_reporting:
                     raise exception

@@ -1,4 +1,5 @@
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, getLogger
+log = getLogger(__name__)
 
 ###{standalone
 class LarkError(Exception):
@@ -38,31 +39,28 @@ class UnexpectedInput(LarkError):
         after = text[pos:end].split('\n', 1)[0]
         return before + after + '\n' + ' ' * len(before) + '^\n'
 
-    def match_examples(self, parse_fn, examples):
+    def match_examples(self, candidate, label):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
         """
+        log(2, "self %s %s", type(self), self)
+        log(2, "candidate %s %s", type(candidate), candidate)
         assert self.state is not None, "Not supported for this exception"
 
-        candidate = None
-        for label, example in examples.items():
-            assert not isinstance(example, STRING_TYPE)
+        if candidate.state == self.state:
+            try:
+                if candidate.token == self.token:  # Try exact match first
+                    log(2, "Exactly match: %s", candidate)
+                    return label
+            except AttributeError:
+                pass
 
-            for malformed in example:
-                try:
-                    parse_fn(malformed)
-                except UnexpectedInput as ut:
-                    if ut.state == self.state:
-                        try:
-                            if ut.token == self.token:  # Try exact match first
-                                return label
-                        except AttributeError:
-                            pass
-                        if not candidate:
-                            candidate = label
+            if not candidate:
+                log(2, "Not exactly match: %s", candidate)
+                return label
 
-        return candidate
+        return None
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

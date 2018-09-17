@@ -2,10 +2,12 @@
 # This demonstrates example-driven error reporting with the LALR parser
 #
 
-from lark import Lark, UnexpectedInput
+from lark import Lark, LarkError, SyntaxErrors, UnexpectedInput
+from debug_tools import getLogger
 
 from .json_parser import json_grammar   # Using the grammar from the json_parser example
 
+log = getLogger(__name__)
 json_parser = Lark(json_grammar, parser='lalr')
 
 class JsonSyntaxError(SyntaxError):
@@ -32,24 +34,9 @@ class JsonTrailingComma(JsonSyntaxError):
 def parse(json_text):
     try:
         j = json_parser.parse(json_text)
-    except UnexpectedInput as u:
-    # except SyntaxErrors as errors:
-    #     json_parser.parser.error_reporting = True
-    #     candidates = []
-
-    #     for label, example in examples.items():
-    #         assert not isinstance(example, STRING_TYPE)
-
-    #         for malformed in example:
-    #             try:
-    #                 json_parser.parse(malformed)
-
-    #             except LarkError as ut:
-    #                 candidates.append(candidates)
-
-    #     for exception in errors.exceptions:
-
-        exc_class = u.match_examples(json_parser.parse, {
+    except SyntaxErrors as errors:
+        examples = \
+        {
             JsonMissingOpening: ['{"foo": ]}',
                                  '{"foor": }}',
                                  '{"foo": }'],
@@ -68,10 +55,33 @@ def parse(json_text):
                                 '[1,2,]',
                                 '{"foo":1,}',
                                 '{"foo":false,"bar":true,}']
-        })
-        if not exc_class:
-            raise
-        raise exc_class(u.get_context(json_text), u.line, u.column)
+        }
+        json_parser.parser.error_reporting = True
+
+        candidates = []
+        new_exceptions = []
+
+        for label, example in examples.items():
+
+            for malformed in example:
+                try:
+                    json_parser.parse(malformed)
+
+                except LarkError as candidate:
+                    log(2, "Saving candidate %s %s", type(candidate), candidate)
+                    candidates.append((candidate, label))
+
+        for exception in errors.exceptions:
+
+            for candidate, label in candidates:
+                exc_class = exception.match_examples(candidate, label)
+                if not exc_class or exc_class not in examples.keys():
+                    raise
+                else:
+                    new_exceptions.append(exc_class(candidate.get_context(json_text), candidate.line, candidate.column))
+
+        for new_exception in new_exceptions:
+            print(new_exception)
 
 
 def test():

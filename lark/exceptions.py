@@ -2,12 +2,6 @@ from .utils import STRING_TYPE
 
 ###{standalone
 class LarkError(Exception):
-    pass
-
-class GrammarError(LarkError):
-    pass
-
-class ParseError(LarkError):
     def __eq__(self, other):
         """ Determines whether this object is equal to another one based on their hashes. """
         if isinstance(self, LarkError) is isinstance(other, LarkError):
@@ -16,8 +10,22 @@ class ParseError(LarkError):
         raise TypeError("'=' not supported between instances of '%s' and '%s'" % (
                 self.__class__.__name__, other.__class__.__name__))
 
+class GrammarError(LarkError):
+    pass
+
+class ParseError(LarkError):
+    pass
+
 class LexError(LarkError):
     pass
+
+class SyntaxErrors(LarkError):
+    def __init__(self, messages, exceptions):
+        self.messages = messages
+        self.exceptions = exceptions
+
+    def __str__(self):
+        return self.messages
 
 class UnexpectedInput(LarkError):
     pos_in_stream = None

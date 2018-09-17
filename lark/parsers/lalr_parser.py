@@ -4,7 +4,7 @@
 # Email : erezshin@gmail.com
 import sys
 
-from ..exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
+from ..exceptions import SyntaxErrors, UnexpectedToken, UnexpectedCharacters
 from ..tree import Tree
 from ..lexer import Token
 from ..utils import getLogger
@@ -36,6 +36,7 @@ class _Parser:
         self.start_state = parse_table.start_state
         self.end_state = parse_table.end_state
         self.callbacks = callbacks
+        self.error_reporting = False
         # TODO Verify whether `parser_errors` can be a member class atribute.
         # It depends on whether this is an member class object or static.
         # self.parser_errors = []
@@ -60,16 +61,21 @@ class _Parser:
                 return states[state][key]
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
+                exception = UnexpectedToken(token, expected, state=state)
+                log(2, 'exception %s', exception)
 
-                # TODO filter out rules from expected
-                parser_errors[-1].append(UnexpectedToken(token, expected, state=state))
-                log(2, 'parser_errors %s', parser_errors)
+                if self.error_reporting:
+                    raise exception
 
-                # Just take the first expected key
-                for s in states[state].keys():
-                    if s.isupper():
-                        log( 2, 'For %s and %s, returning key %s - %s', state, key, s, states[state][s] )
-                        return states[state][s]
+                else:
+                    # TODO filter out rules from expected
+                    parser_errors[-1].append(exception)
+
+                    # Just take the first expected key
+                    for s in states[state].keys():
+                        if s.isupper():
+                            log( 2, 'For %s and %s, returning key %s - %s', state, key, s, states[state][s] )
+                            return states[state][s]
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -105,15 +111,17 @@ class _Parser:
             log(2, 'parser_errors: %s', parser_errors)
             if parser_errors[-1]:
                 error_messages = []
+                error_exceptions = []
                 for index, exception in enumerate(parser_errors[-1]):
                     # Comment out this if to show the duplicated error messages removed
                     if not index or index > 0 and exception != parser_errors[-1][index-1]:
+                        error_exceptions.append(exception)
                         if type(exception) is UnexpectedCharacters:
                             error_messages.append('\nLexer error: %s' % exception)
                         elif type(exception) is UnexpectedToken:
                             error_messages.append('\nParser error: %s' % exception)
                 print_partial_tree()
-                raise SyntaxError(''.join( error_messages ))
+                raise SyntaxErrors(''.join( error_messages ), error_exceptions)
 
         try:
             # Main LALR-parser loop

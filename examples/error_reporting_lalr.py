@@ -33,6 +33,22 @@ def parse(json_text):
     try:
         j = json_parser.parse(json_text)
     except UnexpectedInput as u:
+    # except SyntaxErrors as errors:
+    #     json_parser.parser.error_reporting = True
+    #     candidates = []
+
+    #     for label, example in examples.items():
+    #         assert not isinstance(example, STRING_TYPE)
+
+    #         for malformed in example:
+    #             try:
+    #                 json_parser.parse(malformed)
+
+    #             except LarkError as ut:
+    #                 candidates.append(candidates)
+
+    #     for exception in errors.exceptions:
+
         exc_class = u.match_examples(json_parser.parse, {
             JsonMissingOpening: ['{"foo": ]}',
                                  '{"foor": }}',

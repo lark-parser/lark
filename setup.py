@@ -10,6 +10,9 @@ setup(
 
     requires = [],
     install_requires = [],
+    extras_require = {
+        'debug':  ["debug_tools"]
+    },
 
     package_data = { '': ['*.md', '*.lark'] },
 

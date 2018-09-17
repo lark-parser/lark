@@ -49,7 +49,7 @@ You can skip the building the tree for LALR(1), by providing Lark with a transfo
 
 ### 3. Earley is the default
 
-The Earley algorithm can accept *any* contxet-free grammar you throw at it (i.e. any grammar you can write in EBNF, it can parse). That makes it extremely useful for beginners, who are not aware of the strange and arbitrary restrictions that LALR(1) places on its grammars.
+The Earley algorithm can accept *any* context-free grammar you throw at it (i.e. any grammar you can write in EBNF, it can parse). That makes it extremely useful for beginners, who are not aware of the strange and arbitrary restrictions that LALR(1) places on its grammars.
 
 As the users grow to understand the structure of their grammar, the scope of their target language and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features. 
 

@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from io import open
 
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, getLogger
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -14,6 +14,7 @@ from .lexer import Lexer, TraditionalLexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 
+log = getLogger('lark')
 
 class LarkOptions(object):
     """Specifies the options for Lark
@@ -106,6 +107,10 @@ class Lark:
             options : a dictionary controlling various aspects of Lark.
         """
         self.options = LarkOptions(options)
+        debug = int(self.options.debug)
+
+        # Force a debug level for all files already loaded after the static initialization
+        if debug: log.setup(force=debug)
 
         # Some, but not all file-like objects have a 'name' attribute
         try:

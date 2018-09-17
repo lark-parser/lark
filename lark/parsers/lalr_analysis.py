@@ -6,13 +6,14 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-import logging
 from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset
+from ..utils import classify, classify_bool, bfs, fzset, getLogger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
+
+log = getLogger(__name__)
 
 class Action:
     def __init__(self, name):
@@ -82,7 +83,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             for k, v in lookahead.items():
                 if len(v) > 1:
                     if self.debug:
-                        logging.warn("Shift/reduce conflict for %s: %s. Resolving as shift.", k, v)
+                        log.warn("Shift/reduce conflict for %s: %s. Resolving as shift.", k, v)
                     for x in v:
                         # XXX resolving shift/reduce into shift, like PLY
                         # Give a proper warning

@@ -12,7 +12,7 @@ except ( ImportError, ValueError ):   # Python 3
         handlers = None
         disabled = False
         def __call__(*args, **kwargs): pass
-        def __init__(self, name, level=0): pass
+        def __init__(self, *args, **kwargs): pass
         def setLevel(self, level): pass
         def debug(self, msg, *args, **kwargs): pass
         def info(self, msg, *args, **kwargs): pass
@@ -33,5 +33,5 @@ except ( ImportError, ValueError ):   # Python 3
         def isEnabledFor(self, level): pass
         def getChild(self, suffix): pass
 
-log = getLogger(__name__, 1)
+log = getLogger('lark', force=1)
 ###}

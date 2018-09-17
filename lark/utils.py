@@ -3,6 +3,10 @@ from collections import deque
 
 from .logging import getLogger
 
+# Force a debug level for all files before the static initialization,
+# comment this out to individually control their debug level on each getLogger()
+log = getLogger('lark', force=1)
+
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 class fzset(frozenset):

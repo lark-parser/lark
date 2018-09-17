@@ -21,9 +21,12 @@ class LexError(LarkError):
     pass
 
 class SyntaxErrors(LarkError):
-    def __init__(self, messages, exceptions):
-        self.messages = messages
+    def __init__(self, exceptions, messages=""):
         self.exceptions = exceptions
+        if messages:
+            self.messages = messages
+        else:
+            self.messages = '\n'.join(str(exception) for exception in exceptions)
 
     def __str__(self):
         return self.messages
@@ -38,29 +41,6 @@ class UnexpectedInput(LarkError):
         before = text[start:pos].rsplit('\n', 1)[-1]
         after = text[pos:end].split('\n', 1)[0]
         return before + after + '\n' + ' ' * len(before) + '^\n'
-
-    def match_examples(self, candidate, label):
-        """ Given a parser instance and a dictionary mapping some label with
-            some malformed syntax examples, it'll return the label for the
-            example that bests matches the current error.
-        """
-        log(2, "self %s %s", type(self), self)
-        log(2, "candidate %s %s", type(candidate), candidate)
-        assert self.state is not None, "Not supported for this exception"
-
-        if candidate.state == self.state:
-            try:
-                if candidate.token == self.token:  # Try exact match first
-                    log(2, "Exactly match: %s", candidate)
-                    return label
-            except AttributeError:
-                pass
-
-            if not candidate:
-                log(2, "Not exactly match: %s", candidate)
-                return label
-
-        return None
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

@@ -62,7 +62,7 @@ class _Parser:
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
                 exception = UnexpectedToken(token, expected, state=state)
-                log(2, 'error_reporting %s, exception %s', self.error_reporting, exception)
+                log(2, 'error_reporting %s, exception %s %s', self.error_reporting, type(exception), exception)
 
                 if self.error_reporting:
                     raise exception
@@ -108,7 +108,7 @@ class _Parser:
             sys.stderr.write(delimiter)
 
         def raise_parsing_errors():
-            log(2, 'parser_errors: %s', parser_errors)
+            log(2, 'parser_errors(%s): %s', len(parser_errors), parser_errors)
             if parser_errors[-1]:
                 error_messages = []
                 error_exceptions = []
@@ -121,7 +121,7 @@ class _Parser:
                         elif type(exception) is UnexpectedToken:
                             error_messages.append('\nParser error: %s' % exception)
                 print_partial_tree()
-                raise SyntaxErrors(''.join( error_messages ), error_exceptions)
+                raise SyntaxErrors(error_exceptions, ''.join( error_messages ))
 
         try:
             # Main LALR-parser loop
@@ -141,9 +141,7 @@ class _Parser:
                     else:
                         reduce(arg)
 
-            raise_parsing_errors()
             token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
-
             while True:
                 _action, arg = get_action('$END')
                 if _action is Shift:
@@ -158,7 +156,7 @@ class _Parser:
             raise_parsing_errors()
 
         finally:
-            # unstack the current erro context on finish
+            # unstack the current error context on finish
             parser_errors.pop()
 
 ###}

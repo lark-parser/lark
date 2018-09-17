@@ -183,7 +183,6 @@ class _Lex:
                             )
                         )
 
-                    log(2, 'parser_errors: %s', parser_errors)
                     char_error_offset += 1
                     column_error_offset += 1
 
@@ -311,7 +310,7 @@ class TraditionalLexer(Lexer):
             assert type_ not in self.callback
             self.callback[type_] = f
 
-        log(2, 'tokens/terminals ' + str(terminals))
+        log(2, 'tokens/terminals %s', str(terminals))
         self.terminals = terminals
 
         self.mres = build_mres(terminals)

@@ -7,7 +7,7 @@ from debug_tools import getLogger
 
 from .json_parser import json_grammar   # Using the grammar from the json_parser example
 
-log = getLogger(__name__)
+log = getLogger('lark')
 json_parser = Lark(json_grammar, parser='lalr')
 
 class JsonSyntaxError(SyntaxError):
@@ -56,7 +56,8 @@ def parse(json_text):
                                 '{"foo":1,}',
                                 '{"foo":false,"bar":true,}']
         }
-        json_parser.parser.error_reporting = True
+        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
+        json_parser.parser.parser.parser.error_reporting = True
 
         candidates = []
         new_exceptions = []
@@ -68,32 +69,53 @@ def parse(json_text):
                     json_parser.parse(malformed)
 
                 except LarkError as candidate:
-                    log(2, "Saving candidate %s %s", type(candidate), candidate)
+                    log(2, "error_reporting: %s, saving candidate %s %s", json_parser.parser.parser.parser.error_reporting, type(candidate), candidate)
                     candidates.append((candidate, label))
 
+        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
         for exception in errors.exceptions:
+            exc_class = None
 
+            """ Given a parser instance and a dictionary mapping some label with
+                some malformed syntax examples, it'll return the label for the
+                example that bests matches the current error.
+            """
             for candidate, label in candidates:
-                exc_class = exception.match_examples(candidate, label)
-                if not exc_class or exc_class not in examples.keys():
-                    raise
-                else:
-                    new_exceptions.append(exc_class(candidate.get_context(json_text), candidate.line, candidate.column))
+                assert exception.state is not None, "Not supported for this exception"
 
-        for new_exception in new_exceptions:
-            print(new_exception)
+                if candidate.state == exception.state:
+                    try:
+                        if candidate.token == exception.token:  # Try exact match first
+                            log(2, "Exactly match: %s", label)
+                            exc_class = label
+                    except AttributeError:
+                        pass
+
+                    if not exc_class:
+                        log(2, "Not exactly match: %s", label)
+                        exc_class = label
+
+            if not exc_class or exc_class not in examples.keys():
+                new_exceptions.append(exception)
+            else:
+                new_exceptions.append(exc_class(candidate.get_context(json_text), candidate.line, candidate.column))
+
+        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
+        raise SyntaxErrors(new_exceptions)
 
 
 def test():
     try:
         parse('{"example1": "value"')
-    except JsonMissingClosing as e:
-        print(e)
+    except SyntaxErrors as errors:
+        print("Caught %s exceptions:" % len(errors.exceptions))
+        for exception in errors.exceptions:
+            print(exception)
 
-    try:
-        parse('{"example2": ] ')
-    except JsonMissingOpening as e:
-        print(e)
+    # try:
+    #     parse('{"example2": ] ')
+    # except JsonMissingOpening as e:
+    #     print(e)
 
 
 if __name__ == '__main__':

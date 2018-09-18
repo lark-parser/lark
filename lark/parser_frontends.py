@@ -4,8 +4,7 @@ from functools import partial
 from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
-
-from .parsers import lalr_parser, earley, xearley, resolve_ambig, cyk
+from .parsers import lalr_parser, earley, earley_forest, xearley, cyk
 from .tree import Tree
 
 class WithLexer:
@@ -54,13 +53,13 @@ class LALR_CustomLexer(WithLexer):
         self.lexer = lexer_cls(lexer_conf)
 
 
-def get_ambiguity_resolver(options):
+def get_ambiguity_options(options):
     if not options or options.ambiguity == 'resolve':
-        return resolve_ambig.standard_resolve_ambig
+        return {}
     elif options.ambiguity == 'resolve__antiscore_sum':
-        return resolve_ambig.antiscore_sum_resolve_ambig
+        return {'forest_sum_visitor': earley_forest.ForestAntiscoreSumVisitor}
     elif options.ambiguity == 'explicit':
-        return None
+        return {'resolve_ambiguity': False}
     raise ValueError(options)
 
 def tokenize_text(text):
@@ -76,8 +75,7 @@ class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.init_traditional_lexer(lexer_conf)
 
-        self.parser = earley.Parser(parser_conf, self.match,
-                                    resolve_ambiguity=get_ambiguity_resolver(options))
+        self.parser = earley.Parser(parser_conf, self.match, **get_ambiguity_options(options))
 
     def match(self, term, token):
         return term.name == token.type
@@ -89,11 +87,10 @@ class XEarley:
 
         self._prepare_match(lexer_conf)
 
+        kw.update(get_ambiguity_options(options))
         self.parser = xearley.Parser(parser_conf,
                                     self.match,
-                                    resolve_ambiguity=get_ambiguity_resolver(options),
                                     ignore=lexer_conf.ignore,
-                                    predict_all=options.earley__predict_all,
                                     **kw
                                     )
 

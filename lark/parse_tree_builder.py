@@ -7,6 +7,7 @@ from .visitors import InlineTransformer # XXX Deprecated
 
 ###{standalone
 from functools import partial, wraps
+from itertools import repeat, product
 
 
 class ExpandSingleChild:
@@ -62,22 +63,10 @@ class PropagatePositions:
 
 
 class ChildFilter:
+    "Optimized childfilter (assumes no duplication in parse tree, so it's safe to change it)"
     def __init__(self, to_include, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
-
-    def __call__(self, children):
-        filtered = []
-        for i, to_expand in self.to_include:
-            if to_expand:
-                filtered += children[i].children
-            else:
-                filtered.append(children[i])
-
-        return self.node_builder(filtered)
-
-class ChildFilterLALR(ChildFilter):
-    "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
 
     def __call__(self, children):
         filtered = []
@@ -89,19 +78,43 @@ class ChildFilterLALR(ChildFilter):
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
-
         return self.node_builder(filtered)
 
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
 
-def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous):
+def maybe_create_child_filter(expansion, keep_all_tokens):
     to_include = [(i, _should_expand(sym)) for i, sym in enumerate(expansion)
                   if keep_all_tokens or not (sym.is_term and sym.filter_out)]
 
     if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
-        return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include)
+        return partial(ChildFilter, to_include)
 
+class AmbiguousExpander:
+    """Deal with the case where we're expanding children ('_rule') into a parent but the children
+       are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
+       ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
+       into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
+    def __init__(self, to_expand, tree_class, node_builder):
+        self.node_builder = node_builder
+        self.tree_class = tree_class
+        self.to_expand = to_expand
+
+    def __call__(self, children):
+        def _is_ambig_tree(child):
+            return hasattr(child, 'data') and child.data == '_ambig'
+
+        ambiguous = [i for i in self.to_expand if _is_ambig_tree(children[i])]
+        if ambiguous:
+            expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
+            return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+        return self.node_builder(children)
+
+def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
+    to_expand = [i for i, sym in enumerate(expansion)
+                 if keep_all_tokens or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))]
+    if to_expand:
+        return partial(AmbiguousExpander, to_expand, tree_class)
 
 class Callback(object):
     pass
@@ -112,8 +125,6 @@ def ptb_inline_args(func):
     def f(children):
         return func(*children)
     return f
-
-
 
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False):
@@ -135,7 +146,8 @@ class ParseTreeBuilder:
             wrapper_chain = filter(None, [
                 self.propagate_positions and PropagatePositions,
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
+                maybe_create_child_filter(rule.expansion, keep_all_tokens),
+                self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
             ])
 
             yield rule, wrapper_chain

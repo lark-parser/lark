@@ -1,14 +1,19 @@
 #
 # This demonstrates example-driven error reporting with the LALR parser
 #
+# To run this, use:
+#     python -m examples.error_reporting_lalr &> test.txt
+#
+import sys
 
 from lark import Lark, LarkError, SyntaxErrors, UnexpectedInput
 from debug_tools import getLogger
 
-from .json_parser import json_grammar   # Using the grammar from the json_parser example
+# Using the grammar from the json_parser example
+from .json_parser import json_grammar
 
-log = getLogger('lark')
-json_parser = Lark(json_grammar, parser='lalr')
+log = getLogger(__name__, 1)
+json_parser = Lark(json_grammar, parser='lalr', debug=0)
 
 class JsonSyntaxError(SyntaxError):
     def __str__(self):
@@ -69,10 +74,12 @@ def parse(json_text):
                     json_parser.parse(malformed)
 
                 except LarkError as candidate:
-                    log(2, "error_reporting: %s, saving candidate %s %s", json_parser.parser.parser.parser.error_reporting, type(candidate), candidate)
                     candidates.append((candidate, label))
 
         log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
+        log(2, "errors.exceptions(%s): %s", len(errors.exceptions), errors.exceptions)
+        json_parser.parser.parser.parser.error_reporting = False
+
         for exception in errors.exceptions:
             exc_class = None
 
@@ -80,42 +87,50 @@ def parse(json_text):
                 some malformed syntax examples, it'll return the label for the
                 example that bests matches the current error.
             """
+            # Try exact match first
             for candidate, label in candidates:
                 assert exception.state is not None, "Not supported for this exception"
 
                 if candidate.state == exception.state:
                     try:
-                        if candidate.token == exception.token:  # Try exact match first
+                        if candidate.token == exception.token:
                             log(2, "Exactly match: %s", label)
                             exc_class = label
-                    except AttributeError:
-                        pass
+                    except AttributeError as error:
+                        log(2, 'Could not get the token: %s', error)
 
-                    if not exc_class:
+            if not exc_class:
+                for candidate, label in candidates:
+
+                    if candidate.state == exception.state:
                         log(2, "Not exactly match: %s", label)
                         exc_class = label
+                        break
 
             if not exc_class or exc_class not in examples.keys():
                 new_exceptions.append(exception)
             else:
-                new_exceptions.append(exc_class(candidate.get_context(json_text), candidate.line, candidate.column))
+                new_exceptions.append(exc_class(exception.get_context(json_text), exception.line, exception.column))
 
-        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
         raise SyntaxErrors(new_exceptions)
 
 
 def test():
+    sys.stderr.write("\nParsing example 1\n")
     try:
         parse('{"example1": "value"')
     except SyntaxErrors as errors:
-        print("Caught %s exceptions:" % len(errors.exceptions))
+        sys.stderr.write("Caught %s exceptions:\n" % len(errors.exceptions))
         for exception in errors.exceptions:
-            print(exception)
+            sys.stderr.write("%s\n" % exception)
 
-    # try:
-    #     parse('{"example2": ] ')
-    # except JsonMissingOpening as e:
-    #     print(e)
+    sys.stderr.write("\nParsing example 2\n")
+    try:
+        parse('{"example2": ] ')
+    except SyntaxErrors as errors:
+        sys.stderr.write("Caught %s exceptions:\n" % len(errors.exceptions))
+        for exception in errors.exceptions:
+            sys.stderr.write("%s\n" % exception)
 
 
 if __name__ == '__main__':

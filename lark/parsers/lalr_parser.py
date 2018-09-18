@@ -65,6 +65,7 @@ class _Parser:
                 log(2, 'error_reporting %s, exception %s %s', self.error_reporting, type(exception), exception)
 
                 if self.error_reporting:
+                    log(2, "self.error_reporting: %s, saving candidate %s %s", self.error_reporting, type(exception), exception)
                     raise exception
 
                 else:
@@ -120,7 +121,9 @@ class _Parser:
                             error_messages.append('\nLexer error: %s' % exception)
                         elif type(exception) is UnexpectedToken:
                             error_messages.append('\nParser error: %s' % exception)
-                print_partial_tree()
+                        else:
+                            error_messages.append('\nUnknown error: %s' % exception)
+                if log.debug_level & 2: print_partial_tree()
                 raise SyntaxErrors(error_exceptions, ''.join( error_messages ))
 
         try:

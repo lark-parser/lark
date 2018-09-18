@@ -11,6 +11,9 @@ class LarkError(Exception):
         raise TypeError("'=' not supported between instances of '%s' and '%s'" % (
                 self.__class__.__name__, other.__class__.__name__))
 
+    def __hash__(self):
+        return hash(str(self))
+
 class GrammarError(LarkError):
     pass
 

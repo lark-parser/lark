@@ -51,7 +51,7 @@ class LarkOptions(object):
     def __init__(self, options_dict):
         o = dict(options_dict)
 
-        self.debug = bool(o.pop('debug', False))
+        self.debug = int(o.pop('debug', False))
         self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
         self.tree_class = o.pop('tree_class', Tree)
         self.cache_grammar = o.pop('cache_grammar', False)
@@ -107,7 +107,7 @@ class Lark:
             options : a dictionary controlling various aspects of Lark.
         """
         self.options = LarkOptions(options)
-        debug = int(self.options.debug)
+        debug = self.options.debug
 
         # Force a debug level for all files already loaded after the static initialization
         if debug: log.setup(force=debug)

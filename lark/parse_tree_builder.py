@@ -133,9 +133,9 @@ class ParseTreeBuilder:
             expand_single_child = options.expand1 if options else False
 
             wrapper_chain = filter(None, [
+                self.propagate_positions and PropagatePositions,
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
-                self.propagate_positions and PropagatePositions,
             ])
 
             yield rule, wrapper_chain

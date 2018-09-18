@@ -36,7 +36,7 @@ class _Parser:
         self.start_state = parse_table.start_state
         self.end_state = parse_table.end_state
         self.callbacks = callbacks
-        self.error_reporting = False
+        self.error_recovering = True
         # TODO Verify whether `parser_errors` can be a member class atribute.
         # It depends on whether this is an member class object or static.
         # self.parser_errors = []
@@ -62,13 +62,9 @@ class _Parser:
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
                 exception = UnexpectedToken(token, expected, state=state)
-                log(2, 'error_reporting %s, exception %s %s', self.error_reporting, type(exception), exception)
+                log(2, 'error_recovering %s, exception %s %s', self.error_recovering, type(exception), exception)
 
-                if self.error_reporting:
-                    log(2, "self.error_reporting: %s, saving candidate %s %s", self.error_reporting, type(exception), exception)
-                    raise exception
-
-                else:
+                if self.error_recovering:
                     # TODO filter out rules from expected
                     parser_errors[-1].append(exception)
 
@@ -77,6 +73,10 @@ class _Parser:
                         if s.isupper():
                             log( 2, 'For %s and %s, returning key %s - %s', state, key, s, states[state][s] )
                             return states[state][s]
+
+                else:
+                    log(2, "self.error_recovering: %s, saving candidate %s %s", self.error_recovering, type(exception), exception)
+                    raise exception
 
         def reduce(rule):
             size = len(rule.expansion)

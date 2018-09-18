@@ -61,8 +61,8 @@ def parse(json_text):
                                 '{"foo":1,}',
                                 '{"foo":false,"bar":true,}']
         }
-        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
-        json_parser.parser.parser.parser.error_reporting = True
+        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_recovering)
+        json_parser.parser.parser.parser.error_recovering = False
 
         candidates = []
         new_exceptions = []
@@ -76,9 +76,9 @@ def parse(json_text):
                 except LarkError as candidate:
                     candidates.append((candidate, label))
 
-        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_reporting)
+        log(2, "error_reportings: %s", json_parser.parser.parser.parser.error_recovering)
         log(2, "errors.exceptions(%s): %s", len(errors.exceptions), errors.exceptions)
-        json_parser.parser.parser.parser.error_reporting = False
+        json_parser.parser.parser.parser.error_recovering = True
 
         for exception in errors.exceptions:
             exc_class = None

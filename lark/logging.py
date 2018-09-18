@@ -7,12 +7,14 @@ except ( ImportError, ValueError ):   # Python 3
     class getLogger(object):
         name = ""
         level = 0
+        debug_level = 0
+        _debug_level = 0
         parent = None
         propagate = False
         handlers = None
         disabled = False
         def __call__(*args, **kwargs): pass
-        def __init__(self, *args, **kwargs): pass
+        def __init__(*args, **kwargs): pass
         def setLevel(self, level): pass
         def debug(self, msg, *args, **kwargs): pass
         def info(self, msg, *args, **kwargs): pass

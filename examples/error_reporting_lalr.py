@@ -7,7 +7,7 @@
 import sys
 
 from lark import Lark, LarkError, SyntaxErrors, UnexpectedInput
-from debug_tools import getLogger
+from lark.logging import getLogger
 
 # Using the grammar from the json_parser example
 from .json_parser import json_grammar

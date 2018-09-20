@@ -138,8 +138,8 @@ class _Lex:
         self.state = state
 
     def lex(self, stream, newline_types, ignore_types):
-        newline_types = list(newline_types)
-        ignore_types = list(ignore_types)
+        newline_types = frozenset(newline_types)
+        ignore_types = frozenset(ignore_types)
         line_ctr = LineCounter()
         char_error_offset = 0
         line_error_offset = 0
@@ -147,58 +147,52 @@ class _Lex:
         last_error_line = -1
         original_stream = stream
 
-        t = None
-        while True:
+        while line_ctr.char_pos < len(stream):
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
-                log(2, 'stream %s, mre %s', repr(stream[0:50]), mre)
                 m = mre.match(stream, line_ctr.char_pos)
-                if m:
-                    value = m.group(0)
-                    type_ = type_from_index[m.lastindex]
-                    if type_ not in ignore_types:
-                        t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                        if t.type in lexer.callback:
-                            t = lexer.callback[t.type](t)
-                        yield t
-                    else:
-                        if type_ in lexer.callback:
-                            t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                            lexer.callback[type_](t)
+                if not m:
+                    continue
 
-                    line_ctr.feed(value, type_ in newline_types)
-                    if t:
-                        t.end_line = line_ctr.line
-                        t.end_column = line_ctr.column
-
-                    break
-            else:
-                if line_ctr.char_pos < len(stream):
-                    if last_error_line != line_ctr.line:
-                        parser_errors[-1].append( UnexpectedCharacters( original_stream,
-                                line_ctr.char_pos + char_error_offset,
-                                line_ctr.line + line_error_offset,
-                                line_ctr.column + column_error_offset,
-                                state=self.state
-                            )
-                        )
-
-                    char_error_offset += 1
-                    column_error_offset += 1
-
-                    if stream[line_ctr.char_pos] == '\n':
-                        line_error_offset += 1
-                        column_error_offset = 0
-
-                    last_error_line = line_ctr.line
-                    stream = stream[0:line_ctr.char_pos] + stream[line_ctr.char_pos+1:]
-
+                t = None
+                value = m.group(0)
+                type_ = type_from_index[m.lastindex]
+                if type_ not in ignore_types:
+                    t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    if t.type in lexer.callback:
+                        t = lexer.callback[t.type](t)
+                    yield t
                 else:
-                    break
+                    if type_ in lexer.callback:
+                        t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                        lexer.callback[type_](t)
 
-        if t:
-            t.end_line = line_ctr.line
-            t.end_column = line_ctr.column
+                line_ctr.feed(value, type_ in newline_types)
+                if t:
+                    t.end_line = line_ctr.line
+                    t.end_column = line_ctr.column
+
+                break
+            else:
+                if last_error_line != line_ctr.line:
+                    parser_errors[-1].append( UnexpectedCharacters( original_stream,
+                            line_ctr.char_pos + char_error_offset,
+                            line_ctr.line + line_error_offset,
+                            line_ctr.column + column_error_offset,
+                            state=self.state
+                        )
+                    )
+
+                char_error_offset += 1
+                column_error_offset += 1
+
+                if stream[line_ctr.char_pos] == '\n':
+                    line_error_offset += 1
+                    column_error_offset = 0
+
+                last_error_line = line_ctr.line
+                stream = stream[0:line_ctr.char_pos] + stream[line_ctr.char_pos+1:]
+
 
 class UnlessCallback:
     def __init__(self, mres):

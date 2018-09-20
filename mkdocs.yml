@@ -8,3 +8,4 @@ pages:
     - Grammar Reference: grammar.md
     - Tree Construction Reference: tree_construction.md
     - Classes Reference: classes.md
+    - Recipes: recipes.md

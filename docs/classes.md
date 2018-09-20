@@ -36,6 +36,8 @@ The Lark class accepts a grammar string or file object, and keyword options:
 
 * propagate_positions - Propagate line/column count to tree nodes (default=False)
 
+* lexer_callbacks - A dictionary of callbacks of type f(Token) -> Token, used to interface with the lexer Token generation. Only works with the standard and contextual lexers. See [Recipes](recipes.md) for more information.
+
 #### parse(self, text)
 
 Return a complete parse tree for the text (of type Tree)

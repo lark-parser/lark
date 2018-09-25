@@ -55,23 +55,22 @@ class _Parser:
 
         if set_state: set_state(self.start_state)
 
-        def get_action(key):
+        def get_action(token):
             state = state_stack[-1]
             try:
-                return states[state][key]
+                return states[state][token.type]
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
                 exception = UnexpectedToken(token, expected, state=state)
                 log(2, 'error_recovering %s, exception %s %s', self.error_recovering, type(exception), exception)
 
                 if self.error_recovering:
-                    # TODO filter out rules from expected
                     parser_errors[-1].append(exception)
 
                     # Just take the first expected key
                     for s in states[state].keys():
                         if s.isupper():
-                            log( 2, 'For %s and %s, returning key %s - %s', state, key, s, states[state][s] )
+                            log( 2, 'For %s and %s, returning token.type %s - %s', state, token.type, s, states[state][s] )
                             return states[state][s]
 
                 else:
@@ -93,7 +92,7 @@ class _Parser:
             value = self.callbacks[rule](s)
             log(2, "callbacks[rule](s): %s", value)
 
-            _action, new_state = get_action(rule.origin.name)
+            _action, new_state = states[state_stack[-1]][rule.origin.name]
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)
@@ -133,7 +132,7 @@ class _Parser:
                 index += 1; x = token; log( 2, "[@%s,%s:%s=%s<%s>,%s:%s]", index, x.pos_in_stream, x.pos_in_stream+len(x.value)-1, repr(x.value), x.type, x.line, x.column )
                 while True:
                     log( 2, 'token %s %s', type(token), repr(token))
-                    action, arg = get_action(token.type)
+                    action, arg = get_action(token)
                     if arg == self.end_state:
                         break
                     if action is Shift:
@@ -144,9 +143,9 @@ class _Parser:
                     else:
                         reduce(arg)
 
-            token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
+            token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
             while True:
-                _action, arg = get_action('$END')
+                _action, arg = get_action(token)
                 if _action is Shift:
                     if arg != self.end_state:
                         raise_parsing_errors()

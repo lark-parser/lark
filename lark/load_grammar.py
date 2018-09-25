@@ -5,8 +5,8 @@ import sys
 from ast import literal_eval
 from copy import deepcopy
 
+from .utils import bfs
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
-
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
@@ -25,9 +25,6 @@ IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 EXT = '.lark'
 
 _RE_FLAGS = 'imslux'
-
-def is_terminal(sym):
-    return sym.isupper()
 
 _TERMINAL_NAMES = {
     '.' : 'DOT',
@@ -528,6 +525,41 @@ def import_grammar(grammar_path, base_paths=[]):
 
     return _imported_grammars[grammar_path]
 
+def import_from_grammar_into_namespace(grammar, namespace, aliases):
+    imported_terms = dict(grammar.term_defs)
+    imported_rules = {n:(n,t,o) for n,t,o in grammar.rule_defs}
+    
+    term_defs = []
+    rule_defs = []
+
+    def rule_dependencies(symbol):
+        if symbol.type != 'RULE':
+            return []
+        _, tree, _ = imported_rules[symbol]
+        return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
+
+    def get_namespace_name(name):
+        try:
+            return aliases[name].value
+        except KeyError:
+            return '%s.%s' % (namespace, name)
+
+    to_import = list(bfs(aliases, rule_dependencies))
+    for symbol in to_import:
+        if symbol.type == 'TERMINAL':
+            term_defs.append([get_namespace_name(symbol), imported_terms[symbol]])
+        else:
+            assert symbol.type == 'RULE'
+            rule = imported_rules[symbol]
+            for t in rule[1].iter_subtrees():
+                for i, c in enumerate(t.children):
+                    if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
+                        t.children[i] = Token(c.type, get_namespace_name(c))
+            rule_defs.append((get_namespace_name(symbol), rule[1], rule[2]))
+
+    return term_defs, rule_defs
+
+
 
 def resolve_term_references(term_defs):
     # TODO Cycles detection
@@ -569,7 +601,7 @@ def options_from_rule(name, *x):
 
 
 def symbols_from_strcase(expansion):
-    return [Terminal(x, filter_out=x.startswith('_')) if is_terminal(x) else NonTerminal(x) for x in expansion]
+    return [Terminal(x, filter_out=x.startswith('_')) if x.isupper() else NonTerminal(x) for x in expansion]
 
 @inline_args
 class PrepareGrammar(Transformer_InPlace):
@@ -632,6 +664,7 @@ class GrammarLoader:
 
         term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
         term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
+        rule_defs = [options_from_rule(*x) for x in rule_defs]
 
         # Execute statements
         ignore = []
@@ -646,15 +679,14 @@ class GrammarLoader:
                     path_node ,= stmt.children
                     arg1 = None
 
-                dotted_path = path_node.children
-
                 if isinstance(arg1, Tree):  # Multi import
+                    dotted_path = path_node.children
                     names = arg1.children
                     aliases = names  # Can't have aliased multi import, so all aliases will be the same as names
                 else:  # Single import
-                    names = [dotted_path[-1]]  # Get name from dotted path
+                    dotted_path = path_node.children[:-1]
+                    names = [path_node.children[-1]]  # Get name from dotted path
                     aliases = [arg1] if arg1 else names  # Aliases if exist
-                    dotted_path = dotted_path[:-1]
 
                 grammar_path = os.path.join(*dotted_path) + EXT
 
@@ -668,10 +700,11 @@ class GrammarLoader:
                     base_path = os.path.split(base_file)[0]
                     g = import_grammar(grammar_path, base_paths=[base_path])
 
-                for name, alias in zip(names, aliases):
-                    term_options = dict(g.term_defs)[name]
-                    assert isinstance(term_options, tuple) and len(term_options)==2
-                    term_defs.append([alias.value, term_options])
+                aliases_dict = dict(zip(names, aliases))
+                new_td, new_rd = import_from_grammar_into_namespace(g, '.'.join(dotted_path), aliases_dict)
+
+                term_defs += new_td
+                rule_defs += new_rd
 
             elif stmt.data == 'declare':
                 for t in stmt.children:
@@ -716,7 +749,7 @@ class GrammarLoader:
 
         resolve_term_references(term_defs)
 
-        rules = [options_from_rule(*x) for x in rule_defs]
+        rules = rule_defs
 
         rule_names = set()
         for name, _x, _o in rules:
@@ -730,7 +763,7 @@ class GrammarLoader:
             used_symbols = {t for x in expansions.find_data('expansion')
                               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
             for sym in used_symbols:
-                if is_terminal(sym):
+                if sym.type == 'TERMINAL':
                     if sym not in terminal_names:
                         raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, name))
                 else:

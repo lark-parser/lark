@@ -40,13 +40,13 @@ class _Parser:
 
         if set_state: set_state(self.start_state)
 
-        def get_action(key):
+        def get_action(token):
             state = state_stack[-1]
             try:
-                return states[state][key]
+                return states[state][token.type]
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
-                raise UnexpectedToken(token, expected, state=state)  # TODO filter out rules from expected
+                raise UnexpectedToken(token, expected, state=state)
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -59,7 +59,7 @@ class _Parser:
 
             value = self.callbacks[rule](s)
 
-            _action, new_state = get_action(rule.origin.name)
+            _action, new_state = states[state_stack[-1]][rule.origin.name]
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)
@@ -67,7 +67,7 @@ class _Parser:
         # Main LALR-parser loop
         for token in stream:
             while True:
-                action, arg = get_action(token.type)
+                action, arg = get_action(token)
                 assert arg != self.end_state
 
                 if action is Shift:
@@ -78,9 +78,9 @@ class _Parser:
                 else:
                     reduce(arg)
 
-        token = Token.new_borrow_pos('<EOF>', token, token) if token else Token('<EOF>', '', 0, 1, 1)
+        token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
         while True:
-            _action, arg = get_action('$END')
+            _action, arg = get_action(token)
             if _action is Shift:
                 assert arg == self.end_state
                 val ,= value_stack

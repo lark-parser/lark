@@ -4,7 +4,7 @@ Parse any context-free grammar, FAST and EASY!
 
 **Beginners**: Lark is not just another parser. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs a parse-tree for you, without additional code on your part.
 
-**Experts**: Lark lets you choose between Earley and LALR(1), to trade-off power and speed. It also contains a CYK parser and experimental features such as a contextual-lexer.
+**Experts**: Lark lets you choose between Earley and LALR(1), to trade-off power and speed. It also contains a CYK parser and unique features such as a contextual-lexer.
 
 Lark can:
 

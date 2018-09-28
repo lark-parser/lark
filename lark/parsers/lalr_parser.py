@@ -151,11 +151,10 @@ class _Parser:
                         raise_parsing_errors()
                         assert arg == self.end_state
                     val ,= value_stack
+                    raise_parsing_errors()
                     return val
                 else:
                     reduce(arg)
-
-            raise_parsing_errors()
 
         finally:
             # unstack the current error context on finish

@@ -189,7 +189,7 @@ When using a lexer, the resulting tokens in the trees will be of the Token class
 * `line` - The line of the token in the text (starting with 1)
 * `column` - The column of the token in the text (starting with 1)
 * `end_line` - The line where the token ends
-* `end_column` - The column where the token ends
+* `end_column` - The next column after the end of the token. For example, if the token is a single character with a `column` value of 4, `end_column` will be 5.
 
 
 ## UnexpectedInput

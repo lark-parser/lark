@@ -22,7 +22,7 @@ class Transformer:
 
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
-        children = new_children if new_children is not None else tree.children
+        children = tree.children if new_children is None else new_children
         try:
             f = getattr(self, tree.data)
         except AttributeError:
@@ -33,9 +33,9 @@ class Transformer:
             elif getattr(f, 'inline', False):
                 return f(*children)
             elif getattr(f, 'whole_tree', False):
-                if new_children is not None:
-                    raise NotImplementedError("Doesn't work with the base Transformer class")
-                return f(tree)
+                if new_children is None:
+                    return f(tree)
+                raise NotImplementedError("Doesn't work with the base Transformer class")
             else:
                 return f(children)
 
@@ -76,7 +76,7 @@ class Transformer:
 class InlineTransformer(Transformer):   # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
-        children = new_children if new_children is not None else tree.children
+        children = tree.children if new_children is None else new_children
         try:
             f = getattr(self, tree.data)
         except AttributeError:

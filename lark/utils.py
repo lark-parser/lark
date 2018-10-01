@@ -23,8 +23,8 @@ def classify_bool(seq, pred):
 def classify(seq, key=None, value=None):
     d = {}
     for item in seq:
-        k = key(item) if (key is not None) else item
-        v = value(item) if (value is not None) else item
+        k = item if (key is None) else key(item)
+        v = item if (value is None) else value(item)
         if k in d:
             d[k].append(v)
         else:

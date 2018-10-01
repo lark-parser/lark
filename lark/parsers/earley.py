@@ -41,7 +41,7 @@ class Item(object):
         self.rule = rule
         self.ptr = ptr
         self.start = start
-        self.tree = tree if tree is not None else Derivation(self.rule)
+        self.tree = Derivation(self.rule) if tree is None else tree
 
     @property
     def expect(self):

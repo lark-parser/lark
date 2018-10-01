@@ -128,11 +128,17 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree, filename):
-    "Creates a colorful image that represents the tree (data+children, without meta)"
+def pydot__tree_to_png(tree, filename, rankdir="LR"):
+    """Creates a colorful image that represents the tree (data+children, without meta)
+
+    Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
+    directed graphs drawn from top to bottom, from left to right, from bottom to
+    top, and from right to left, respectively. See:
+    https://www.graphviz.org/doc/info/attrs.html#k:rankdir
+    """
 
     import pydot
-    graph = pydot.Dot(graph_type='digraph', rankdir="LR")
+    graph = pydot.Dot(graph_type='digraph', rankdir)
 
     i = [0]
 

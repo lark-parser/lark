@@ -138,7 +138,7 @@ def pydot__tree_to_png(tree, filename, rankdir="LR"):
     """
 
     import pydot
-    graph = pydot.Dot(graph_type='digraph', rankdir)
+    graph = pydot.Dot(graph_type='digraph', rankdir=rankdir)
 
     i = [0]
 

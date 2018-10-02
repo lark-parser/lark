@@ -95,6 +95,21 @@ class Token(Str):
     def __deepcopy__(self, memo):
         return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
 
+    def pretty(self, index=-1):
+        """Return a pretty version of the token like ANRL4.
+
+        The `index` is the current token index on the stream.
+        The output format is:
+        1. @index
+        2. position in stream start:position in stream end
+        3. =the representation of the token
+        4. <the token type>
+        5. token line:token column
+        """
+        return "[@%s,%s:%s=%s<%s>,%s:%s]" % (
+                index, self.pos_in_stream, self.pos_in_stream+len(self.value)-1,
+                repr(self.value), self.type, self.line, self.column )
+
     def __eq__(self, other):
         if isinstance(other, Token) and self.type != other.type:
             return False

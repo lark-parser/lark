@@ -27,21 +27,29 @@ class Tree(object):
     def _pretty_label(self):
         return self.data
 
-    def _pretty(self, level, indent_str):
+    def _pretty(self, level, indent_str, index):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
+            if index[0] > -1: index[0] += 1
+            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (
+                    self.children[0].pretty(index[0]) if index[0] > -1 else self.children[0],), '\n']
 
         l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
             if isinstance(n, Tree):
-                l += n._pretty(level+1, indent_str)
+                l += n._pretty(level+1, indent_str, index)
             else:
-                l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
+                if index[0] > -1: index[0] += 1
+                l += [ indent_str*(level+1), '%s' % (n.pretty(index[0]) if index[0] > -1 else n,), '\n' ]
 
         return l
 
-    def pretty(self, indent_str='  '):
-        return ''.join(self._pretty(0, indent_str))
+    def pretty(self, indent_str='  ', debug=False):
+        """Prints a pretty text version of this tree.
+
+        If `debug` is True, it will call Token.pretty() instead of Token.__repr__()
+        when creating the token string representation.
+        """
+        return ''.join(self._pretty(0, indent_str, [int(debug)-1]))
     def __eq__(self, other):
         try:
             return self.data == other.data and self.children == other.children
@@ -128,13 +136,16 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree, filename, rankdir="LR"):
+def pydot__tree_to_png(tree, filename, rankdir="LR", debug=False):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
     directed graphs drawn from top to bottom, from left to right, from bottom to
     top, and from right to left, respectively. See:
     https://www.graphviz.org/doc/info/attrs.html#k:rankdir
+
+    If `debug` is True, it will call Token.pretty() instead of Token.__repr__()
+    when creating the token string representation.
     """
 
     import pydot
@@ -142,17 +153,18 @@ def pydot__tree_to_png(tree, filename, rankdir="LR"):
 
     i = [0]
 
-    def new_leaf(leaf):
-        node = pydot.Node(i[0], label=repr(leaf))
+    def new_leaf(leaf, index):
+        if index[0] > -1: index[0] += 1
+        node = pydot.Node(i[0], label=leaf.pretty(index[0]) if index[0] > -1 else repr(leaf))
         i[0] += 1
         graph.add_node(node)
         return node
 
-    def _to_pydot(subtree):
+    def _to_pydot(subtree, index):
         color = hash(subtree.data) & 0xffffff
         color |= 0x808080
 
-        subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
+        subnodes = [_to_pydot(child, index) if isinstance(child, Tree) else new_leaf(child, index)
                     for child in subtree.children]
         node = pydot.Node(i[0], style="filled", fillcolor="#%x"%color, label=subtree.data)
         i[0] += 1
@@ -163,6 +175,6 @@ def pydot__tree_to_png(tree, filename, rankdir="LR"):
 
         return node
 
-    _to_pydot(tree)
+    _to_pydot(tree, [int(debug)-1])
     graph.write_png(filename)
 

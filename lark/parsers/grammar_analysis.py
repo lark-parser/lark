@@ -92,7 +92,7 @@ def calculate_sets(rules):
 
         for rule in rules:
             for i, sym in enumerate(rule.expansion):
-                if i==len(rule.expansion)-1 or set(rule.expansion[i:]) <= NULLABLE:
+                if i==len(rule.expansion)-1 or set(rule.expansion[i+1:]) <= NULLABLE:
                     if update_set(FOLLOW[sym], FOLLOW[rule.origin]):
                         changed = True
 

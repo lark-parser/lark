@@ -1237,6 +1237,17 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(tok.end_line, 2)
                 self.assertEqual(tok.end_column, 6)
 
+        @unittest.skipIf(PARSER=='cyk', "Empty rules")
+        def test_empty_end(self):
+            p = _Lark("""
+                start: b c d
+                b: "B"
+                c: | "C"
+                d: | "D"
+            """)
+            res = p.parse('B')
+            self.assertEqual(len(res.children), 3)
+
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

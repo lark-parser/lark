@@ -69,6 +69,8 @@ class Transformer:
             if name.startswith('_') or name in libmembers:
                 continue
 
+            if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
+                kwargs['static'] = True
             setattr(cls, name, decorator(value, **kwargs))
         return cls
 
@@ -225,7 +227,7 @@ def inline_args(obj):   # XXX Deprecated
 
 
 
-def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False):
+def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, static=False):
     assert [whole_tree, meta, inline].count(True) <= 1
     def create_decorator(_f, with_self):
         if with_self:
@@ -236,7 +238,10 @@ def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False):
                 return _f(*args, **kwargs)
         return f
 
-    f = smart_decorator(func, create_decorator)
+    if static:
+        f = wraps(func)(create_decorator(func, False))
+    else:
+        f = smart_decorator(func, create_decorator)
     f.inline = inline
     f.meta = meta
     f.whole_tree = whole_tree

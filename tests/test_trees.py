@@ -97,6 +97,25 @@ class TestTrees(TestCase):
         res = T().transform(t)
         self.assertEqual(res, 2.9)
 
+    def test_vargs(self):
+        @v_args()
+        class MyTransformer(Transformer):
+            @staticmethod
+            def integer(args):
+                return 1 # some code here
+
+            @classmethod
+            def integer2(cls, args):
+                return 2 # some code here
+
+            hello = staticmethod(lambda args: 'hello')
+
+        x = MyTransformer().transform( Tree('integer', [2]))
+        self.assertEqual(x, 1)
+        x = MyTransformer().transform( Tree('integer2', [2]))
+        self.assertEqual(x, 2)
+        x = MyTransformer().transform( Tree('hello', [2]))
+        self.assertEqual(x, 'hello')
 
 
 if __name__ == '__main__':

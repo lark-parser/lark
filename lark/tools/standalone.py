@@ -18,6 +18,9 @@
 #    If you wish to purchase a commercial license for this tool and its
 #    generated code, contact me via email.
 #
+#    If GPL is incompatible with your free or open-source project,
+#    contact me and we'll work it out (for free).
+#
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 2 of the License, or

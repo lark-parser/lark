@@ -69,9 +69,8 @@ class Transformer:
             if name.startswith('_') or name in libmembers:
                 continue
 
-            if isinstance(cls.__dict__[name], (staticmethod, classmethod)):
-                kwargs['static'] = True
-            setattr(cls, name, decorator(value, **kwargs))
+            static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
+            setattr(cls, name, decorator(value, static=static, **kwargs))
         return cls
 
 

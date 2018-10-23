@@ -82,7 +82,9 @@ class LALR_Analyzer(GrammarAnalyzer):
             for k, v in lookahead.items():
                 if len(v) > 1:
                     if self.debug:
-                        logging.warn("Shift/reduce conflict for %s: %s. Resolving as shift.", k, v)
+                        logging.warn("Shift/reduce conflict for terminal %s:  (resolving as shift)", k.name)
+                        for act, arg in v:
+                            logging.warn(' * %s: %s', act, arg)
                     for x in v:
                         # XXX resolving shift/reduce into shift, like PLY
                         # Give a proper warning

@@ -8,10 +8,10 @@ from ..lexer import Token
 from .lalr_analysis import LALR_Analyzer, Shift
 
 class Parser:
-    def __init__(self, parser_conf):
+    def __init__(self, parser_conf, debug=False):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
-        analysis = LALR_Analyzer(parser_conf)
+        analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lookahead()
         callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
                           for rule in parser_conf.rules}

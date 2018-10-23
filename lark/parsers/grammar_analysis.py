@@ -14,9 +14,9 @@ class RulePtr(object):
         self.index = index
 
     def __repr__(self):
-        before = self.rule.expansion[:self.index]
-        after = self.rule.expansion[self.index:]
-        return '<%s : %s * %s>' % (self.rule.origin, ' '.join(before), ' '.join(after))
+        before = [x.name for x in self.rule.expansion[:self.index]]
+        after = [x.name for x in self.rule.expansion[self.index:]]
+        return '<%s : %s * %s>' % (self.rule.origin.name, ' '.join(before), ' '.join(after))
 
     @property
     def next(self):

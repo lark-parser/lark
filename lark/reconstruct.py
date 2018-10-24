@@ -4,7 +4,7 @@ from .tree import Tree
 from .visitors import Transformer_InPlace
 from .common import ParserConf
 from .lexer import Token, PatternStr
-from .parsers import earley, resolve_ambig
+from .parsers import earley
 from .grammar import Rule, Terminal, NonTerminal
 
 
@@ -114,7 +114,7 @@ class Reconstructor:
 
     def _reconstruct(self, tree):
         # TODO: ambiguity?
-        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match, resolve_ambiguity=resolve_ambig.standard_resolve_ambig)
+        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match, resolve_ambiguity=True)
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)

@@ -62,14 +62,13 @@ class LarkOptions(object):
         self.profile = o.pop('profile', False)
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
-        self.earley__predict_all = o.pop('earley__predict_all', False)
         self.lexer_callbacks = o.pop('lexer_callbacks', {})
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
-        if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
-                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. lalr)')
+        if self.ambiguity == 'explicit' and self.transformer:
+            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm for explicit ambiguity.'
+                             'Please use your transformer on the resulting Forest, or use a different algorithm (i.e. LALR)')
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -176,7 +175,7 @@ class Lark:
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
 
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr')
+        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit')
         callback = self._parse_tree_builder.create_callback(self.options.transformer)
         if self.profiler:
             for f in dir(callback):

@@ -240,7 +240,7 @@ def _make_full_earley_test(LEXER):
             parser = Lark(grammar, parser='earley', lexer=LEXER, ambiguity='explicit')
             root_symbol = parser.parse('ab')
             ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, parser.parser.parser.callbacks).go()
-            print(ambig_tree.pretty())
+            # print(ambig_tree.pretty())
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
 
@@ -256,7 +256,7 @@ def _make_full_earley_test(LEXER):
             l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
             root_symbol = l.parse('cde')
             ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, l.parser.parser.callbacks).go()
-            print(ambig_tree.pretty())
+            # print(ambig_tree.pretty())
 #            tree = ApplyCallbacks(l.parser.parser.postprocess).transform(ambig_tree)
 
             assert ambig_tree.data == '_ambig', ambig_tree
@@ -321,7 +321,9 @@ def _make_full_earley_test(LEXER):
             # print res.pretty()
             # print expected.pretty()
 
-            self.assertEqual(tree, expected)
+            # self.assertEqual(tree, expected)
+            self.assertEqual(tree.data, expected.data)
+            self.assertEqual(set(tree.children), set(expected.children))
 
 
         @unittest.skipIf(LEXER=='dynamic', "Only relevant for the dynamic_complete parser")

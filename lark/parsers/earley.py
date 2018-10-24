@@ -38,7 +38,7 @@ class Parser:
         self.NON_TERMINALS = { sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term }
 
         for rule in parser_conf.rules:
-            self.callbacks[rule] = getattr(parser_conf.callback, rule.alias or rule.origin, None)
+            self.callbacks[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
         self.term_matcher = term_matcher

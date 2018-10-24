@@ -64,7 +64,7 @@ class Parser:
         token_cache = {}
 
         text_line = 1
-        text_column = 0
+        text_column = 1
 
         def make_symbol_node(s, start, end):
             label = (s, start.i, end.i)

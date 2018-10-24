@@ -4,7 +4,7 @@ from .tree import Tree
 from .visitors import Transformer_InPlace
 from .common import ParserConf
 from .lexer import Token, PatternStr
-from .parsers import earley, resolve_ambig
+from .parsers import earley
 from .grammar import Rule, Terminal, NonTerminal
 
 

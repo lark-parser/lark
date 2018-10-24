@@ -103,7 +103,8 @@ class Tree(object):
 
     def iter_subtrees_topdown(self):
         if not self.children:
-            return self
+            yield self
+            return
 
         stack = [self]
         while stack:

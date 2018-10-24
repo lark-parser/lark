@@ -5,6 +5,8 @@ except ImportError:
 
 from copy import deepcopy
 
+from .lexer import Token
+
 ###{standalone
 class Meta:
     pass
@@ -31,7 +33,9 @@ class Tree(object):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
             if index[0] > -1: index[0] += 1
             return [ indent_str*level, self._pretty_label(), '\t', '%s' % (
-                    self.children[0].pretty(index[0]) if index[0] > -1 else self.children[0],), '\n']
+                    ( self.children[0].pretty(index[0])
+                        if type( self.children[0] ) is Token else self.children[0] )
+                            if index[0] > -1 else self.children[0],), '\n']
 
         l = [ indent_str*level, self._pretty_label(), '\n' ]
         for n in self.children:
@@ -39,7 +43,9 @@ class Tree(object):
                 l += n._pretty(level+1, indent_str, index)
             else:
                 if index[0] > -1: index[0] += 1
-                l += [ indent_str*(level+1), '%s' % (n.pretty(index[0]) if index[0] > -1 else n,), '\n' ]
+                l += [ indent_str*(level+1), '%s' % (
+                        ( n.pretty(index[0]) if type( n ) is Token else n )
+                            if index[0] > -1 else n, ), '\n' ]
 
         return l
 

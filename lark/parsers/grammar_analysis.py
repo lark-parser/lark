@@ -32,6 +32,11 @@ class RulePtr(object):
 
     def __eq__(self, other):
         return self.rule == other.rule and self.index == other.index
+
+    def __lt__(self, other):
+        assert isinstance(other, RulePtr)
+        return (self.rule, self.index) < (other.rule, other.index)
+
     def __hash__(self):
         return hash((self.rule, self.index))
 

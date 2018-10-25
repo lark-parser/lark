@@ -11,6 +11,10 @@ class Symbol(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __lt__(self, other):
+        assert isinstance(other, Symbol)
+        return self.name < other.name
+
     def __hash__(self):
         return hash(self.name)
 
@@ -50,6 +54,10 @@ class Rule(object):
 
     def __repr__(self):
         return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+
+    def __lt__(self, other):
+        assert isinstance(other, Rule)
+        return (self.origin, self.expansion) < (other.origin, other.expansion)
 
 
 class RuleOptions:

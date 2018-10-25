@@ -9,7 +9,7 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 import logging
 from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset
+from ..utils import classify, classify_bool, bfs
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
@@ -66,20 +66,20 @@ class LALR_Analyzer(GrammarAnalyzer):
                     lookahead[term].append((Reduce, rp.rule))
 
             d = classify(unsat, lambda rp: rp.next)
-            for sym, rps in d.items():
+            for sym, rps in sorted(d.items()):
                 rps = {rp.advance(sym) for rp in rps}
 
                 for rp in set(rps):
                     if not rp.is_satisfied and not rp.next.is_term:
                         rps |= self.expand_rule(rp.next)
 
-                new_state = fzset(rps)
+                new_state = tuple(sorted(rps))
                 lookahead[sym].append((Shift, new_state))
                 if sym == Terminal('$END'):
                     self.end_states.append( new_state )
                 yield new_state
 
-            for k, v in lookahead.items():
+            for k, v in sorted(lookahead.items()):
                 if len(v) > 1:
                     if self.debug:
                         logging.warn("Shift/reduce conflict for terminal %s:  (resolving as shift)", k.name)

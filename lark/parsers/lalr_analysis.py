@@ -50,9 +50,18 @@ class IntParseTable(ParseTable):
         return cls(int_states, start_state, end_state)
 
 
-
-
 class LALR_Analyzer(GrammarAnalyzer):
+
+    @classmethod
+    def action_str(cls, act):
+        return '%s: %s' % act
+
+    @classmethod
+    def conflict_str(cls, terminal, actions):
+        return "Conflict in %s: %s" %(
+            terminal,
+            ', '.join(['\n  * %s' % cls.action_str(act) for act in actions]),
+        )
 
     def compute_lookahead(self):
         self.end_states = []
@@ -79,21 +88,25 @@ class LALR_Analyzer(GrammarAnalyzer):
                     self.end_states.append( new_state )
                 yield new_state
 
+            # Look for conflicts and resolve them if possible
+            #  * shift/reduce -> shift (+ warning)
+            #  * reduce/reduce -> raise an error
             for k, v in lookahead.items():
                 if len(v) > 1:
-                    if self.debug:
-                        logging.warn("Shift/reduce conflict for terminal %s:  (resolving as shift)", k.name)
-                        for act, arg in v:
-                            logging.warn(' * %s: %s', act, arg)
+                    last_shift = None
                     for x in v:
-                        # XXX resolving shift/reduce into shift, like PLY
-                        # Give a proper warning
                         if x[0] is Shift:
-                            lookahead[k] = [x]
+                            last_shift = x
 
-            for k, v in lookahead.items():
-                if not len(v) == 1:
-                    raise GrammarError("Collision in %s: %s" %(k, ', '.join(['\n  * %s: %s' % x for x in v])))
+                    if last_shift is None:
+                        raise GrammarError(self.conflict_str(k, v))
+                    else:
+                        if self.debug:
+                            logging.warn(self.conflict_str(k, v))
+                            logging.warn("Resolving conflict as %s", self.action_str(last_shift))
+                        # XXX resolving shift/reduce into shift, like PLY
+                        # When there is reduce/reduce conflict and also a shift/reduce then shift action will be used.
+                        lookahead[k] = [last_shift]
 
             self.states[state] = {k.name:v[0] for k, v in lookahead.items()}
 

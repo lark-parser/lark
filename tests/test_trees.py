@@ -21,6 +21,17 @@ class TestTrees(TestCase):
         data = pickle.dumps(s)
         assert pickle.loads(data) == s
 
+    def test_iter_subtrees(self):
+        expected = [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z'),
+                    Tree('a', [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')])]
+        nodes = list(self.tree1.iter_subtrees())
+        self.assertEqual(nodes, expected)
+
+    def test_iter_subtrees_topdown(self):
+        expected = [Tree('a', [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]),
+                    Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]
+        nodes = list(self.tree1.iter_subtrees_topdown())
+        self.assertEqual(nodes, expected)
 
     def test_interp(self):
         t = Tree('a', [Tree('b', []), Tree('c', []), 'd'])

@@ -102,10 +102,6 @@ class Tree(object):
                 seen.add(id(x))
 
     def iter_subtrees_topdown(self):
-        if not self.children:
-            yield self
-            return
-
         stack = [self]
         while stack:
             node = stack.pop()

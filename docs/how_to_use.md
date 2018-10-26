@@ -56,7 +56,7 @@ new_tree = MyTransformer().transform(tree)
 
 By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure `logging` framework beforehand. For example:
 
-```
+```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
 

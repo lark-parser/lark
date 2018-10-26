@@ -1,7 +1,5 @@
 from .exceptions import GrammarError
-from .utils import suppress
 from .lexer import Token
-from .grammar import Rule
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
 

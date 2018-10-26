@@ -45,9 +45,7 @@ from collections import defaultdict
 
 import lark
 from lark import Lark
-from lark.parsers.lalr_analysis import Shift, Reduce
-
-from ..grammar import Rule
+from lark.parsers.lalr_analysis import Reduce
 
 _dir = path.dirname(__file__)
 _larkdir = path.join(_dir, path.pardir)

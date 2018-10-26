@@ -36,7 +36,7 @@ def _compare_drv(tree1, tree2):
     except AttributeError:
         rule2 = None
 
-    if None == rule1 == rule2:
+    if rule1 is None and rule2 is None:
         return compare(tree1, tree2)
     elif rule1 is None:
         return -1

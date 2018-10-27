@@ -16,7 +16,10 @@ from .earley_common import Column, Derivation
 
 from collections import deque
 
-class SymbolNode(object):
+class ForestNode(object):
+    pass
+
+class SymbolNode(ForestNode):
     """
     A Symbol Node represents a symbol (or Intermediate LR0).
 
@@ -61,7 +64,7 @@ class SymbolNode(object):
         symbol = self.s.name if isinstance(self.s, (NonTerminal, Terminal)) else self.s[0].origin.name
         return "(%s, %d, %d, %d)" % (symbol, self.start.i, self.end.i, self.priority if self.priority is not None else 0)
 
-class PackedNode(object):
+class PackedNode(ForestNode):
     """
     A Packed Node represents a single derivation in a symbol node.
     """
@@ -160,7 +163,7 @@ class ForestVisitor(object):
                 input_stack.append(next_node)
                 continue
 
-            if isinstance(current, Str):
+            if not isinstance(current, ForestNode):
                 vtn(current)
                 input_stack.pop()
                 continue

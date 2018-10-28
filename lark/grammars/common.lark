@@ -29,7 +29,19 @@ ESCAPED_STRING: "\"" STRING_INNER* "\""
 // Names (Variables)
 //
 LCASE_LETTER: "a".."z"
+            | "ç"
+            | "ğ"
+            | "ı"
+            | "ö"
+            | "ş"
+            | "ü"
 UCASE_LETTER: "A".."Z"
+            | "Ç"
+            | "Ğ"
+            | "İ"
+            | "Ö"
+            | "Ş"
+            | "Ü"
 
 LETTER: UCASE_LETTER | LCASE_LETTER
 WORD: LETTER+

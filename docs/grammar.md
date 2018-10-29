@@ -43,7 +43,7 @@ Literals can be one of:
 * `/regular expression+/`
 * `"case-insensitive string"i`
 * `/re with flags/imulx`
-* Literal range: `"a".."z"`, `"1..9"`, etc.
+* Literal range: `"a".."z"`, `"1".."9"`, etc.
 
 #### Notes for when using a lexer:
 

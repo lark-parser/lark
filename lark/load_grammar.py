@@ -526,8 +526,12 @@ def import_grammar(grammar_path, base_paths=[]):
     return _imported_grammars[grammar_path]
 
 def import_from_grammar_into_namespace(grammar, namespace, aliases):
+    """Returns all rules and terminals of grammar, prepended
+    with a 'namespace' prefix, except for those which are aliased.
+    """
+
     imported_terms = dict(grammar.term_defs)
-    imported_rules = {n:(n,t,o) for n,t,o in grammar.rule_defs}
+    imported_rules = {n:(n,deepcopy(t),o) for n,t,o in grammar.rule_defs}
     
     term_defs = []
     rule_defs = []
@@ -535,7 +539,10 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
     def rule_dependencies(symbol):
         if symbol.type != 'RULE':
             return []
-        _, tree, _ = imported_rules[symbol]
+        try:
+            _, tree, _ = imported_rules[symbol]
+        except KeyError:
+            raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
         return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
 
     def get_namespace_name(name):

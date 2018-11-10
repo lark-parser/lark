@@ -52,3 +52,19 @@ class MyTransformer(Transformer):
 new_tree = MyTransformer().transform(tree)
 ```
 
+## LALR usage
+
+By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure `logging` framework beforehand. For example:
+
+```python
+from lark import Lark
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+collision_grammar = '''
+start: as as
+as: a*
+a: 'a'
+'''
+p = Lark(collision_grammar, parser='lalr', debug=True)
+```

@@ -21,7 +21,6 @@ from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput
 from lark.tree import Tree
 from lark.visitors import Transformer
-from lark.parsers.earley_forest import ForestToAmbiguousTreeVisitor
 from lark.parsers.earley import ApplyCallbacks
 
 __path__ = os.path.dirname(__file__)
@@ -156,6 +155,8 @@ class TestParsers(unittest.TestCase):
 
 
 def _make_full_earley_test(LEXER):
+    def _Lark(grammar, **kwargs):
+        return Lark(grammar, lexer=LEXER, parser='earley', propagate_positions=True, **kwargs)
     class _TestFullEarley(unittest.TestCase):
         def test_anon(self):
             # Fails an Earley implementation without special handling for empty rules,
@@ -238,8 +239,7 @@ def _make_full_earley_test(LEXER):
             """
 
             parser = Lark(grammar, parser='earley', lexer=LEXER, ambiguity='explicit')
-            root_symbol = parser.parse('ab')
-            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, parser.parser.parser.callbacks).go()
+            ambig_tree = parser.parse('ab')
             # print(ambig_tree.pretty())
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
@@ -254,8 +254,7 @@ def _make_full_earley_test(LEXER):
 
             """
             l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
-            root_symbol = l.parse('cde')
-            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, l.parser.parser.callbacks).go()
+            ambig_tree = l.parse('cde')
             # print(ambig_tree.pretty())
 #            tree = ApplyCallbacks(l.parser.parser.postprocess).transform(ambig_tree)
 
@@ -301,8 +300,7 @@ def _make_full_earley_test(LEXER):
                 %ignore WS
             """
             parser = Lark(grammar, ambiguity='explicit', lexer=LEXER)
-            root_symbol = parser.parse('fruit flies like bananas')
-            tree = ForestToAmbiguousTreeVisitor(root_symbol, parser.parser.parser.callbacks).go()
+            tree = parser.parse('fruit flies like bananas')
 #            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
 
             expected = Tree('_ambig', [
@@ -335,10 +333,9 @@ def _make_full_earley_test(LEXER):
             """
             text = """cat"""
 
-            parser = Lark(grammar, start='start', ambiguity='explicit')
-            root_symbol = parser.parse(text)
-            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol).go()
-            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
+            parser = _Lark(grammar, start='start', ambiguity='explicit')
+            tree = parser.parse(text)
+            print(tree.pretty())
             self.assertEqual(tree.data, '_ambig')
 
             combinations = {tuple(str(s) for s in t.children) for t in tree.children}
@@ -1303,7 +1300,7 @@ _TO_TEST = [
 for _LEXER, _PARSER in _TO_TEST:
     _make_parser_test(_LEXER, _PARSER)
 
-for _LEXER in ('dynamic',):
+for _LEXER in ('dynamic', 'dynamic_complete'):
     _make_full_earley_test(_LEXER)
 
 if __name__ == '__main__':

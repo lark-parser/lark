@@ -25,6 +25,7 @@ from .test_parser import (
 
         # TestFullEarleyScanless,
         TestFullEarleyDynamic,
+        TestFullEarleyDynamic_complete,
 
         TestParsers,
         )

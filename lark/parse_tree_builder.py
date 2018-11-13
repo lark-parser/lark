@@ -28,7 +28,7 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
-        if isinstance(res, Tree):
+        if isinstance(res, Tree) and getattr(res.meta, 'empty', True):
             res.meta.empty = True
 
             for c in children:
@@ -144,9 +144,9 @@ class ParseTreeBuilder:
             expand_single_child = options.expand1 if options else False
 
             wrapper_chain = filter(None, [
-                self.propagate_positions and PropagatePositions,
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens),
+                self.propagate_positions and PropagatePositions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
             ])
 

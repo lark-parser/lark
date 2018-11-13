@@ -27,7 +27,7 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
-        if isinstance(res, Tree):
+        if isinstance(res, Tree) and getattr(res.meta, 'empty', True):
             res.meta.empty = True
 
             for c in children:

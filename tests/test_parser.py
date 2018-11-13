@@ -50,8 +50,8 @@ class TestParsers(unittest.TestCase):
 
         self.assertRaises(GrammarError, Lark, g, parser='lalr')
 
-        l = Lark(g, parser='earley', lexer='dynamic')
-        self.assertRaises(ParseError, l.parse, 'a')
+        # l = Lark(g, parser='earley', lexer='dynamic')
+        # self.assertRaises(ParseError, l.parse, 'a')
 
     def test_propagate_positions(self):
         g = Lark("""start: a

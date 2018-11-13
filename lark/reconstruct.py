@@ -34,7 +34,8 @@ class WriteTokensTransformer(Transformer_InPlace):
         for sym in meta.orig_expansion:
             if is_discarded_terminal(sym):
                 t = self.tokens[sym.name]
-                assert isinstance(t.pattern, PatternStr)
+                if not isinstance(t.pattern, PatternStr):
+                    raise NotImplementedError("Reconstructing regexps not supported yet: %s" % t)
                 to_write.append(t.pattern.value)
             else:
                 x = next(iter_args)

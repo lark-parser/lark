@@ -40,9 +40,9 @@ class TestReconstructor(TestCase):
     def test_starred_group(self):
 
         g = """
-        start: (rule | _NL)*
+        start: (rule | NL)*
         rule: WORD ":" NUMBER
-        _NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\s*/
         """ + common
 
         code = """

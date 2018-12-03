@@ -46,7 +46,9 @@ class LarkOptions(object):
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     """
-    __doc__ += OPTIONS_DOC
+    if __doc__:
+        __doc__ += OPTIONS_DOC
+
     def __init__(self, options_dict):
         o = dict(options_dict)
 
@@ -168,7 +170,8 @@ class Lark:
 
         if self.profiler: self.profiler.enter_section('outside_lark')
 
-    __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
+    if __init__.__doc__:
+        __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)

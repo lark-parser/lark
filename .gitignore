@@ -1,4 +1,5 @@
 *.pyc
+*.pyo
 /lark_parser.egg-info/**
 tags
 .vscode

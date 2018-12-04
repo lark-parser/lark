@@ -26,7 +26,6 @@ class Parser:
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
-        self.forest_sum_visitor = forest_sum_visitor
 
         self.FIRST = analysis.FIRST
         self.callbacks = {}
@@ -41,6 +40,7 @@ class Parser:
             self.callbacks[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
+        self.forest_tree_visitor = ForestToTreeVisitor(forest_sum_visitor, self.callbacks)
         self.term_matcher = term_matcher
 
 
@@ -203,7 +203,7 @@ class Parser:
 
         # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
         # according to the rules.
-        return ForestToTreeVisitor(solutions[0], self.forest_sum_visitor, self.callbacks).go()
+        return self.forest_tree_visitor.go(solutions[0])
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

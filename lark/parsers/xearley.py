@@ -33,7 +33,6 @@ class Parser:
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
-        self.forest_sum_visitor = forest_sum_visitor
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 
@@ -50,6 +49,7 @@ class Parser:
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
         self.term_matcher = term_matcher
+        self.forest_tree_visitor = ForestToTreeVisitor(forest_sum_visitor, self.callbacks)
 
     def parse(self, stream, start_symbol=None):
         start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
@@ -271,4 +271,4 @@ class Parser:
 
         # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
         # according to the rules.
-        return ForestToTreeVisitor(solutions[0], self.forest_sum_visitor, self.callbacks).go()
+        return self.forest_tree_visitor.go(solutions[0])

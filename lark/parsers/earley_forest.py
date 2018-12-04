@@ -114,9 +114,7 @@ class ForestVisitor(object):
 
     Use this as a base when you need to walk the forest.
     """
-    def __init__(self, root):
-        self.root = root
-        self.result = None
+    __slots__ = ['result']
 
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
@@ -124,7 +122,8 @@ class ForestVisitor(object):
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
 
-    def go(self):
+    def go(self, root):
+        self.result = None
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
         # the stack. It serves two purposes: to detect when we 'recurse' in and out
         # of a symbol/intermediate so that we can process both up and down. Also,
@@ -134,7 +133,7 @@ class ForestVisitor(object):
 
         # We do not use recursion here to walk the Forest due to the limited
         # stack size in python. Therefore input_stack is essentially our stack.
-        input_stack = deque([self.root])
+        input_stack = deque([root])
 
         # It is much faster to cache these as locals since they are called
         # many times in large parses.
@@ -263,19 +262,21 @@ class ForestToTreeVisitor(ForestVisitor):
     implementation should be another ForestVisitor which sorts the children
     according to some priority mechanism.
     """
-    def __init__(self, root, forest_sum_visitor = ForestSumVisitor, callbacks = None):
-        super(ForestToTreeVisitor, self).__init__(root)
-        self.forest_sum_visitor = forest_sum_visitor
-        self.output_stack = deque()
+    __slots__ = ['forest_sum_visitor', 'output_stack', 'callbacks']
+    def __init__(self, forest_sum_visitor = ForestSumVisitor, callbacks = None):
+        self.forest_sum_visitor = forest_sum_visitor()
         self.callbacks = callbacks
-        self.result = None
+
+    def go(self, root):
+        self.output_stack = deque()
+        return super(ForestToTreeVisitor, self).go(root)
 
     def visit_token_node(self, node):
         self.output_stack[-1].append(node)
 
     def visit_symbol_node_in(self, node):
         if node.is_ambiguous and node.priority is None:
-            self.forest_sum_visitor(node).go()
+            self.forest_sum_visitor.go(node)
         return next(iter(node.children))
 
     def visit_packed_node_in(self, node):
@@ -311,11 +312,13 @@ class ForestToAmbiguousTreeVisitor(ForestVisitor):
     This is mainly used by the test framework, to make it simpler to write
     tests ensuring the SPPF contains the right results.
     """
-    def __init__(self, root, callbacks):
-        super(ForestToAmbiguousTreeVisitor, self).__init__(root)
-        self.output_stack = deque()
+    __slots__ = ['output_stack', 'callbacks']
+    def __init__(self, callbacks):
         self.callbacks = callbacks
-        self.result = None
+
+    def go(self, root):
+        self.output_stack = deque([])
+        return super(ForestToAmbiguousTreeVisitor, self).go(root)
 
     def visit_token_node(self, node):
         self.output_stack[-1].children.append(node)

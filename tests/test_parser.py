@@ -239,7 +239,7 @@ def _make_full_earley_test(LEXER):
 
             parser = Lark(grammar, parser='earley', lexer=LEXER, ambiguity='explicit')
             root_symbol = parser.parse('ab')
-            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, parser.parser.parser.callbacks).go()
+            ambig_tree = ForestToAmbiguousTreeVisitor(parser.parser.parser.callbacks).go(root_symbol)
             # print(ambig_tree.pretty())
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
@@ -255,7 +255,7 @@ def _make_full_earley_test(LEXER):
             """
             l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
             root_symbol = l.parse('cde')
-            ambig_tree = ForestToAmbiguousTreeVisitor(root_symbol, l.parser.parser.callbacks).go()
+            ambig_tree = ForestToAmbiguousTreeVisitor(l.parser.parser.callbacks).go(root_symbol)
             # print(ambig_tree.pretty())
 #            tree = ApplyCallbacks(l.parser.parser.postprocess).transform(ambig_tree)
 
@@ -302,7 +302,7 @@ def _make_full_earley_test(LEXER):
             """
             parser = Lark(grammar, ambiguity='explicit', lexer=LEXER)
             root_symbol = parser.parse('fruit flies like bananas')
-            tree = ForestToAmbiguousTreeVisitor(root_symbol, parser.parser.parser.callbacks).go()
+            tree = ForestToAmbiguousTreeVisitor(parser.parser.parser.callbacks).go(root_symbol)
 #            tree = ApplyCallbacks(parser.parser.parser.postprocess).transform(ambig_tree)
 
             expected = Tree('_ambig', [

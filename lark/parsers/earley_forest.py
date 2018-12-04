@@ -7,6 +7,7 @@ Full reference and more details is here:
 http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+from random import randint
 from ..tree import Tree
 from ..exceptions import ParseError
 from ..lexer import Token
@@ -15,6 +16,7 @@ from ..grammar import NonTerminal, Terminal
 from .earley_common import Column, Derivation
 
 from collections import deque
+from importlib import import_module
 
 class ForestNode(object):
     pass
@@ -61,7 +63,13 @@ class SymbolNode(ForestNode):
         return hash((self.s, self.start.i, self.end.i))
 
     def __repr__(self):
-        symbol = self.s.name if isinstance(self.s, (NonTerminal, Terminal)) else self.s[0].origin.name
+        if self.is_intermediate:
+            rule = self.s[0]
+            ptr = self.s[1]
+            names = [ "{}*".format(expansion.name) if index == ptr else expansion.name for index, expansion in enumerate(rule.expansion) ]
+            symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
+        else:
+            symbol = self.s.name
         return "(%s, %d, %d, %d)" % (symbol, self.start.i, self.end.i, self.priority if self.priority is not None else 0)
 
 class PackedNode(ForestNode):
@@ -105,8 +113,14 @@ class PackedNode(ForestNode):
         return self._hash
 
     def __repr__(self):
-        symbol = self.s.name if isinstance(self.s, (NonTerminal, Terminal)) else self.s[0].origin.name
-        return "{%s, %d, %s, %s, %s}" % (symbol, self.start.i, self.left, self.right, self.priority if self.priority is not None else 0)
+        if isinstance(self.s, tuple):
+            rule = self.s[0]
+            ptr = self.s[1]
+            names = [ "{}*".format(expansion.name) if index == ptr else expansion.name for index, expansion in enumerate(rule.expansion) ]
+            symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
+        else:
+            symbol = self.s.name
+        return "{%s, %d, %d}" % (symbol, self.start.i, self.priority if self.priority is not None else 0)
 
 class ForestVisitor(object):
     """
@@ -351,3 +365,78 @@ class ForestToAmbiguousTreeVisitor(ForestVisitor):
                 self.output_stack[-1].children.append(result)
             else:
                 self.result = result
+
+class ForestToPyDotVisitor(ForestVisitor):
+    """
+    A Forest visitor which writes the SPPF to a PNG.
+
+    The SPPF can get really large, really quickly because
+    of the amount of meta-data it stores, so this is probably
+    only useful for trivial trees and learning how the SPPF
+    is structured.
+    """
+    def __init__(self, rankdir="TB"):
+        self.pydot = import_module('pydot')
+        self.graph = self.pydot.Dot(graph_type='digraph', rankdir=rankdir)
+
+    def go(self, root, filename):
+        super(ForestToPyDotVisitor, self).go(root)
+        self.graph.write_png(filename)
+
+    def visit_token_node(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = "\"{}\"".format(node.value.replace('"', '\\"'))
+        graph_node_color = 0x808080
+        graph_node_style = "filled"
+        graph_node_shape = "polygon"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+
+    def visit_packed_node_in(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = repr(node)
+        graph_node_color = 0x808080
+        graph_node_style = "filled"
+        graph_node_shape = "diamond"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+        return iter([node.left, node.right])
+
+    def visit_packed_node_out(self, node):
+        graph_node_id = str(id(node))
+        graph_node = self.graph.get_node(graph_node_id)[0]
+        for child in [node.left, node.right]:
+            if child is not None:
+                child_graph_node_id = str(id(child))
+                child_graph_node = self.graph.get_node(child_graph_node_id)[0]
+                self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
+            else:
+                #### Try and be above the Python object ID range; probably impl. specific, but maybe this is okay.
+                child_graph_node_id = str(randint(100000000000000000000000000000,123456789012345678901234567890))
+                child_graph_node_style = "invis"
+                child_graph_node = self.pydot.Node(child_graph_node_id, style=child_graph_node_style, label="None")
+                child_edge_style = "invis"
+                self.graph.add_node(child_graph_node)
+                self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node, style=child_edge_style))
+
+    def visit_symbol_node_in(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = repr(node)
+        graph_node_color = 0x808080
+        graph_node_style = "filled"
+        if node.is_intermediate:
+            graph_node_shape = "ellipse"
+        else:
+            graph_node_shape = "rectangle"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+        return iter(node.children)
+
+    def visit_symbol_node_out(self, node):
+        graph_node_id = str(id(node))
+        graph_node = self.graph.get_node(graph_node_id)[0]
+        for child in node.children:
+            child_graph_node_id = str(id(child))
+            child_graph_node = self.graph.get_node(child_graph_node_id)[0]
+            self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
+

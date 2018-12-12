@@ -13,7 +13,7 @@ from ..exceptions import ParseError
 from ..lexer import Token
 from ..utils import Str
 from ..grammar import NonTerminal, Terminal
-from .earley_common import Column, Derivation
+from .earley_common import Derivation
 
 from collections import deque
 from importlib import import_module
@@ -60,7 +60,7 @@ class SymbolNode(ForestNode):
         return self is other or (self.s == other.s and self.start == other.start and self.end is other.end)
 
     def __hash__(self):
-        return hash((self.s, self.start.i, self.end.i))
+        return hash((self.s, self.start, self.end))
 
     def __repr__(self):
         if self.is_intermediate:
@@ -70,7 +70,7 @@ class SymbolNode(ForestNode):
             symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
         else:
             symbol = self.s.name
-        return "(%s, %d, %d, %d)" % (symbol, self.start.i, self.end.i, self.priority if self.priority is not None else 0)
+        return "(%s, %d, %d, %d)" % (symbol, self.start, self.end, self.priority if self.priority is not None else 0)
 
 class PackedNode(ForestNode):
     """
@@ -85,7 +85,7 @@ class PackedNode(ForestNode):
         self.left = left
         self.right = right
         self.priority = None
-        self._hash = hash((self.s, self.start.i, self.left, self.right))
+        self._hash = hash((self.s, self.start, self.left, self.right))
 
     @property
     def is_empty(self):
@@ -120,7 +120,7 @@ class PackedNode(ForestNode):
             symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
         else:
             symbol = self.s.name
-        return "{%s, %d, %d}" % (symbol, self.start.i, self.priority if self.priority is not None else 0)
+        return "{%s, %d, %d}" % (symbol, self.start, self.priority if self.priority is not None else 0)
 
 class ForestVisitor(object):
     """

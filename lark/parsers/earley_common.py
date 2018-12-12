@@ -35,6 +35,7 @@ class Item(object):
 
     __slots__ = ('s', 'rule', 'ptr', 'start', 'is_complete', 'expect', 'node', '_hash')
     def __init__(self, rule, ptr, start):
+        assert isinstance(start, int), "start is not an int"
         self.is_complete = len(rule.expansion) == ptr
         self.rule = rule    # rule
         self.ptr = ptr      # ptr
@@ -46,35 +47,16 @@ class Item(object):
         else:
             self.s = (rule, ptr)
             self.expect = rule.expansion[ptr]
-        self._hash = hash((self.s, self.start.i))
+        self._hash = hash((self.s, self.start))
 
     def advance(self):
         return self.__class__(self.rule, self.ptr + 1, self.start)
 
     def __eq__(self, other):
-        return self is other or (self.s == other.s and self.start.i == other.start.i)
+        return self is other or (self.s == other.s and self.start == other.start)
 
     def __hash__(self):
         return self._hash
 
     def __repr__(self):
-        return '%s (%d)' % (self.s if self.is_complete else self.rule.origin, self.start.i)
-
-class Column:
-    "An entry in the table, aka Earley Chart. Contains lists of items."
-    def __init__(self, i, FIRST):
-        self.i = i
-        self.items = set()
-        self.FIRST = FIRST
-
-    def add(self, item):
-        """Sort items into scan/predict/reduce newslists
-
-        Makes sure only unique items are added.
-        """
-        self.items.add(item)
-
-    def __bool__(self):
-        return bool(self.items)
-
-    __nonzero__ = __bool__  # Py2 backwards-compatibility
+        return '%s (%d)' % (self.s if self.is_complete else self.rule.origin, self.start)

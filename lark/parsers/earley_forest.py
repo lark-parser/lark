@@ -13,7 +13,6 @@ from ..exceptions import ParseError
 from ..lexer import Token
 from ..utils import Str
 from ..grammar import NonTerminal, Terminal
-from .earley_common import Derivation
 
 from collections import deque
 from importlib import import_module

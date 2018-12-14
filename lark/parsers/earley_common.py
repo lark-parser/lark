@@ -13,23 +13,6 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-## for recursive repr
-from ..tree import Tree
-
-class Derivation(Tree):
-    def __init__(self, rule, children = None):
-        Tree.__init__(self, 'drv', children if children is not None else [])
-        self.meta.rule = rule
-        self._hash = None
-
-    def __repr__(self, indent = 0):
-        return 'Derivation(%s, %s, %s)' % (self.data, self.rule.origin, '...')
-
-    def __hash__(self):
-        if self._hash is None:
-            self._hash = Tree.__hash__(self)
-        return self._hash
-
 class Item(object):
     "An Earley Item, the atom of the algorithm."
 

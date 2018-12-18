@@ -13,27 +13,12 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-## for recursive repr
-from ..tree import Tree
-
-class Derivation(Tree):
-    def __init__(self, rule, children = None):
-        Tree.__init__(self, 'drv', children if children is not None else [])
-        self.meta.rule = rule
-        self._hash = None
-
-    def __repr__(self, indent = 0):
-        return 'Derivation(%s, %s, %s)' % (self.data, self.rule.origin, '...')
-
-    def __hash__(self):
-        if self._hash is None:
-            self._hash = Tree.__hash__(self)
-        return self._hash
+from ..grammar import NonTerminal, Terminal
 
 class Item(object):
     "An Earley Item, the atom of the algorithm."
 
-    __slots__ = ('s', 'rule', 'ptr', 'start', 'is_complete', 'expect', 'node', '_hash')
+    __slots__ = ('s', 'rule', 'ptr', 'start', 'is_complete', 'expect', 'previous', 'node', '_hash')
     def __init__(self, rule, ptr, start):
         self.is_complete = len(rule.expansion) == ptr
         self.rule = rule    # rule
@@ -43,38 +28,48 @@ class Item(object):
         if self.is_complete:
             self.s = rule.origin
             self.expect = None
+            self.previous = rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
         else:
             self.s = (rule, ptr)
             self.expect = rule.expansion[ptr]
-        self._hash = hash((self.s, self.start.i))
+            self.previous = rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
+        self._hash = hash((self.s, self.start))
 
     def advance(self):
-        return self.__class__(self.rule, self.ptr + 1, self.start)
+        return Item(self.rule, self.ptr + 1, self.start)
 
     def __eq__(self, other):
-        return self is other or (self.s == other.s and self.start.i == other.start.i)
+        return self is other or (self.s == other.s and self.start == other.start)
 
     def __hash__(self):
         return self._hash
 
     def __repr__(self):
-        return '%s (%d)' % (self.s if self.is_complete else self.rule.origin, self.start.i)
+        before = ( expansion.name for expansion in self.rule.expansion[:self.ptr] )
+        after = ( expansion.name for expansion in self.rule.expansion[self.ptr:] )
+        symbol = "{} ::= {}* {}".format(self.rule.origin.name, ' '.join(before), ' '.join(after))
+        return '%s (%d)' % (symbol, self.start)
 
-class Column:
-    "An entry in the table, aka Earley Chart. Contains lists of items."
-    def __init__(self, i, FIRST):
-        self.i = i
-        self.items = set()
-        self.FIRST = FIRST
 
-    def add(self, item):
-        """Sort items into scan/predict/reduce newslists
+class TransitiveItem(Item):
+    __slots__ = ('recognized', 'reduction', 'column', 'next_titem')
+    def __init__(self, recognized, trule, originator, start):
+        super(TransitiveItem, self).__init__(trule.rule, trule.ptr, trule.start)
+        self.recognized = recognized
+        self.reduction = originator
+        self.column = start
+        self.next_titem = None
+        self._hash = hash((self.s, self.start, self.recognized))
 
-        Makes sure only unique items are added.
-        """
-        self.items.add(item)
+    def __eq__(self, other):
+        if not isinstance(other, TransitiveItem):
+            return False
+        return self is other or (type(self.s) == type(other.s) and self.s == other.s and self.start == other.start and self.recognized == other.recognized)
 
-    def __bool__(self):
-        return bool(self.items)
+    def __hash__(self):
+        return self._hash
 
-    __nonzero__ = __bool__  # Py2 backwards-compatibility
+    def __repr__(self):
+        before = ( expansion.name for expansion in self.rule.expansion[:self.ptr] )
+        after = ( expansion.name for expansion in self.rule.expansion[self.ptr:] )
+        return '{} : {} -> {}* {} ({}, {})'.format(self.recognized.name, self.rule.origin.name, ' '.join(before), ' '.join(after), self.column, self.start)

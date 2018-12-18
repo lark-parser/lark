@@ -7,14 +7,15 @@ Full reference and more details is here:
 http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+from random import randint
 from ..tree import Tree
 from ..exceptions import ParseError
 from ..lexer import Token
 from ..utils import Str
-from ..grammar import NonTerminal, Terminal
-from .earley_common import Column, Derivation
+from ..grammar import NonTerminal, Terminal, Symbol
 
 from collections import deque
+from importlib import import_module
 
 class ForestNode(object):
     pass
@@ -33,36 +34,65 @@ class SymbolNode(ForestNode):
 
     Hence a Symbol Node with a single child is unambiguous.
     """
-    __slots__ = ('s', 'start', 'end', 'children', 'priority', 'is_intermediate')
+    __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate', '_hash')
     def __init__(self, s, start, end):
         self.s = s
         self.start = start
         self.end = end
-        self.children = set()
+        self._children = set()
+        self.paths = set()
+        self.paths_loaded = False
         self.priority = None
         self.is_intermediate = isinstance(s, tuple)
+        self._hash = hash((self.s, self.start, self.end))
 
     def add_family(self, lr0, rule, start, left, right):
-        self.children.add(PackedNode(self, lr0, rule, start, left, right))
+        self._children.add(PackedNode(self, lr0, rule, start, left, right))
+
+    def add_path(self, transitive, node):
+        self.paths.add((transitive, node))
+
+    def load_paths(self):
+        for transitive, node in self.paths:
+            if transitive.next_titem is not None:
+                vn = SymbolNode(transitive.next_titem.s, transitive.next_titem.start, self.end)
+                vn.add_path(transitive.next_titem, node)
+                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, vn)
+            else:
+                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, node)
+        self.paths_loaded = True
 
     @property
     def is_ambiguous(self):
         return len(self.children) > 1
 
+    @property
+    def children(self):
+        if not self.paths_loaded:
+            self.load_paths()
+        return self._children
+
     def __iter__(self):
-        return iter(self.children)
+        return iter(self._children)
 
     def __eq__(self, other):
         if not isinstance(other, SymbolNode):
             return False
-        return self is other or (self.s == other.s and self.start == other.start and self.end is other.end)
+        return self is other or (type(self.s) == type(other.s) and self.s == other.s and self.start == other.start and self.end is other.end)
 
     def __hash__(self):
-        return hash((self.s, self.start.i, self.end.i))
+        return self._hash
 
     def __repr__(self):
-        symbol = self.s.name if isinstance(self.s, (NonTerminal, Terminal)) else self.s[0].origin.name
-        return "(%s, %d, %d, %d)" % (symbol, self.start.i, self.end.i, self.priority if self.priority is not None else 0)
+        if self.is_intermediate:
+            rule = self.s[0]
+            ptr = self.s[1]
+            before = ( expansion.name for expansion in rule.expansion[:ptr] )
+            after = ( expansion.name for expansion in rule.expansion[ptr:] )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, ' '.join(before), ' '.join(after))
+        else:
+            symbol = self.s.name
+        return "({}, {}, {}, {})".format(symbol, self.start, self.end, self.priority if self.priority is not None else 0)
 
 class PackedNode(ForestNode):
     """
@@ -77,7 +107,7 @@ class PackedNode(ForestNode):
         self.left = left
         self.right = right
         self.priority = None
-        self._hash = hash((self.s, self.start.i, self.left, self.right))
+        self._hash = hash((self.s, self.start, self.left, self.right))
 
     @property
     def is_empty(self):
@@ -105,8 +135,15 @@ class PackedNode(ForestNode):
         return self._hash
 
     def __repr__(self):
-        symbol = self.s.name if isinstance(self.s, (NonTerminal, Terminal)) else self.s[0].origin.name
-        return "{%s, %d, %s, %s, %s}" % (symbol, self.start.i, self.left, self.right, self.priority if self.priority is not None else 0)
+        if isinstance(self.s, tuple):
+            rule = self.s[0]
+            ptr = self.s[1]
+            before = ( expansion.name for expansion in rule.expansion[:ptr] )
+            after = ( expansion.name for expansion in rule.expansion[ptr:] )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, ' '.join(before), ' '.join(after))
+        else:
+            symbol = self.s.name
+        return "({}, {}, {})".format(symbol, self.start, self.priority)
 
 class ForestVisitor(object):
     """
@@ -169,8 +206,8 @@ class ForestVisitor(object):
 
             current_id = id(current)
             if current_id in visiting:
-                if isinstance(current, PackedNode): vpno(current)
-                else:                               vsno(current)
+                if isinstance(current, PackedNode):    vpno(current)
+                else:                                  vsno(current)
                 input_stack.pop()
                 visiting.remove(current_id)
                 continue
@@ -213,7 +250,7 @@ class ForestSumVisitor(ForestVisitor):
 
     def visit_symbol_node_out(self, node):
         node.priority = max(child.priority for child in node.children)
-        node.children = sorted(node.children, reverse = True)
+        node._children = sorted(node.children, reverse = True)
 
 class ForestAntiscoreSumVisitor(ForestSumVisitor):
     """
@@ -227,7 +264,7 @@ class ForestAntiscoreSumVisitor(ForestSumVisitor):
     """
     def visit_symbol_node_out(self, node):
         node.priority = min(child.priority for child in node.children)
-        node.children = sorted(node.children, key=AntiscoreSumComparator, reverse = True)
+        node._children = sorted(node.children, key=AntiscoreSumComparator, reverse = True)
 
 class AntiscoreSumComparator(object):
     """
@@ -329,7 +366,7 @@ class ForestToAmbiguousTreeVisitor(ForestVisitor):
         return iter(node.children)
 
     def visit_symbol_node_out(self, node):
-        if node.is_ambiguous:
+        if not node.is_intermediate and node.is_ambiguous:
             result = self.output_stack.pop()
             if self.output_stack:
                 self.output_stack[-1].children.append(result)
@@ -351,3 +388,77 @@ class ForestToAmbiguousTreeVisitor(ForestVisitor):
                 self.output_stack[-1].children.append(result)
             else:
                 self.result = result
+
+class ForestToPyDotVisitor(ForestVisitor):
+    """
+    A Forest visitor which writes the SPPF to a PNG.
+
+    The SPPF can get really large, really quickly because
+    of the amount of meta-data it stores, so this is probably
+    only useful for trivial trees and learning how the SPPF
+    is structured.
+    """
+    def __init__(self, rankdir="TB"):
+        self.pydot = import_module('pydot')
+        self.graph = self.pydot.Dot(graph_type='digraph', rankdir=rankdir)
+
+    def go(self, root, filename):
+        super(ForestToPyDotVisitor, self).go(root)
+        self.graph.write_png(filename)
+
+    def visit_token_node(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = "\"{}\"".format(node.value.replace('"', '\\"'))
+        graph_node_color = 0x808080
+        graph_node_style = "\"filled,rounded\""
+        graph_node_shape = "diamond"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+
+    def visit_packed_node_in(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = repr(node)
+        graph_node_color = 0x808080
+        graph_node_style = "filled"
+        graph_node_shape = "diamond"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+        return iter([node.left, node.right])
+
+    def visit_packed_node_out(self, node):
+        graph_node_id = str(id(node))
+        graph_node = self.graph.get_node(graph_node_id)[0]
+        for child in [node.left, node.right]:
+            if child is not None:
+                child_graph_node_id = str(id(child))
+                child_graph_node = self.graph.get_node(child_graph_node_id)[0]
+                self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
+            else:
+                #### Try and be above the Python object ID range; probably impl. specific, but maybe this is okay.
+                child_graph_node_id = str(randint(100000000000000000000000000000,123456789012345678901234567890))
+                child_graph_node_style = "invis"
+                child_graph_node = self.pydot.Node(child_graph_node_id, style=child_graph_node_style, label="None")
+                child_edge_style = "invis"
+                self.graph.add_node(child_graph_node)
+                self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node, style=child_edge_style))
+
+    def visit_symbol_node_in(self, node):
+        graph_node_id = str(id(node))
+        graph_node_label = repr(node)
+        graph_node_color = 0x808080
+        graph_node_style = "\"filled\""
+        if node.is_intermediate:
+            graph_node_shape = "ellipse"
+        else:
+            graph_node_shape = "rectangle"
+        graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
+        self.graph.add_node(graph_node)
+        return iter(node.children)
+
+    def visit_symbol_node_out(self, node):
+        graph_node_id = str(id(node))
+        graph_node = self.graph.get_node(graph_node_id)[0]
+        for child in node.children:
+            child_graph_node_id = str(id(child))
+            child_graph_node = self.graph.get_node(child_graph_node_id)[0]
+            self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))

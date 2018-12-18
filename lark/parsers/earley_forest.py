@@ -12,7 +12,7 @@ from ..tree import Tree
 from ..exceptions import ParseError
 from ..lexer import Token
 from ..utils import Str
-from ..grammar import NonTerminal, Terminal
+from ..grammar import NonTerminal, Terminal, Symbol
 
 from collections import deque
 from importlib import import_module
@@ -34,42 +34,65 @@ class SymbolNode(ForestNode):
 
     Hence a Symbol Node with a single child is unambiguous.
     """
-    __slots__ = ('s', 'start', 'end', 'children', 'priority', 'is_intermediate')
+    __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate', '_hash')
     def __init__(self, s, start, end):
         self.s = s
         self.start = start
         self.end = end
-        self.children = set()
+        self._children = set()
+        self.paths = set()
+        self.paths_loaded = False
         self.priority = None
         self.is_intermediate = isinstance(s, tuple)
+        self._hash = hash((self.s, self.start, self.end))
 
     def add_family(self, lr0, rule, start, left, right):
-        self.children.add(PackedNode(self, lr0, rule, start, left, right))
+        self._children.add(PackedNode(self, lr0, rule, start, left, right))
+
+    def add_path(self, transitive, node):
+        self.paths.add((transitive, node))
+
+    def load_paths(self):
+        for transitive, node in self.paths:
+            if transitive.next_titem is not None:
+                vn = SymbolNode(transitive.next_titem.s, transitive.next_titem.start, self.end)
+                vn.add_path(transitive.next_titem, node)
+                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, vn)
+            else:
+                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, node)
+        self.paths_loaded = True
 
     @property
     def is_ambiguous(self):
         return len(self.children) > 1
 
+    @property
+    def children(self):
+        if not self.paths_loaded:
+            self.load_paths()
+        return self._children
+
     def __iter__(self):
-        return iter(self.children)
+        return iter(self._children)
 
     def __eq__(self, other):
         if not isinstance(other, SymbolNode):
             return False
-        return self is other or (self.s == other.s and self.start == other.start and self.end is other.end)
+        return self is other or (type(self.s) == type(other.s) and self.s == other.s and self.start == other.start and self.end is other.end)
 
     def __hash__(self):
-        return hash((self.s, self.start, self.end))
+        return self._hash
 
     def __repr__(self):
         if self.is_intermediate:
             rule = self.s[0]
             ptr = self.s[1]
-            names = [ "{}*".format(expansion.name) if index == ptr else expansion.name for index, expansion in enumerate(rule.expansion) ]
-            symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
+            before = ( expansion.name for expansion in rule.expansion[:ptr] )
+            after = ( expansion.name for expansion in rule.expansion[ptr:] )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, ' '.join(before), ' '.join(after))
         else:
             symbol = self.s.name
-        return "(%s, %d, %d, %d)" % (symbol, self.start, self.end, self.priority if self.priority is not None else 0)
+        return "({}, {}, {}, {})".format(symbol, self.start, self.end, self.priority if self.priority is not None else 0)
 
 class PackedNode(ForestNode):
     """
@@ -115,11 +138,12 @@ class PackedNode(ForestNode):
         if isinstance(self.s, tuple):
             rule = self.s[0]
             ptr = self.s[1]
-            names = [ "{}*".format(expansion.name) if index == ptr else expansion.name for index, expansion in enumerate(rule.expansion) ]
-            symbol = "{} ::= {}".format(rule.origin.name, ' '.join(names))
+            before = ( expansion.name for expansion in rule.expansion[:ptr] )
+            after = ( expansion.name for expansion in rule.expansion[ptr:] )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, ' '.join(before), ' '.join(after))
         else:
             symbol = self.s.name
-        return "{%s, %d, %d}" % (symbol, self.start, self.priority if self.priority is not None else 0)
+        return "({}, {}, {})".format(symbol, self.start, self.priority)
 
 class ForestVisitor(object):
     """
@@ -182,8 +206,8 @@ class ForestVisitor(object):
 
             current_id = id(current)
             if current_id in visiting:
-                if isinstance(current, PackedNode): vpno(current)
-                else:                               vsno(current)
+                if isinstance(current, PackedNode):    vpno(current)
+                else:                                  vsno(current)
                 input_stack.pop()
                 visiting.remove(current_id)
                 continue
@@ -226,7 +250,7 @@ class ForestSumVisitor(ForestVisitor):
 
     def visit_symbol_node_out(self, node):
         node.priority = max(child.priority for child in node.children)
-        node.children = sorted(node.children, reverse = True)
+        node._children = sorted(node.children, reverse = True)
 
 class ForestAntiscoreSumVisitor(ForestSumVisitor):
     """
@@ -240,7 +264,7 @@ class ForestAntiscoreSumVisitor(ForestSumVisitor):
     """
     def visit_symbol_node_out(self, node):
         node.priority = min(child.priority for child in node.children)
-        node.children = sorted(node.children, key=AntiscoreSumComparator, reverse = True)
+        node._children = sorted(node.children, key=AntiscoreSumComparator, reverse = True)
 
 class AntiscoreSumComparator(object):
     """
@@ -342,7 +366,7 @@ class ForestToAmbiguousTreeVisitor(ForestVisitor):
         return iter(node.children)
 
     def visit_symbol_node_out(self, node):
-        if node.is_ambiguous:
+        if not node.is_intermediate and node.is_ambiguous:
             result = self.output_stack.pop()
             if self.output_stack:
                 self.output_stack[-1].children.append(result)
@@ -386,8 +410,8 @@ class ForestToPyDotVisitor(ForestVisitor):
         graph_node_id = str(id(node))
         graph_node_label = "\"{}\"".format(node.value.replace('"', '\\"'))
         graph_node_color = 0x808080
-        graph_node_style = "filled"
-        graph_node_shape = "polygon"
+        graph_node_style = "\"filled,rounded\""
+        graph_node_shape = "diamond"
         graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
         self.graph.add_node(graph_node)
 
@@ -422,7 +446,7 @@ class ForestToPyDotVisitor(ForestVisitor):
         graph_node_id = str(id(node))
         graph_node_label = repr(node)
         graph_node_color = 0x808080
-        graph_node_style = "filled"
+        graph_node_style = "\"filled\""
         if node.is_intermediate:
             graph_node_shape = "ellipse"
         else:
@@ -438,4 +462,3 @@ class ForestToPyDotVisitor(ForestVisitor):
             child_graph_node_id = str(id(child))
             child_graph_node = self.graph.get_node(child_graph_node_id)[0]
             self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
-

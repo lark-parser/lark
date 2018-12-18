@@ -462,3 +462,20 @@ class ForestToPyDotVisitor(ForestVisitor):
             child_graph_node_id = str(id(child))
             child_graph_node = self.graph.get_node(child_graph_node_id)[0]
             self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
+
+class Forest(Tree):
+    def __init__(self, root, callbacks):
+        self.root = root
+        self.callbacks = callbacks
+        self.data = '_ambig'
+        self._children = None
+
+    @property
+    def children(self):
+        if self._children is None:
+            t = ForestToAmbiguousTreeVisitor(self.callbacks).go(self.root)
+            self._children = t.children
+        return self._children
+
+    def to_pydot(self, filename):
+        ForestToPyDotVisitor().go(self.root, filename)

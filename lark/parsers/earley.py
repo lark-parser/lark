@@ -17,9 +17,7 @@ from ..exceptions import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode
-
-from collections import deque, defaultdict
+from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, Forest
 
 class Parser:
     def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, forest_sum_visitor = ForestSumVisitor):
@@ -295,7 +293,7 @@ class Parser:
         ## If we're not resolving ambiguity, we just return the root of the SPPF tree to the caller.
         # This means the caller can work directly with the SPPF tree.
         if not self.resolve_ambiguity:
-            return ForestToAmbiguousTreeVisitor(solutions[0], self.callbacks).go()
+            return Forest(solutions[0], self.callbacks)
 
         # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
         # according to the rules.

@@ -24,7 +24,7 @@ from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal, Terminal
 from .earley import ApplyCallbacks
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, ForestToAmbiguousTreeVisitor
+from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, Forest
 
 
 class Parser:
@@ -359,7 +359,7 @@ class Parser:
         ## If we're not resolving ambiguity, we just return the root of the SPPF tree to the caller.
         # This means the caller can work directly with the SPPF tree.
         if not self.resolve_ambiguity:
-            return ForestToAmbiguousTreeVisitor(self.callbacks).go(solutions[0])
+            return Forest(solutions[0], self.callbacks)
 
         # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
         # according to the rules.

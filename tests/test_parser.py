@@ -228,6 +228,7 @@ def _make_full_earley_test(LEXER):
             empty_tree = Tree('empty', [Tree('empty2', [])])
             self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
+        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
         def test_earley_explicit_ambiguity(self):
             # This was a sneaky bug!
 
@@ -244,6 +245,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
 
+        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
         def test_ambiguity1(self):
             grammar = """
             start: cd+ "e"
@@ -261,7 +263,7 @@ def _make_full_earley_test(LEXER):
             assert ambig_tree.data == '_ambig', ambig_tree
             assert len(ambig_tree.children) == 2
 
-        @unittest.skipIf(LEXER==None, "Scanless doesn't support regular expressions")
+        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
         def test_ambiguity2(self):
             grammar = """
             ANY:  /[a-zA-Z0-9 ]+/
@@ -324,7 +326,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(set(tree.children), set(expected.children))
 
 
-        @unittest.skipIf(LEXER=='dynamic', "Only relevant for the dynamic_complete parser")
+        @unittest.skipIf(LEXER!='dynamic_complete', "Only relevant for the dynamic_complete parser")
         def test_explicit_ambiguity2(self):
             grammar = r"""
             start: NAME+

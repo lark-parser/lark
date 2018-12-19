@@ -151,7 +151,7 @@ class ParseTreeBuilder:
             wrapper_chain = filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
-                self.maybe_placeholders and partial(AddMaybePlaceholder, options.empty_indices),
+                self.maybe_placeholders and partial(AddMaybePlaceholder, options.empty_indices if options else None),
                 self.propagate_positions and PropagatePositions,
             ])
 

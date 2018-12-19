@@ -1249,6 +1249,16 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(res.children), 3)
 
         def test_maybe_placeholders(self):
+            # Anonymous tokens shouldn't count
+            p = Lark("""start: "a"? "b"? "c"? """, maybe_placeholders=True)
+            self.assertEqual(p.parse("").children, [])
+
+            # Anonymous tokens shouldn't count, other constructs should
+            p = Lark("""start: A? "b"? _c?
+                        A: "a"
+                        _c: "c" """, maybe_placeholders=True)
+            self.assertEqual(p.parse("").children, [None, None])
+
             p = Lark("""!start: "a"? "b"? "c"? """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [None, None, None])
             self.assertEqual(p.parse("a").children, ['a', None, None])

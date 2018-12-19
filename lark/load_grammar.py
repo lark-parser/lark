@@ -176,7 +176,12 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def expr(self, rule, op, *args):
         if op.value == '?':
-            return ST('expansions', [rule, _EMPTY])
+            if isinstance(rule, Terminal) and rule.filter_out and not (
+                    self.rule_options and self.rule_options.keep_all_tokens):
+                empty = ST('expansion', [])
+            else:
+                empty = _EMPTY
+            return ST('expansions', [rule, empty])
         elif op.value == '+':
             # a : b c+ d
             #   -->

@@ -64,6 +64,7 @@ class RuleOptions:
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
+        self.empty_indices = ()
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r)' % (

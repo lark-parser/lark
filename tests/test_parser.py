@@ -1248,6 +1248,28 @@ def _make_parser_test(LEXER, PARSER):
             res = p.parse('B')
             self.assertEqual(len(res.children), 3)
 
+        def test_maybe_placeholders(self):
+            p = Lark("""!start: "a"? "b"? "c"? """, maybe_placeholders=True)
+            self.assertEqual(p.parse("").children, [None, None, None])
+            self.assertEqual(p.parse("a").children, ['a', None, None])
+            self.assertEqual(p.parse("b").children, [None, 'b', None])
+            self.assertEqual(p.parse("c").children, [None, None, 'c'])
+            self.assertEqual(p.parse("ab").children, ['a', 'b', None])
+            self.assertEqual(p.parse("ac").children, ['a', None, 'c'])
+            self.assertEqual(p.parse("bc").children, [None, 'b', 'c'])
+            self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
+
+            p = Lark("""!start: ("a"? "b" "c"?)+ """, maybe_placeholders=True)
+            self.assertEqual(p.parse("b").children, [None, 'b', None])
+            self.assertEqual(p.parse("bb").children, [None, 'b', None, None, 'b', None])
+            self.assertEqual(p.parse("abbc").children, ['a', 'b', None, None, 'b', 'c'])
+            self.assertEqual(p.parse("babbcabcb").children,
+                [None, 'b', None, 
+                 'a', 'b', None, 
+                 None, 'b', 'c',
+                 'a', 'b', 'c',
+                 None, 'b', None])
+
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

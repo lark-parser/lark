@@ -3,7 +3,7 @@
 import os.path
 import sys
 from ast import literal_eval
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from .utils import bfs
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -25,6 +25,8 @@ IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 EXT = '.lark'
 
 _RE_FLAGS = 'imslux'
+
+_EMPTY = Symbol('__empty__')
 
 _TERMINAL_NAMES = {
     '.' : 'DOT',
@@ -151,7 +153,6 @@ RULES = {
     'literal': ['REGEXP', 'STRING'],
 }
 
-
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
@@ -175,7 +176,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def expr(self, rule, op, *args):
         if op.value == '?':
-            return ST('expansions', [rule, ST('expansion', [])])
+            return ST('expansions', [rule, _EMPTY])
         elif op.value == '+':
             # a : b c+ d
             #   -->
@@ -481,7 +482,8 @@ class Grammar:
         for name, rule_tree, options in rule_defs:
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
             tree = transformer.transform(rule_tree)
-            rules.append((name, ebnf_to_bnf.transform(tree), options))
+            res = ebnf_to_bnf.transform(tree)
+            rules.append((name, res, options))
         rules += ebnf_to_bnf.new_rules
 
         assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
@@ -499,9 +501,17 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                empty_indices = [i for i, x in enumerate(expansion) if x==_EMPTY]
+                if empty_indices:
+                    assert options
+                    exp_options = copy(options)
+                    exp_options.empty_indices = len(expansion), empty_indices
+                    expansion = [x for x in expansion if x!=_EMPTY]
+                else:
+                    exp_options = options
 
-                rule = Rule(NonTerminal(name), expansion, alias, options)
+                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                rule = Rule(NonTerminal(name), expansion, alias, exp_options)
                 compiled_rules.append(rule)
 
         return terminals, compiled_rules, self.ignore

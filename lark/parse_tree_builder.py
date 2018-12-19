@@ -1,7 +1,5 @@
 from .exceptions import GrammarError
-from .utils import suppress
 from .lexer import Token
-from .grammar import Rule
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
 
@@ -18,6 +16,23 @@ class ExpandSingleChild:
             return children[0]
         else:
             return self.node_builder(children)
+
+class AddMaybePlaceholder:
+    def __init__(self, empty_indices, node_builder):
+        self.node_builder = node_builder
+        self.empty_indices = empty_indices
+
+    def __call__(self, children):
+        t = self.node_builder(children)
+        if self.empty_indices:
+            exp_len, empty_indices = self.empty_indices
+            # Calculate offset to handle repetition correctly
+            # e.g. ("a" "b"?)+
+            # For non-repetitive rules, offset should be 0
+            offset = len(t.children) - (exp_len - len(empty_indices))
+            for i in empty_indices:
+                t.children.insert(i + offset, None)
+        return t
 
 
 class PropagatePositions:
@@ -116,11 +131,12 @@ def ptb_inline_args(func):
 
 
 class ParseTreeBuilder:
-    def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False):
+    def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions
         self.always_keep_all_tokens = keep_all_tokens
         self.ambiguous = ambiguous
+        self.maybe_placeholders = maybe_placeholders
 
         self.rule_builders = list(self._init_builders(rules))
 
@@ -135,6 +151,7 @@ class ParseTreeBuilder:
             wrapper_chain = filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
+                self.maybe_placeholders and partial(AddMaybePlaceholder, options.empty_indices),
                 self.propagate_positions and PropagatePositions,
             ])
 

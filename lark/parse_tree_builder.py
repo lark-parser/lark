@@ -17,24 +17,6 @@ class ExpandSingleChild:
         else:
             return self.node_builder(children)
 
-class AddMaybePlaceholder:
-    def __init__(self, empty_indices, node_builder):
-        self.node_builder = node_builder
-        self.empty_indices = empty_indices
-
-    def __call__(self, children):
-        t = self.node_builder(children)
-        if self.empty_indices:
-            exp_len, empty_indices = self.empty_indices
-            # Calculate offset to handle repetition correctly
-            # e.g. ("a" "b"?)+
-            # For non-repetitive rules, offset should be 0
-            offset = len(t.children) - (exp_len - len(empty_indices))
-            for i in empty_indices:
-                t.children.insert(i + offset, None)
-        return t
-
-
 class PropagatePositions:
     def __init__(self, node_builder):
         self.node_builder = node_builder
@@ -77,22 +59,53 @@ class PropagatePositions:
 
 
 class ChildFilter:
-    def __init__(self, to_include, node_builder):
+    def __init__(self, to_include, append_none, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
+        self.append_none = append_none
 
     def __call__(self, children):
         filtered = []
-        for i, to_expand in self.to_include:
+
+        for i, to_expand, add_none in self.to_include:
+            if add_none:
+                filtered += [None] * add_none
             if to_expand:
                 filtered += children[i].children
             else:
                 filtered.append(children[i])
 
+        if self.append_none:
+            filtered += [None] * self.append_none
+
         return self.node_builder(filtered)
 
 class ChildFilterLALR(ChildFilter):
     "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+
+    def __call__(self, children):
+        filtered = []
+        for i, to_expand, add_none in self.to_include:
+            if add_none:
+                filtered += [None] * add_none
+            if to_expand:
+                if filtered:
+                    filtered += children[i].children
+                else:   # Optimize for left-recursion
+                    filtered = children[i].children
+            else:
+                filtered.append(children[i])
+
+        if self.append_none:
+            filtered += [None] * self.append_none
+
+        return self.node_builder(filtered)
+
+class ChildFilterLALR_NoPlaceholders(ChildFilter):
+    "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+    def __init__(self, to_include, node_builder):
+        self.node_builder = node_builder
+        self.to_include = to_include
 
     def __call__(self, children):
         filtered = []
@@ -110,12 +123,32 @@ class ChildFilterLALR(ChildFilter):
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
 
-def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous):
-    to_include = [(i, _should_expand(sym)) for i, sym in enumerate(expansion)
-                  if keep_all_tokens or not (sym.is_term and sym.filter_out)]
+def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
+    # Prepare empty_indices as: How many Nones to insert at each index?
+    if _empty_indices:
+        assert _empty_indices.count(False) == len(expansion)
+        s = ''.join(str(int(b)) for b in _empty_indices)
+        empty_indices = [len(ones) for ones in s.split('0')]
+        assert len(empty_indices) == len(expansion)+1, (empty_indices, len(expansion))
+    else:
+        empty_indices = [0] * (len(expansion)+1)
 
-    if len(to_include) < len(expansion) or any(to_expand for i, to_expand in to_include):
-        return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include)
+    to_include = []
+    nones_to_add = 0
+    for i, sym in enumerate(expansion):
+        nones_to_add += empty_indices[i]
+        if keep_all_tokens or not (sym.is_term and sym.filter_out):
+            to_include.append((i, _should_expand(sym), nones_to_add))
+            nones_to_add = 0
+
+    nones_to_add += empty_indices[len(expansion)]
+
+    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand,_ in to_include):
+        if _empty_indices or ambiguous:
+            return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add)
+        else:
+            # LALR without placeholders
+            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
 
 
 class Callback(object):
@@ -150,8 +183,7 @@ class ParseTreeBuilder:
 
             wrapper_chain = filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous),
-                self.maybe_placeholders and partial(AddMaybePlaceholder, options.empty_indices if options else None),
+                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders and options else None),
                 self.propagate_positions and PropagatePositions,
             ])
 

@@ -179,6 +179,8 @@ class EBNF_to_BNF(Transformer_InPlace):
             if isinstance(rule, Terminal) and rule.filter_out and not (
                     self.rule_options and self.rule_options.keep_all_tokens):
                 empty = ST('expansion', [])
+            elif isinstance(rule, NonTerminal) and rule.name.startswith('_'):
+                empty = ST('expansion', [])
             else:
                 empty = _EMPTY
             return ST('expansions', [rule, empty])
@@ -506,11 +508,11 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                empty_indices = [i for i, x in enumerate(expansion) if x==_EMPTY]
-                if empty_indices:
+                empty_indices = [x==_EMPTY for i, x in enumerate(expansion)]
+                if any(empty_indices):
                     assert options
                     exp_options = copy(options)
-                    exp_options.empty_indices = len(expansion), empty_indices
+                    exp_options.empty_indices = empty_indices
                     expansion = [x for x in expansion if x!=_EMPTY]
                 else:
                     exp_options = options

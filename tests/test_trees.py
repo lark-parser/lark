@@ -128,6 +128,22 @@ class TestTrees(TestCase):
         x = MyTransformer().transform( Tree('hello', [2]))
         self.assertEqual(x, 'hello')
 
+    def test_vargs_override(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        @v_args(inline=True)
+        class T(Transformer):
+            i = int
+            f = float
+            sub = lambda self, a, b: a-b
+
+            @v_args(inline=False)
+            def add(self, values):
+                return sum(values)
+
+        res = T().transform(t)
+        self.assertEqual(res, 2.9)
+
 
 if __name__ == '__main__':
     unittest.main()

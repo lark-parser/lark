@@ -27,7 +27,7 @@ In accordance with these principles, I arrived at the following design choices:
 
 ### 1. Separation of code and grammar
 
-Grammars are the de-facto reference for your language, and for the structure of your parse-tree. For any non-trivial language, the conflation of code and grammar always turns out convoluted and difficult to read. 
+Grammars are the de-facto reference for your language, and for the structure of your parse-tree. For any non-trivial language, the conflation of code and grammar always turns out convoluted and difficult to read.
 
 The grammars in Lark are EBNF-inspired, so they are especially easy to read & work with.
 
@@ -51,7 +51,7 @@ You can skip the building the tree for LALR(1), by providing Lark with a transfo
 
 The Earley algorithm can accept *any* context-free grammar you throw at it (i.e. any grammar you can write in EBNF, it can parse). That makes it extremely useful for beginners, who are not aware of the strange and arbitrary restrictions that LALR(1) places on its grammars.
 
-As the users grow to understand the structure of their grammar, the scope of their target language and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features. 
+As the users grow to understand the structure of their grammar, the scope of their target language and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features.
 
 In short, "Premature optimization is the root of all evil."
 
@@ -60,4 +60,4 @@ In short, "Premature optimization is the root of all evil."
 - Automatically resolve terminal collisions whenever possible
 
 - Automatically keep track of line & column numbers
-                                                                                  
+

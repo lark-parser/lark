@@ -71,52 +71,58 @@ class Parser:
                 quasi = quasi.advance()
             return True
 
-        def create_leo_transitives(item, trule, previous, visited = None):
-            if visited is None:
-                visited = set()
+        def create_leo_transitives(origin, start):
+            visited = set()
+            to_create = []
+            trule = None
+            previous = None
 
-            if item.rule.origin in transitives[item.start]:
-                previous = trule = transitives[item.start][item.rule.origin]
-                return trule, previous
+            ### Recursively walk backwards through the Earley sets until we find the
+            #   first transitive candidate. If this is done continuously, we shouldn't
+            #   have to walk more than 1 hop.
+            while True:
+                if origin in transitives[start]:
+                    previous = trule = transitives[start][origin]
+                    break
 
-            is_empty_rule = not self.FIRST[item.rule.origin]
-            if is_empty_rule:
-                return trule, previous
+                is_empty_rule = not self.FIRST[origin]
+                if is_empty_rule:
+                    break
 
-            originator = None
-            for key in columns[item.start]:
-                if key.expect is not None and key.expect == item.rule.origin:
-                    if originator is not None:
-                        return trule, previous
-                    originator = key
+                candidates = [ candidate for candidate in columns[start] if candidate.expect is not None and origin == candidate.expect ]
+                if len(candidates) != 1:
+                    break
+                originator = next(iter(candidates))
 
-            if originator is None:
-                return trule, previous
+                if originator is None or originator in visited:
+                    break
 
-            if originator in visited:
-                return trule, previous
+                visited.add(originator)
+                if not is_quasi_complete(originator):
+                    break
 
-            visited.add(originator)
-            if not is_quasi_complete(originator):
-                return trule, previous
+                trule = originator.advance()
+                if originator.start != start:
+                    visited.clear()
 
-            trule = originator.advance()
-            if originator.start != item.start:
-                visited.clear()
+                to_create.append((origin, start, originator))
+                origin = originator.rule.origin
+                start = originator.start
 
-            trule, previous = create_leo_transitives(originator, trule, previous, visited)
+            # If a suitable Transitive candidate is not found, bail.
             if trule is None:
-                return trule, previous
+                return
 
-            titem = None
-            if previous is not None:
-                titem = TransitiveItem(item.rule.origin, trule, originator, previous.column)
-                previous.next_titem = titem
-            else:
-                titem = TransitiveItem(item.rule.origin, trule, originator, item.start)
-
-            previous = transitives[item.start][item.rule.origin] = titem
-            return trule, previous
+            #### Now walk forwards and create Transitive Items in each set we walked through; and link
+            #    each transitive item to the next set forwards.
+            while to_create:
+                origin, start, originator = to_create.pop()
+                titem = None
+                if previous is not None:
+                        titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
+                else:
+                        titem = TransitiveItem(origin, trule, originator, start)
+                previous = transitives[start][origin] = titem
 
         def predict_and_complete(i, to_scan):
             """The core Earley Predictor and Completer.
@@ -141,7 +147,7 @@ class Parser:
                         item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                         item.node.add_family(item.s, item.rule, item.start, None, None)
 
-                    create_leo_transitives(item, None, None)
+                    create_leo_transitives(item.rule.origin, item.start)
 
                     ###R Joop Leo right recursion Completer
                     if item.rule.origin in transitives[item.start]:
@@ -151,12 +157,10 @@ class Parser:
                         else:
                             root_transitive = transitive
 
-                        label = (root_transitive.s, root_transitive.start, i)
-                        node = vn = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                        vn.add_path(root_transitive, item.node)
-
                         new_item = Item(transitive.rule, transitive.ptr, transitive.start)
-                        new_item.node = vn
+                        label = (root_transitive.s, root_transitive.start, i)
+                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                        new_item.node.add_path(root_transitive, item.node)
                         if new_item.expect in self.TERMINALS:
                             # Add (B :: aC.B, h, y) to Q
                             to_scan.add(new_item)

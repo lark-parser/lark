@@ -282,6 +282,9 @@ class Parser:
             # completer/predictor) or the to_scan buffer for the next parse step.
             for item, start, token in delayed_matches[i+1]:
                 if token is not None:
+                    token.end_line = text_line
+                    token.end_column = text_column + 1
+
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))

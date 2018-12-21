@@ -121,16 +121,6 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
 
-class AmbiguousExpander:
-    """Deal with the case where we're expanding children ('_rule') into a parent but the children
-       are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
-       ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
-       into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
-    def __init__(self, to_expand, tree_class, node_builder):
-        self.node_builder = node_builder
-        self.tree_class = tree_class
-        self.to_expand = to_expand
-
 def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
     # Prepare empty_indices as: How many Nones to insert at each index?
     if _empty_indices:
@@ -158,15 +148,38 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
             # LALR without placeholders
             return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
 
+class AmbiguousExpander:
+    """Deal with the case where we're expanding children ('_rule') into a parent but the children
+       are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
+       ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
+       into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
+    def __init__(self, to_expand, tree_class, node_builder):
+        self.node_builder = node_builder
+        self.tree_class = tree_class
+        self.to_expand = to_expand
+
     def __call__(self, children):
         def _is_ambig_tree(child):
             return hasattr(child, 'data') and child.data == '_ambig'
 
-        ambiguous = [i for i in self.to_expand if _is_ambig_tree(children[i])]
-        if ambiguous:
-            expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
-            return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
-        return self.node_builder(children)
+        #### When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
+        #    All children of an _ambig node should be a derivation of that ambig node, hence
+        #    it is safe to assume that if we see an _ambig node nested within an ambig node
+        #    it is safe to simply expand it into the parent _ambig node as an alternative derivation.
+        ambiguous = []
+        for i, child in enumerate(children):
+            if _is_ambig_tree(child):
+                if i in self.to_expand:
+                    ambiguous.append(i)
+
+                to_expand = [j for j, grandchild in enumerate(child.children) if _is_ambig_tree(grandchild)]
+                child.expand_kids_by_index(*to_expand)
+
+        if not ambiguous:
+            return self.node_builder(children)
+
+        expand = [ iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children) ]
+        return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     to_expand = [i for i, sym in enumerate(expansion)

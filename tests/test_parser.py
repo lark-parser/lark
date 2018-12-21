@@ -1275,8 +1275,8 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("bb").children, [None, 'b', None, None, 'b', None])
             self.assertEqual(p.parse("abbc").children, ['a', 'b', None, None, 'b', 'c'])
             self.assertEqual(p.parse("babbcabcb").children,
-                [None, 'b', None, 
-                 'a', 'b', None, 
+                [None, 'b', None,
+                 'a', 'b', None,
                  None, 'b', 'c',
                  'a', 'b', 'c',
                  None, 'b', None])

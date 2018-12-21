@@ -549,7 +549,7 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
 
     imported_terms = dict(grammar.term_defs)
     imported_rules = {n:(n,deepcopy(t),o) for n,t,o in grammar.rule_defs}
-    
+
     term_defs = []
     rule_defs = []
 

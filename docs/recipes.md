@@ -54,7 +54,7 @@ parser = Lark("""
     %import common (INT, WS)
     %ignore COMMENT
     %ignore WS
-""", parser="lalr", lexer_callbacks={'COMMENT': comments.append}) 
+""", parser="lalr", lexer_callbacks={'COMMENT': comments.append})
 
 parser.parse("""
 1 2 3  # hello

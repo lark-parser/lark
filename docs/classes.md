@@ -76,7 +76,11 @@ Returns all nodes of the tree whose data equals the given data.
 
 #### iter_subtrees(self)
 
-Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG)
+Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
+
+#### iter_subtrees_topdown(self)
+
+Iterates over all the subtrees, return nodes in order like pretty() does.
 
 #### \_\_eq\_\_, \_\_hash\_\_
 

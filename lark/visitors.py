@@ -69,6 +69,10 @@ class Transformer:
             if name.startswith('_') or name in libmembers:
                 continue
 
+            # Skip if v_args already applied (at the function level)
+            if hasattr(cls.__dict__[name], 'vargs_applied'):
+                continue
+
             static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
             setattr(cls, name, decorator(value, static=static, **kwargs))
         return cls
@@ -241,6 +245,7 @@ def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, sta
         f = wraps(func)(create_decorator(func, False))
     else:
         f = smart_decorator(func, create_decorator)
+    f.vargs_applied = True
     f.inline = inline
     f.meta = meta
     f.whole_tree = whole_tree

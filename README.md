@@ -178,6 +178,26 @@ There are many ways you can help the project:
 
 If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
 
+## Unit Tests
+
+To run all Unit Tests,
+install tox and Python 2.7 up to the latest python version supported (consult the file tox.ini).
+Then,
+run the command `tox` on the root of this project (where the main setup.py file is on).
+
+If you would like to only run the Unit Tests for Python version 2.7,
+you can run the command `tox -e py27`
+
+If you would like to run a single Unit Test,
+you do not need to use tox,
+you can directly run it with your current python interpreter.
+First you need to figure out what is the test full name.
+For example:
+```python
+##          test_package.tests_module.test_class_name.test_function_name
+python -m unittest tests.test_parser.TestLalrStandard.test_lexer_error_recovering
+```
+
 ## Donate
 
 If you like Lark and feel like donating, you can do so at my [patreon page](https://www.patreon.com/erezsh).

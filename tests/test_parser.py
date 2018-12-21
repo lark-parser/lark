@@ -337,7 +337,7 @@ def _make_full_earley_test(LEXER):
 
             parser = _Lark(grammar, start='start', ambiguity='explicit')
             tree = parser.parse(text)
-            print(tree.pretty())
+#            print(tree.pretty())
             self.assertEqual(tree.data, '_ambig')
 
             combinations = {tuple(str(s) for s in t.children) for t in tree.children}

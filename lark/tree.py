@@ -8,7 +8,8 @@ from copy import deepcopy
 
 ###{standalone
 class Meta:
-    pass
+    def __init__(self):
+        self.empty = True
 
 class Tree(object):
     def __init__(self, data, children, meta=None):

@@ -38,12 +38,14 @@ class Rule(object):
     """
         origin : a symbol
         expansion : a list of symbols
+        order : index of this expansion amongst all rules of the same name
     """
-    __slots__ = ('origin', 'expansion', 'alias', 'options', '_hash')
-    def __init__(self, origin, expansion, alias=None, options=None):
+    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
+    def __init__(self, origin, expansion, order=0, alias=None, options=None):
         self.origin = origin
         self.expansion = expansion
         self.alias = alias
+        self.order = order
         self.options = options
         self._hash = hash((self.origin, tuple(self.expansion)))
 

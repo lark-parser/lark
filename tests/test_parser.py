@@ -201,7 +201,7 @@ def _make_full_earley_test(LEXER):
 
             l = Lark(grammar, parser='earley', lexer=LEXER)
             res = l.parse("aaa")
-            self.assertEqual(res.children, ['aa', 'a'])
+            self.assertEqual(res.children, ['a', 'aa'])
 
         def test_earley4(self):
             grammar = """
@@ -211,6 +211,7 @@ def _make_full_earley_test(LEXER):
 
             l = Lark(grammar, parser='earley', lexer=LEXER)
             res = l.parse("aaa")
+#            print(res.pretty())
             self.assertEqual(res.children, ['aaa'])
 
         def test_earley_repeating_empty(self):
@@ -1069,7 +1070,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.1: "bb"
             """
 
-            l = Lark(grammar, ambiguity='resolve__antiscore_sum')
+            l = Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 
@@ -1082,8 +1083,9 @@ def _make_parser_test(LEXER, PARSER):
             bb_: "bb"
             """
 
-            l = Lark(grammar, ambiguity='resolve__antiscore_sum')
+            l = Lark(grammar, priority="invert")
             res = l.parse('abba')
+#            print(res.pretty())
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 
             grammar = """
@@ -1095,7 +1097,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.3: "bb"
             """
 
-            l = Lark(grammar, ambiguity='resolve__antiscore_sum')
+            l = Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 
@@ -1108,7 +1110,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.3: "bb"
             """
 
-            l = Lark(grammar, ambiguity='resolve__antiscore_sum')
+            l = Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 

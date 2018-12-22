@@ -75,6 +75,12 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+def dedup_list(l):
+    """Given a list (l) will removing duplicates from the list,
+       preserving the original order of the list. Assumes that
+       the list entrie are hashable."""
+    dedup = set()
+    return [ x for x in l if not (x in dedup or dedup.add(x))]
 
 ###}
 

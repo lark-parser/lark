@@ -43,6 +43,7 @@ class LarkOptions(object):
         postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
+        priority - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
         maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None
@@ -63,6 +64,7 @@ class LarkOptions(object):
         self.transformer = o.pop('transformer', None)
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
+        self.priority = o.pop('priority', 'auto')
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
         self.lexer_callbacks = o.pop('lexer_callbacks', {})
@@ -154,7 +156,16 @@ class Lark:
             disambig_parsers = ['earley', 'cyk']
             assert self.options.parser in disambig_parsers, (
                 'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
-        assert self.options.ambiguity in ('resolve', 'explicit', 'auto', 'resolve__antiscore_sum')
+        assert self.options.priority in ('auto', 'none', 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
+        if self.options.priority == 'auto':
+            if self.options.parser in ('earley', 'cyk', ):
+                self.options.priority = 'normal'
+            elif self.options.parser in ('lalr', ):
+                self.options.priority = 'none'
+        if self.options.priority in ('invert', 'normal'):
+            assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
+        assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
+        assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, self.source)
@@ -162,6 +173,19 @@ class Lark:
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile()
 
+        # If the user asked to invert the priorities, negate them all here.
+        # This replaces the old 'resolve__antiscore_sum' option.
+        if self.options.priority == 'invert':
+            for rule in self.rules:
+                if rule.options and rule.options.priority is not None:
+                    rule.options.priority = -rule.options.priority
+        # Else, if the user asked to disable priorities, strip them from the
+        # rules. This allows the Earley parsers to skip an extra forest walk
+        # for improved performance, if you don't need them (or didn't specify any).
+        elif self.options.priority == 'none':
+            for rule in self.rules:
+                if rule.options and rule.options.priority is not None:
+                    rule.options.priority = None
         self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 
         if self.options.parser:

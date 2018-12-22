@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress
+from .utils import classify, suppress, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
@@ -237,7 +237,7 @@ class SimplifyRule_Visitor(Visitor):
                 tree.data = 'expansions'
                 tree.children = [self.visit(ST('expansion', [option if i==j else other
                                                             for j, other in enumerate(tree.children)]))
-                                    for option in set(child.children)]
+                                    for option in dedup_list(child.children)]
                 self._flatten(tree)
                 break
 
@@ -252,7 +252,7 @@ class SimplifyRule_Visitor(Visitor):
 
     def expansions(self, tree):
         self._flatten(tree)
-        tree.children = list(set(tree.children))
+        tree.children = dedup_list(tree.children)
 
 
 class RuleTreeToText(Transformer):
@@ -500,7 +500,8 @@ class Grammar:
 
         simplify_rule = SimplifyRule_Visitor()
         compiled_rules = []
-        for name, tree, options in rules:
+        for i, rule_content in enumerate(rules):
+            name, tree, options = rule_content
             simplify_rule.visit(tree)
             expansions = rule_tree_to_text.transform(tree)
 
@@ -517,7 +518,7 @@ class Grammar:
                     exp_options = options
 
                 assert all(isinstance(x, Symbol) for x in expansion), expansion
-                rule = Rule(NonTerminal(name), expansion, alias, exp_options)
+                rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)
 
         return terminals, compiled_rules, self.ignore
@@ -639,7 +640,7 @@ class GrammarLoader:
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, x) for name, x in  RULES.items()]
-        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), None, o) for r, xs, o in rules for x in xs]
+        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
 

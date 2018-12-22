@@ -24,11 +24,11 @@ from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal, Terminal
 from .earley import ApplyCallbacks
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, Forest
+from .earley_forest import ForestToTreeVisitor, ForestToAmbiguousTreeVisitor, ForestSumVisitor, ForestToPyDotVisitor, SymbolNode
 
 
 class Parser:
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, forest_sum_visitor = ForestSumVisitor, ignore = (), complete_lex = False):
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
@@ -41,15 +41,25 @@ class Parser:
         self.predictions = {}
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
-        #  the slow 'isupper' in is_terminal.
+        #  the slow 'isupper' in is_terminal; or even called sym.is_term directly.
         self.TERMINALS = { sym for r in parser_conf.rules for sym in r.expansion if sym.is_term }
         self.NON_TERMINALS = { sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term }
 
+        self.forest_sum_visitor = None
         for rule in parser_conf.rules:
             self.callbacks[rule] = getattr(parser_conf.callback, rule.alias or rule.origin, None)
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
-        self.forest_tree_visitor = ForestToTreeVisitor(forest_sum_visitor, self.callbacks)
+            ## Detect if any rules have priorities set. If the user specified priority = "none" then
+            #  the priorities will be stripped from all rules before they reach us, allowing us to
+            #  skip the extra tree walk.
+            if self.forest_sum_visitor is None and rule.options and rule.options.priority is not None:
+                self.forest_sum_visitor = ForestSumVisitor()
+
+        if resolve_ambiguity:
+            self.forest_tree_visitor = ForestToTreeVisitor(self.callbacks, self.forest_sum_visitor)
+        else:
+            self.forest_tree_visitor = ForestToAmbiguousTreeVisitor(self.callbacks, self.forest_sum_visitor)
         self.term_matcher = term_matcher
 
     def parse(self, stream, start_symbol=None):
@@ -362,11 +372,6 @@ class Parser:
         elif len(solutions) > 1:
             raise Exception('Earley should not generate more than one start symbol - bug')
 
-        ## If we're not resolving ambiguity, we just return the root of the SPPF tree to the caller.
-        # This means the caller can work directly with the SPPF tree.
-        if not self.resolve_ambiguity:
-            return Forest(solutions[0], self.callbacks)
-
-        # ... otherwise, disambiguate and convert the SPPF to an AST, removing any ambiguities
-        # according to the rules.
+        # Perform our SPPF -> AST conversion using the right ForestVisitor.
         return self.forest_tree_visitor.go(solutions[0])
+

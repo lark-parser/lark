@@ -39,11 +39,14 @@ class Rule(object):
         origin : a symbol
         expansion : a list of symbols
     """
+    __slots__ = ('origin', 'expansion', 'alias', 'options', '_hash')
     def __init__(self, origin, expansion, alias=None, options=None):
         self.origin = origin
         self.expansion = expansion
         self.alias = alias
         self.options = options
+        self._hash = hash((self.origin, tuple(self.expansion)))
+
 
     def __str__(self):
         return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
@@ -52,7 +55,8 @@ class Rule(object):
         return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
 
     def __hash__(self):
-        return hash((self.origin, tuple(self.expansion)))
+        return self._hash
+
     def __eq__(self, other):
         if not isinstance(other, Rule):
             return False

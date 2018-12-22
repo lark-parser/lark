@@ -10,7 +10,7 @@ This is the recommended process for working with Lark:
 
 3. Try your grammar in Lark against each input sample. Make sure the resulting parse-trees make sense.
 
-4. Use Lark's grammar features to [[shape the tree|Tree Construction]]: Get rid of superfluous rules by inlining them, and use aliases when specific cases need clarification. 
+4. Use Lark's grammar features to [[shape the tree|Tree Construction]]: Get rid of superfluous rules by inlining them, and use aliases when specific cases need clarification.
 
   - You can perform steps 1-4 repeatedly, gradually growing your grammar to include more sentences.
 
@@ -32,7 +32,7 @@ grammar = """start: rules and more rules
              rule1: other rules AND TOKENS
                   | rule1 "+" rule2             -> add
                   | some value [maybe]
-              
+
               rule2: rule1 "-" (rule2 | "whatever")*
 
               TOKEN1: "a literal"
@@ -52,3 +52,19 @@ class MyTransformer(Transformer):
 new_tree = MyTransformer().transform(tree)
 ```
 
+## LALR usage
+
+By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure `logging` framework beforehand. For example:
+
+```python
+from lark import Lark
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+collision_grammar = '''
+start: as as
+as: a*
+a: 'a'
+'''
+p = Lark(collision_grammar, parser='lalr', debug=True)
+```

@@ -49,7 +49,7 @@ def test():
     res = ParseToDict().transform(tree)
 
     print('-->')
-    print(res) # prints {'alice': [1, 27, 3], 'bob': [4], 'carrie': [], 'dan': [8, 6]} 
+    print(res) # prints {'alice': [1, 27, 3], 'bob': [4], 'carrie': [], 'dan': [8, 6]}
 
 
 if __name__ == '__main__':

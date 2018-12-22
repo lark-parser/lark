@@ -199,7 +199,8 @@ class CnfWrapper(object):
         for r in self.rules:
             # Validate that the grammar is CNF and populate auxiliary data structures.
             assert isinstance(r.lhs, NT), r
-            assert len(r.rhs) in [1, 2], r
+            if len(r.rhs) not in [1, 2]:
+                raise ParseError("CYK doesn't support empty rules")
             if len(r.rhs) == 1 and isinstance(r.rhs[0], T):
                 self.terminal_rules[r.rhs[0]].append(r)
             elif len(r.rhs) == 2 and all(isinstance(x, NT) for x in r.rhs):

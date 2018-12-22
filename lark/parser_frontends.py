@@ -42,12 +42,14 @@ class WithLexer:
 
 class LALR_TraditionalLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.parser = lalr_parser.Parser(parser_conf)
+        debug = options.debug if options else False
+        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
         self.init_traditional_lexer(lexer_conf)
 
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.parser = lalr_parser.Parser(parser_conf)
+        debug = options.debug if options else False
+        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
         self.init_contextual_lexer(lexer_conf)
 
 class LALR_CustomLexer(WithLexer):

@@ -46,10 +46,17 @@ class Rule(object):
         self.options = options
 
     def __str__(self):
-        return '<%s : %s>' % (self.origin, ' '.join(map(str,self.expansion)))
+        return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
 
     def __repr__(self):
         return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+
+    def __hash__(self):
+        return hash((self.origin, tuple(self.expansion)))
+    def __eq__(self, other):
+        if not isinstance(other, Rule):
+            return False
+        return self.origin == other.origin and self.expansion == other.expansion
 
 
 class RuleOptions:
@@ -57,6 +64,7 @@ class RuleOptions:
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
+        self.empty_indices = ()
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r)' % (

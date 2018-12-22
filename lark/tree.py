@@ -5,6 +5,7 @@ except ImportError:
 
 from copy import deepcopy
 
+
 ###{standalone
 class Meta:
     pass
@@ -42,6 +43,7 @@ class Tree(object):
 
     def pretty(self, indent_str='  '):
         return ''.join(self._pretty(0, indent_str))
+
     def __eq__(self, other):
         try:
             return self.data == other.data and self.children == other.children
@@ -99,12 +101,22 @@ class Tree(object):
                 yield x
                 seen.add(id(x))
 
+    def iter_subtrees_topdown(self):
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            if not isinstance(node, Tree):
+                continue
+            yield node
+            for n in reversed(node.children):
+                stack.append(n)
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo))
 
     def copy(self):
         return type(self)(self.data, self.children)
+
     def set(self, data, children):
         self.data = data
         self.children = children
@@ -128,11 +140,17 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree, filename):
-    "Creates a colorful image that represents the tree (data+children, without meta)"
+def pydot__tree_to_png(tree, filename, rankdir="LR"):
+    """Creates a colorful image that represents the tree (data+children, without meta)
+
+    Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
+    directed graphs drawn from top to bottom, from left to right, from bottom to
+    top, and from right to left, respectively. See:
+    https://www.graphviz.org/doc/info/attrs.html#k:rankdir
+    """
 
     import pydot
-    graph = pydot.Dot(graph_type='digraph', rankdir="LR")
+    graph = pydot.Dot(graph_type='digraph', rankdir=rankdir)
 
     i = [0]
 

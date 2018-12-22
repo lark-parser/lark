@@ -161,7 +161,7 @@ yield_expr: "yield" [yield_arg]
 yield_arg: "from" test | testlist
 
 
-number: DEC_NUMBER | HEX_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
+number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
 string: STRING | LONG_STRING
 // Tokens
 

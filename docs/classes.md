@@ -76,7 +76,11 @@ Returns all nodes of the tree whose data equals the given data.
 
 #### iter_subtrees(self)
 
-Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG)
+Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
+
+#### iter_subtrees_topdown(self)
+
+Iterates over all the subtrees, return nodes in order like pretty() does.
 
 #### \_\_eq\_\_, \_\_hash\_\_
 
@@ -189,7 +193,7 @@ When using a lexer, the resulting tokens in the trees will be of the Token class
 * `line` - The line of the token in the text (starting with 1)
 * `column` - The column of the token in the text (starting with 1)
 * `end_line` - The line where the token ends
-* `end_column` - The column where the token ends
+* `end_column` - The next column after the end of the token. For example, if the token is a single character with a `column` value of 4, `end_column` will be 5.
 
 
 ## UnexpectedInput

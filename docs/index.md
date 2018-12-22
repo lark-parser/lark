@@ -1,15 +1,19 @@
-# Lark - a modern parsing library for Python
+# Lark
+
+A modern parsing library for Python
+
+## Overview
 
 Lark can parse any context-free grammar.
 
-Lark provides
+Lark provides:
 
 - Advanced grammar language, based on EBNF
 - Three parsing algorithms to choose from: Earley, LALR(1) and CYK
-- Automatic tree construction, based on grammar
+- Automatic tree construction, inferred from your grammar
 - Fast unicode lexer with regexp support, and automatic line-counting
 
-Code is hosted on Github: [https://github.com/lark-parser/lark](https://github.com/lark-parser/lark)
+Lark's code is hosted on Github: [https://github.com/lark-parser/lark](https://github.com/lark-parser/lark)
 
 ### Install
 ```bash
@@ -21,6 +25,7 @@ $ pip install lark-parser
 - [Sublime Text & TextMate](https://github.com/lark-parser/lark_syntax)
 - [Visual Studio Code](https://github.com/lark-parser/vscode-lark) (Or install through the vscode plugin system)
 
+-----
 
 ## Documentation Index
 

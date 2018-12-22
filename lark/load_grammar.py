@@ -3,7 +3,7 @@
 import os.path
 import sys
 from ast import literal_eval
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from .utils import bfs
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -26,6 +26,8 @@ IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
 EXT = '.lark'
 
 _RE_FLAGS = 'imslux'
+
+_EMPTY = Symbol('__empty__')
 
 _TERMINAL_NAMES = {
     '.' : 'DOT',
@@ -152,7 +154,6 @@ RULES = {
     'literal': ['REGEXP', 'STRING'],
 }
 
-
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
@@ -176,7 +177,14 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def expr(self, rule, op, *args):
         if op.value == '?':
-            return ST('expansions', [rule, ST('expansion', [])])
+            if isinstance(rule, Terminal) and rule.filter_out and not (
+                    self.rule_options and self.rule_options.keep_all_tokens):
+                empty = ST('expansion', [])
+            elif isinstance(rule, NonTerminal) and rule.name.startswith('_'):
+                empty = ST('expansion', [])
+            else:
+                empty = _EMPTY
+            return ST('expansions', [rule, empty])
         elif op.value == '+':
             # a : b c+ d
             #   -->
@@ -482,7 +490,8 @@ class Grammar:
         for name, rule_tree, options in rule_defs:
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
             tree = transformer.transform(rule_tree)
-            rules.append((name, ebnf_to_bnf.transform(tree), options))
+            res = ebnf_to_bnf.transform(tree)
+            rules.append((name, res, options))
         rules += ebnf_to_bnf.new_rules
 
         assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
@@ -501,9 +510,17 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                empty_indices = [x==_EMPTY for i, x in enumerate(expansion)]
+                if any(empty_indices):
+                    assert options
+                    exp_options = copy(options)
+                    exp_options.empty_indices = empty_indices
+                    expansion = [x for x in expansion if x!=_EMPTY]
+                else:
+                    exp_options = options
 
-                rule = Rule(NonTerminal(name), expansion, alias, options)
+                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                rule = Rule(NonTerminal(name), expansion, alias, exp_options)
                 compiled_rules.append(rule)
 
         return terminals, compiled_rules, self.ignore
@@ -528,16 +545,23 @@ def import_grammar(grammar_path, base_paths=[]):
     return _imported_grammars[grammar_path]
 
 def import_from_grammar_into_namespace(grammar, namespace, aliases):
+    """Returns all rules and terminals of grammar, prepended
+    with a 'namespace' prefix, except for those which are aliased.
+    """
+
     imported_terms = dict(grammar.term_defs)
-    imported_rules = {n:(n,t,o) for n,t,o in grammar.rule_defs}
-    
+    imported_rules = {n:(n,deepcopy(t),o) for n,t,o in grammar.rule_defs}
+
     term_defs = []
     rule_defs = []
 
     def rule_dependencies(symbol):
         if symbol.type != 'RULE':
             return []
-        _, tree, _ = imported_rules[symbol]
+        try:
+            _, tree, _ = imported_rules[symbol]
+        except KeyError:
+            raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
         return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
 
     def get_namespace_name(name):

@@ -78,7 +78,7 @@ class Parser:
                 for item in to_reduce:
                     new_items = list(complete(item))
                     if item in new_items:
-                        raise ParseError('Infinite recursion detected! (rule %s)' % item.rule)
+                        self.on_error(ParseError('Infinite recursion detected! (rule %s)' % item.rule))
                     column.add(new_items)
 
         def scan(i, column):
@@ -116,7 +116,7 @@ class Parser:
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             if not next_set and not delayed_matches:
-                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan))
+                self.on_error(UnexpectedCharacters(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan)))
 
             return next_set
 
@@ -143,7 +143,7 @@ class Parser:
 
         if not solutions:
             expected_tokens = [t.expect for t in column.to_scan]
-            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+            self.on_error(ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens))
 
         elif len(solutions) == 1:
             tree = solutions[0]

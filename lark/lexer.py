@@ -2,7 +2,7 @@
 
 import re
 
-from .utils import Str, classify, get_regexp_width, Py36
+from .utils import Str, classify, reraise, get_regexp_width, Py36
 from .exceptions import UnexpectedCharacters, LexError
 
 class Pattern(object):
@@ -164,7 +164,7 @@ class _Lex:
 
                 break
             else:
-                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
+                self.on_error(UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state))
 
 
 class UnlessCallback:
@@ -235,7 +235,7 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
-class Lexer:
+class Lexer(object):
     """Lexer interface
 
     Method Signatures:
@@ -246,10 +246,14 @@ class Lexer:
     set_parser_state = NotImplemented
     lex = NotImplemented
 
+    def __init__(self):
+        self.on_error = reraise
+
 class TraditionalLexer(Lexer):
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
+        super(TraditionalLexer, self).__init__()
         terminals = list(terminals)
 
         # Sanitization
@@ -283,7 +287,9 @@ class TraditionalLexer(Lexer):
 
 
     def lex(self, stream):
-        return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
+        lex = _Lex(self)
+        lex.on_error = self.on_error
+        return lex.lex(stream, self.newline_types, self.ignore_types)
 
 
 class ContextualLexer(Lexer):
@@ -293,6 +299,7 @@ class ContextualLexer(Lexer):
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
 
+        super(ContextualLexer, self).__init__()
         lexer_by_tokens = {}
         self.lexers = {}
         for state, accepts in states.items():
@@ -316,6 +323,7 @@ class ContextualLexer(Lexer):
 
     def lex(self, stream):
         l = _Lex(self.lexers[self.parser_state], self.parser_state)
+        l.on_error = self.on_error
         for x in l.lex(stream, self.root_lexer.newline_types, self.root_lexer.ignore_types):
             yield x
             l.lexer = self.lexers[self.parser_state]

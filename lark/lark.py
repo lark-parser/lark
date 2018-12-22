@@ -5,14 +5,14 @@ import time
 from collections import defaultdict
 from io import open
 
-from .utils import STRING_TYPE
+from .utils import reraise, STRING_TYPE
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
 from .lexer import Lexer, TraditionalLexer
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend
+from .parser_frontends import WithLexer, get_frontend
 
 
 class LarkOptions(object):
@@ -43,6 +43,7 @@ class LarkOptions(object):
         postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
         start - The start symbol (Default: start)
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
+        on_error - A callback(error_object) to handle exceptions on parsing. Defaults to "lambda x: raise x"
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
         maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None
@@ -63,6 +64,7 @@ class LarkOptions(object):
         self.transformer = o.pop('transformer', None)
         self.start = o.pop('start', 'start')
         self.profile = o.pop('profile', False)
+        self.on_error = o.pop('on_error', reraise)
         self.ambiguity = o.pop('ambiguity', 'auto')
         self.propagate_positions = o.pop('propagate_positions', False)
         self.earley__predict_all = o.pop('earley__predict_all', False)
@@ -176,7 +178,9 @@ class Lark:
         __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
-        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        lexer.on_error = self.options.on_error
+        return lexer
 
     def _build_parser(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
@@ -189,8 +193,10 @@ class Lark:
                     setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
 
         parser_conf = ParserConf(self.rules, callback, self.options.start)
+        parser = self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
-        return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+        if isinstance(self.parser_class, WithLexer): parser.lexer.on_error = self.options.on_error
+        return parser
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):

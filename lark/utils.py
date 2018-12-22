@@ -8,6 +8,11 @@ class fzset(frozenset):
         return '{%s}' % ', '.join(map(repr, self))
 
 
+# https://stackoverflow.com/questions/8294618/define-a-lambda-expression-that-raises-an-exception
+def reraise(exception):
+    raise exception
+
+
 def classify_bool(seq, pred):
     true_elems = []
     false_elems = []

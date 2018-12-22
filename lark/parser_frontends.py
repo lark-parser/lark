@@ -98,6 +98,7 @@ class XEarley:
                                     predict_all=options.earley__predict_all,
                                     **kw
                                     )
+        self.parser.on_error = options.on_error
 
     def match(self, term, text, index=0):
         return self.regexps[term.name].match(text, index)

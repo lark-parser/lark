@@ -40,6 +40,7 @@ $ pip install lark-parser
         * [Program Synthesis is Possible](https://www.cs.cornell.edu/~asampson/blog/minisynth.html) - Creates a DSL for Z3
 * Guides
     * [How to use Lark](how_to_use.md)
+    * [How to develop Lark](how_to_develop.md)
 * Reference
     * [Grammar](grammar.md)
     * [Tree Construction](tree_construction.md)

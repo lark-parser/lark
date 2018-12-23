@@ -165,7 +165,11 @@ class Lark:
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile()
 
-        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
+        self.lexer_conf = LexerConf(self.terminals,
+                                    self.ignore_tokens,
+                                    self.options.postlex,
+                                    self.options.lexer_callbacks,
+                                    self.options.on_error)
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -178,8 +182,10 @@ class Lark:
         __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
     def _build_lexer(self):
-        lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
-        lexer.on_error = self.options.on_error
+        lexer = TraditionalLexer(self.lexer_conf.tokens,
+                                 ignore=self.lexer_conf.ignore,
+                                 user_callbacks=self.lexer_conf.callbacks,
+                                 on_error=self.lexer_conf.on_error)
         return lexer
 
     def _build_parser(self):
@@ -194,8 +200,6 @@ class Lark:
 
         parser_conf = ParserConf(self.rules, callback, self.options.start)
         parser = self.parser_class(self.lexer_conf, parser_conf, options=self.options)
-
-        if isinstance(self.parser_class, WithLexer): parser.lexer.on_error = self.options.on_error
         return parser
 
     @classmethod

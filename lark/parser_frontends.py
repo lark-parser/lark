@@ -15,7 +15,10 @@ class WithLexer:
 
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        self.lexer = TraditionalLexer(lexer_conf.tokens,
+                                      ignore=lexer_conf.ignore,
+                                      user_callbacks=lexer_conf.callbacks,
+                                      on_error=lexer_conf.on_error)
 
     def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
@@ -24,7 +27,8 @@ class WithLexer:
         self.lexer = ContextualLexer(lexer_conf.tokens, states,
                                      ignore=lexer_conf.ignore,
                                      always_accept=always_accept,
-                                     user_callbacks=lexer_conf.callbacks)
+                                     user_callbacks=lexer_conf.callbacks,
+                                     on_error=lexer_conf.on_error)
 
     def lex(self, text):
         stream = self.lexer.lex(text)

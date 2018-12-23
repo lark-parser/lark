@@ -18,9 +18,10 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer
+from lark.grammar import Terminal
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -1210,6 +1211,36 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
+
+
+        def test_lexer_error_recovering(self):
+            errors = []
+            def on_error(exception):
+                errors.append(exception)
+
+            _Lark(ur""" !start: "b" """, on_error=on_error).parse(u'abc')
+            if PARSER == 'earley':
+                if LEXER == 'standard':
+                    self.assertEqual([UnexpectedCharacters(u'abc', 0, 1, 1, {}, {})], errors)
+                else: # dynamic
+                    self.assertEqual([UnexpectedCharacters(u'abc', 0, 1, 1, {Terminal(u'B')}, {}),
+                        ParseError('Unexpected end of input! Expecting a terminal of: []')], errors)
+            else:
+                self.assertEqual([UnexpectedCharacters(u'abc', 0, 1, 1)], errors)
+            del errors[:]
+
+            _Lark(ur""" !start: "bc\nd" """, on_error=on_error).parse(u'abc\nde')
+            if PARSER == 'earley':
+                if LEXER == 'standard':
+                    self.assertEqual([UnexpectedCharacters(u'abc', 0, 1, 1, {}, {}),
+                        UnexpectedCharacters(u'abc\nde', 5, 2, 2, {}, {})], errors)
+                else: # dynamic
+                    self.assertEqual([UnexpectedCharacters(u'abc', 0, 1, 1, {Terminal('__ANON_0')}, {}),
+                        UnexpectedCharacters(u'abc\nde', 4, 2, 1, {}, {}),
+                        ParseError('Unexpected end of input! Expecting a terminal of: []')], errors)
+            else:
+                self.assertEqual([UnexpectedCharacters(u'abc\nde', 0, 1, 1), UnexpectedCharacters(u'de', 1, 2, 2)], errors)
+            del errors[:]
 
         @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX
         def test_priority_vs_embedded(self):

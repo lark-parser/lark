@@ -1,6 +1,7 @@
 ## Lexer Implementation
 
 import re
+import sys
 
 from .utils import Str, classify, reraise, get_regexp_width, Py36
 from .exceptions import UnexpectedCharacters, LexError
@@ -137,6 +138,11 @@ class _Lex:
         ignore_types = frozenset(ignore_types)
         line_ctr = LineCounter()
 
+        char_error_offset = 0
+        line_error_offset = 0
+        column_error_offset = 0
+        last_error_line = -1
+
         while line_ctr.char_pos < len(stream):
             lexer = self.lexer
             for mre, type_from_index in lexer.mres:
@@ -164,7 +170,19 @@ class _Lex:
 
                 break
             else:
-                self.on_error(UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state))
+                # Ignore new errors on the current line because they cascade into hundreds of useless errors
+                if last_error_line != line_ctr.line:
+                    self.on_error(UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state))
+
+                char_error_offset += 1
+                column_error_offset += 1
+
+                if stream[line_ctr.char_pos] == '\n':
+                    line_error_offset += 1
+                    column_error_offset = 0
+
+                last_error_line = line_ctr.line
+                stream = stream[0:line_ctr.char_pos] + stream[line_ctr.char_pos+1:]
 
 
 class UnlessCallback:
@@ -235,7 +253,7 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
-class Lexer(object):
+class Lexer:
     """Lexer interface
 
     Method Signatures:
@@ -246,14 +264,11 @@ class Lexer(object):
     set_parser_state = NotImplemented
     lex = NotImplemented
 
-    def __init__(self):
-        self.on_error = reraise
-
 class TraditionalLexer(Lexer):
-    def __init__(self, terminals, ignore=(), user_callbacks={}):
+    def __init__(self, terminals, ignore=(), user_callbacks={}, on_error=reraise):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
-        super(TraditionalLexer, self).__init__()
+        self.on_error = on_error
         terminals = list(terminals)
 
         # Sanitization
@@ -293,15 +308,15 @@ class TraditionalLexer(Lexer):
 
 
 class ContextualLexer(Lexer):
-    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
+    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}, on_error=reraise):
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
 
-        super(ContextualLexer, self).__init__()
         lexer_by_tokens = {}
         self.lexers = {}
+        self.on_error = on_error
         for state, accepts in states.items():
             key = frozenset(accepts)
             try:
@@ -309,12 +324,12 @@ class ContextualLexer(Lexer):
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
-                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
+                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks, on_error=on_error)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks)
+        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks, on_error=on_error)
 
         self.set_parser_state(None) # Needs to be set on the outside
 

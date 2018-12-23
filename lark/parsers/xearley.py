@@ -55,6 +55,7 @@ class Parser:
         match = self.term_matcher
 
         text_line = 1
+        last_text_line = [-1]
         text_column = 1
 
         def predict(nonterm, column):
@@ -116,7 +117,11 @@ class Parser:
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             if not next_set and not delayed_matches:
-                self.on_error(UnexpectedCharacters(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan)))
+                # Ignore new errors on the current line because they cascade into hundreds of useless errors
+                if last_text_line[0] != text_line:
+                    self.on_error(UnexpectedCharacters(stream, i, text_line, text_column, {item.expect for item in to_scan}, set(to_scan)))
+
+                last_text_line[0] = text_line
 
             return next_set
 
@@ -136,6 +141,7 @@ class Parser:
                 text_column += 1
 
         predict_and_complete(column)
+        tree = Tree('default_empty_tree', [])
 
         # Parse ended. Now build a parse tree
         solutions = [n.tree for n in column.to_reduce

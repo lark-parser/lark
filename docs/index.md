@@ -38,6 +38,7 @@ $ pip install lark-parser
     * [How to write a JSON parser](json_tutorial.md)
 * Guides
     * [How to use Lark](how_to_use.md)
+    * [How to develop Lark](how_to_develop.md)
 * Reference
     * [Grammar](grammar.md)
     * [Tree Construction](tree_construction.md)

@@ -49,6 +49,8 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
         self.assertEqual(x.children, ['12', 'elephants'])
+        x = l.parse('16 candles')
+        self.assertEqual(x.children, ['16', 'candles'])
 
     def test_contextual(self):
         grammar = """

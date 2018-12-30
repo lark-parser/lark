@@ -57,12 +57,16 @@ from functools import wraps, partial
 from contextlib import contextmanager
 
 Str = type(u'')
+try:
+    classtype = types.ClassType # Python2
+except AttributeError:
+    classtype = type    # Python3
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
         return wraps(f)(create_decorator(f, True))
 
-    elif isinstance(f, (type, types.BuiltinFunctionType)):
+    elif isinstance(f, (classtype, type, types.BuiltinFunctionType)):
         return wraps(f)(create_decorator(f, False))
 
     elif isinstance(f, types.MethodType):

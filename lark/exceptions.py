@@ -86,4 +86,6 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         super(UnexpectedToken, self).__init__(message)
 
+class VisitError(Exception):
+    pass
 ###}

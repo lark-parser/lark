@@ -18,39 +18,15 @@ This is the recommended process for working with Lark:
 
 Of course, some specific use-cases may deviate from this process. Feel free to suggest these cases, and I'll add them to this page.
 
-## Basic API Usage
+## Getting started
 
-For common use, you only need to know 3 classes: Lark, Tree, Transformer  ([[Classes Reference]])
+Browse the [Examples](https://github.com/lark-parser/lark/tree/master/examples) to find a template that suits your purposes.
 
-Here is some mock usage of them. You can see a real example in the [[examples]]
+Read the tutorials to get a better understanding of how everything works. (links in the [main page](/))
 
-```python
-from lark import Lark, Transformer
+Use the [Cheatsheet (PDF)](lark_cheatsheet.pdf) for quick reference.
 
-grammar = """start: rules and more rules
-
-             rule1: other rules AND TOKENS
-                  | rule1 "+" rule2             -> add
-                  | some value [maybe]
-
-              rule2: rule1 "-" (rule2 | "whatever")*
-
-              TOKEN1: "a literal"
-              TOKEN2: TOKEN1 "and literals"
-              """
-
-parser = Lark(grammar)
-
-tree = parser.parse("some input string")
-
-class MyTransformer(Transformer):
-   def rule1(self, matches):
-      return matches[0] + matches[1]
-
-   # I don't have to implement rule2 if I don't feel like it!
-
-new_tree = MyTransformer().transform(tree)
-```
+Use the reference pages for more in-depth explanations. (links in the [main page](/)]
 
 ## LALR usage
 
@@ -64,7 +40,7 @@ logging.basicConfig(level=logging.DEBUG)
 collision_grammar = '''
 start: as as
 as: a*
-a: 'a'
+a: "a"
 '''
 p = Lark(collision_grammar, parser='lalr', debug=True)
 ```

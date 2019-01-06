@@ -158,7 +158,7 @@ class Parser:
                         item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                         item.node.add_family(item.s, item.rule, item.start, None, None)
 
-                    create_leo_transitives(item.rule.origin, item.start)
+                    # create_leo_transitives(item.rule.origin, item.start)
 
                     ###R Joop Leo right recursion Completer
                     if item.rule.origin in transitives[item.start]:

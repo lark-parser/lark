@@ -39,26 +39,11 @@ class Parser(BaseParser):
         match = self.term_matcher
 
         # Cache for nodes & tokens created in a particular parse step.
-        token_cache = {}
         columns = []
         transitives = []
 
         text_line = 1
         text_column = 1
-
-        def is_quasi_complete(item):
-            if item.is_complete:
-                return True
-
-            quasi = item.advance()
-            while not quasi.is_complete:
-                if quasi.expect not in self.NULLABLE:
-                    return False
-                if quasi.rule.origin == start_symbol and quasi.expect == start_symbol:
-                    return False
-                quasi = quasi.advance()
-            return True
-
 
         def scan(i, to_scan):
             """The core Earley Scanner.
@@ -111,8 +96,7 @@ class Parser(BaseParser):
             next_to_scan = set()
             next_set = set()
             columns.append(next_set)
-            next_transitives = dict()
-            transitives.append(next_transitives)
+            transitives.append({})
 
             ## 4) Process Tokens from delayed_matches.
             # This is the core of the Earley scanner. Create an SPPF node for each Token,
@@ -171,9 +155,6 @@ class Parser(BaseParser):
         for token in stream:
             self.predict_and_complete(i, to_scan, columns, transitives)
 
-            # Clear the node_cache and token_cache, which are only relevant for each
-            # step in the Earley pass.
-            token_cache.clear()
             to_scan = scan(i, to_scan)
 
             if token == '\n':

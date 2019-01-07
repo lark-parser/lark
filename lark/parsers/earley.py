@@ -153,7 +153,6 @@ class Parser:
         match = self.term_matcher
 
         # Cache for nodes & tokens created in a particular parse step.
-        token_cache = {}
         columns = []
         transitives = []
 
@@ -285,8 +284,6 @@ class Parser:
         for token in stream:
             self.predict_and_complete(i, to_scan, columns, transitives)
 
-            # Clear the node_cache and token_cache, which are only relevant for each
-            # step in the Earley pass.
             to_scan = scan(i, token, to_scan)
             i += 1
 

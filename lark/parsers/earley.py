@@ -17,7 +17,7 @@ from ..exceptions import ParseError, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode
+from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, ForestToAmbiguousTreeVisitor
 
 class Parser:
     def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True):
@@ -54,16 +54,105 @@ class Parser:
         self.term_matcher = term_matcher
 
 
+    def predict_and_complete(self, i, to_scan, columns, transitives):
+        """The core Earley Predictor and Completer.
+
+        At each stage of the input, we handling any completed items (things
+        that matched on the last cycle) and use those to predict what should
+        come next in the input stream. The completions and any predicted
+        non-terminals are recursively processed until we reach a set of,
+        which can be added to the scan list for the next scanner cycle."""
+        # Held Completions (H in E.Scotts paper).
+        node_cache = {}
+        held_completions = {}
+
+        column = columns[i]
+        # R (items) = Ei (column.items)
+        items = deque(column)
+        while items:
+            item = items.pop()    # remove an element, A say, from R
+
+            ### The Earley completer
+            if item.is_complete:   ### (item.s == string)
+                if item.node is None:
+                    label = (item.s, item.start, i)
+                    item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                    item.node.add_family(item.s, item.rule, item.start, None, None)
+
+                # create_leo_transitives(item.rule.origin, item.start)
+
+                ###R Joop Leo right recursion Completer
+                if item.rule.origin in transitives[item.start]:
+                    transitive = transitives[item.start][item.s]
+                    if transitive.previous in transitives[transitive.column]:
+                        root_transitive = transitives[transitive.column][transitive.previous]
+                    else:
+                        root_transitive = transitive
+
+                    new_item = Item(transitive.rule, transitive.ptr, transitive.start)
+                    label = (root_transitive.s, root_transitive.start, i)
+                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                    new_item.node.add_path(root_transitive, item.node)
+                    if new_item.expect in self.TERMINALS:
+                        # Add (B :: aC.B, h, y) to Q
+                        to_scan.add(new_item)
+                    elif new_item not in column:
+                        # Add (B :: aC.B, h, y) to Ei and R
+                        column.add(new_item)
+                        items.append(new_item)
+                ###R Regular Earley completer
+                else:
+                    # Empty has 0 length. If we complete an empty symbol in a particular
+                    # parse step, we need to be able to use that same empty symbol to complete
+                    # any predictions that result, that themselves require empty. Avoids
+                    # infinite recursion on empty symbols.
+                    # held_completions is 'H' in E.Scott's paper.
+                    is_empty_item = item.start == i
+                    if is_empty_item:
+                        held_completions[item.rule.origin] = item.node
+
+                    originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+                    for originator in originators:
+                        new_item = originator.advance()
+                        label = (new_item.s, originator.start, i)
+                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                        new_item.node.add_family(new_item.s, new_item.rule, i, originator.node, item.node)
+                        if new_item.expect in self.TERMINALS:
+                            # Add (B :: aC.B, h, y) to Q
+                            to_scan.add(new_item)
+                        elif new_item not in column:
+                            # Add (B :: aC.B, h, y) to Ei and R
+                            column.add(new_item)
+                            items.append(new_item)
+
+            ### The Earley predictor
+            elif item.expect in self.NON_TERMINALS: ### (item.s == lr0)
+                new_items = []
+                for rule in self.predictions[item.expect]:
+                    new_item = Item(rule, 0, i)
+                    new_items.append(new_item)
+
+                # Process any held completions (H).
+                if item.expect in held_completions:
+                    new_item = item.advance()
+                    label = (new_item.s, item.start, i)
+                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                    new_item.node.add_family(new_item.s, new_item.rule, new_item.start, item.node, held_completions[item.expect])
+                    new_items.append(new_item)
+
+                for new_item in new_items:
+                    if new_item.expect in self.TERMINALS:
+                        to_scan.add(new_item)
+                    elif new_item not in column:
+                        column.add(new_item)
+                        items.append(new_item)
+
     def parse(self, stream, start_symbol=None):
         # Define parser functions
         start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
         match = self.term_matcher
 
-        # Held Completions (H in E.Scotts paper).
-        held_completions = {}
-
         # Cache for nodes & tokens created in a particular parse step.
-        node_cache = {}
         token_cache = {}
         columns = []
         transitives = []
@@ -74,10 +163,9 @@ class Parser:
 
             quasi = item.advance()
             while not quasi.is_complete:
-                symbol = quasi.expect
-                if symbol not in self.NULLABLE:
+                if quasi.expect not in self.NULLABLE:
                     return False
-                if quasi.rule.origin == start_symbol and symbol == start_symbol:
+                if quasi.rule.origin == start_symbol and quasi.expect == start_symbol:
                     return False
                 quasi = quasi.advance()
             return True
@@ -135,96 +223,7 @@ class Parser:
                         titem = TransitiveItem(origin, trule, originator, start)
                 previous = transitives[start][origin] = titem
 
-        def predict_and_complete(i, to_scan):
-            """The core Earley Predictor and Completer.
 
-            At each stage of the input, we handling any completed items (things
-            that matched on the last cycle) and use those to predict what should
-            come next in the input stream. The completions and any predicted
-            non-terminals are recursively processed until we reach a set of,
-            which can be added to the scan list for the next scanner cycle."""
-            held_completions.clear()
-
-            column = columns[i]
-            # R (items) = Ei (column.items)
-            items = deque(column)
-            while items:
-                item = items.pop()    # remove an element, A say, from R
-
-                ### The Earley completer
-                if item.is_complete:   ### (item.s == string)
-                    if item.node is None:
-                        label = (item.s, item.start, i)
-                        item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                        item.node.add_family(item.s, item.rule, item.start, None, None)
-
-                    # create_leo_transitives(item.rule.origin, item.start)
-
-                    ###R Joop Leo right recursion Completer
-                    if item.rule.origin in transitives[item.start]:
-                        transitive = transitives[item.start][item.s]
-                        if transitive.previous in transitives[transitive.column]:
-                            root_transitive = transitives[transitive.column][transitive.previous]
-                        else:
-                            root_transitive = transitive
-
-                        new_item = Item(transitive.rule, transitive.ptr, transitive.start)
-                        label = (root_transitive.s, root_transitive.start, i)
-                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                        new_item.node.add_path(root_transitive, item.node)
-                        if new_item.expect in self.TERMINALS:
-                            # Add (B :: aC.B, h, y) to Q
-                            to_scan.add(new_item)
-                        elif new_item not in column:
-                            # Add (B :: aC.B, h, y) to Ei and R
-                            column.add(new_item)
-                            items.append(new_item)
-                    ###R Regular Earley completer
-                    else:
-                        # Empty has 0 length. If we complete an empty symbol in a particular
-                        # parse step, we need to be able to use that same empty symbol to complete
-                        # any predictions that result, that themselves require empty. Avoids
-                        # infinite recursion on empty symbols.
-                        # held_completions is 'H' in E.Scott's paper.
-                        is_empty_item = item.start == i
-                        if is_empty_item:
-                            held_completions[item.rule.origin] = item.node
-
-                        originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
-                        for originator in originators:
-                            new_item = originator.advance()
-                            label = (new_item.s, originator.start, i)
-                            new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                            new_item.node.add_family(new_item.s, new_item.rule, i, originator.node, item.node)
-                            if new_item.expect in self.TERMINALS:
-                                # Add (B :: aC.B, h, y) to Q
-                                to_scan.add(new_item)
-                            elif new_item not in column:
-                                # Add (B :: aC.B, h, y) to Ei and R
-                                column.add(new_item)
-                                items.append(new_item)
-
-                ### The Earley predictor
-                elif item.expect in self.NON_TERMINALS: ### (item.s == lr0)
-                    new_items = []
-                    for rule in self.predictions[item.expect]:
-                        new_item = Item(rule, 0, i)
-                        new_items.append(new_item)
-
-                    # Process any held completions (H).
-                    if item.expect in held_completions:
-                        new_item = item.advance()
-                        label = (new_item.s, item.start, i)
-                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                        new_item.node.add_family(new_item.s, new_item.rule, new_item.start, item.node, held_completions[item.expect])
-                        new_items.append(new_item)
-
-                    for new_item in new_items:
-                        if new_item.expect in self.TERMINALS:
-                            to_scan.add(new_item)
-                        elif new_item not in column:
-                            column.add(new_item)
-                            items.append(new_item)
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.
@@ -237,8 +236,8 @@ class Parser:
             next_to_scan = set()
             next_set = set()
             columns.append(next_set)
-            next_transitives = dict()
-            transitives.append(next_transitives)
+            transitives.append({})
+            node_cache = {}
 
             for item in set(to_scan):
                 if match(item.expect, token):
@@ -284,15 +283,14 @@ class Parser:
         # step.
         i = 0
         for token in stream:
-            predict_and_complete(i, to_scan)
+            self.predict_and_complete(i, to_scan, columns, transitives)
 
             # Clear the node_cache and token_cache, which are only relevant for each
             # step in the Earley pass.
-            node_cache.clear()
             to_scan = scan(i, token, to_scan)
             i += 1
 
-        predict_and_complete(i, to_scan)
+        self.predict_and_complete(i, to_scan, columns, transitives)
 
         ## Column is now the final column in the parse. If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in

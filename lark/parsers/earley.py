@@ -147,15 +147,7 @@ class Parser:
                         column.add(new_item)
                         items.append(new_item)
 
-    def parse(self, stream, start_symbol=None):
-        # Define parser functions
-        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
-        match = self.term_matcher
-
-        # Cache for nodes & tokens created in a particular parse step.
-        columns = []
-        transitives = []
-
+    def _parse(self, stream, columns, to_scan, start_symbol=None):
         def is_quasi_complete(item):
             if item.is_complete:
                 return True
@@ -258,22 +250,12 @@ class Parser:
 
             return next_to_scan
 
-        # Main loop starts
-        columns.append(set())
-        transitives.append(dict())
 
-        ## The scan buffer. 'Q' in E.Scott's paper.
-        to_scan = set()
+        # Define parser functions
+        match = self.term_matcher
 
-        ## Predict for the start_symbol.
-        # Add predicted items to the first Earley set (for the predictor) if they
-        # result in a non-terminal, or the scanner if they result in a terminal.
-        for rule in self.predictions[start_symbol]:
-            item = Item(rule, 0, 0)
-            if item.expect in self.TERMINALS:
-                to_scan.add(item)
-            else:
-                columns[0].add(item)
+        # Cache for nodes & tokens created in a particular parse step.
+        transitives = [{}]
 
         ## The main Earley loop.
         # Run the Prediction/Completion cycle for any Items in the current Earley set.
@@ -289,19 +271,42 @@ class Parser:
 
         self.predict_and_complete(i, to_scan, columns, transitives)
 
-        ## Column is now the final column in the parse. If the parse was successful, the start
+        ## Column is now the final column in the parse.
+        assert i == len(columns)-1
+
+    def parse(self, stream, start_symbol=None):
+        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
+
+        columns = [set()]
+        to_scan = set()     # The scan buffer. 'Q' in E.Scott's paper.
+
+        ## Predict for the start_symbol.
+        # Add predicted items to the first Earley set (for the predictor) if they
+        # result in a non-terminal, or the scanner if they result in a terminal.
+        for rule in self.predictions[start_symbol]:
+            item = Item(rule, 0, 0)
+            if item.expect in self.TERMINALS:
+                to_scan.add(item)
+            else:
+                columns[0].add(item)
+
+        self._parse(stream, columns, to_scan, start_symbol)
+
+        # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = [n.node for n in columns[i] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
 
         if not solutions:
-            raise ParseError('Incomplete parse: Could not find a solution to input')
+            expected_tokens = [t.expect for t in to_scan]
+            # raise ParseError('Incomplete parse: Could not find a solution to input')
+            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
         elif len(solutions) > 1:
-            raise ParseError('Earley should not generate multiple start symbol items!')
-
+            assert False, 'Earley should not generate multiple start symbol items!'
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
         return self.forest_tree_visitor.go(solutions[0])
+
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

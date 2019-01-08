@@ -79,7 +79,10 @@ By the way, if you're curious what these terminals signify, they are roughly equ
 
 Lark will accept this, if you really want to complicate your life :)
 
-(You can find the original definitions in [common.lark](/lark/grammars/common.lark).)
+You can find the original definitions in [common.lark](/lark/grammars/common.lark).
+They're a bit looser than [json.org](https://json.org/) - accepting `\f` as whitespace,
+`.1` as a number, unicode digits, and unescaped control characters in strings - but
+strict standards-compliance would make for a somewhat longer tutorial.
 
 Notice that terminals are written in UPPER-CASE, while rules are written in lower-case.
 I'll touch more on the differences between rules and terminals later.

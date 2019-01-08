@@ -13,18 +13,14 @@ Instead of running a lexer beforehand, or using a costy char-by-char method, thi
 uses regular expressions by necessity, achieving high-performance while maintaining all of
 Earley's power in parsing any CFG.
 """
-# Author: Erez Shinan (2017)
-# Email : erezshin@gmail.com
 
-from collections import defaultdict, deque
+from collections import defaultdict
 
-from ..exceptions import ParseError, UnexpectedCharacters
+from ..exceptions import UnexpectedCharacters
 from ..lexer import Token
-from .grammar_analysis import GrammarAnalyzer
-from ..grammar import NonTerminal, Terminal
-from .earley import ApplyCallbacks, Parser as BaseParser
-from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestToAmbiguousTreeVisitor, ForestSumVisitor, ForestToPyDotVisitor, SymbolNode
+from ..grammar import Terminal
+from .earley import Parser as BaseParser
+from .earley_forest import SymbolNode
 
 
 class Parser(BaseParser):

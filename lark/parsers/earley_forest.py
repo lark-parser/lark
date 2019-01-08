@@ -8,16 +8,13 @@ http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
 from random import randint
-from ..tree import Tree
-from ..exceptions import ParseError
-from ..lexer import Token
-from ..utils import Str
-from ..grammar import NonTerminal, Terminal, Symbol
-
 from math import isinf
 from collections import deque
 from operator import attrgetter
 from importlib import import_module
+
+from ..tree import Tree
+from ..exceptions import ParseError
 
 class ForestNode(object):
     pass
@@ -163,7 +160,7 @@ class ForestVisitor(object):
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
 
-    def go(self, root):
+    def visit(self, root):
         self.result = None
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
         # the stack. It serves two purposes: to detect when we 'recurse' in and out
@@ -278,16 +275,16 @@ class ForestToTreeVisitor(ForestVisitor):
         self.forest_sum_visitor = forest_sum_visitor
         self.callbacks = callbacks
 
-    def go(self, root):
+    def visit(self, root):
         self.output_stack = deque()
-        return super(ForestToTreeVisitor, self).go(root)
+        return super(ForestToTreeVisitor, self).visit(root)
 
     def visit_token_node(self, node):
         self.output_stack[-1].append(node)
 
     def visit_symbol_node_in(self, node):
         if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
-            self.forest_sum_visitor.go(node)
+            self.forest_sum_visitor.visit(node)
         return next(iter(node.children))
 
     def visit_packed_node_in(self, node):
@@ -331,7 +328,7 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
 
     def visit_symbol_node_in(self, node):
         if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
-            self.forest_sum_visitor.go(node)
+            self.forest_sum_visitor.visit(node)
         if not node.is_intermediate and node.is_ambiguous:
             self.output_stack.append(Tree('_ambig', []))
         return iter(node.children)
@@ -370,8 +367,8 @@ class ForestToPyDotVisitor(ForestVisitor):
         self.pydot = import_module('pydot')
         self.graph = self.pydot.Dot(graph_type='digraph', rankdir=rankdir)
 
-    def go(self, root, filename):
-        super(ForestToPyDotVisitor, self).go(root)
+    def visit(self, root, filename):
+        super(ForestToPyDotVisitor, self).visit(root)
         self.graph.write_png(filename)
 
     def visit_token_node(self, node):

@@ -10,7 +10,7 @@ is better documented here:
     http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
-from collections import deque, defaultdict
+from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import ParseError, UnexpectedToken
@@ -305,7 +305,7 @@ class Parser:
             assert False, 'Earley should not generate multiple start symbol items!'
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        return self.forest_tree_visitor.go(solutions[0])
+        return self.forest_tree_visitor.visit(solutions[0])
 
 
 class ApplyCallbacks(Transformer_InPlace):

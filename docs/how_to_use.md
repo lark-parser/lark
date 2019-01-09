@@ -20,7 +20,7 @@ Of course, some specific use-cases may deviate from this process. Feel free to s
 
 ## Getting started
 
-Browse the [Examples](https://github.com/lark-parser/lark/tree/master/examples) to find a template that suits your purposes.
+Browse the [Examples](/examples) to find a template that suits your purposes.
 
 Read the tutorials to get a better understanding of how everything works. (links in the [main page](/))
 

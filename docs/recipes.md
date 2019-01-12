@@ -22,6 +22,8 @@ It only works with the standard and contextual lexers.
 from lark import Lark, Token
 
 def tok_to_int(tok):
+    "Convert the value of `tok` from string to int, while maintaining line number & column."
+    # tok.type == 'INT'
     return Token.new_borrow_pos(tok.type, int(tok), tok)
 
 parser = Lark("""

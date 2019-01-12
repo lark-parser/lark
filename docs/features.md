@@ -1,4 +1,4 @@
-# Features
+# Main Features
 
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
@@ -47,8 +47,9 @@ A [CYK parser](https://www.wikiwand.com/en/CYK_algorithm) can parse any context-
 
 Its too slow to be practical for simple grammars, but it offers good performance for highly ambiguous grammars.
 
-# Other features
+# Extra features
 
+  - Import rules and tokens from other Lark grammars, for code reuse and modularity.
   - Import grammars from Nearley.js
 
 ### Experimental features
@@ -59,4 +60,3 @@ Its too slow to be practical for simple grammars, but it offers good performance
  - Grammar composition
  - LALR(k) parser
  - Full regexp-collision support using NFAs
- - Automatically produce syntax-highlighters for grammars, for popular IDEs

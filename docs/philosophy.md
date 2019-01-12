@@ -45,7 +45,7 @@ And anyway, every parse-tree can be replayed as a state-machine, so there is no 
 
 See this answer in more detail [here](https://github.com/erezsh/lark/issues/4).
 
-You can skip the building the tree for LALR(1), by providing Lark with a transformer (see the [JSON example](https://github.com/erezsh/lark/blob/master/examples/json_parser.py)).
+To improve performance, you can skip building the tree for LALR(1), by providing Lark with a transformer (see the [JSON example](https://github.com/erezsh/lark/blob/master/examples/json_parser.py)).
 
 ### 3. Earley is the default
 

@@ -66,7 +66,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         if allowed:
             message += '\nExpecting: %s\n' % allowed
 
-        super(UnexpectedCharacters, self).__init__(message.encode('utf-8'))
+        super(UnexpectedCharacters, self).__init__(message)
 
 
 
@@ -84,7 +84,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
                    "Expected one of: \n\t* %s\n"
                    % (token, self.line, self.column, '\n\t* '.join(self.expected)))
 
-        super(UnexpectedToken, self).__init__(message.encode('utf-8'))
+        super(UnexpectedToken, self).__init__(message)
 
 class VisitError(Exception):
     pass

@@ -100,17 +100,10 @@ class Reconstructor:
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:
-<<<<<<< HEAD
                 yield Rule(origin, [Terminal(alias)], alias=MakeMatchTree(origin.name, [NonTerminal(alias)]))
             
             yield Rule(origin, [Terminal(origin.name)], alias=MakeMatchTree(origin.name, [origin]))
         
-=======
-                yield Rule(origin, [Terminal(alias)], MakeMatchTree(origin.name, [NonTerminal(alias)]))
-
-            yield Rule(origin, [Terminal(origin.name)], MakeMatchTree(origin.name, [origin]))
-
->>>>>>> master
 
 
     def _match(self, term, token):

@@ -42,12 +42,8 @@ class LarkOptions(object):
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
         start - The start symbol (Default: start)
-<<<<<<< HEAD
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
         priority - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
-=======
-        profile - Measure run-time usage in Lark. Read results from the profiler property (Default: False)
->>>>>>> master
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
         maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None
@@ -76,9 +72,9 @@ class LarkOptions(object):
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
-        if self.ambiguity == 'explicit' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm for explicit ambiguity.'
-                             'Please use your transformer on the resulting Forest, or use a different algorithm (i.e. LALR)')
+        if self.parser == 'earley' and self.transformer:
+            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
+                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -160,14 +156,16 @@ class Lark:
             disambig_parsers = ['earley', 'cyk']
             assert self.options.parser in disambig_parsers, (
                 'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
-        assert self.options.priority in ('auto', 'none', 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
+
         if self.options.priority == 'auto':
             if self.options.parser in ('earley', 'cyk', ):
                 self.options.priority = 'normal'
             elif self.options.parser in ('lalr', ):
-                self.options.priority = 'none'
-        if self.options.priority in ('invert', 'normal'):
+                self.options.priority = None
+        elif self.options.priority in ('invert', 'normal'):
             assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
+
+        assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
 
@@ -186,7 +184,7 @@ class Lark:
         # Else, if the user asked to disable priorities, strip them from the
         # rules. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
-        elif self.options.priority == 'none':
+        elif self.options.priority == None:
             for rule in self.rules:
                 if rule.options and rule.options.priority is not None:
                     rule.options.priority = None

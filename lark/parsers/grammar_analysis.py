@@ -1,3 +1,4 @@
+from collections import Counter
 
 from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
@@ -111,7 +112,10 @@ class GrammarAnalyzer(object):
         rules = parser_conf.rules + [Rule(NonTerminal('$root'), [NonTerminal(parser_conf.start), Terminal('$END')])]
         self.rules_by_origin = classify(rules, lambda r: r.origin)
 
-        assert len(rules) == len(set(rules))
+        if len(rules) != len(set(rules)):
+            duplicates = [item for item, count in Counter(rules).items() if count > 1]
+            raise GrammarError("Rules defined twice: %s" % ', '.join(str(i) for i in duplicates))
+
         for r in rules:
             for sym in r.expansion:
                 if not (sym.is_term or sym in self.rules_by_origin):

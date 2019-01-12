@@ -42,8 +42,12 @@ class LarkOptions(object):
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
         start - The start symbol (Default: start)
+<<<<<<< HEAD
         profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
         priority - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+=======
+        profile - Measure run-time usage in Lark. Read results from the profiler property (Default: False)
+>>>>>>> master
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
         maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None

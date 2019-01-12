@@ -109,6 +109,10 @@ four_words: word ~ 4
 
 All occurrences of the terminal will be ignored, and won't be part of the parse.
 
+Using the `%ignore` directive results in a cleaner grammar.
+
+It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extranous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
+
 **Syntax:**
 ```html
 %ignore <TERMINAL>
@@ -122,9 +126,9 @@ COMMENT: "#" /[^\n]/*
 ```
 ### %import
 
-Allows to import terminals from lark grammars.
+Allows to import terminals and rules from lark grammars.
 
-Future versions will allow to import rules and macros.
+When importing rules, all their dependencies will be imported into a namespace, to avoid collisions. It's not possible to override their dependencies (e.g. like you would when inheriting a class).
 
 **Syntax:**
 ```html

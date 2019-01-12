@@ -1,7 +1,7 @@
-# Features
+# Main Features
 
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
- - Builds a parse-tree (AST) automagically based on the grammar 
+ - Builds a parse-tree (AST) automagically based on the grammar
  - Stand-alone parser generator - create a small independent parser to embed in your project.
  - Automatic line & column tracking
  - Automatic terminal collision resolution
@@ -39,16 +39,17 @@ Lark extends the traditional YACC-based architecture with a *contextual lexer*, 
 
 The contextual lexer communicates with the parser, and uses the parser's lookahead prediction to narrow its choice of tokens. So at each point, the lexer only matches the subgroup of terminals that are legal at that parser state, instead of all of the terminals. It’s surprisingly effective at resolving common terminal collisions, and allows to parse languages that LALR(1) was previously incapable of parsing.
 
-This is an improvement to LALR(1) that is unique to Lark. 
+This is an improvement to LALR(1) that is unique to Lark.
 
 ### CYK Parser
 
-A [CYK parser](https://www.wikiwand.com/en/CYK_algorithm) can parse any context-free grammar at O(n^3*|G|). 
+A [CYK parser](https://www.wikiwand.com/en/CYK_algorithm) can parse any context-free grammar at O(n^3*|G|).
 
 Its too slow to be practical for simple grammars, but it offers good performance for highly ambiguous grammars.
 
-# Other features
+# Extra features
 
+  - Import rules and tokens from other Lark grammars, for code reuse and modularity.
   - Import grammars from Nearley.js
 
 ### Experimental features
@@ -59,4 +60,3 @@ Its too slow to be practical for simple grammars, but it offers good performance
  - Grammar composition
  - LALR(k) parser
  - Full regexp-collision support using NFAs
- - Automatically produce syntax-highlighters for grammars, for popular IDEs

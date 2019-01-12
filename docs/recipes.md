@@ -22,6 +22,8 @@ It only works with the standard and contextual lexers.
 from lark import Lark, Token
 
 def tok_to_int(tok):
+    "Convert the value of `tok` from string to int, while maintaining line number & column."
+    # tok.type == 'INT'
     return Token.new_borrow_pos(tok.type, int(tok), tok)
 
 parser = Lark("""
@@ -54,7 +56,7 @@ parser = Lark("""
     %import common (INT, WS)
     %ignore COMMENT
     %ignore WS
-""", parser="lalr", lexer_callbacks={'COMMENT': comments.append}) 
+""", parser="lalr", lexer_callbacks={'COMMENT': comments.append})
 
 parser.parse("""
 1 2 3  # hello

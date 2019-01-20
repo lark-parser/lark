@@ -511,7 +511,7 @@ class Grammar:
 
                 empty_indices = [x==_EMPTY for i, x in enumerate(expansion)]
                 if any(empty_indices):
-                    exp_options = copy(options) or RuleOptions()
+                    exp_options = copy(options) if options else RuleOptions()
                     exp_options.empty_indices = empty_indices
                     expansion = [x for x in expansion if x!=_EMPTY]
                 else:

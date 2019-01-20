@@ -4,7 +4,7 @@ from functools import partial
 from .utils import get_regexp_width
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
-from .parsers import lalr_parser, earley, earley_forest, xearley, cyk
+from .parsers import lalr_parser, earley, xearley, cyk
 from .tree import Tree
 
 class WithLexer:

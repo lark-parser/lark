@@ -741,15 +741,6 @@ def _make_parser_test(LEXER, PARSER):
                       """)
             x = g.parse(r'\a')
 
-        def test_special_chars(self):
-            g = _Lark(r"""start: "\n"
-                      """)
-            x = g.parse('\n')
-
-            g = _Lark(r"""start: /\n/
-                      """)
-            x = g.parse('\n')
-
 
         def test_backslash2(self):
             g = _Lark(r"""start: "\"" "-"
@@ -759,6 +750,18 @@ def _make_parser_test(LEXER, PARSER):
             g = _Lark(r"""start: /\// /-/
                       """)
             x = g.parse('/-')
+
+
+
+        def test_special_chars(self):
+            g = _Lark(r"""start: "\n"
+                      """)
+            x = g.parse('\n')
+
+            g = _Lark(r"""start: /\n/
+                      """)
+            x = g.parse('\n')
+
 
         # def test_token_recurse(self):
         #     g = _Lark("""start: A
@@ -1321,6 +1324,20 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("abba").children, ['a', None, 'b', 'b', 'a', None])
             self.assertEqual(p.parse("cbbbb").children, [None, 'c', 'b', 'b', 'b', 'b', None, None])
 
+
+        def test_escaped_string(self):
+            "Tests common.ESCAPED_STRING"
+            grammar = r"""
+            start: ESCAPED_STRING+
+
+            %import common (WS_INLINE, ESCAPED_STRING)
+            %ignore WS_INLINE
+            """
+
+            parser = _Lark(grammar)
+            parser.parse(r'"\\" "b" "c"')
+
+            parser.parse(r'"That" "And a \"b"')
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

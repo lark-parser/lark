@@ -20,9 +20,10 @@ SIGNED_NUMBER: ["+"|"-"] NUMBER
 //
 // Strings
 //
-//STRING: /"(\\\"|\\\\|[^"\n])*?"i?/
-STRING_INNER: ("\\\""|/[^"]/)
-ESCAPED_STRING: "\"" STRING_INNER* "\""
+_STRING_INNER: /.*?/
+_STRING_ESC_INNER: _STRING_INNER /(?<!\\)(\\\\)*?/ 
+
+ESCAPED_STRING : "\"" _STRING_ESC_INNER "\""
 
 
 //

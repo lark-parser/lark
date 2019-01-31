@@ -5,11 +5,13 @@
 After cloning the repo, open the terminal into the root directory of the project, and run the following:
 
 ```bash
-[lark]$ python -m examples.<name_of_example}
+[lark]$ python -m examples.<name_of_example>
+```
 
 For example, the following will parse all the Python files in the standard library of your local installation:
 
-$ python -m examples.python_parser
+```bash
+[lark]$ python -m examples.python_parser
 ```
 
 ### Beginners

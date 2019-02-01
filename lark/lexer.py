@@ -270,13 +270,12 @@ class TraditionalLexer(Lexer):
 
         terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
 
-        self.callback = dict()
-        for type_, f in user_callbacks.items():
-            assert type_ not in self.callback
-            self.callback[type_] = f
-
         terminals, self.callback = _create_unless(terminals)
         assert all(self.callback.values())
+
+        for type_, f in user_callbacks.items():
+            assert type_ not in self.callback or isinstance(self.callback[type_], UnlessCallback)
+            self.callback[type_] = f
 
         self.terminals = terminals
 

@@ -43,7 +43,7 @@ class Transformer:
             except GrammarError:
                 raise
             except Exception as e:
-                raise VisitError('Error trying to process rule "%s":\n\n%s' % (tree.data, e))
+                raise VisitError(tree, e)
 
     def _transform_children(self, children):
         for c in children:

@@ -87,5 +87,10 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         super(UnexpectedToken, self).__init__(message)
 
 class VisitError(Exception):
-    pass
+    def __init__(self, tree, orig_exc):
+        self.tree = tree
+        self.orig_exc = orig_exc
+
+        message = 'Error trying to process rule "%s":\n\n%s' % (tree.data, orig_exc)
+        super(VisitError, self).__init__(message)
 ###}

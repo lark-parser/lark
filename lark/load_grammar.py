@@ -521,6 +521,13 @@ class Grammar:
                 rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)
 
+
+        # Filter out unused terminals
+        used_terms = {t.name for r in compiled_rules
+                             for t in r.expansion
+                             if isinstance(t, Terminal)}
+        terminals = [t for t in terminals if t.name in used_terms or t.name in self.ignore]
+
         return terminals, compiled_rules, self.ignore
 
 
@@ -793,8 +800,6 @@ class GrammarLoader:
                 else:
                     if sym not in rule_names:
                         raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, name))
-
-        # TODO don't include unused terminals, they can only cause trouble!
 
         return Grammar(rules, term_defs, ignore_names)
 

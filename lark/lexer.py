@@ -151,6 +151,8 @@ class _Lex:
                     t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                     if t.type in lexer.callback:
                         t = lexer.callback[t.type](t)
+                        if not isinstance(t, Token):
+                            raise ValueError("Callbacks must return a token (returned %r)" % t)
                     yield t
                 else:
                     if type_ in lexer.callback:
@@ -178,6 +180,17 @@ class UnlessCallback:
                 t.type = type_from_index[m.lastindex]
                 break
         return t
+
+class CallChain:
+    def __init__(self, callback1, callback2, cond):
+        self.callback1 = callback1
+        self.callback2 = callback2
+        self.cond = cond
+
+    def __call__(self, t):
+        t2 = self.callback1(t)
+        return self.callback2(t) if self.cond(t2) else t2
+
 
 ###}
 
@@ -274,8 +287,11 @@ class TraditionalLexer(Lexer):
         assert all(self.callback.values())
 
         for type_, f in user_callbacks.items():
-            assert type_ not in self.callback
-            self.callback[type_] = f
+            if type_ in self.callback:
+                # Already a callback there, probably UnlessCallback
+                self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
+            else:
+                self.callback[type_] = f
 
         self.terminals = terminals
 

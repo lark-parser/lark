@@ -22,7 +22,7 @@ Lark grammars are composed of a list of definitions and directives, each on its 
 
 Lark begins the parse with the rule 'start', unless specified otherwise in the options.
 
-Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects for tree construction, and for building a lexer (aka tokenizer, or scanner).
+Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects, for the shape of the generated parse-tree, and the automatic construction of the lexer (aka tokenizer, or scanner).
 
 
 ## Terminals

@@ -8,7 +8,7 @@ Parse any context-free grammar, FAST and EASY!
 
 Lark can:
 
- - Parse all context-free grammars, and handle all ambiguity
+ - Parse all context-free grammars, and handle any ambiguity
  - Build a parse-tree automagically, no construction code required
  - Outperform all other Python libraries when using LALR(1) (Yes, including PLY)
  - Run on every Python interpreter (it's pure-python)

@@ -4,6 +4,7 @@ pages:
     - Main Page: index.md
     - Philosophy: philosophy.md
     - Features: features.md
+    - Parsers: parsers.md
     - How To Use (Guide): how_to_use.md
     - Grammar Reference: grammar.md
     - Tree Construction Reference: tree_construction.md

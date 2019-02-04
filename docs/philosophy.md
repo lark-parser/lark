@@ -2,7 +2,7 @@
 
 Parsers are innately complicated and confusing. They're difficult to understand, difficult to write, and difficult to use. Even experts on the subject can become baffled by the nuances of these complicated state-machines.
 
-Lark's mission is to make the process of writing them as simple and abstract as possible. by the following design principles:
+Lark's mission is to make the process of writing them as simple and abstract as possible, by following these design principles:
 
 ### Design Principles
 
@@ -49,9 +49,9 @@ To improve performance, you can skip building the tree for LALR(1), by providing
 
 ### 3. Earley is the default
 
-The Earley algorithm can accept *any* context-free grammar you throw at it (i.e. any grammar you can write in EBNF, it can parse). That makes it extremely useful for beginners, who are not aware of the strange and arbitrary restrictions that LALR(1) places on its grammars.
+The Earley algorithm can accept *any* context-free grammar you throw at it (i.e. any grammar you can write in EBNF, it can parse). That makes it extremely friendly to beginners, who are not aware of the strange and arbitrary restrictions that LALR(1) places on its grammars.
 
-As the users grow to understand the structure of their grammar, the scope of their target language and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features.
+As the users grow to understand the structure of their grammar, the scope of their target language, and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features.
 
 In short, "Premature optimization is the root of all evil."
 

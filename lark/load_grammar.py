@@ -521,6 +521,19 @@ class Grammar:
                 rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)
 
+        # Remove duplicates of empty rules, throw error for non-empty duplicates
+        if len(set(compiled_rules)) != len(compiled_rules):
+            duplicates = classify(compiled_rules, lambda x: x)
+            for dups in duplicates.values():
+                if len(dups) > 1:
+                    if dups[0].expansion:
+                        raise GrammarError("Rules defined twice: %s" % ', '.join(str(i) for i in duplicates))
+
+                    # Empty rule; assert all other attributes are equal
+                    assert len({(r.alias, r.order, r.options) for r in dups}) == len(dups)
+
+            # Remove duplicates
+            compiled_rules = list(set(compiled_rules))
 
         # Filter out unused terminals
         used_terms = {t.name for r in compiled_rules

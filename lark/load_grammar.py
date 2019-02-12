@@ -346,7 +346,7 @@ def _fix_escaping(s):
             n2 = next(i)
             if n2 == '\\':
                 w += '\\\\'
-            elif n2 not in 'unftr':
+            elif n2 not in 'uxnftr':
                 w += '\\'
             w += n2
     w = w.replace('\\"', '"').replace("'", "\\'")

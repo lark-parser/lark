@@ -71,7 +71,7 @@ class TerminalDef(object):
 class Token(Str):
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
 
-    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None):
+    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
@@ -83,13 +83,13 @@ class Token(Str):
         self.value = value
         self.line = line
         self.column = column
-        self.end_line = None
-        self.end_column = None
+        self.end_line = end_line
+        self.end_column = end_column
         return self
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        return cls(type_, value, borrow_t.pos_in_stream, line=borrow_t.line, column=borrow_t.column)
+        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column)
 
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))

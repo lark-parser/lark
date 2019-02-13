@@ -448,6 +448,13 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
+        def test_hex_escape(self):
+            g = _Lark(r"""start: A B C
+                          A: "\x01"
+                          B: /\x02/
+                          C: "\xABCD"
+                          """)
+            g.parse('\x01\x02\xABCD')
 
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
@@ -1363,4 +1370,3 @@ for _LEXER in ('dynamic', 'dynamic_complete'):
 
 if __name__ == '__main__':
     unittest.main()
-

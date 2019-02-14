@@ -86,7 +86,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         super(UnexpectedToken, self).__init__(message)
 
-class VisitError(Exception):
+class VisitError(LarkError):
     def __init__(self, tree, orig_exc):
         self.tree = tree
         self.orig_exc = orig_exc

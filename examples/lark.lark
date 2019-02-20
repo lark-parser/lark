@@ -10,10 +10,10 @@ token: TOKEN priority? ":" expansions _NL
 priority: "." NUMBER
 
 statement: "%ignore" expansions _NL                -> ignore
-         | "%import" import_args ["->" TOKEN] _NL  -> import
+         | "%import" import_args ["->" name] _NL   -> import
          | "%declare" name+                        -> declare
 
-import_args: name ("." name)*
+import_args: "."? name ("." name)*
 
 ?expansions: alias (_VBAR alias)*
 

@@ -586,7 +586,7 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
         try:
             return aliases[name].value
         except KeyError:
-            return '%s.%s' % (namespace, name)
+            return '%s__%s' % (namespace, name)
 
     to_import = list(bfs(aliases, rule_dependencies))
     for symbol in to_import:
@@ -745,7 +745,7 @@ class GrammarLoader:
                     g = import_grammar(grammar_path, base_paths=[base_path])
 
                 aliases_dict = dict(zip(names, aliases))
-                new_td, new_rd = import_from_grammar_into_namespace(g, '.'.join(dotted_path), aliases_dict)
+                new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases_dict)
 
                 term_defs += new_td
                 rule_defs += new_rd

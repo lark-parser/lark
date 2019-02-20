@@ -1025,6 +1025,37 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'lions'])
 
 
+        def test_relative_rule_import(self):
+            l = _Lark_open('test_relative_rule_import.lark', rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('expr', ['a', Tree('expr', ['a', 'b']), 'b']),
+                'y'])
+
+
+        def test_relative_rule_import_drop_ignore(self):
+            # %ignore rules are dropped on import
+            l = _Lark_open('test_relative_rule_import_drop_ignore.lark',
+                           rel_to=__file__)
+            self.assertRaises((ParseError, UnexpectedInput),
+                              l.parse, 'xa abby')
+
+
+        def test_relative_rule_import_subrule(self):
+            l = _Lark_open('test_relative_rule_import_subrule.lark',
+                           rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('startab', [
+                    Tree('grammars__ab__expr', [
+                        'a', Tree('grammars__ab__expr', ['a', 'b']), 'b',
+                    ]),
+                ]),
+                'y'])
+
+
         def test_multi_import(self):
             grammar = """
             start: NUMBER WORD

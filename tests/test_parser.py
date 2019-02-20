@@ -998,10 +998,32 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'elephants'])
 
 
+        def test_import_rename(self):
+            grammar = """
+            start: N W
+
+            %import common.NUMBER -> N
+            %import common.WORD -> W
+            %import common.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 elephants')
+            self.assertEqual(x.children, ['12', 'elephants'])
+
+
         def test_relative_import(self):
             l = _Lark_open('test_relative_import.lark', rel_to=__file__)
             x = l.parse('12 lions')
             self.assertEqual(x.children, ['12', 'lions'])
+
+
+        def test_relative_import_rename(self):
+            l = _Lark_open('test_relative_import_rename.lark', rel_to=__file__)
+            x = l.parse('12 lions')
+            self.assertEqual(x.children, ['12', 'lions'])
+
 
         def test_multi_import(self):
             grammar = """

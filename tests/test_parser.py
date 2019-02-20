@@ -1056,6 +1056,31 @@ def _make_parser_test(LEXER, PARSER):
                 'y'])
 
 
+        def test_relative_rule_import_subrule_no_conflict(self):
+            l = _Lark_open(
+                'test_relative_rule_import_subrule_no_conflict.lark',
+                rel_to=__file__)
+            x = l.parse('xaby')
+            self.assertEqual(x.children, [Tree('expr', [
+                'x',
+                Tree('startab', [
+                    Tree('grammars__ab__expr', ['a', 'b']),
+                ]),
+                'y'])])
+            self.assertRaises((ParseError, UnexpectedInput),
+                              l.parse, 'xaxabyby')
+
+
+        def test_relative_rule_import_rename(self):
+            l = _Lark_open('test_relative_rule_import_rename.lark',
+                           rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('ab', ['a', Tree('ab', ['a', 'b']), 'b']),
+                'y'])
+
+
         def test_multi_import(self):
             grammar = """
             start: NUMBER WORD

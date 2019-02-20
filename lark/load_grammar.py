@@ -139,7 +139,7 @@ RULES = {
     'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT _import_path _NL',
                '_IMPORT _import_path _LPAR name_list _RPAR _NL',
-               '_IMPORT _import_path _TO TERMINAL _NL'],
+               '_IMPORT _import_path _TO name _NL'],
 
     '_import_path': ['import_lib', 'import_rel'],
     'import_lib': ['_import_args'],

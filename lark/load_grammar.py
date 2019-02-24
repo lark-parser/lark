@@ -389,7 +389,7 @@ class PrepareLiterals(Transformer_InPlace):
         assert start.type == end.type == 'STRING'
         start = start.value[1:-1]
         end = end.value[1:-1]
-        assert len(start) == len(end) == 1, (start, end, len(start), len(end))
+        assert len(_fix_escaping(start)) == len(_fix_escaping(end)) == 1, (start, end, len(_fix_escaping(start)), len(_fix_escaping(end)))
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 

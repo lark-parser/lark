@@ -456,6 +456,18 @@ def _make_parser_test(LEXER, PARSER):
                           """)
             g.parse('\x01\x02\xABCD')
 
+        def test_unicode_literal_range_escape(self):
+            g = _Lark(r"""start: A+
+                          A: "\u0061".."\u0063"
+                          """)
+            g.parse('abc')
+
+        def test_hex_literal_range_escape(self):
+            g = _Lark(r"""start: A+
+                          A: "\x01".."\x03"
+                          """)
+            g.parse('\x01\x02\x03')
+
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
             """Verify that stack depth isn't an issue for EBNF grammars"""

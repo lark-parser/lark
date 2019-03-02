@@ -6,6 +6,7 @@ pages:
     - Features: features.md
     - Parsers: parsers.md
     - How To Use (Guide): how_to_use.md
+    - How To Develop (Guide): how_to_develop.md
     - Grammar Reference: grammar.md
     - Tree Construction Reference: tree_construction.md
     - Classes Reference: classes.md

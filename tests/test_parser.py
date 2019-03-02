@@ -18,7 +18,7 @@ from io import (
 logging.basicConfig(level=logging.INFO)
 
 from lark.lark import Lark
-from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer
 
@@ -388,6 +388,8 @@ def _make_full_earley_test(LEXER):
 def _make_parser_test(LEXER, PARSER):
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
+    def _Lark_open(gfilename, **kwargs):
+        return Lark.open(gfilename, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*
@@ -817,7 +819,7 @@ def _make_parser_test(LEXER, PARSER):
                       %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
 
         def test_float_without_lexer(self):
-            expected_error = UnexpectedInput if LEXER == 'dynamic' else UnexpectedToken
+            expected_error = UnexpectedCharacters if LEXER.startswith('dynamic') else UnexpectedToken
             if PARSER == 'cyk':
                 expected_error = ParseError
 
@@ -997,16 +999,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
         def test_relative_import(self):
-            grammar = """
-            start: NUMBER WORD
-
-            %import .grammars.test.NUMBER
-            %import common.WORD
-            %import common.WS
-            %ignore WS
-
-            """
-            l = _Lark(grammar)
+            l = _Lark_open('test_relative_import.lark', rel_to=__file__)
             x = l.parse('12 lions')
             self.assertEqual(x.children, ['12', 'lions'])
 
@@ -1024,14 +1017,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
         def test_relative_multi_import(self):
-            grammar = """
-           start: NUMBER WORD
-
-           %import .grammars.test (NUMBER, WORD, WS)
-           %ignore WS
-
-           """
-            l = _Lark(grammar)
+            l = _Lark_open("test_relative_multi_import.lark", rel_to=__file__)
             x = l.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 

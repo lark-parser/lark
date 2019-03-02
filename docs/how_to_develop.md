@@ -14,25 +14,25 @@ If you're interested in taking one of these on, let me know and I will provide m
 
 ## Unit Tests
 
-If you would like to run all Unit Tests,
-all you need is a supported Python Interpreter.
-You can consult the list of supported interpreter for unit testing on the `tox.ini` file.
-Then, just run the command `python -m tests`
+Lark comes with an extensive set of tests. Many of the tests will run several times, once for each parser configuration.
 
-If you would like to run a single Unit Test,
-you do not need to use tox,
-you can directly run it with your installed Python Interpreter.
-First you need to figure out what is the test full name.
-For example:
-```python
-##   test_package test_class_name.test_function_name
-python -m tests TestLalrStandard.test_lexer_error_recovering
+To run the tests, just go to the lark project root, and run the command:
+```bash
+python -m tests
 ```
 
-Equivalent example/way, but unrecommended:
-```python
-##          test_package.tests_module.test_class_name.test_function_name
-python -m unittest tests.test_parser.TestLalrStandard.test_lexer_error_recovering
+or
+
+```bash
+pypy -m tests
+```
+
+For a list of supported interpreters, you can consult the `tox.ini` file.
+
+You can also run a single unittest using its class and method name, for example:
+```bash
+##   test_package test_class_name.test_function_name
+python -m tests TestLalrStandard.test_lexer_error_recovering
 ```
 
 ### tox
@@ -45,3 +45,19 @@ run the command `tox` on the root of this project (where the main setup.py file 
 And, for example,
 if you would like to only run the Unit Tests for Python version 2.7,
 you can run the command `tox -e py27`
+
+### pytest
+
+You can also run the tests using pytest:
+
+```bash
+pytest tests
+```
+
+### Using setup.py
+
+Another way to run the tests is using setup.py:
+
+```bash
+python setup.py test 
+```

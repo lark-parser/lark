@@ -117,9 +117,6 @@ class Lark:
             self.source = grammar.name
         except AttributeError:
             self.source = '<string>'
-            cache_file = "larkcache_%s" % str(hash(grammar)%(2**32))
-        else:
-            cache_file = "larkcache_%s" % os.path.basename(self.source)
 
         # Drain file-like objects to get their contents
         try:

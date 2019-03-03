@@ -998,10 +998,88 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'elephants'])
 
 
+        def test_import_rename(self):
+            grammar = """
+            start: N W
+
+            %import common.NUMBER -> N
+            %import common.WORD -> W
+            %import common.WS
+            %ignore WS
+
+            """
+            l = _Lark(grammar)
+            x = l.parse('12 elephants')
+            self.assertEqual(x.children, ['12', 'elephants'])
+
+
         def test_relative_import(self):
             l = _Lark_open('test_relative_import.lark', rel_to=__file__)
             x = l.parse('12 lions')
             self.assertEqual(x.children, ['12', 'lions'])
+
+
+        def test_relative_import_rename(self):
+            l = _Lark_open('test_relative_import_rename.lark', rel_to=__file__)
+            x = l.parse('12 lions')
+            self.assertEqual(x.children, ['12', 'lions'])
+
+
+        def test_relative_rule_import(self):
+            l = _Lark_open('test_relative_rule_import.lark', rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('expr', ['a', Tree('expr', ['a', 'b']), 'b']),
+                'y'])
+
+
+        def test_relative_rule_import_drop_ignore(self):
+            # %ignore rules are dropped on import
+            l = _Lark_open('test_relative_rule_import_drop_ignore.lark',
+                           rel_to=__file__)
+            self.assertRaises((ParseError, UnexpectedInput),
+                              l.parse, 'xa abby')
+
+
+        def test_relative_rule_import_subrule(self):
+            l = _Lark_open('test_relative_rule_import_subrule.lark',
+                           rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('startab', [
+                    Tree('grammars__ab__expr', [
+                        'a', Tree('grammars__ab__expr', ['a', 'b']), 'b',
+                    ]),
+                ]),
+                'y'])
+
+
+        def test_relative_rule_import_subrule_no_conflict(self):
+            l = _Lark_open(
+                'test_relative_rule_import_subrule_no_conflict.lark',
+                rel_to=__file__)
+            x = l.parse('xaby')
+            self.assertEqual(x.children, [Tree('expr', [
+                'x',
+                Tree('startab', [
+                    Tree('grammars__ab__expr', ['a', 'b']),
+                ]),
+                'y'])])
+            self.assertRaises((ParseError, UnexpectedInput),
+                              l.parse, 'xaxabyby')
+
+
+        def test_relative_rule_import_rename(self):
+            l = _Lark_open('test_relative_rule_import_rename.lark',
+                           rel_to=__file__)
+            x = l.parse('xaabby')
+            self.assertEqual(x.children, [
+                'x',
+                Tree('ab', ['a', Tree('ab', ['a', 'b']), 'b']),
+                'y'])
+
 
         def test_multi_import(self):
             grammar = """

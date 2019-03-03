@@ -133,19 +133,28 @@ When importing rules, all their dependencies will be imported into a namespace, 
 **Syntax:**
 ```html
 %import <module>.<TERMINAL>
-%import <module> (<TERM1> <TERM2>)
+%import <module>.<rule>
+%import <module>.<TERMINAL> -> <NEWTERMINAL>
+%import <module>.<rule> -> <newrule>
+%import <module> (<TERM1> <TERM2> <rule1> <rule2>)
 ```
 
 If the module path is absolute, Lark will attempt to load it from the built-in directory (currently, only `common.lark` is available).
 
 If the module path is relative, such as `.path.to.file`, Lark will attempt to load it from the current working directory. Grammars must have the `.lark` extension.
 
+The rule or terminal can be imported under an other name with the `->` syntax.
+
 **Example:**
 ```perl
 %import common.NUMBER
 
 %import .terminals_file (A B C)
+
+%import .rules_file.rulea -> ruleb
 ```
+
+Note that `%ignore` directives cannot be imported. Imported rules will abide by the `%ignore` directives declared in the main grammar.
 
 ### %declare
 

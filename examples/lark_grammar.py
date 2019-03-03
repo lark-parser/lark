@@ -6,6 +6,9 @@ grammar_files = [
     'examples/python2.lark',
     'examples/python3.lark',
     'examples/lark.lark',
+    'examples/relative-imports/multiples.lark',
+    'examples/relative-imports/multiple2.lark',
+    'examples/relative-imports/multiple3.lark',
     'lark/grammars/common.lark',
 ]
 

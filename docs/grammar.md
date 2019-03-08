@@ -85,7 +85,7 @@ Each item is one of:
 * `TERMINAL`
 * `"string literal"` or `/regexp literal/`
 * `(item item ..)` - Group items
-* `[item item ..]` - Maybe. Same as: `(item item ..)?`
+* `[item item ..]` - Maybe. Same as `(item item ..)?`
 * `item?` - Zero or one instances of item ("maybe")
 * `item*` - Zero or more instances of item
 * `item+` - One or more instances of item

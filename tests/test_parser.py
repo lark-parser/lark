@@ -1371,16 +1371,23 @@ def _make_parser_test(LEXER, PARSER):
         @unittest.skipIf(PARSER=='cyk', "Empty rules")
         def test_maybe_placeholders(self):
             # Anonymous tokens shouldn't count
-            p = _Lark("""start: "a"? "b"? "c"? """, maybe_placeholders=True)
+            p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [])
 
-            # Anonymous tokens shouldn't count, other constructs should
-            p = _Lark("""start: A? "b"? _c?
+            # All invisible constructs shouldn't count
+            p = _Lark("""start: [A] ["b"] [_c] ["e" "f" _c]
                         A: "a"
                         _c: "c" """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [None])
+            self.assertEqual(p.parse("c").children, [None])
+            self.assertEqual(p.parse("aefc").children, ['a'])
 
-            p = _Lark("""!start: "a"? "b"? "c"? """, maybe_placeholders=True)
+            # ? shouldn't apply
+            p = _Lark("""!start: ["a"] "b"? ["c"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("").children, [None, None])
+            self.assertEqual(p.parse("b").children, [None, 'b', None])
+
+            p = _Lark("""!start: ["a"] ["b"] ["c"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [None, None, None])
             self.assertEqual(p.parse("a").children, ['a', None, None])
             self.assertEqual(p.parse("b").children, [None, 'b', None])
@@ -1390,7 +1397,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("bc").children, [None, 'b', 'c'])
             self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
 
-            p = _Lark("""!start: ("a"? "b" "c"?)+ """, maybe_placeholders=True)
+            p = _Lark("""!start: (["a"] "b" ["c"])+ """, maybe_placeholders=True)
             self.assertEqual(p.parse("b").children, [None, 'b', None])
             self.assertEqual(p.parse("bb").children, [None, 'b', None, None, 'b', None])
             self.assertEqual(p.parse("abbc").children, ['a', 'b', None, None, 'b', 'c'])
@@ -1401,7 +1408,7 @@ def _make_parser_test(LEXER, PARSER):
                  'a', 'b', 'c',
                  None, 'b', None])
 
-            p = _Lark("""!start: "a"? "c"? "b"+ "a"? "d"? """, maybe_placeholders=True)
+            p = _Lark("""!start: ["a"] ["c"] "b"+ ["a"] ["d"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("bb").children, [None, None, 'b', 'b', None, None])
             self.assertEqual(p.parse("bd").children, [None, None, 'b', None, 'd'])
             self.assertEqual(p.parse("abba").children, ['a', None, 'b', 'b', 'a', None])

@@ -176,13 +176,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def expr(self, rule, op, *args):
         if op.value == '?':
-            if isinstance(rule, Terminal) and rule.filter_out and not (
-                    self.rule_options and self.rule_options.keep_all_tokens):
-                empty = ST('expansion', [])
-            elif isinstance(rule, NonTerminal) and rule.name.startswith('_'):
-                empty = ST('expansion', [])
-            else:
-                empty = _EMPTY
+            empty = ST('expansion', [])
             return ST('expansions', [rule, empty])
         elif op.value == '+':
             # a : b c+ d
@@ -206,6 +200,23 @@ class EBNF_to_BNF(Transformer_InPlace):
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
             return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx+1)])
         assert False, op
+
+    def maybe(self, rule):
+        keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
+
+        def will_not_get_removed(sym):
+            if isinstance(sym, NonTerminal): 
+                return not sym.name.startswith('_')
+            if isinstance(sym, Terminal):
+                return keep_all_tokens or not sym.filter_out
+            assert False
+
+        if any(rule.scan_values(will_not_get_removed)):
+            empty = _EMPTY
+        else:
+            empty = ST('expansion', [])
+
+        return ST('expansions', [rule, empty])
 
 
 class SimplifyRule_Visitor(Visitor):
@@ -268,9 +279,6 @@ class RuleTreeToText(Transformer):
 
 @inline_args
 class CanonizeTree(Transformer_InPlace):
-    def maybe(self, expr):
-        return ST('expr', [expr, Token('OP', '?', -1)])
-
     def tokenmods(self, *args):
         if len(args) == 1:
             return list(args)
@@ -427,6 +435,9 @@ class TerminalTreeToPattern(Transformer):
         else:
             assert len(args) == 2
         return PatternRE('(?:%s)%s' % (inner.to_regexp(), op), inner.flags)
+
+    def maybe(self, expr):
+        return self.expr(expr + ['?'])
 
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")

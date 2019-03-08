@@ -171,7 +171,8 @@ class _Lex:
 
                 break
             else:
-                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, state=self.state)
+                allowed = [v for m, tfi in lexer.mres for v in tfi.values()]
+                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, state=self.state)
 
 
 class UnlessCallback:

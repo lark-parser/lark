@@ -6,7 +6,7 @@ import copy
 import pickle
 
 from lark.tree import Tree
-from lark.visitors import Transformer, Interpreter, visit_children_decor, v_args
+from lark.visitors import Transformer, Interpreter, visit_children_decor, v_args, Discard
 
 
 class TestTrees(TestCase):
@@ -143,6 +143,26 @@ class TestTrees(TestCase):
 
         res = T().transform(t)
         self.assertEqual(res, 2.9)
+
+    def test_discard(self):
+        class MyTransformer(Transformer):
+            def a(self, args):
+                return 1 # some code here
+
+            def b(cls, args):
+                raise Discard()
+
+        t = Tree('root', [
+            Tree('b', []),
+            Tree('a', []),
+            Tree('b', []),
+            Tree('c', []),
+            Tree('b', []),
+        ])
+        t2 = Tree('root', [1, Tree('c', [])])
+
+        x = MyTransformer().transform( t )
+        self.assertEqual(x, t2)
 
 
 if __name__ == '__main__':

@@ -40,7 +40,7 @@ class Transformer:
                     return f(tree)
                 else:
                     return f(children)
-            except GrammarError:
+            except (GrammarError, Discard):
                 raise
             except Exception as e:
                 raise VisitError('Error trying to process rule "%s":\n\n%s' % (tree.data, e))

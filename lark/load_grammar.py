@@ -749,10 +749,16 @@ class GrammarLoader:
                     g = import_grammar(grammar_path)
                 else:  # Relative import
                     if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
-                        base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                        try:
+                            base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                        except AttributeError:
+                            base_file = None
                     else:
                         base_file = grammar_name  # Import relative to grammar file path if external grammar file
-                    base_path = os.path.split(base_file)[0]
+                    if base_file:
+                        base_path = os.path.split(base_file)[0]
+                    else:
+                        base_path = os.path.abspath(os.path.curdir)
                     g = import_grammar(grammar_path, base_paths=[base_path])
 
                 aliases_dict = dict(zip(names, aliases))

@@ -74,6 +74,8 @@ class Transformer:
         for name, value in getmembers(cls):
             if name.startswith('_') or name in libmembers:
                 continue
+            if not callable(cls.__dict__[name]):
+                continue
 
             # Skip if v_args already applied (at the function level)
             if hasattr(cls.__dict__[name], 'vargs_applied'):

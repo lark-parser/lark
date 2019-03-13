@@ -137,6 +137,8 @@ class TestTrees(TestCase):
             f = float
             sub = lambda self, a, b: a-b
 
+            not_a_method = {'other': 'stuff'}
+
             @v_args(inline=False)
             def add(self, values):
                 return sum(values)

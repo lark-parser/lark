@@ -93,6 +93,8 @@ class XEarley:
     def _prepare_match(self, lexer_conf):
         self.regexps = {}
         for t in lexer_conf.tokens:
+            if t.priority != 1:
+                raise ValueError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:
                 width = get_regexp_width(regexp)[0]

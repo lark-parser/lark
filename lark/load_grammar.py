@@ -796,7 +796,7 @@ class GrammarLoader:
 
             name = '__IGNORE_%d'% len(ignore_names)
             ignore_names.append(name)
-            term_defs.append((name, (t, 0)))
+            term_defs.append((name, (t, 1)))
 
         # Verify correctness 2
         terminal_names = set()

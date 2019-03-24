@@ -83,6 +83,15 @@ class TestNearley(unittest.TestCase):
         parse = d['parse']
         parse(u'"')
 
+    def test_null(self):
+        grammar = r'main -> "a" | null'
+        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, './')
+        d = {}
+        exec (code, d)
+        parse = d['parse']
+        parse('a')
+        parse('')
+
     def test_utf8_2(self):
         fn = os.path.join(TEST_PATH, 'grammars/unicode.ne')
         nearley_tool_main(fn, 'x', NEARLEY_PATH)

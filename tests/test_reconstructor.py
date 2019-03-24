@@ -28,7 +28,7 @@ class TestReconstructor(TestCase):
         item: NL
             | rule
         rule: WORD ":" NUMBER
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = """
@@ -42,7 +42,7 @@ class TestReconstructor(TestCase):
         g = """
         start: (rule | NL)*
         rule: WORD ":" NUMBER
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = """
@@ -59,7 +59,7 @@ class TestReconstructor(TestCase):
             | rule
             | "hello" -> hi
         rule: WORD ":" NUMBER
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = """

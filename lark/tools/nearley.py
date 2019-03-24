@@ -32,8 +32,8 @@ nearley_grammar = r"""
     NAME: /[a-zA-Z_$]\w*/
     COMMENT: /#[^\n]*/
     REGEXP: /\[.*?\]/
-    STRING: /".*?"/
 
+    %import common.ESCAPED_STRING -> STRING
     %import common.WS
     %ignore WS
     %ignore COMMENT

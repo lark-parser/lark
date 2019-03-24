@@ -75,6 +75,14 @@ class TestNearley(unittest.TestCase):
 
         parse(u'±a')
 
+    def test_backslash(self):
+        grammar = r'main -> "\""'
+        code = create_code_for_nearley_grammar(grammar, 'main', BUILTIN_PATH, './')
+        d = {}
+        exec (code, d)
+        parse = d['parse']
+        parse(u'"')
+
     def test_utf8_2(self):
         fn = os.path.join(TEST_PATH, 'grammars/unicode.ne')
         nearley_tool_main(fn, 'x', NEARLEY_PATH)

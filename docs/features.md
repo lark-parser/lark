@@ -1,8 +1,8 @@
 # Main Features
  - Earley parser, capable of parsing any context-free grammar
    - Implements SPPF, for efficient parsing and storing of ambiguous grammars.
- - LALR(1) parser, limited in power of expression, but efficient in space and performance (O(n)).
-   - Implements a parse-aware lexer that provides a better power of expression than traditional implementations.
+ - LALR(1) parser, limited in power of expression, but very efficient in space and performance (O(n)).
+   - Implements a parse-aware lexer that provides a better power of expression than traditional LALR implementations (such as ply).
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
  - Stand-alone parser generator - create a small independent parser to embed in your project.

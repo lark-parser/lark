@@ -186,8 +186,7 @@ class ParserAtoms:
         print('parse_table.end_state = %s' % self.parse_table.end_state)
         print('class Lark_StandAlone:')
         print('  def __init__(self, transformer=None, postlex=None):')
-        print('     callback = parse_tree_builder.create_callback(transformer=transformer)')
-        print('     callbacks = {rule: getattr(callback, rule.alias or rule.origin, None) for rule in RULES.values()}')
+        print('     callbacks = parse_tree_builder.create_callback(transformer=transformer)')
         print('     self.parser = _Parser(parse_table, callbacks)')
         print('     self.postlex = postlex')
         print('  def parse(self, stream):')
@@ -199,14 +198,13 @@ class ParserAtoms:
 class TreeBuilderAtoms:
     def __init__(self, lark):
         self.rules = lark.rules
-        self.ptb = lark._parse_tree_builder
 
     def print_python(self):
         # print('class InlineTransformer: pass')
         print('RULES = {')
         for i, r in enumerate(self.rules):
             rule_ids[r] = i
-            print('  %d: Rule(%r, [%s], alias=%r, options=%r),' % (i, r.origin, ', '.join(s.fullrepr for s in r.expansion), self.ptb.user_aliases[r], r.options ))
+            print('  %d: Rule(%r, [%s], alias=%r, options=%r),' % (i, r.origin, ', '.join(s.fullrepr for s in r.expansion), r.alias, r.options ))
         print('}')
         print('parse_tree_builder = ParseTreeBuilder(RULES.values(), Tree)')
 

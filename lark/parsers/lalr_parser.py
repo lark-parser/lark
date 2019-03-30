@@ -13,8 +13,7 @@ class Parser:
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lookahead()
-        callbacks = {rule: getattr(parser_conf.callback, rule.alias or rule.origin, None)
-                          for rule in parser_conf.rules}
+        callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table
         self.parser_conf = parser_conf

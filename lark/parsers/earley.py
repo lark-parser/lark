@@ -27,7 +27,7 @@ class Parser:
 
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
-        self.callbacks = {}
+        self.callbacks = parser_conf.callbacks
         self.predictions = {}
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
@@ -37,7 +37,6 @@ class Parser:
 
         self.forest_sum_visitor = None
         for rule in parser_conf.rules:
-            self.callbacks[rule] = rule.alias if callable(rule.alias) else getattr(parser_conf.callback, rule.alias)
             self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
             ## Detect if any rules have priorities set. If the user specified priority = "none" then

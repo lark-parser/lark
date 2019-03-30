@@ -8,9 +8,9 @@ class LexerConf:
         self.callbacks = callbacks or {}
 
 class ParserConf:
-    def __init__(self, rules, callback, start):
+    def __init__(self, rules, callbacks, start):
         self.rules = rules
-        self.callback = callback
+        self.callbacks = callbacks
         self.start = start
 
 

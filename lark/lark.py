@@ -132,7 +132,7 @@ class Lark:
             raise NotImplementedError("Not available yet")
 
         assert not self.options.profile, "Feature temporarily disabled"
-        self.profiler = Profiler() if self.options.profile else None
+        # self.profiler = Profiler() if self.options.profile else None
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
@@ -192,8 +192,6 @@ class Lark:
         elif lexer:
             self.lexer = self._build_lexer()
 
-        if self.profiler: self.profiler.enter_section('outside_lark')
-
     if __init__.__doc__:
         __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
@@ -204,13 +202,9 @@ class Lark:
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
 
         self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
-        callback = self._parse_tree_builder.create_callback(self.options.transformer)
-        if self.profiler:
-            for f in dir(callback):
-                if not (f.startswith('__') and f.endswith('__')):
-                    setattr(callback, f, self.profiler.make_wrapper('transformer', getattr(callback, f)))
+        callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
-        parser_conf = ParserConf(self.rules, callback, self.options.start)
+        parser_conf = ParserConf(self.rules, callbacks, self.options.start)
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 

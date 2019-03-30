@@ -123,10 +123,7 @@ class CYK(WithLexer):
         self._analysis = GrammarAnalyzer(parser_conf)
         self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
 
-        self._postprocess = {}
-        for rule in parser_conf.rules:
-            a = rule.alias
-            self._postprocess[a] = a if callable(a) else (a and getattr(parser_conf.callback, a))
+        self.callbacks = parser_conf.callbacks
 
     def parse(self, text):
         tokens = list(self.lex(text))
@@ -142,11 +139,7 @@ class CYK(WithLexer):
         return self._apply_callback(tree)
 
     def _apply_callback(self, tree):
-        children = tree.children
-        callback = self._postprocess[tree.rule.alias]
-        assert callback, tree.rule.alias
-        r = callback(children)
-        return r
+        return self.callbacks[tree.rule](tree.children)
 
 
 def get_frontend(parser, lexer):

@@ -86,7 +86,7 @@ class Parser(object):
 
     def __init__(self, rules, start):
         super(Parser, self).__init__()
-        self.orig_rules = {rule.alias: rule for rule in rules}
+        self.orig_rules = {rule: rule for rule in rules}
         rules = [self._to_rule(rule) for rule in rules]
         self.grammar = to_cnf(Grammar(rules))
         self.start = NT(start)
@@ -98,7 +98,7 @@ class Parser(object):
         return Rule(
             lark_rule.origin, lark_rule.expansion,
             weight=lark_rule.options.priority if lark_rule.options and lark_rule.options.priority else 0,
-            alias=lark_rule.alias)
+            alias=lark_rule)
 
     def parse(self, tokenized):  # pylint: disable=invalid-name
         """Parses input, which is a list of tokens."""

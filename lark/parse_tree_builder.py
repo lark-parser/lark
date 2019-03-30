@@ -187,10 +187,6 @@ def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     if to_expand:
         return partial(AmbiguousExpander, to_expand, tree_class)
 
-class Callback(object):
-    pass
-
-
 def ptb_inline_args(func):
     @wraps(func)
     def f(children):
@@ -206,8 +202,6 @@ class ParseTreeBuilder:
         self.maybe_placeholders = maybe_placeholders
 
         self.rule_builders = list(self._init_builders(rules))
-
-        self.user_aliases = {}
 
     def _init_builders(self, rules):
         for rule in rules:
@@ -226,12 +220,9 @@ class ParseTreeBuilder:
 
 
     def create_callback(self, transformer=None):
-        callback = Callback()
+        callbacks = {}
 
-        i = 0
         for rule, wrapper_chain in self.rule_builders:
-            internal_callback_name = '_cb%d_%s' % (i, rule.origin)
-            i += 1
 
             user_callback_name = rule.alias or rule.origin.name
             try:
@@ -243,16 +234,14 @@ class ParseTreeBuilder:
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 
-            self.user_aliases[rule] = rule.alias
-            rule.alias = internal_callback_name
-
             for w in wrapper_chain:
                 f = w(f)
 
-            if hasattr(callback, internal_callback_name):
+            if rule in callbacks:
                 raise GrammarError("Rule '%s' already exists" % (rule,))
-            setattr(callback, internal_callback_name, f)
 
-        return callback
+            callbacks[rule] = f
+
+        return callbacks
 
 ###}

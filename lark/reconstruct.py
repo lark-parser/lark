@@ -112,7 +112,8 @@ class Reconstructor:
 
     def _reconstruct(self, tree):
         # TODO: ambiguity?
-        parser = earley.Parser(ParserConf(self.rules, None, tree.data), self._match, resolve_ambiguity=True)
+        callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
+        parser = earley.Parser(ParserConf(self.rules, callbacks, tree.data), self._match, resolve_ambiguity=True)
         unreduced_tree = parser.parse(tree.children)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)

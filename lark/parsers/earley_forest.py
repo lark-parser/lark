@@ -271,7 +271,8 @@ class ForestToTreeVisitor(ForestVisitor):
     according to some priority mechanism.
     """
     __slots__ = ['forest_sum_visitor', 'callbacks', 'output_stack']
-    def __init__(self, callbacks = None, forest_sum_visitor = None):
+    def __init__(self, callbacks, forest_sum_visitor = None):
+        assert callbacks
         self.forest_sum_visitor = forest_sum_visitor
         self.callbacks = callbacks
 

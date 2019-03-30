@@ -30,9 +30,15 @@ class Terminal(Symbol):
     def fullrepr(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
 
+    def serialize(self):
+        return ['T', self.name, self.filter_out]
+
 
 class NonTerminal(Symbol):
     is_term = False
+
+    def serialize(self):
+        return ['NT', self.name]
 
 class Rule(object):
     """
@@ -64,6 +70,11 @@ class Rule(object):
             return False
         return self.origin == other.origin and self.expansion == other.expansion
 
+    def serialize(self):
+        return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.alias, self.options.serialize() if self.options else None]
+    # def deserialize(self):
+        # return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.alias, self.options.serialize() if self.options else None]
+
 
 class RuleOptions:
     def __init__(self, keep_all_tokens=False, expand1=False, priority=None):
@@ -78,3 +89,6 @@ class RuleOptions:
             self.expand1,
             self.priority,
         )
+
+    def serialize(self):
+        return [self.keep_all_tokens, self.expand1, self.priority, list(self.empty_indices)]

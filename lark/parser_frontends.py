@@ -7,7 +7,7 @@ from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
 from .parsers import lalr_parser, earley, xearley, cyk
 from .tree import Tree
 
-class WithLexer:
+class WithLexer(object):
     lexer = None
     parser = None
     lexer_conf = None
@@ -35,6 +35,20 @@ class WithLexer:
         token_stream = self.lex(text)
         sps = self.lexer.set_parser_state
         return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
+
+    def serialize(self):
+        return {
+            # 'class': type(self).__name__,
+            'parser': self.parser.serialize(),
+            'lexer': self.lexer.serialize(),
+        }
+    @classmethod
+    def deserialize(cls, data):
+        inst = cls.__new__(cls)
+        inst.parser = lalr_parser.Parser.deserialize(data['parser'])
+        inst.lexer = Lexer.deserialize(data['lexer'])
+        return inst
+
 
 class LALR_TraditionalLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):

@@ -65,6 +65,9 @@ class TerminalDef(object):
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
 
+    def serialize(self):
+        return [self.name, self.pattern, self.priority]
+
 
 
 ###{standalone
@@ -307,6 +310,13 @@ class TraditionalLexer(Lexer):
     def lex(self, stream):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
+    def serialize(self):
+        return {
+            'terminals': [t.serialize() for t in self.terminals],
+            'ignore_types': self.ignore_types,
+            'newline_types': self.newline_types,
+        }
+
 
 class ContextualLexer(Lexer):
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
@@ -343,4 +353,6 @@ class ContextualLexer(Lexer):
             l.lexer = self.lexers[self.parser_state]
             l.state = self.parser_state
 
+    def serialize(self):
+        return {state: lexer.serialize() for state, lexer in self.lexers.items()}
 

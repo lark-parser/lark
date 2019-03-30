@@ -208,6 +208,7 @@ class Lark:
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
+
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
         """Create an instance of Lark with the grammar given by its filename

@@ -4,10 +4,30 @@
 # Email : erezshin@gmail.com
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
+from ..grammar import Rule
 
-from .lalr_analysis import LALR_Analyzer, Shift
+from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
-class Parser:
+
+class Enumerator:
+    def __init__(self):
+        self.enums = {}
+
+    def get(self, item):
+        if item not in self.enums:
+            self.enums[item] = len(self.enums)
+        return self.enums[item]
+
+    def __len__(self):
+        return len(self.enums)
+
+    def reversed(self):
+        r = {v: k for k, v in self.enums.items()}
+        assert len(r) == len(self.enums)
+        return r
+
+
+class Parser(object):
     def __init__(self, parser_conf, debug=False):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -19,6 +39,38 @@ class Parser:
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)
         self.parse = self.parser.parse
+
+    def serialize(self):
+        tokens = Enumerator()
+        rules = Enumerator()
+
+        states = {
+            state: {tokens.get(token): ((1, rules.get(arg)) if action is Reduce else (0, arg))
+                    for token, (action, arg) in actions.items()}
+            for state, actions in self._parse_table.states.items()
+        }
+
+        return {
+            'tokens': tokens.reversed(),
+            'rules': {idx: r.serialize() for idx, r in rules.reversed().items()},
+            'states': states,
+            'start_state': self._parse_table.start_state,
+            'end_state': self._parse_table.end_state,
+        }
+    
+    @classmethod
+    def deserialize(cls, data):
+        tokens = data['tokens']
+        rules = {idx: Rule.deserialize(r) for idx, r in data['rules'].items()}
+        states = {
+            state: {tokens[token]: ((Reduce, rules[arg]) if action==1 else (Shift, arg))
+                    for token, (action, arg) in actions.items()}
+            for state, actions in data['states'].items()
+        }
+        parse_table = IntParseTable(states, data['start_state'], data['end_state'])
+        print(parse_table)
+
+
 
 ###{standalone
 

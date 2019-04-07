@@ -51,24 +51,39 @@ class LarkOptions(object):
     if __doc__:
         __doc__ += OPTIONS_DOC
 
+    _defaults = {
+        'debug': False,
+        'keep_all_tokens': False,
+        'tree_class': Tree,
+        'cache_grammar': False,
+        'postlex': None,
+        'parser': 'earley',
+        'lexer': 'auto',
+        'transformer': None,
+        'start': 'start',
+        'profile': False,
+        'priority': 'auto',
+        'ambiguity': 'auto',
+        'propagate_positions': False,
+        'lexer_callbacks': {},
+        'maybe_placeholders': False,
+    }
+
     def __init__(self, options_dict):
         o = dict(options_dict)
 
-        self.debug = bool(o.pop('debug', False))
-        self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
-        self.tree_class = o.pop('tree_class', Tree)
-        self.cache_grammar = o.pop('cache_grammar', False)
-        self.postlex = o.pop('postlex', None)
-        self.parser = o.pop('parser', 'earley')
-        self.lexer = o.pop('lexer', 'auto')
-        self.transformer = o.pop('transformer', None)
-        self.start = o.pop('start', 'start')
-        self.profile = o.pop('profile', False)
-        self.priority = o.pop('priority', 'auto')
-        self.ambiguity = o.pop('ambiguity', 'auto')
-        self.propagate_positions = o.pop('propagate_positions', False)
-        self.lexer_callbacks = o.pop('lexer_callbacks', {})
-        self.maybe_placeholders = o.pop('maybe_placeholders', False)
+        options = {}
+        for name, default in self._defaults.items():
+            if name in o:
+                value = o.pop(name)
+                if isinstance(default, bool):
+                    value = bool(value)
+            else:
+                value = default
+
+            options[name] = value
+
+        self.__dict__['options'] = options
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
@@ -78,6 +93,18 @@ class LarkOptions(object):
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
+
+    def __getattr__(self, name):
+        return self.options[name]
+    def __setattr__(self, name, value):
+        self.options[name] = value
+
+    def serialize(self):
+        return self.options
+
+    @classmethod
+    def deserialize(cls, data):
+        return cls(data)
 
 
 class Profiler:
@@ -207,6 +234,28 @@ class Lark:
         parser_conf = ParserConf(self.rules, callbacks, self.options.start)
 
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+
+    def serialize(self):
+        return {
+            'parser': self.parser.serialize(),
+            'rules': [r.serialize() for r in self.rules],
+            'options': self.options.serialize(),
+        }
+    
+    @classmethod
+    def deserialize(cls, data):
+        from .grammar import Rule
+        inst = cls.__new__(cls)
+
+        rules = [Rule.deserialize(r) for r in data['rules']]
+        options = LarkOptions.deserialize(data['options'])
+
+        ptb = ParseTreeBuilder(rules, options.tree_class, options.propagate_positions, options.keep_all_tokens, options.parser!='lalr' and options.ambiguity=='explicit', options.maybe_placeholders)
+        callbacks = ptb.create_callback(None)
+
+        parser_class = get_frontend(options.parser, options.lexer)
+        inst.parser = parser_class.deserialize(data['parser'], callbacks)
+        return inst
 
 
     @classmethod

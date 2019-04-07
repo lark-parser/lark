@@ -59,7 +59,7 @@ class Parser(object):
         }
     
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data, callbacks):
         tokens = data['tokens']
         rules = {idx: Rule.deserialize(r) for idx, r in data['rules'].items()}
         states = {
@@ -68,7 +68,10 @@ class Parser(object):
             for state, actions in data['states'].items()
         }
         parse_table = IntParseTable(states, data['start_state'], data['end_state'])
-        print(parse_table)
+        inst = cls.__new__(cls)
+        inst.parser = _Parser(parse_table, callbacks)
+        inst.parse = inst.parser.parse
+        return inst
 
 
 

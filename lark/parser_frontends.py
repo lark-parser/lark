@@ -15,11 +15,13 @@ class WithLexer(object):
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
         self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        self.postlex = lexer_conf.postlex
 
     def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
+        self.postlex = lexer_conf.postlex
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
-        always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
+        always_accept = self.postlex.always_accept if self.postlex else ()
         self.lexer = ContextualLexer(lexer_conf.tokens, states,
                                      ignore=lexer_conf.ignore,
                                      always_accept=always_accept,
@@ -27,8 +29,8 @@ class WithLexer(object):
 
     def lex(self, text):
         stream = self.lexer.lex(text)
-        if self.lexer_conf.postlex:
-            return self.lexer_conf.postlex.process(stream)
+        if self.postlex:
+            return self.postlex.process(stream)
         return stream
 
     def parse(self, text):
@@ -38,15 +40,19 @@ class WithLexer(object):
 
     def serialize(self):
         return {
-            # 'class': type(self).__name__,
+            'type': type(self).__name__,
             'parser': self.parser.serialize(),
             'lexer': self.lexer.serialize(),
         }
     @classmethod
-    def deserialize(cls, data):
-        inst = cls.__new__(cls)
-        inst.parser = lalr_parser.Parser.deserialize(data['parser'])
+    def deserialize(cls, data, callbacks):
+        class_ = globals()[data['type']]    # XXX unsafe
+        parser = lalr_parser.Parser.deserialize(data['parser'], callbacks)
+        assert parser
+        inst = class_.__new__(class_)
+        inst.parser = parser
         inst.lexer = Lexer.deserialize(data['lexer'])
+        inst.postlex = None # TODO
         return inst
 
 

@@ -68,6 +68,10 @@ class TerminalDef(object):
     def serialize(self):
         return [self.name, self.pattern, self.priority]
 
+    @classmethod
+    def deserialize(cls, data):
+        return cls(*data)
+
 
 
 ###{standalone
@@ -268,6 +272,14 @@ class Lexer:
     set_parser_state = NotImplemented
     lex = NotImplemented
 
+    @classmethod
+    def deserialize(cls, data):
+        class_ = {
+            'traditional': TraditionalLexer,
+            'contextual': ContextualLexer,
+        }[data['type']]
+        return class_.deserialize(data)
+
 class TraditionalLexer(Lexer):
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
@@ -312,10 +324,21 @@ class TraditionalLexer(Lexer):
 
     def serialize(self):
         return {
+            'type': 'traditional',
             'terminals': [t.serialize() for t in self.terminals],
             'ignore_types': self.ignore_types,
             'newline_types': self.newline_types,
         }
+
+    @classmethod
+    def deserialize(cls, data):
+        inst = cls.__new__(cls)
+        inst.terminals = [TerminalDef.deserialize(t) for t in data['terminals']]
+        inst.mres = build_mres(inst.terminals)
+        inst.ignore_types = data['ignore_types']
+        inst.newline_types = data['newline_types']
+        inst.callback = {}  # TODO implement
+        return inst
 
 
 class ContextualLexer(Lexer):
@@ -354,5 +377,15 @@ class ContextualLexer(Lexer):
             l.state = self.parser_state
 
     def serialize(self):
-        return {state: lexer.serialize() for state, lexer in self.lexers.items()}
+        return {
+            'type': 'contextual',
+            'root_lexer': self.root_lexer.serialize(),
+            'lexers': {state: lexer.serialize() for state, lexer in self.lexers.items()}
+        }
 
+    @classmethod
+    def deserialize(cls, data):
+        inst = cls.__new__(cls)
+        inst.lexers = {state:Lexer.deserialize(lexer) for state, lexer in data['lexers'].items()}
+        inst.root_lexer = TraditionalLexer.deserialize(data['root_lexer'])
+        return inst

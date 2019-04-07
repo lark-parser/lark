@@ -209,12 +209,12 @@ class ParseTreeBuilder:
             keep_all_tokens = self.always_keep_all_tokens or (options.keep_all_tokens if options else False)
             expand_single_child = options.expand1 if options else False
 
-            wrapper_chain = filter(None, [
+            wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders and options else None),
                 self.propagate_positions and PropagatePositions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
-            ])
+            ]))
 
             yield rule, wrapper_chain
 

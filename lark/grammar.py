@@ -19,6 +19,15 @@ class Symbol(object):
 
     fullrepr = property(__repr__)
 
+    @classmethod
+    def deserialize(cls, data):
+        class_ = {
+            'T': Terminal,
+            'NT': NonTerminal,
+        }[data[0]]
+        return class_(*data[1:])
+
+
 class Terminal(Symbol):
     is_term = True
 
@@ -71,17 +80,26 @@ class Rule(object):
         return self.origin == other.origin and self.expansion == other.expansion
 
     def serialize(self):
-        return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.alias, self.options.serialize() if self.options else None]
-    # def deserialize(self):
-        # return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.alias, self.options.serialize() if self.options else None]
+        return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.order, self.alias, self.options.serialize() if self.options else None]
+
+    @classmethod
+    def deserialize(cls, data):
+        origin, expansion, order, alias, options = data
+        return cls(
+            Symbol.deserialize(origin),
+            [Symbol.deserialize(s) for s in expansion],
+            order,
+            alias,
+            RuleOptions.deserialize(options) if options else None
+        )
 
 
 class RuleOptions:
-    def __init__(self, keep_all_tokens=False, expand1=False, priority=None):
+    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, empty_indices=()):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
-        self.empty_indices = ()
+        self.empty_indices = empty_indices
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r)' % (
@@ -92,3 +110,7 @@ class RuleOptions:
 
     def serialize(self):
         return [self.keep_all_tokens, self.expand1, self.priority, list(self.empty_indices)]
+    
+    @classmethod
+    def deserialize(cls, data):
+        return cls(*data)

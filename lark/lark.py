@@ -225,14 +225,14 @@ class Lark:
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
-    def _build_parser(self):
+    def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-
         self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
-        callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
+        self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
-        parser_conf = ParserConf(self.rules, callbacks, self.options.start)
-
+    def _build_parser(self):
+        self._prepare_callbacks()
+        parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def serialize(self):
@@ -246,15 +246,10 @@ class Lark:
     def deserialize(cls, data):
         from .grammar import Rule
         inst = cls.__new__(cls)
-
-        rules = [Rule.deserialize(r) for r in data['rules']]
-        options = LarkOptions.deserialize(data['options'])
-
-        ptb = ParseTreeBuilder(rules, options.tree_class, options.propagate_positions, options.keep_all_tokens, options.parser!='lalr' and options.ambiguity=='explicit', options.maybe_placeholders)
-        callbacks = ptb.create_callback(None)
-
-        parser_class = get_frontend(options.parser, options.lexer)
-        inst.parser = parser_class.deserialize(data['parser'], callbacks)
+        inst.options = LarkOptions.deserialize(data['options'])
+        inst.rules = [Rule.deserialize(r) for r in data['rules']]
+        inst._prepare_callbacks()
+        inst.parser = inst.parser_class.deserialize(data['parser'], inst._callbacks)
         return inst
 
 

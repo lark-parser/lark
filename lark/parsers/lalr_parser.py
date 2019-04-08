@@ -5,26 +5,9 @@
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
 from ..grammar import Rule
+from ..utils import Enumerator
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
-
-
-class Enumerator:
-    def __init__(self):
-        self.enums = {}
-
-    def get(self, item):
-        if item not in self.enums:
-            self.enums[item] = len(self.enums)
-        return self.enums[item]
-
-    def __len__(self):
-        return len(self.enums)
-
-    def reversed(self):
-        r = {v: k for k, v in self.enums.items()}
-        assert len(r) == len(self.enums)
-        return r
 
 
 class Parser(object):

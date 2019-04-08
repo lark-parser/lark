@@ -54,7 +54,7 @@ class LarkOptions(object):
     _defaults = {
         'debug': False,
         'keep_all_tokens': False,
-        'tree_class': Tree,
+        'tree_class': None,
         'cache_grammar': False,
         'postlex': None,
         'parser': 'earley',
@@ -97,6 +97,7 @@ class LarkOptions(object):
     def __getattr__(self, name):
         return self.options[name]
     def __setattr__(self, name, value):
+        assert name in self.options
         self.options[name] = value
 
     def serialize(self):
@@ -227,7 +228,7 @@ class Lark:
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
+        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
         self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
     def _build_parser(self):

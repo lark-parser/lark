@@ -128,3 +128,22 @@ def get_regexp_width(regexp):
         return sre_parse.parse(regexp).getwidth()
     except sre_constants.error:
         raise ValueError(regexp)
+
+
+class Enumerator:
+    def __init__(self):
+        self.enums = {}
+
+    def get(self, item):
+        if item not in self.enums:
+            self.enums[item] = len(self.enums)
+        return self.enums[item]
+
+    def __len__(self):
+        return len(self.enums)
+
+    def reversed(self):
+        r = {v: k for k, v in self.enums.items()}
+        assert len(r) == len(self.enums)
+        return r
+

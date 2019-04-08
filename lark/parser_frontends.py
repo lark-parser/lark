@@ -46,7 +46,10 @@ class WithLexer(object):
         }
     @classmethod
     def deserialize(cls, data, callbacks):
-        class_ = globals()[data['type']]    # XXX unsafe
+        class_ = {
+            'LALR_TraditionalLexer': LALR_TraditionalLexer,
+            'LALR_ContextualLexer': LALR_ContextualLexer,
+        }[data['type']]    # XXX unsafe
         parser = lalr_parser.Parser.deserialize(data['parser'], callbacks)
         assert parser
         inst = class_.__new__(class_)

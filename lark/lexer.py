@@ -35,6 +35,16 @@ class Pattern(object):
                 value = ('(?%s)' % f) + value
             return value
 
+    @classmethod
+    def deserialize(cls, data):
+        class_ = {
+            's': PatternStr,
+            're': PatternRE,
+        }[data[0]]
+        value, flags = data[1:]
+        return class_(value, frozenset(flags))
+
+
 class PatternStr(Pattern):
     def to_regexp(self):
         return self._get_flags(re.escape(self.value))
@@ -43,6 +53,9 @@ class PatternStr(Pattern):
     def min_width(self):
         return len(self.value)
     max_width = min_width
+
+    def serialize(self):
+        return ['s', self.value, list(self.flags)]
 
 class PatternRE(Pattern):
     def to_regexp(self):
@@ -55,6 +68,9 @@ class PatternRE(Pattern):
     def max_width(self):
         return get_regexp_width(self.to_regexp())[1]
 
+    def serialize(self):
+        return ['re', self.value, list(self.flags)]
+
 class TerminalDef(object):
     def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
@@ -66,11 +82,12 @@ class TerminalDef(object):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
 
     def serialize(self):
-        return [self.name, self.pattern, self.priority]
+        return [self.name, self.pattern.serialize(), self.priority]
 
     @classmethod
     def deserialize(cls, data):
-        return cls(*data)
+        name, pattern, priority = data
+        return cls(name, Pattern.deserialize(pattern), priority)
 
 
 

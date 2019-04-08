@@ -29,9 +29,7 @@ class WithLexer(object):
 
     def lex(self, text):
         stream = self.lexer.lex(text)
-        if self.postlex:
-            return self.postlex.process(stream)
-        return stream
+        return self.postlex.process(stream) if self.postlex else stream
 
     def parse(self, text):
         token_stream = self.lex(text)
@@ -49,7 +47,7 @@ class WithLexer(object):
         class_ = {
             'LALR_TraditionalLexer': LALR_TraditionalLexer,
             'LALR_ContextualLexer': LALR_ContextualLexer,
-        }[data['type']]    # XXX unsafe
+        }[data['type']]
         parser = lalr_parser.Parser.deserialize(data['parser'], callbacks)
         assert parser
         inst = class_.__new__(class_)

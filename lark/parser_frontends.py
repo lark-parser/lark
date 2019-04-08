@@ -1,16 +1,30 @@
 import re
 from functools import partial
 
-from .utils import get_regexp_width
+from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
 from .parsers import lalr_parser, earley, xearley, cyk
+from .grammar import Rule
 from .tree import Tree
 
-class WithLexer(object):
+class WithLexer(Serialize):
     lexer = None
     parser = None
     lexer_conf = None
+
+    __serialize_fields__ = 'parser', 'lexer'
+    __serialize_namespace__ = lambda: (Rule, ContextualLexer, LALR_ContextualLexer)
+
+    @classmethod
+    def deserialize(cls, data, callbacks):
+        inst = super(WithLexer, cls).deserialize(data)
+        inst.postlex = None # TODO
+        inst.parser = lalr_parser.Parser.deserialize(inst.parser, callbacks)
+        return inst
+    
+    def _serialize(self, data):
+        data['parser'] = data['parser'].serialize()
 
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
@@ -35,26 +49,6 @@ class WithLexer(object):
         token_stream = self.lex(text)
         sps = self.lexer.set_parser_state
         return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
-
-    def serialize(self):
-        return {
-            'type': type(self).__name__,
-            'parser': self.parser.serialize(),
-            'lexer': self.lexer.serialize(),
-        }
-    @classmethod
-    def deserialize(cls, data, callbacks):
-        class_ = {
-            'LALR_TraditionalLexer': LALR_TraditionalLexer,
-            'LALR_ContextualLexer': LALR_ContextualLexer,
-        }[data['type']]
-        parser = lalr_parser.Parser.deserialize(data['parser'], callbacks)
-        assert parser
-        inst = class_.__new__(class_)
-        inst.parser = parser
-        inst.lexer = Lexer.deserialize(data['lexer'])
-        inst.postlex = None # TODO
-        return inst
 
 
 class LALR_TraditionalLexer(WithLexer):

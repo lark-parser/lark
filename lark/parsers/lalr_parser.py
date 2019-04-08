@@ -5,12 +5,12 @@
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
 from ..grammar import Rule
-from ..utils import Enumerator
+from ..utils import Enumerator, Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
 
-class Parser(object):
+class Parser:
     def __init__(self, parser_conf, debug=False):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -21,42 +21,18 @@ class Parser(object):
         self._parse_table = analysis.parse_table
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)
-        self.parse = self.parser.parse
 
-    def serialize(self):
-        tokens = Enumerator()
-        rules = Enumerator()
-
-        states = {
-            state: {tokens.get(token): ((1, rules.get(arg)) if action is Reduce else (0, arg))
-                    for token, (action, arg) in actions.items()}
-            for state, actions in self._parse_table.states.items()
-        }
-
-        return {
-            'tokens': tokens.reversed(),
-            'rules': {idx: r.serialize() for idx, r in rules.reversed().items()},
-            'states': states,
-            'start_state': self._parse_table.start_state,
-            'end_state': self._parse_table.end_state,
-        }
-    
     @classmethod
     def deserialize(cls, data, callbacks):
-        tokens = data['tokens']
-        rules = {idx: Rule.deserialize(r) for idx, r in data['rules'].items()}
-        states = {
-            state: {tokens[token]: ((Reduce, rules[arg]) if action==1 else (Shift, arg))
-                    for token, (action, arg) in actions.items()}
-            for state, actions in data['states'].items()
-        }
-        parse_table = IntParseTable(states, data['start_state'], data['end_state'])
         inst = cls.__new__(cls)
-        inst.parser = _Parser(parse_table, callbacks)
-        inst.parse = inst.parser.parse
+        inst.parser = _Parser(IntParseTable.deserialize(data), callbacks)
         return inst
 
+    def serialize(self):
+        return self._parse_table.serialize()
 
+    def parse(self, *args):
+        return self.parser.parse(*args)
 
 ###{standalone
 

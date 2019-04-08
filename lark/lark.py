@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from io import open
 
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, Serialize
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -13,9 +13,10 @@ from .common import LexerConf, ParserConf
 from .lexer import Lexer, TraditionalLexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
+from .grammar import Rule
 
 
-class LarkOptions(object):
+class LarkOptions(Serialize):
     """Specifies the options for Lark
 
     """
@@ -132,7 +133,7 @@ class Profiler:
         return wrapper
 
 
-class Lark:
+class Lark(Serialize):
     def __init__(self, grammar, **options):
         """
             grammar : a string or file-object containing the grammar spec (using Lark's ebnf syntax)
@@ -223,6 +224,8 @@ class Lark:
     if __init__.__doc__:
         __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
+    __serialize_fields__ = 'parser', 'rules', 'options'
+
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
@@ -236,16 +239,8 @@ class Lark:
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
-    def serialize(self):
-        return {
-            'parser': self.parser.serialize(),
-            'rules': [r.serialize() for r in self.rules],
-            'options': self.options.serialize(),
-        }
-    
     @classmethod
     def deserialize(cls, data):
-        from .grammar import Rule
         inst = cls.__new__(cls)
         inst.options = LarkOptions.deserialize(data['options'])
         inst.rules = [Rule.deserialize(r) for r in data['rules']]

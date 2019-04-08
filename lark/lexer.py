@@ -2,10 +2,12 @@
 
 import re
 
-from .utils import Str, classify, get_regexp_width, Py36
+from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError
 
-class Pattern(object):
+class Pattern(Serialize):
+    __serialize_fields__ = 'value', 'flags'
+
     def __init__(self, value, flags=()):
         self.value = value
         self.flags = frozenset(flags)
@@ -35,15 +37,6 @@ class Pattern(object):
                 value = ('(?%s)' % f) + value
             return value
 
-    @classmethod
-    def deserialize(cls, data):
-        class_ = {
-            's': PatternStr,
-            're': PatternRE,
-        }[data[0]]
-        value, flags = data[1:]
-        return class_(value, frozenset(flags))
-
 
 class PatternStr(Pattern):
     def to_regexp(self):
@@ -53,9 +46,6 @@ class PatternStr(Pattern):
     def min_width(self):
         return len(self.value)
     max_width = min_width
-
-    def serialize(self):
-        return ['s', self.value, list(self.flags)]
 
 class PatternRE(Pattern):
     def to_regexp(self):
@@ -68,10 +58,11 @@ class PatternRE(Pattern):
     def max_width(self):
         return get_regexp_width(self.to_regexp())[1]
 
-    def serialize(self):
-        return ['re', self.value, list(self.flags)]
 
-class TerminalDef(object):
+class TerminalDef(Serialize):
+    __serialize_fields__ = 'name', 'pattern', 'priority'
+    __serialize_namespace__ = lambda: (PatternStr, PatternRE)
+
     def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
@@ -80,14 +71,6 @@ class TerminalDef(object):
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
-
-    def serialize(self):
-        return [self.name, self.pattern.serialize(), self.priority]
-
-    @classmethod
-    def deserialize(cls, data):
-        name, pattern, priority = data
-        return cls(name, Pattern.deserialize(pattern), priority)
 
 
 
@@ -278,7 +261,7 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
-class Lexer:
+class Lexer(Serialize):
     """Lexer interface
 
     Method Signatures:
@@ -289,15 +272,16 @@ class Lexer:
     set_parser_state = NotImplemented
     lex = NotImplemented
 
-    @classmethod
-    def deserialize(cls, data):
-        class_ = {
-            'traditional': TraditionalLexer,
-            'contextual': ContextualLexer,
-        }[data['type']]
-        return class_.deserialize(data)
 
 class TraditionalLexer(Lexer):
+    __serialize_fields__ = 'terminals', 'ignore_types', 'newline_types'
+    __serialize_namespace__ = lambda: (TerminalDef,)
+
+    def _deserialize(self):
+        self.mres = build_mres(self.terminals)
+        self.callback = {}  # TODO implement
+
+
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -339,26 +323,13 @@ class TraditionalLexer(Lexer):
     def lex(self, stream):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
-    def serialize(self):
-        return {
-            'type': 'traditional',
-            'terminals': [t.serialize() for t in self.terminals],
-            'ignore_types': self.ignore_types,
-            'newline_types': self.newline_types,
-        }
 
-    @classmethod
-    def deserialize(cls, data):
-        inst = cls.__new__(cls)
-        inst.terminals = [TerminalDef.deserialize(t) for t in data['terminals']]
-        inst.mres = build_mres(inst.terminals)
-        inst.ignore_types = data['ignore_types']
-        inst.newline_types = data['newline_types']
-        inst.callback = {}  # TODO implement
-        return inst
 
 
 class ContextualLexer(Lexer):
+    __serialize_fields__ = 'root_lexer', 'lexers'
+    __serialize_namespace__ = lambda: (TraditionalLexer,)
+
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in terminals:
@@ -392,17 +363,3 @@ class ContextualLexer(Lexer):
             yield x
             l.lexer = self.lexers[self.parser_state]
             l.state = self.parser_state
-
-    def serialize(self):
-        return {
-            'type': 'contextual',
-            'root_lexer': self.root_lexer.serialize(),
-            'lexers': {state: lexer.serialize() for state, lexer in self.lexers.items()}
-        }
-
-    @classmethod
-    def deserialize(cls, data):
-        inst = cls.__new__(cls)
-        inst.lexers = {state:Lexer.deserialize(lexer) for state, lexer in data['lexers'].items()}
-        inst.root_lexer = TraditionalLexer.deserialize(data['root_lexer'])
-        return inst

@@ -44,6 +44,54 @@ def bfs(initial, expand):
 
 
 
+def _serialize(value):
+    if isinstance(value, Serialize):
+        return value.serialize()
+    elif isinstance(value, list):
+        return [_serialize(elem) for elem in value]
+    elif isinstance(value, frozenset):
+        return list(value)  # TODO reversible?
+    elif isinstance(value, dict):
+        return {key:_serialize(elem) for key, elem in value.items()}
+    return value
+
+def _deserialize(data, namespace):
+    if isinstance(data, dict):
+        if '__type__' in data: # Object
+            class_ = namespace[data['__type__']]
+            return class_.deserialize(data)
+        return {key:_deserialize(value, namespace) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [_deserialize(value, namespace) for value in data]
+    return data
+
+
+class Serialize(object):
+    def serialize(self):
+        fields = getattr(self, '__serialize_fields__')
+        res = {f: _serialize(getattr(self, f)) for f in fields}
+        res['__type__'] = type(self).__name__
+        postprocess = getattr(self, '_serialize', None)
+        if postprocess:
+            postprocess(res)
+        return res
+
+    @classmethod
+    def deserialize(cls, data):
+        namespace = getattr(cls, '__serialize_namespace__', dict)
+        namespace = {c.__name__:c for c in namespace()}
+
+        fields = getattr(cls, '__serialize_fields__')
+
+        inst = cls.__new__(cls)
+        for f in fields:
+            setattr(inst, f, _deserialize(data[f], namespace))
+        postprocess = getattr(inst, '_deserialize', None)
+        if postprocess:
+            postprocess()
+        return inst
+
+
 
 ###{standalone
 try:

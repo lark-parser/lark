@@ -1,4 +1,6 @@
-class Symbol(object):
+from .utils import Serialize
+
+class Symbol(Serialize):
     is_term = NotImplemented
 
     def __init__(self, name):
@@ -19,16 +21,10 @@ class Symbol(object):
 
     fullrepr = property(__repr__)
 
-    @classmethod
-    def deserialize(cls, data):
-        class_ = {
-            'T': Terminal,
-            'NT': NonTerminal,
-        }[data[0]]
-        return class_(*data[1:])
-
 
 class Terminal(Symbol):
+    __serialize_fields__ = 'name', 'filter_out'
+
     is_term = True
 
     def __init__(self, name, filter_out=False):
@@ -39,23 +35,25 @@ class Terminal(Symbol):
     def fullrepr(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
 
-    def serialize(self):
-        return ['T', self.name, self.filter_out]
 
 
 class NonTerminal(Symbol):
+    __serialize_fields__ = 'name',
+
     is_term = False
 
-    def serialize(self):
-        return ['NT', self.name]
 
-class Rule(object):
+class Rule(Serialize):
     """
         origin : a symbol
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
     """
     __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
+
+    __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
+    __serialize_namespace__ = lambda: (Terminal, NonTerminal, RuleOptions)
+
     def __init__(self, origin, expansion, order=0, alias=None, options=None):
         self.origin = origin
         self.expansion = expansion
@@ -64,6 +62,8 @@ class Rule(object):
         self.options = options
         self._hash = hash((self.origin, tuple(self.expansion)))
 
+    def _deserialize(self):
+        self._hash = hash((self.origin, tuple(self.expansion)))
 
     def __str__(self):
         return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
@@ -79,22 +79,11 @@ class Rule(object):
             return False
         return self.origin == other.origin and self.expansion == other.expansion
 
-    def serialize(self):
-        return [self.origin.serialize(), list(s.serialize() for s in self.expansion), self.order, self.alias, self.options.serialize() if self.options else None]
-
-    @classmethod
-    def deserialize(cls, data):
-        origin, expansion, order, alias, options = data
-        return cls(
-            Symbol.deserialize(origin),
-            [Symbol.deserialize(s) for s in expansion],
-            order,
-            alias,
-            RuleOptions.deserialize(options) if options else None
-        )
 
 
-class RuleOptions:
+class RuleOptions(Serialize):
+    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'empty_indices'
+
     def __init__(self, keep_all_tokens=False, expand1=False, priority=None, empty_indices=()):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
@@ -107,10 +96,3 @@ class RuleOptions:
             self.expand1,
             self.priority,
         )
-
-    def serialize(self):
-        return [self.keep_all_tokens, self.expand1, self.priority, list(self.empty_indices)]
-    
-    @classmethod
-    def deserialize(cls, data):
-        return cls(*data)

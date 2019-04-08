@@ -4,10 +4,9 @@
 # Email : erezshin@gmail.com
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
-from ..grammar import Rule
 from ..utils import Enumerator, Serialize
 
-from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
+from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable
 
 
 class Parser:

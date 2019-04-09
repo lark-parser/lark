@@ -54,9 +54,9 @@ class WithLexer(Serialize):
     __serialize_namespace__ = Rule, ContextualLexer, TraditionalLexer
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks):
+    def deserialize(cls, data, memo, callbacks, postlex):
         inst = super(WithLexer, cls).deserialize(data, memo)
-        inst.postlex = None # TODO
+        inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         return inst
     

@@ -241,14 +241,17 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     @classmethod
-    def deserialize(cls, data, namespace, memo):
+    def deserialize(cls, data, namespace, memo, transformer=None, postlex=None):
         if memo:
             memo = SerializeMemoizer.deserialize(memo, namespace, {})
         inst = cls.__new__(cls)
-        inst.options = LarkOptions.deserialize(data['options'], memo)
+        options = dict(data['options'])
+        options['transformer'] = transformer
+        options['postlex'] = postlex
+        inst.options = LarkOptions.deserialize(options, memo)
         inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         inst._prepare_callbacks()
-        inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks)
+        inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
         return inst
 
 

@@ -70,6 +70,10 @@ class TestStandalone(TestCase):
         x = T().transform(x)
         self.assertEqual(x, ['a', 'b'])
 
+        l2 = _Lark(transformer=T())
+        x = l2.parse('ABAB')
+        self.assertEqual(x, ['a', 'b'])
+
 
 if __name__ == '__main__':
     unittest.main()

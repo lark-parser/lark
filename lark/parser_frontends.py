@@ -27,7 +27,7 @@ class WithLexer(Serialize):
         return inst
     
     def _serialize(self, data, memo):
-        data['parser'] = data['parser'].serialize()
+        data['parser'] = data['parser'].serialize(memo)
 
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf

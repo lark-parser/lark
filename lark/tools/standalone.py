@@ -49,7 +49,7 @@ from lark import Lark
 from lark.parsers.lalr_analysis import Reduce
 
 
-from lark.grammar import RuleOptions
+from lark.grammar import RuleOptions, Rule
 from lark.lexer import TerminalDef
 
 _dir = path.dirname(__file__)
@@ -63,13 +63,13 @@ EXTRACT_STANDALONE_FILES = [
     'tree.py',
     'visitors.py',
     'indenter.py',
+    'grammar.py',
     'lexer.py',
     'parse_tree_builder.py',
     'parsers/lalr_parser.py',
     'parsers/lalr_analysis.py',
     'parser_frontends.py',
     'lark.py',
-    'grammar.py',
 ]
 
 def extract_sections(lines):
@@ -101,7 +101,7 @@ def main(fobj, start):
         with open(os.path.join(_larkdir, pyfile)) as f:
             print (extract_sections(f)['standalone'])
 
-    data, m = lark_inst.memo_serialize([TerminalDef])
+    data, m = lark_inst.memo_serialize([TerminalDef, Rule])
     print( 'DATA = (' )
     # pprint(data, width=160)
     print(data)
@@ -113,10 +113,9 @@ def main(fobj, start):
 
     print('Shift = 0')
     print('Reduce = 1')
-    print("def load_parser():")
-    print("  return Lark.deserialize(DATA)")
-
-
+    print("def Lark_StandAlone():")
+    print("  memo = SerializeMemoizer.deserialize(MEMO, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})")
+    print("  return Lark.deserialize(DATA, memo)")
 
 
 

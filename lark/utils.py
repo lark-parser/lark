@@ -42,14 +42,11 @@ def bfs(initial, expand):
 
 
 
-###{standalone
-import sys, re
-
-Py36 = (sys.version_info[:2] >= (3, 6))
-
-
 
 def _serialize(value, memo):
+    # if memo and memo.in_types(value):
+    #     return {'__memo__': memo.memoized.get(value)}
+
     if isinstance(value, Serialize):
         return value.serialize(memo)
     elif isinstance(value, list):
@@ -60,11 +57,14 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     return value
 
+###{standalone
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
         if '__type__' in data: # Object
             class_ = namespace[data['__type__']]
             return class_.deserialize(data, memo)
+        elif '__memo__' in data:
+            return memo[data['__memo__']]
         return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
@@ -159,6 +159,11 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+import sys, re
+Py36 = (sys.version_info[:2] >= (3, 6))
+###}
+
+
 def dedup_list(l):
     """Given a list (l) will removing duplicates from the list,
        preserving the original order of the list. Assumes that
@@ -166,7 +171,7 @@ def dedup_list(l):
     dedup = set()
     return [ x for x in l if not (x in dedup or dedup.add(x))]
 
-###}
+
 
 
 try:

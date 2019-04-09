@@ -28,8 +28,8 @@ class LALR_Parser(object):
         inst.parser = _Parser(IntParseTable.deserialize(data, memo), callbacks)
         return inst
 
-    def serialize(self):
-        return self._parse_table.serialize()
+    def serialize(self, memo):
+        return self._parse_table.serialize(memo)
 
     def parse(self, *args):
         return self.parser.parse(*args)

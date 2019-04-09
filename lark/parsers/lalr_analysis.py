@@ -13,6 +13,7 @@ from ..utils import classify, classify_bool, bfs, fzset, Serialize, Enumerator
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
+from ..grammar import Rule
 
 ###{standalone
 
@@ -33,19 +34,18 @@ class ParseTable:
         self.start_state = start_state
         self.end_state = end_state
 
-    def serialize(self):
+    def serialize(self, memo):
         tokens = Enumerator()
         rules = Enumerator()
 
         states = {
-            state: {tokens.get(token): ((1, rules.get(arg)) if action is Reduce else (0, arg))
+            state: {tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
                     for token, (action, arg) in actions.items()}
             for state, actions in self.states.items()
         }
 
         return {
             'tokens': tokens.reversed(),
-            'rules': {idx: r.serialize() for idx, r in rules.reversed().items()},
             'states': states,
             'start_state': self.start_state,
             'end_state': self.end_state,
@@ -54,9 +54,8 @@ class ParseTable:
     @classmethod
     def deserialize(cls, data, memo):
         tokens = data['tokens']
-        rules = data['rules']
         states = {
-            state: {tokens[token]: ((Reduce, rules[arg]) if action==1 else (Shift, arg))
+            state: {tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action==1 else (Shift, arg))
                     for token, (action, arg) in actions.items()}
             for state, actions in data['states'].items()
         }

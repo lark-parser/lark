@@ -63,8 +63,8 @@ def _deserialize(data, namespace, memo):
         if '__type__' in data: # Object
             class_ = namespace[data['__type__']]
             return class_.deserialize(data, memo)
-        elif '__memo__' in data:
-            return memo[data['__memo__']]
+        elif '@' in data:
+            return memo[data['@']]
         return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
@@ -78,7 +78,7 @@ class Serialize(object):
 
     def serialize(self, memo=None):
         if memo and memo.in_types(self):
-            return {'__memo__': memo.memoized.get(self)}
+            return {'@': memo.memoized.get(self)}
 
         fields = getattr(self, '__serialize_fields__')
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
@@ -95,8 +95,8 @@ class Serialize(object):
 
         fields = getattr(cls, '__serialize_fields__')
 
-        if '__memo__' in data:
-            return memo[data['__memo__']]
+        if '@' in data:
+            return memo[data['@']]
 
         inst = cls.__new__(cls)
         for f in fields:

@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from io import open
 
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -13,9 +13,11 @@ from .common import LexerConf, ParserConf
 from .lexer import Lexer, TraditionalLexer
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
+from .grammar import Rule
 
+###{standalone
 
-class LarkOptions(object):
+class LarkOptions(Serialize):
     """Specifies the options for Lark
 
     """
@@ -51,24 +53,39 @@ class LarkOptions(object):
     if __doc__:
         __doc__ += OPTIONS_DOC
 
+    _defaults = {
+        'debug': False,
+        'keep_all_tokens': False,
+        'tree_class': None,
+        'cache_grammar': False,
+        'postlex': None,
+        'parser': 'earley',
+        'lexer': 'auto',
+        'transformer': None,
+        'start': 'start',
+        'profile': False,
+        'priority': 'auto',
+        'ambiguity': 'auto',
+        'propagate_positions': False,
+        'lexer_callbacks': {},
+        'maybe_placeholders': False,
+    }
+
     def __init__(self, options_dict):
         o = dict(options_dict)
 
-        self.debug = bool(o.pop('debug', False))
-        self.keep_all_tokens = bool(o.pop('keep_all_tokens', False))
-        self.tree_class = o.pop('tree_class', Tree)
-        self.cache_grammar = o.pop('cache_grammar', False)
-        self.postlex = o.pop('postlex', None)
-        self.parser = o.pop('parser', 'earley')
-        self.lexer = o.pop('lexer', 'auto')
-        self.transformer = o.pop('transformer', None)
-        self.start = o.pop('start', 'start')
-        self.profile = o.pop('profile', False)
-        self.priority = o.pop('priority', 'auto')
-        self.ambiguity = o.pop('ambiguity', 'auto')
-        self.propagate_positions = o.pop('propagate_positions', False)
-        self.lexer_callbacks = o.pop('lexer_callbacks', {})
-        self.maybe_placeholders = o.pop('maybe_placeholders', False)
+        options = {}
+        for name, default in self._defaults.items():
+            if name in o:
+                value = o.pop(name)
+                if isinstance(default, bool):
+                    value = bool(value)
+            else:
+                value = default
+
+            options[name] = value
+
+        self.__dict__['options'] = options
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
 
@@ -78,6 +95,19 @@ class LarkOptions(object):
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
+
+    def __getattr__(self, name):
+        return self.options[name]
+    def __setattr__(self, name, value):
+        assert name in self.options
+        self.options[name] = value
+
+    def serialize(self, memo):
+        return self.options
+
+    @classmethod
+    def deserialize(cls, data, memo):
+        return cls(data)
 
 
 class Profiler:
@@ -104,7 +134,7 @@ class Profiler:
         return wrapper
 
 
-class Lark:
+class Lark(Serialize):
     def __init__(self, grammar, **options):
         """
             grammar : a string or file-object containing the grammar spec (using Lark's ebnf syntax)
@@ -195,18 +225,35 @@ class Lark:
     if __init__.__doc__:
         __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
 
+    __serialize_fields__ = 'parser', 'rules', 'options'
+
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
-    def _build_parser(self):
+    def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
+        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
+        self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
-        callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
-
-        parser_conf = ParserConf(self.rules, callbacks, self.options.start)
-
+    def _build_parser(self):
+        self._prepare_callbacks()
+        parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+
+    @classmethod
+    def deserialize(cls, data, namespace, memo, transformer=None, postlex=None):
+        if memo:
+            memo = SerializeMemoizer.deserialize(memo, namespace, {})
+        inst = cls.__new__(cls)
+        options = dict(data['options'])
+        options['transformer'] = transformer
+        options['postlex'] = postlex
+        inst.options = LarkOptions.deserialize(options, memo)
+        inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
+        inst._prepare_callbacks()
+        inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
+        return inst
+
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
@@ -243,14 +290,4 @@ class Lark:
         "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
         return self.parser.parse(text)
 
-        # if self.profiler:
-        #     self.profiler.enter_section('lex')
-        #     l = list(self.lex(text))
-        #     self.profiler.enter_section('parse')
-        #     try:
-        #         return self.parser.parse(l)
-        #     finally:
-        #         self.profiler.enter_section('outside_lark')
-        # else:
-        #     l = list(self.lex(text))
-        #     return self.parser.parse(l)
+###}

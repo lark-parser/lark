@@ -4,10 +4,13 @@
 # Email : erezshin@gmail.com
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
+from ..utils import Enumerator, Serialize
 
-from .lalr_analysis import LALR_Analyzer, Shift
+from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable
 
-class Parser:
+
+###{standalone
+class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -18,9 +21,19 @@ class Parser:
         self._parse_table = analysis.parse_table
         self.parser_conf = parser_conf
         self.parser = _Parser(analysis.parse_table, callbacks)
-        self.parse = self.parser.parse
 
-###{standalone
+    @classmethod
+    def deserialize(cls, data, memo, callbacks):
+        inst = cls.__new__(cls)
+        inst.parser = _Parser(IntParseTable.deserialize(data, memo), callbacks)
+        return inst
+
+    def serialize(self, memo):
+        return self._parse_table.serialize(memo)
+
+    def parse(self, *args):
+        return self.parser.parse(*args)
+
 
 class _Parser:
     def __init__(self, parse_table, callbacks):

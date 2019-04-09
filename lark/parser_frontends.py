@@ -1,25 +1,78 @@
 import re
 from functools import partial
 
-from .utils import get_regexp_width
+from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
-from .parsers import lalr_parser, earley, xearley, cyk
+from .parsers import earley, xearley, cyk
+from .parsers.lalr_parser import LALR_Parser
+from .grammar import Rule
 from .tree import Tree
 
-class WithLexer:
+###{standalone
+
+def get_frontend(parser, lexer):
+    if parser=='lalr':
+        if lexer is None:
+            raise ValueError('The LALR parser requires use of a lexer')
+        elif lexer == 'standard':
+            return LALR_TraditionalLexer
+        elif lexer == 'contextual':
+            return LALR_ContextualLexer
+        elif issubclass(lexer, Lexer):
+            return partial(LALR_CustomLexer, lexer)
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    elif parser=='earley':
+        if lexer=='standard':
+            return Earley
+        elif lexer=='dynamic':
+            return XEarley
+        elif lexer=='dynamic_complete':
+            return XEarley_CompleteLex
+        elif lexer=='contextual':
+            raise ValueError('The Earley parser does not support the contextual parser')
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    elif parser == 'cyk':
+        if lexer == 'standard':
+            return CYK
+        else:
+            raise ValueError('CYK parser requires using standard parser.')
+    else:
+        raise ValueError('Unknown parser: %s' % parser)
+
+
+
+
+class WithLexer(Serialize):
     lexer = None
     parser = None
     lexer_conf = None
 
+    __serialize_fields__ = 'parser', 'lexer'
+    __serialize_namespace__ = Rule, ContextualLexer, TraditionalLexer
+
+    @classmethod
+    def deserialize(cls, data, memo, callbacks, postlex):
+        inst = super(WithLexer, cls).deserialize(data, memo)
+        inst.postlex = postlex
+        inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
+        return inst
+    
+    def _serialize(self, data, memo):
+        data['parser'] = data['parser'].serialize(memo)
+
     def init_traditional_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
         self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        self.postlex = lexer_conf.postlex
 
     def init_contextual_lexer(self, lexer_conf):
         self.lexer_conf = lexer_conf
+        self.postlex = lexer_conf.postlex
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
-        always_accept = lexer_conf.postlex.always_accept if lexer_conf.postlex else ()
+        always_accept = self.postlex.always_accept if self.postlex else ()
         self.lexer = ContextualLexer(lexer_conf.tokens, states,
                                      ignore=lexer_conf.ignore,
                                      always_accept=always_accept,
@@ -27,30 +80,31 @@ class WithLexer:
 
     def lex(self, text):
         stream = self.lexer.lex(text)
-        if self.lexer_conf.postlex:
-            return self.lexer_conf.postlex.process(stream)
-        return stream
+        return self.postlex.process(stream) if self.postlex else stream
 
     def parse(self, text):
         token_stream = self.lex(text)
         sps = self.lexer.set_parser_state
         return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
 
+
 class LALR_TraditionalLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
-        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
+        self.parser = LALR_Parser(parser_conf, debug=debug)
         self.init_traditional_lexer(lexer_conf)
 
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
-        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
+        self.parser = LALR_Parser(parser_conf, debug=debug)
         self.init_contextual_lexer(lexer_conf)
+
+###}
 
 class LALR_CustomLexer(WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.parser = lalr_parser.Parser(parser_conf)
+        self.parser = LALR_Parser(parser_conf)
         self.lexer_conf = lexer_conf
         self.lexer = lexer_cls(lexer_conf)
 
@@ -140,38 +194,4 @@ class CYK(WithLexer):
 
     def _apply_callback(self, tree):
         return self.callbacks[tree.rule](tree.children)
-
-
-def get_frontend(parser, lexer):
-    if parser=='lalr':
-        if lexer is None:
-            raise ValueError('The LALR parser requires use of a lexer')
-        elif lexer == 'standard':
-            return LALR_TraditionalLexer
-        elif lexer == 'contextual':
-            return LALR_ContextualLexer
-        elif issubclass(lexer, Lexer):
-            return partial(LALR_CustomLexer, lexer)
-        else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser=='earley':
-        if lexer=='standard':
-            return Earley
-        elif lexer=='dynamic':
-            return XEarley
-        elif lexer=='dynamic_complete':
-            return XEarley_CompleteLex
-        elif lexer=='contextual':
-            raise ValueError('The Earley parser does not support the contextual parser')
-        else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser == 'cyk':
-        if lexer == 'standard':
-            return CYK
-        else:
-            raise ValueError('CYK parser requires using standard parser.')
-    else:
-        raise ValueError('Unknown parser: %s' % parser)
-
-
 

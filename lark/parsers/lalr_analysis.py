@@ -9,10 +9,13 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 import logging
 from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset
+from ..utils import classify, classify_bool, bfs, fzset, Serialize, Enumerator
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
+from ..grammar import Rule
+
+###{standalone
 
 class Action:
     def __init__(self, name):
@@ -30,6 +33,34 @@ class ParseTable:
         self.states = states
         self.start_state = start_state
         self.end_state = end_state
+
+    def serialize(self, memo):
+        tokens = Enumerator()
+        rules = Enumerator()
+
+        states = {
+            state: {tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
+                    for token, (action, arg) in actions.items()}
+            for state, actions in self.states.items()
+        }
+
+        return {
+            'tokens': tokens.reversed(),
+            'states': states,
+            'start_state': self.start_state,
+            'end_state': self.end_state,
+        }
+
+    @classmethod
+    def deserialize(cls, data, memo):
+        tokens = data['tokens']
+        states = {
+            state: {tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action==1 else (Shift, arg))
+                    for token, (action, arg) in actions.items()}
+            for state, actions in data['states'].items()
+        }
+        return cls(states, data['start_state'], data['end_state'])
+
 
 class IntParseTable(ParseTable):
 
@@ -49,8 +80,7 @@ class IntParseTable(ParseTable):
         end_state = state_to_idx[parse_table.end_state]
         return cls(int_states, start_state, end_state)
 
-
-
+###}
 
 class LALR_Analyzer(GrammarAnalyzer):
 

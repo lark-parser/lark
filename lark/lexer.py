@@ -2,10 +2,14 @@
 
 import re
 
-from .utils import Str, classify, get_regexp_width, Py36
+from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError
 
-class Pattern(object):
+###{standalone
+
+class Pattern(Serialize):
+    __serialize_fields__ = 'value', 'flags'
+
     def __init__(self, value, flags=()):
         self.value = value
         self.flags = frozenset(flags)
@@ -35,6 +39,7 @@ class Pattern(object):
                 value = ('(?%s)' % f) + value
             return value
 
+
 class PatternStr(Pattern):
     def to_regexp(self):
         return self._get_flags(re.escape(self.value))
@@ -55,7 +60,11 @@ class PatternRE(Pattern):
     def max_width(self):
         return get_regexp_width(self.to_regexp())[1]
 
-class TerminalDef(object):
+
+class TerminalDef(Serialize):
+    __serialize_fields__ = 'name', 'pattern', 'priority'
+    __serialize_namespace__ = PatternStr, PatternRE
+
     def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
@@ -67,7 +76,6 @@ class TerminalDef(object):
 
 
 
-###{standalone
 class Token(Str):
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
 
@@ -198,7 +206,6 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
-###}
 
 
 
@@ -254,7 +261,7 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
-class Lexer:
+class Lexer(Serialize):
     """Lexer interface
 
     Method Signatures:
@@ -265,7 +272,16 @@ class Lexer:
     set_parser_state = NotImplemented
     lex = NotImplemented
 
+
 class TraditionalLexer(Lexer):
+    __serialize_fields__ = 'terminals', 'ignore_types', 'newline_types'
+    __serialize_namespace__ = TerminalDef,
+
+    def _deserialize(self):
+        self.mres = build_mres(self.terminals)
+        self.callback = {}  # TODO implement
+
+
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -308,7 +324,12 @@ class TraditionalLexer(Lexer):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
 
+
+
 class ContextualLexer(Lexer):
+    __serialize_fields__ = 'root_lexer', 'lexers'
+    __serialize_namespace__ = TraditionalLexer,
+
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in terminals:
@@ -343,4 +364,4 @@ class ContextualLexer(Lexer):
             l.lexer = self.lexers[self.parser_state]
             l.state = self.parser_state
 
-
+###}

@@ -21,6 +21,8 @@ from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer
+from lark.grammar import Rule
+from lark.lexer import TerminalDef
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -1428,6 +1430,23 @@ def _make_parser_test(LEXER, PARSER):
             parser.parse(r'"\\" "b" "c"')
 
             parser.parse(r'"That" "And a \"b"')
+
+        @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
+        def test_serialize(self):
+            grammar = """
+                start: "A" b "C"
+                b: "B"
+            """
+            parser = _Lark(grammar)
+            d = parser.serialize()
+            parser2 = Lark.deserialize(d, {}, {})
+            self.assertEqual(parser2.parse('ABC'), Tree('start', [Tree('b', [])]) )
+
+            namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}
+            d, m = parser.memo_serialize(namespace.values())
+            parser3 = Lark.deserialize(d, namespace, m)
+            self.assertEqual(parser3.parse('ABC'), Tree('start', [Tree('b', [])]) )
+
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

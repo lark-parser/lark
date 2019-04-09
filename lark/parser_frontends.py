@@ -11,6 +11,40 @@ from .tree import Tree
 
 ###{standalone
 
+def get_frontend(parser, lexer):
+    if parser=='lalr':
+        if lexer is None:
+            raise ValueError('The LALR parser requires use of a lexer')
+        elif lexer == 'standard':
+            return LALR_TraditionalLexer
+        elif lexer == 'contextual':
+            return LALR_ContextualLexer
+        elif issubclass(lexer, Lexer):
+            return partial(LALR_CustomLexer, lexer)
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    elif parser=='earley':
+        if lexer=='standard':
+            return Earley
+        elif lexer=='dynamic':
+            return XEarley
+        elif lexer=='dynamic_complete':
+            return XEarley_CompleteLex
+        elif lexer=='contextual':
+            raise ValueError('The Earley parser does not support the contextual parser')
+        else:
+            raise ValueError('Unknown lexer: %s' % lexer)
+    elif parser == 'cyk':
+        if lexer == 'standard':
+            return CYK
+        else:
+            raise ValueError('CYK parser requires using standard parser.')
+    else:
+        raise ValueError('Unknown parser: %s' % parser)
+
+
+
+
 class WithLexer(Serialize):
     lexer = None
     parser = None
@@ -65,6 +99,8 @@ class LALR_ContextualLexer(WithLexer):
         debug = options.debug if options else False
         self.parser = LALR_Parser(parser_conf, debug=debug)
         self.init_contextual_lexer(lexer_conf)
+
+###}
 
 class LALR_CustomLexer(WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
@@ -159,39 +195,3 @@ class CYK(WithLexer):
     def _apply_callback(self, tree):
         return self.callbacks[tree.rule](tree.children)
 
-
-def get_frontend(parser, lexer):
-    if parser=='lalr':
-        if lexer is None:
-            raise ValueError('The LALR parser requires use of a lexer')
-        elif lexer == 'standard':
-            return LALR_TraditionalLexer
-        elif lexer == 'contextual':
-            return LALR_ContextualLexer
-        elif issubclass(lexer, Lexer):
-            return partial(LALR_CustomLexer, lexer)
-        else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser=='earley':
-        if lexer=='standard':
-            return Earley
-        elif lexer=='dynamic':
-            return XEarley
-        elif lexer=='dynamic_complete':
-            return XEarley_CompleteLex
-        elif lexer=='contextual':
-            raise ValueError('The Earley parser does not support the contextual parser')
-        else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser == 'cyk':
-        if lexer == 'standard':
-            return CYK
-        else:
-            raise ValueError('CYK parser requires using standard parser.')
-    else:
-        raise ValueError('Unknown parser: %s' % parser)
-
-
-
-
-###}

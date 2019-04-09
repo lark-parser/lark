@@ -51,7 +51,7 @@ class WithLexer(Serialize):
     lexer_conf = None
 
     __serialize_fields__ = 'parser', 'lexer'
-    __serialize_namespace__ = Rule, ContextualLexer
+    __serialize_namespace__ = Rule, ContextualLexer, TraditionalLexer
 
     @classmethod
     def deserialize(cls, data, memo, callbacks):

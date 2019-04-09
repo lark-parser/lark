@@ -114,8 +114,8 @@ def main(fobj, start):
     print('Shift = 0')
     print('Reduce = 1')
     print("def Lark_StandAlone():")
-    print("  memo = SerializeMemoizer.deserialize(MEMO, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})")
-    print("  return Lark.deserialize(DATA, memo)")
+    print("  namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}")
+    print("  return Lark.deserialize(DATA, namespace, MEMO)")
 
 
 

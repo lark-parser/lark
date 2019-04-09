@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from io import open
 
-from .utils import STRING_TYPE, Serialize
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -241,7 +241,9 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     @classmethod
-    def deserialize(cls, data, memo):
+    def deserialize(cls, data, namespace, memo):
+        if memo:
+            memo = SerializeMemoizer.deserialize(memo, namespace, {})
         inst = cls.__new__(cls)
         inst.options = LarkOptions.deserialize(data['options'], memo)
         inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]

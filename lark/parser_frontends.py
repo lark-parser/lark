@@ -4,9 +4,12 @@ from functools import partial
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
-from .parsers import lalr_parser, earley, xearley, cyk
+from .parsers import earley, xearley, cyk
+from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
 from .tree import Tree
+
+###{standalone
 
 class WithLexer(Serialize):
     lexer = None
@@ -14,16 +17,16 @@ class WithLexer(Serialize):
     lexer_conf = None
 
     __serialize_fields__ = 'parser', 'lexer'
-    __serialize_namespace__ = lambda: (Rule, ContextualLexer, LALR_ContextualLexer)
+    __serialize_namespace__ = Rule, ContextualLexer
 
     @classmethod
-    def deserialize(cls, data, callbacks):
-        inst = super(WithLexer, cls).deserialize(data)
+    def deserialize(cls, data, memo, callbacks):
+        inst = super(WithLexer, cls).deserialize(data, memo)
         inst.postlex = None # TODO
-        inst.parser = lalr_parser.Parser.deserialize(inst.parser, callbacks)
+        inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         return inst
     
-    def _serialize(self, data):
+    def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize()
 
     def init_traditional_lexer(self, lexer_conf):
@@ -54,18 +57,18 @@ class WithLexer(Serialize):
 class LALR_TraditionalLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
-        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
+        self.parser = LALR_Parser(parser_conf, debug=debug)
         self.init_traditional_lexer(lexer_conf)
 
 class LALR_ContextualLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
-        self.parser = lalr_parser.Parser(parser_conf, debug=debug)
+        self.parser = LALR_Parser(parser_conf, debug=debug)
         self.init_contextual_lexer(lexer_conf)
 
 class LALR_CustomLexer(WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.parser = lalr_parser.Parser(parser_conf)
+        self.parser = LALR_Parser(parser_conf)
         self.lexer_conf = lexer_conf
         self.lexer = lexer_cls(lexer_conf)
 
@@ -190,3 +193,5 @@ def get_frontend(parser, lexer):
 
 
 
+
+###}

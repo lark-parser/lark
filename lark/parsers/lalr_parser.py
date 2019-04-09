@@ -9,7 +9,8 @@ from ..utils import Enumerator, Serialize
 from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable
 
 
-class Parser:
+###{standalone
+class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -22,9 +23,9 @@ class Parser:
         self.parser = _Parser(analysis.parse_table, callbacks)
 
     @classmethod
-    def deserialize(cls, data, callbacks):
+    def deserialize(cls, data, memo, callbacks):
         inst = cls.__new__(cls)
-        inst.parser = _Parser(IntParseTable.deserialize(data), callbacks)
+        inst.parser = _Parser(IntParseTable.deserialize(data, memo), callbacks)
         return inst
 
     def serialize(self):
@@ -33,7 +34,6 @@ class Parser:
     def parse(self, *args):
         return self.parser.parse(*args)
 
-###{standalone
 
 class _Parser:
     def __init__(self, parse_table, callbacks):

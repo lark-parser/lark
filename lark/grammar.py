@@ -1,5 +1,7 @@
 from .utils import Serialize
 
+###{standalone
+
 class Symbol(Serialize):
     is_term = NotImplemented
 
@@ -43,6 +45,24 @@ class NonTerminal(Symbol):
     is_term = False
 
 
+
+class RuleOptions(Serialize):
+    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'empty_indices'
+
+    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, empty_indices=()):
+        self.keep_all_tokens = keep_all_tokens
+        self.expand1 = expand1
+        self.priority = priority
+        self.empty_indices = empty_indices
+
+    def __repr__(self):
+        return 'RuleOptions(%r, %r, %r)' % (
+            self.keep_all_tokens,
+            self.expand1,
+            self.priority,
+        )
+
+
 class Rule(Serialize):
     """
         origin : a symbol
@@ -52,7 +72,7 @@ class Rule(Serialize):
     __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
 
     __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
-    __serialize_namespace__ = lambda: (Terminal, NonTerminal, RuleOptions)
+    __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
 
     def __init__(self, origin, expansion, order=0, alias=None, options=None):
         self.origin = origin
@@ -81,18 +101,4 @@ class Rule(Serialize):
 
 
 
-class RuleOptions(Serialize):
-    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'empty_indices'
-
-    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, empty_indices=()):
-        self.keep_all_tokens = keep_all_tokens
-        self.expand1 = expand1
-        self.priority = priority
-        self.empty_indices = empty_indices
-
-    def __repr__(self):
-        return 'RuleOptions(%r, %r, %r)' % (
-            self.keep_all_tokens,
-            self.expand1,
-            self.priority,
-        )
+###}

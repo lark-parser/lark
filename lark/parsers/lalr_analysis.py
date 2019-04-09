@@ -14,6 +14,8 @@ from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal
 
+###{standalone
+
 class Action:
     def __init__(self, name):
         self.name = name
@@ -50,7 +52,7 @@ class ParseTable:
         }
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data, memo):
         tokens = data['tokens']
         rules = data['rules']
         states = {
@@ -79,8 +81,7 @@ class IntParseTable(ParseTable):
         end_state = state_to_idx[parse_table.end_state]
         return cls(int_states, start_state, end_state)
 
-
-
+###}
 
 class LALR_Analyzer(GrammarAnalyzer):
 

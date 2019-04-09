@@ -15,6 +15,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 from .grammar import Rule
 
+###{standalone
 
 class LarkOptions(Serialize):
     """Specifies the options for Lark
@@ -101,11 +102,11 @@ class LarkOptions(Serialize):
         assert name in self.options
         self.options[name] = value
 
-    def serialize(self):
+    def serialize(self, memo):
         return self.options
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data, memo):
         return cls(data)
 
 
@@ -240,12 +241,12 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data, memo):
         inst = cls.__new__(cls)
-        inst.options = LarkOptions.deserialize(data['options'])
-        inst.rules = [Rule.deserialize(r) for r in data['rules']]
+        inst.options = LarkOptions.deserialize(data['options'], memo)
+        inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         inst._prepare_callbacks()
-        inst.parser = inst.parser_class.deserialize(data['parser'], inst._callbacks)
+        inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks)
         return inst
 
 
@@ -284,14 +285,4 @@ class Lark(Serialize):
         "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
         return self.parser.parse(text)
 
-        # if self.profiler:
-        #     self.profiler.enter_section('lex')
-        #     l = list(self.lex(text))
-        #     self.profiler.enter_section('parse')
-        #     try:
-        #         return self.parser.parse(l)
-        #     finally:
-        #         self.profiler.enter_section('outside_lark')
-        # else:
-        #     l = list(self.lex(text))
-        #     return self.parser.parse(l)
+###}

@@ -5,6 +5,8 @@ import re
 from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError
 
+###{standalone
+
 class Pattern(Serialize):
     __serialize_fields__ = 'value', 'flags'
 
@@ -61,7 +63,7 @@ class PatternRE(Pattern):
 
 class TerminalDef(Serialize):
     __serialize_fields__ = 'name', 'pattern', 'priority'
-    __serialize_namespace__ = lambda: (PatternStr, PatternRE)
+    __serialize_namespace__ = PatternStr, PatternRE
 
     def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
@@ -74,7 +76,6 @@ class TerminalDef(Serialize):
 
 
 
-###{standalone
 class Token(Str):
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
 
@@ -205,7 +206,6 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
-###}
 
 
 
@@ -275,7 +275,7 @@ class Lexer(Serialize):
 
 class TraditionalLexer(Lexer):
     __serialize_fields__ = 'terminals', 'ignore_types', 'newline_types'
-    __serialize_namespace__ = lambda: (TerminalDef,)
+    __serialize_namespace__ = TerminalDef,
 
     def _deserialize(self):
         self.mres = build_mres(self.terminals)
@@ -328,7 +328,7 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
     __serialize_fields__ = 'root_lexer', 'lexers'
-    __serialize_namespace__ = lambda: (TraditionalLexer,)
+    __serialize_namespace__ = TraditionalLexer,
 
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
@@ -363,3 +363,5 @@ class ContextualLexer(Lexer):
             yield x
             l.lexer = self.lexers[self.parser_state]
             l.state = self.parser_state
+
+###}

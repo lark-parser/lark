@@ -1,8 +1,6 @@
 import sys
 from collections import deque
 
-Py36 = (sys.version_info[:2] >= (3, 6))
-
 class fzset(frozenset):
     def __repr__(self):
         return '{%s}' % ', '.join(map(repr, self))
@@ -44,56 +42,90 @@ def bfs(initial, expand):
 
 
 
-def _serialize(value):
+###{standalone
+import sys, re
+
+Py36 = (sys.version_info[:2] >= (3, 6))
+
+
+
+def _serialize(value, memo):
     if isinstance(value, Serialize):
-        return value.serialize()
+        return value.serialize(memo)
     elif isinstance(value, list):
-        return [_serialize(elem) for elem in value]
+        return [_serialize(elem, memo) for elem in value]
     elif isinstance(value, frozenset):
         return list(value)  # TODO reversible?
     elif isinstance(value, dict):
-        return {key:_serialize(elem) for key, elem in value.items()}
+        return {key:_serialize(elem, memo) for key, elem in value.items()}
     return value
 
-def _deserialize(data, namespace):
+def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
         if '__type__' in data: # Object
             class_ = namespace[data['__type__']]
-            return class_.deserialize(data)
-        return {key:_deserialize(value, namespace) for key, value in data.items()}
+            return class_.deserialize(data, memo)
+        return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
-        return [_deserialize(value, namespace) for value in data]
+        return [_deserialize(value, namespace, memo) for value in data]
     return data
 
 
 class Serialize(object):
-    def serialize(self):
+    def memo_serialize(self, types_to_memoize):
+        memo = SerializeMemoizer(types_to_memoize)
+        return self.serialize(memo), memo.serialize()
+
+    def serialize(self, memo=None):
+        if memo and memo.in_types(self):
+            return {'__memo__': memo.memoized.get(self)}
+
         fields = getattr(self, '__serialize_fields__')
-        res = {f: _serialize(getattr(self, f)) for f in fields}
+        res = {f: _serialize(getattr(self, f), memo) for f in fields}
         res['__type__'] = type(self).__name__
         postprocess = getattr(self, '_serialize', None)
         if postprocess:
-            postprocess(res)
+            postprocess(res, memo)
         return res
 
     @classmethod
-    def deserialize(cls, data):
-        namespace = getattr(cls, '__serialize_namespace__', dict)
-        namespace = {c.__name__:c for c in namespace()}
+    def deserialize(cls, data, memo):
+        namespace = getattr(cls, '__serialize_namespace__', {})
+        namespace = {c.__name__:c for c in namespace}
 
         fields = getattr(cls, '__serialize_fields__')
 
+        if '__memo__' in data:
+            return memo[data['__memo__']]
+
         inst = cls.__new__(cls)
         for f in fields:
-            setattr(inst, f, _deserialize(data[f], namespace))
+            setattr(inst, f, _deserialize(data[f], namespace, memo))
         postprocess = getattr(inst, '_deserialize', None)
         if postprocess:
             postprocess()
         return inst
 
 
+class SerializeMemoizer(Serialize):
+    __serialize_fields__ = 'memoized',
 
-###{standalone
+    def __init__(self, types_to_memoize):
+        self.types_to_memoize = tuple(types_to_memoize)
+        self.memoized = Enumerator()
+
+    def in_types(self, value):
+        return isinstance(value, self.types_to_memoize)
+
+    def serialize(self):
+        return _serialize(self.memoized.reversed(), None)
+
+    @classmethod
+    def deserialize(cls, data, namespace, memo):
+        return _deserialize(data, namespace, memo)
+
+
+
 try:
     STRING_TYPE = basestring
 except NameError:   # Python 3
@@ -178,7 +210,7 @@ def get_regexp_width(regexp):
         raise ValueError(regexp)
 
 
-class Enumerator:
+class Enumerator(Serialize):
     def __init__(self):
         self.enums = {}
 

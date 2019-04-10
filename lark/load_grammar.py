@@ -562,9 +562,10 @@ def import_grammar(grammar_path, base_paths=[]):
         import_paths = base_paths + IMPORT_PATHS
         for import_path in import_paths:
             with suppress(IOError):
-                with open(os.path.join(import_path, grammar_path)) as f:
+                joined_path = os.path.join(import_path, grammar_path)
+                with open(joined_path) as f:
                     text = f.read()
-                grammar = load_grammar(text, grammar_path)
+                grammar = load_grammar(text, joined_path)
                 _imported_grammars[grammar_path] = grammar
                 break
         else:

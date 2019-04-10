@@ -1104,6 +1104,11 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('Ax')
             self.assertEqual(next(x.find_data('c')).children, ['A'])
 
+        def test_relative_import_of_nested_grammar(self):
+            l = _Lark_open("grammars/test_relative_import_of_nested_grammar.lark", rel_to=__file__)
+            x = l.parse('N')
+            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
+
         def test_import_errors(self):
             grammar = """
             start: NUMBER WORD

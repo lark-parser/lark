@@ -1101,6 +1101,11 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 
+        def test_relative_import_preserves_leading_underscore(self):
+            l = _Lark_open("test_relative_import_preserves_leading_underscore.lark", rel_to=__file__)
+            x = l.parse('Ax')
+            self.assertEqual(next(x.find_data('c')).children, ['A'])
+
         def test_import_errors(self):
             grammar = """
             start: NUMBER WORD

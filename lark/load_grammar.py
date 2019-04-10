@@ -597,6 +597,8 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
         try:
             return aliases[name].value
         except KeyError:
+            if name[0] == '_':
+                return '_%s__%s' % (namespace, name[1:])
             return '%s__%s' % (namespace, name)
 
     to_import = list(bfs(aliases, rule_dependencies))

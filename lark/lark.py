@@ -250,6 +250,7 @@ class Lark(Serialize):
         options['postlex'] = postlex
         inst.options = LarkOptions.deserialize(options, memo)
         inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
+        inst.source = '<deserialized>'
         inst._prepare_callbacks()
         inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
         return inst

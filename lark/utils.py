@@ -18,16 +18,7 @@ def classify_bool(seq, pred):
 
     return true_elems, false_elems
 
-def classify(seq, key=None, value=None):
-    d = {}
-    for item in seq:
-        k = key(item) if (key is not None) else item
-        v = value(item) if (value is not None) else item
-        if k in d:
-            d[k].append(v)
-        else:
-            d[k] = [v]
-    return d
+
 
 def bfs(initial, expand):
     open_q = deque(list(initial))
@@ -58,6 +49,18 @@ def _serialize(value, memo):
     return value
 
 ###{standalone
+def classify(seq, key=None, value=None):
+    d = {}
+    for item in seq:
+        k = key(item) if (key is not None) else item
+        v = value(item) if (value is not None) else item
+        if k in d:
+            d[k].append(v)
+        else:
+            d[k] = [v]
+    return d
+
+
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
         if '__type__' in data: # Object

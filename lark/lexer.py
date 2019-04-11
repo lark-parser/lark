@@ -278,8 +278,8 @@ class TraditionalLexer(Lexer):
     __serialize_namespace__ = TerminalDef,
 
     def _deserialize(self):
-        self.mres = build_mres(self.terminals)
-        self.callback = {}  # TODO implement
+        self.user_callbacks = {} # TODO implement
+        self.build()
 
 
     def __init__(self, terminals, ignore=(), user_callbacks={}):
@@ -304,18 +304,20 @@ class TraditionalLexer(Lexer):
         self.ignore_types = list(ignore)
 
         terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        self.terminals = terminals
+        self.user_callbacks = user_callbacks
+        self.build()
 
-        terminals, self.callback = _create_unless(terminals)
+    def build(self):
+        terminals, self.callback = _create_unless(self.terminals)
         assert all(self.callback.values())
 
-        for type_, f in user_callbacks.items():
+        for type_, f in self.user_callbacks.items():
             if type_ in self.callback:
                 # Already a callback there, probably UnlessCallback
                 self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
             else:
                 self.callback[type_] = f
-
-        self.terminals = terminals
 
         self.mres = build_mres(terminals)
 

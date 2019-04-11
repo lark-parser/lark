@@ -1451,7 +1451,8 @@ def _make_parser_test(LEXER, PARSER):
         @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
-                start: "A" b "C"
+                start: _ANY b "C"
+                _ANY: /./
                 b: "B"
             """
             parser = _Lark(grammar)

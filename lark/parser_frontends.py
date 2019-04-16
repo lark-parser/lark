@@ -22,25 +22,26 @@ def get_frontend(parser, lexer):
         elif issubclass(lexer, Lexer):
             return partial(LALR_CustomLexer, lexer)
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser=='earley':
-        if lexer=='standard':
+            raise ValueError('Unknown lexer: {}'.format(lexer))
+
+    elif parser == 'earley':
+        if lexer == 'standard':
             return Earley
-        elif lexer=='dynamic':
+        elif lexer == 'dynamic':
             return XEarley
-        elif lexer=='dynamic_complete':
+        elif lexer == 'dynamic_complete':
             return XEarley_CompleteLex
-        elif lexer=='contextual':
+        elif lexer == 'contextual':
             raise ValueError('The Earley parser does not support the contextual parser')
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
+            raise ValueError('Unknown lexer: {}'.format(lexer))
     elif parser == 'cyk':
         if lexer == 'standard':
             return CYK
         else:
             raise ValueError('CYK parser requires using standard parser.')
     else:
-        raise ValueError('Unknown parser: %s' % parser)
+        raise ValueError('Unknown parser: {}'.format(parser))
 
 
 
@@ -153,7 +154,7 @@ class XEarley:
             try:
                 width = get_regexp_width(regexp)[0]
             except ValueError:
-                raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
+                raise ValueError("Bad regexp in token {}: {}".format(t.name, regexp))
             else:
                 if width == 0:
                     raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)

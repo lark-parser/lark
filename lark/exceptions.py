@@ -4,14 +4,18 @@ from .utils import STRING_TYPE
 class LarkError(Exception):
     pass
 
+
 class GrammarError(LarkError):
     pass
+
 
 class ParseError(LarkError):
     pass
 
+
 class LexError(LarkError):
     pass
+
 
 class UnexpectedInput(LarkError):
     pos_in_stream = None
@@ -53,7 +57,7 @@ class UnexpectedInput(LarkError):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None):
-        message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
+        message = "No terminal defined for '{}' at line {} col {}".format(seq[lex_pos], line, column)
 
         self.line = line
         self.column = column
@@ -64,10 +68,9 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
         message += '\n\n' + self.get_context(seq)
         if allowed:
-            message += '\nExpecting: %s\n' % allowed
+            message += '\nExpecting: {}\n'.format(allowed)
 
         super(UnexpectedCharacters, self).__init__(message)
-
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
@@ -80,17 +83,18 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.state = state
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
 
-        message = ("Unexpected token %r at line %s, column %s.\n"
-                   "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.expected)))
+        message = ("Unexpected token {!r} at line {}, column {}.\n"
+                   "Expected one of: \n\t* {}\n".format(
+                    token, self.line, self.column, '\n\t* '.join(self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
+
 
 class VisitError(LarkError):
     def __init__(self, tree, orig_exc):
         self.tree = tree
         self.orig_exc = orig_exc
 
-        message = 'Error trying to process rule "%s":\n\n%s' % (tree.data, orig_exc)
+        message = 'Error trying to process rule "{}":\n\n{}'.format(tree.data, orig_exc)
         super(VisitError, self).__init__(message)
 ###}

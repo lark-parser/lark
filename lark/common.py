@@ -7,6 +7,7 @@ class LexerConf:
         self.postlex = postlex
         self.callbacks = callbacks or {}
 
+
 class ParserConf:
     def __init__(self, rules, callbacks, start):
         self.rules = rules

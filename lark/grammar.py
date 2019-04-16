@@ -2,6 +2,7 @@ from .utils import Serialize
 
 ###{standalone
 
+
 class Symbol(Serialize):
     is_term = NotImplemented
 
@@ -19,7 +20,7 @@ class Symbol(Serialize):
         return hash(self.name)
 
     def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.name)
+        return '{}({!r})'.format(type(self).__name__, self.name)
 
     fullrepr = property(__repr__)
 
@@ -35,15 +36,13 @@ class Terminal(Symbol):
 
     @property
     def fullrepr(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
-
+        return '{}({!r}, {!r})'.format(type(self).__name__, self.name, self.filter_out)
 
 
 class NonTerminal(Symbol):
     __serialize_fields__ = 'name',
 
     is_term = False
-
 
 
 class RuleOptions(Serialize):
@@ -56,11 +55,7 @@ class RuleOptions(Serialize):
         self.empty_indices = empty_indices
 
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r)' % (
-            self.keep_all_tokens,
-            self.expand1,
-            self.priority,
-        )
+        return 'RuleOptions({!r}, {!r}, {!r})'.format(self.keep_all_tokens, self.expand1, self.priority)
 
 
 class Rule(Serialize):
@@ -86,10 +81,10 @@ class Rule(Serialize):
         self._hash = hash((self.origin, tuple(self.expansion)))
 
     def __str__(self):
-        return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
+        return '<{} : {}>'.format(self.origin.name, ' '.join(x.name for x in self.expansion))
 
     def __repr__(self):
-        return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+        return 'Rule({!r}, {!r}, {!r}, {!r})'.format(self.origin, self.expansion, self.alias, self.options)
 
     def __hash__(self):
         return self._hash
@@ -98,7 +93,6 @@ class Rule(Serialize):
         if not isinstance(other, Rule):
             return False
         return self.origin == other.origin and self.expansion == other.expansion
-
 
 
 ###}

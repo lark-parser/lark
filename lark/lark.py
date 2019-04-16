@@ -94,10 +94,11 @@ class LarkOptions(Serialize):
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
         if o:
-            raise ValueError("Unknown options: %s" % o.keys())
+            raise ValueError("Unknown options: {}".format(o.keys()))
 
     def __getattr__(self, name):
         return self.options[name]
+
     def __setattr__(self, name, value):
         assert name in self.options
         self.options[name] = value
@@ -181,8 +182,8 @@ class Lark(Serialize):
                 self.options.ambiguity = 'resolve'
         else:
             disambig_parsers = ['earley', 'cyk']
-            assert self.options.parser in disambig_parsers, (
-                'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
+            assert self.options.parser in disambig_parsers, \
+                'Only {} supports disambiguation right now'.format(', '.join(disambig_parsers))
 
         if self.options.priority == 'auto':
             if self.options.parser in ('earley', 'cyk', ):
@@ -254,7 +255,6 @@ class Lark(Serialize):
         inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
         return inst
 
-
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
         """Create an instance of Lark with the grammar given by its filename
@@ -274,8 +274,7 @@ class Lark(Serialize):
             return cls(f, **options)
 
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
-
+        return 'Lark(open({!r}), parser={!r}, lexer={!r}, ...)'.format(self.source, self.options.parser, self.options.lexer)
 
     def lex(self, text):
         "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"

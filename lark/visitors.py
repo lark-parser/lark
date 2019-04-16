@@ -7,8 +7,10 @@ from .exceptions import VisitError, GrammarError
 ###{standalone
 from inspect import getmembers, getmro
 
+
 class Discard(Exception):
     pass
+
 
 # Transformers
 
@@ -88,7 +90,7 @@ class Transformer:
         return cls
 
 
-class InlineTransformer(Transformer):   # XXX Deprecated
+class InlineTransformer(Transformer):  # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
@@ -115,7 +117,8 @@ class TransformerChain(object):
 
 class Transformer_InPlace(Transformer):
     "Non-recursive. Changes the tree in-place instead of returning new instances"
-    def _transform_tree(self, tree):           # Cancel recursion
+
+    def _transform_tree(self, tree):  # Cancel recursion
         return self._call_userfunc(tree)
 
     def transform(self, tree):
@@ -127,10 +130,10 @@ class Transformer_InPlace(Transformer):
 
 class Transformer_InPlaceRecursive(Transformer):
     "Recursive. Changes the tree in-place instead of returning new instances"
+
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree)
-
 
 
 # Visitors
@@ -151,11 +154,11 @@ class Visitor(VisitorBase):
     Calls its methods (provided by user via inheritance) according to tree.data
     """
 
-
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
+
 
 class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive
@@ -174,13 +177,14 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-
 def visit_children_decor(func):
     "See Interpreter"
+
     @wraps(func)
     def inner(cls, tree):
         values = cls.visit_children(tree)
         return func(cls, values)
+
     return inner
 
 
@@ -193,6 +197,7 @@ class Interpreter:
     Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
     The user has to explicitly call visit_children, or use the @visit_children_decor
     """
+
     def visit(self, tree):
         return getattr(self, tree.data)(tree)
 
@@ -207,8 +212,6 @@ class Interpreter:
         return self.visit_children(tree)
 
 
-
-
 # Decorators
 
 def _apply_decorator(obj, decorator, **kwargs):
@@ -218,7 +221,6 @@ def _apply_decorator(obj, decorator, **kwargs):
         return decorator(obj, **kwargs)
     else:
         return _apply(decorator, **kwargs)
-
 
 
 def _inline_args__func(func):
@@ -235,13 +237,13 @@ def _inline_args__func(func):
     return smart_decorator(func, create_decorator)
 
 
-def inline_args(obj):   # XXX Deprecated
+def inline_args(obj):  # XXX Deprecated
     return _apply_decorator(obj, _inline_args__func)
-
 
 
 def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, static=False):
     assert [whole_tree, meta, inline].count(True) <= 1
+
     def create_decorator(_f, with_self):
         if with_self:
             def f(self, *args, **kwargs):
@@ -261,13 +263,15 @@ def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, sta
     f.whole_tree = whole_tree
     return f
 
+
 def v_args(inline=False, meta=False, tree=False):
     "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
     if [tree, meta, inline].count(True) > 1:
         raise ValueError("Visitor functions can either accept tree, or meta, or be inlined. These cannot be combined.")
+
     def _visitor_args_dec(obj):
         return _apply_decorator(obj, _visitor_args_func_dec, inline=inline, meta=meta, whole_tree=tree)
-    return _visitor_args_dec
 
+    return _visitor_args_dec
 
 ###}

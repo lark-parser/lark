@@ -7,6 +7,7 @@ from .exceptions import UnexpectedCharacters, LexError
 
 ###{standalone
 
+
 class Pattern(Serialize):
     __serialize_fields__ = 'value', 'flags'
 
@@ -20,6 +21,7 @@ class Pattern(Serialize):
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):
         return hash((type(self), self.value, self.flags))
+
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
@@ -30,13 +32,13 @@ class Pattern(Serialize):
         # Python 3.6 changed syntax for flags in regular expression
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s:%s)' % (f, value))
+                value = ('(?{}:{})'.format(f, value))
             return value
 
     else:
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s)' % f) + value
+                value = ('(?{})'.format(f)) + value
             return value
 
 
@@ -49,6 +51,7 @@ class PatternStr(Pattern):
         return len(self.value)
     max_width = min_width
 
+
 class PatternRE(Pattern):
     def to_regexp(self):
         return self._get_flags(self.value)
@@ -56,6 +59,7 @@ class PatternRE(Pattern):
     @property
     def min_width(self):
         return get_regexp_width(self.to_regexp())[0]
+
     @property
     def max_width(self):
         return get_regexp_width(self.to_regexp())[1]
@@ -72,8 +76,7 @@ class TerminalDef(Serialize):
         self.priority = priority
 
     def __repr__(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
-
+        return '{}({!r}, {!r})'.format(type(self).__name__, self.name, self.pattern)
 
 
 class Token(Str):
@@ -100,10 +103,10 @@ class Token(Str):
         return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
+        return self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, )
 
     def __repr__(self):
-        return 'Token(%s, %r)' % (self.type, self.value)
+        return 'Token({}, {!r})'.format(self.type, self.value)
 
     def __deepcopy__(self, memo):
         return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
@@ -139,6 +142,7 @@ class LineCounter:
         self.char_pos += len(token)
         self.column = self.char_pos - self.line_start_pos + 1
 
+
 class _Lex:
     "Built to serve both Lexer and ContextualLexer"
     def __init__(self, lexer, state=None):
@@ -165,7 +169,7 @@ class _Lex:
                     if t.type in lexer.callback:
                         t = lexer.callback[t.type](t)
                         if not isinstance(t, Token):
-                            raise ValueError("Callbacks must return a token (returned %r)" % t)
+                            raise ValueError("Callbacks must return a token (returned {!r})".format(t))
                     yield t
                 else:
                     if type_ in lexer.callback:
@@ -195,6 +199,7 @@ class UnlessCallback:
                 break
         return t
 
+
 class CallChain:
     def __init__(self, callback1, callback2, cond):
         self.callback1 = callback1
@@ -206,16 +211,13 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
-
-
-
 def _create_unless(terminals):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
-        unless = [] # {}
+        unless = []  # {}
         for strtok in tokens_by_type.get(PatternStr, []):
             if strtok.priority > retok.priority:
                 continue
@@ -240,17 +242,19 @@ def _build_mres(terminals, max_size, match_whole):
     mres = []
     while terminals:
         try:
-            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]))
+            mre = re.compile(u'|'.join(u'(?P<{}>{})'.format(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]))
         except AssertionError:  # Yes, this is what Python provides us.. :/
             return _build_mres(terminals, max_size//2, match_whole)
 
         # terms_from_name = {t.name: t for t in terminals[:max_size]}
-        mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
+        mres.append((mre, {i: n for n, i in mre.groupindex.items()} ))
         terminals = terminals[max_size:]
     return mres
 
+
 def build_mres(terminals, match_whole=False):
     return _build_mres(terminals, len(terminals), match_whole)
+
 
 def _regexp_has_newline(r):
     """Expressions that may indicate newlines in a regexp:
@@ -260,6 +264,7 @@ def _regexp_has_newline(r):
         - any-char (.) when the flag (?s) exists
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
+
 
 class Lexer(Serialize):
     """Lexer interface
@@ -281,7 +286,6 @@ class TraditionalLexer(Lexer):
         self.mres = build_mres(self.terminals)
         self.callback = {}  # TODO implement
 
-
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -292,10 +296,10 @@ class TraditionalLexer(Lexer):
             try:
                 re.compile(t.pattern.to_regexp())
             except:
-                raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
+                raise LexError("Cannot compile token {}: {}".format(t.name, t.pattern))
 
             if t.pattern.min_width == 0:
-                raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
+                raise LexError("Lexer does not allow zero-width terminals. ({}: {})".format(t.name, t.pattern))
 
         assert set(ignore) <= {t.name for t in terminals}
 
@@ -303,7 +307,7 @@ class TraditionalLexer(Lexer):
         self.newline_types = [t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = list(ignore)
 
-        terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        terminals.sort(key=lambda x: (-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
 
         terminals, self.callback = _create_unless(terminals)
         assert all(self.callback.values())
@@ -319,11 +323,8 @@ class TraditionalLexer(Lexer):
 
         self.mres = build_mres(terminals)
 
-
     def lex(self, stream):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
-
-
 
 
 class ContextualLexer(Lexer):

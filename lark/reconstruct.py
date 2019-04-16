@@ -8,9 +8,9 @@ from .parsers import earley
 from .grammar import Rule, Terminal, NonTerminal
 
 
-
 def is_discarded_terminal(t):
     return t.is_term and t.filter_out
+
 
 def is_iter_empty(i):
     try:
@@ -18,6 +18,7 @@ def is_iter_empty(i):
         return False
     except StopIteration:
         return True
+
 
 class WriteTokensTransformer(Transformer_InPlace):
     def __init__(self, tokens):
@@ -35,7 +36,7 @@ class WriteTokensTransformer(Transformer_InPlace):
             if is_discarded_terminal(sym):
                 t = self.tokens[sym.name]
                 if not isinstance(t.pattern, PatternStr):
-                    raise NotImplementedError("Reconstructing regexps not supported yet: %s" % t)
+                    raise NotImplementedError("Reconstructing regexps not supported yet: {}".format(t))
                 to_write.append(t.pattern.value)
             else:
                 x = next(iter_args)
@@ -55,6 +56,7 @@ class WriteTokensTransformer(Transformer_InPlace):
 class MatchTree(Tree):
     pass
 
+
 class MakeMatchTree:
     def __init__(self, name, expansion):
         self.name = name
@@ -66,12 +68,13 @@ class MakeMatchTree:
         t.meta.orig_expansion = self.expansion
         return t
 
+
 class Reconstructor:
     def __init__(self, parser):
         # XXX TODO calling compile twice returns different results!
         tokens, rules, _grammar_extra = parser.grammar.compile()
 
-        self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
+        self.write_tokens = WriteTokensTransformer({t.name: t for t in tokens})
         self.rules = list(self._build_recons_rules(rules))
 
     def _build_recons_rules(self, rules):
@@ -80,11 +83,11 @@ class Reconstructor:
         aliases = defaultdict(list)
         for r in rules:
             if r.alias:
-                aliases[r.origin].append( r.alias )
+                aliases[r.origin].append(r.alias)
 
         rule_names = {r.origin for r in rules}
         nonterminals = {sym for sym in rule_names
-                       if sym.name.startswith('_') or sym in expand1s or sym in aliases }
+                        if sym.name.startswith('_') or sym in expand1s or sym in aliases}
 
         for r in rules:
             recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
@@ -112,9 +115,9 @@ class Reconstructor:
 
     def _reconstruct(self, tree):
         # TODO: ambiguity?
-        callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
+        callbacks = {rule: rule.alias for rule in self.rules}  # TODO pass callbacks through dict, instead of alias?
         parser = earley.Parser(ParserConf(self.rules, callbacks, tree.data), self._match, resolve_ambiguity=True)
-        unreduced_tree = parser.parse(tree.children)   # find a full derivation
+        unreduced_tree = parser.parse(tree.children)  # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:

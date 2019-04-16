@@ -43,9 +43,11 @@ nearley_grammar = r"""
 
 nearley_grammar_parser = Lark(nearley_grammar, parser='earley', lexer='standard')
 
+
 def _get_rulename(name):
-    name = {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
+    name = {'_': '_ws_maybe', '__': '_ws'}.get(name, name)
     return 'n_' + name.replace('$', '__DOLLAR__').lower()
+
 
 class NearleyToLark(InlineTransformer):
     def __init__(self):
@@ -55,7 +57,7 @@ class NearleyToLark(InlineTransformer):
         self.alias_js_code = {}
 
     def _new_function(self, code):
-        name = 'alias_%d' % self._count
+        name = 'alias_{}'.format(self._count)
         self._count += 1
 
         self.alias_js_code[name] = code
@@ -65,7 +67,7 @@ class NearleyToLark(InlineTransformer):
         if rule in self.extra_rules_rev:
             return self.extra_rules_rev[rule]
 
-        name = 'xrule_%d' % len(self.extra_rules)
+        name = 'xrule_{}'.format(len(self.extra_rules))
         assert name not in self.extra_rules
         self.extra_rules[name] = rule
         self.extra_rules_rev[rule] = name
@@ -75,14 +77,14 @@ class NearleyToLark(InlineTransformer):
         return _get_rulename(name)
 
     def ruledef(self, name, exps):
-        return '!%s: %s' % (_get_rulename(name), exps)
+        return '!{}: {}'.format(_get_rulename(name), exps)
 
     def expr(self, item, op):
-        rule = '(%s)%s' % (item, op)
+        rule = '({}){}'.format(item, op)
         return self._extra_rule(rule)
 
     def regexp(self, r):
-        return '/%s/' % r
+        return '/{}/'.format(r)
 
     def null(self):
         return ''
@@ -93,7 +95,7 @@ class NearleyToLark(InlineTransformer):
     def expansion(self, *x):
         x, js = x[:-1], x[-1]
         if js.children:
-            js_code ,= js.children
+            js_code, = js.children
             js_code = js_code[2:-2]
             alias = '-> ' + self._new_function(js_code)
         else:
@@ -101,10 +103,11 @@ class NearleyToLark(InlineTransformer):
         return ' '.join(x) + alias
 
     def expansions(self, *x):
-        return '%s' % ('\n    |'.join(x))
+        return '\n    |'.join(x)
 
     def start(self, *rules):
         return '\n'.join(filter(None, rules))
+
 
 def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
     rule_defs = []
@@ -124,15 +127,15 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
             else:
                 assert False, directive
         elif statement.data == 'js_code':
-            code ,= statement.children
+            code, = statement.children
             code = code[2:-2]
             js_code.append(code)
         elif statement.data == 'macro':
             pass    # TODO Add support for macros!
         elif statement.data == 'ruledef':
-            rule_defs.append( n2l.transform(statement) )
+            rule_defs.append(n2l.transform(statement))
         else:
-            raise Exception("Unknown statement: %s" % statement)
+            raise Exception("Unknown statement: {}".format(statement))
 
     return rule_defs
 
@@ -158,20 +161,21 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
     emit()
 
     for alias, code in n2l.alias_js_code.items():
-        js_code.append('%s = (%s);' % (alias, code))
+        js_code.append('{} = ({});'.format(alias, code))
 
     emit(js2py.translate_js('\n'.join(js_code)))
     emit('class TransformNearley(Transformer):')
     for alias in n2l.alias_js_code:
-        emit("    %s = var.get('%s').to_python()" % (alias, alias))
+        emit("    {0} = var.get('{0}').to_python()".format(alias))
     emit("    __default__ = lambda self, n, c, m: c if c else None")
 
     emit()
-    emit('parser = Lark(grammar, start="n_%s")' % start)
+    emit('parser = Lark(grammar, start="n_{}")'.format(start))
     emit('def parse(text):')
     emit('    return TransformNearley().transform(parser.parse(text))')
 
     return ''.join(emit_code)
+
 
 def main(fn, start, nearley_lib):
     with codecs.open(fn, encoding='utf8') as f:
@@ -182,7 +186,7 @@ def main(fn, start, nearley_lib):
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("Reads Nearley grammar (with js functions) outputs an equivalent lark parser.")
-        print("Usage: %s <nearley_grammar_path> <start_rule> <nearley_lib_path>" % sys.argv[0])
+        print("Usage: {} <nearley_grammar_path> <start_rule> <nearley_lib_path>".format(sys.argv[0]))
         sys.exit(1)
 
     fn, start, nearley_lib = sys.argv[1:]

@@ -11,6 +11,7 @@ class Meta:
     def __init__(self):
         self.empty = True
 
+
 class Tree(object):
     def __init__(self, data, children, meta=None):
         self.data = data
@@ -24,21 +25,21 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%s, %s)' % (self.data, self.children)
+        return 'Tree({}, {})'.format(self.data, self.children)
 
     def _pretty_label(self):
         return self.data
 
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
+            return [indent_str * level, self._pretty_label(), '\t', '{}'.format(self.children[0]), '\n']
 
-        l = [ indent_str*level, self._pretty_label(), '\n' ]
+        l = [indent_str * level, self._pretty_label(), '\n']
         for n in self.children:
             if isinstance(n, Tree):
-                l += n._pretty(level+1, indent_str)
+                l += n._pretty(level + 1, indent_str)
             else:
-                l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
+                l += [indent_str * (level + 1), '{}'.format(n), '\n']
 
         return l
 
@@ -56,13 +57,14 @@ class Tree(object):
 
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
+
 ###}
 
     def expand_kids_by_index(self, *indices):
         "Expand (inline) children at the given indices"
-        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
+        for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
             kid = self.children[i]
-            self.children[i:i+1] = kid.children
+            self.children[i:i + 1] = kid.children
 
     def find_pred(self, pred):
         "Find all nodes where pred(tree) == True"
@@ -90,9 +92,9 @@ class Tree(object):
         l = []
         while q:
             subtree = q.pop()
-            l.append( subtree )
+            l.append(subtree)
             if id(subtree) in visited:
-                continue    # already been here from another branch
+                continue  # already been here from another branch
             visited.add(id(subtree))
             q += [c for c in subtree.children if isinstance(c, Tree)]
 
@@ -126,12 +128,15 @@ class Tree(object):
     @property
     def line(self):
         return self.meta.line
+
     @property
     def column(self):
         return self.meta.column
+
     @property
     def end_line(self):
         return self.meta.end_line
+
     @property
     def end_column(self):
         return self.meta.end_column
@@ -167,7 +172,7 @@ def pydot__tree_to_png(tree, filename, rankdir="LR"):
 
         subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
                     for child in subtree.children]
-        node = pydot.Node(i[0], style="filled", fillcolor="#%x"%color, label=subtree.data)
+        node = pydot.Node(i[0], style="filled", fillcolor="#{:x}".format(color), label=subtree.data)
         i[0] += 1
         graph.add_node(node)
 
@@ -178,4 +183,3 @@ def pydot__tree_to_png(tree, filename, rankdir="LR"):
 
     _to_pydot(tree)
     graph.write_png(filename)
-

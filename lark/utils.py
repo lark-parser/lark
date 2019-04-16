@@ -1,6 +1,7 @@
 import sys
 from collections import deque
 
+
 class fzset(frozenset):
     def __repr__(self):
         return '{%s}' % ', '.join(map(repr, self))
@@ -18,6 +19,7 @@ def classify_bool(seq, pred):
 
     return true_elems, false_elems
 
+
 def classify(seq, key=None, value=None):
     d = {}
     for item in seq:
@@ -28,6 +30,7 @@ def classify(seq, key=None, value=None):
         else:
             d[k] = [v]
     return d
+
 
 def bfs(initial, expand):
     open_q = deque(list(initial))
@@ -41,8 +44,6 @@ def bfs(initial, expand):
                 open_q.append(next_node)
 
 
-
-
 def _serialize(value, memo):
     # if memo and memo.in_types(value):
     #     return {'__memo__': memo.memoized.get(value)}
@@ -54,18 +55,19 @@ def _serialize(value, memo):
     elif isinstance(value, frozenset):
         return list(value)  # TODO reversible?
     elif isinstance(value, dict):
-        return {key:_serialize(elem, memo) for key, elem in value.items()}
+        return {key: _serialize(elem, memo) for key, elem in value.items()}
     return value
+
 
 ###{standalone
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
-        if '__type__' in data: # Object
+        if '__type__' in data:  # Object
             class_ = namespace[data['__type__']]
             return class_.deserialize(data, memo)
         elif '@' in data:
             return memo[data['@']]
-        return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
+        return {key: _deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
     return data
@@ -91,7 +93,7 @@ class Serialize(object):
     @classmethod
     def deserialize(cls, data, memo):
         namespace = getattr(cls, '__serialize_namespace__', {})
-        namespace = {c.__name__:c for c in namespace}
+        namespace = {c.__name__: c for c in namespace}
 
         fields = getattr(cls, '__serialize_fields__')
 
@@ -125,12 +127,10 @@ class SerializeMemoizer(Serialize):
         return _deserialize(data, namespace, memo)
 
 
-
 try:
     STRING_TYPE = basestring
-except NameError:   # Python 3
+except NameError:  # Python 3
     STRING_TYPE = str
-
 
 import types
 from functools import wraps, partial
@@ -138,9 +138,10 @@ from contextlib import contextmanager
 
 Str = type(u'')
 try:
-    classtype = types.ClassType # Python2
+    classtype = types.ClassType  # Python2
 except AttributeError:
-    classtype = type    # Python3
+    classtype = type  # Python3
+
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
@@ -159,8 +160,12 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+
 import sys, re
+
 Py36 = (sys.version_info[:2] >= (3, 6))
+
+
 ###}
 
 
@@ -169,13 +174,11 @@ def dedup_list(l):
        preserving the original order of the list. Assumes that
        the list entrie are hashable."""
     dedup = set()
-    return [ x for x in l if not (x in dedup or dedup.add(x))]
-
-
+    return [x for x in l if not (x in dedup or dedup.add(x))]
 
 
 try:
-    from contextlib import suppress     # Python 3
+    from contextlib import suppress  # Python 3
 except ImportError:
     @contextmanager
     def suppress(*excs):
@@ -192,9 +195,6 @@ except ImportError:
         except excs:
             pass
 
-
-
-
 try:
     compare = cmp
 except NameError:
@@ -205,9 +205,10 @@ except NameError:
             return 1
         return -1
 
-
 import sre_parse
 import sre_constants
+
+
 def get_regexp_width(regexp):
     try:
         return sre_parse.parse(regexp).getwidth()
@@ -231,4 +232,3 @@ class Enumerator(Serialize):
         r = {v: k for k, v in self.enums.items()}
         assert len(r) == len(self.enums)
         return r
-

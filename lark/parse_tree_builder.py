@@ -1,7 +1,7 @@
 from .exceptions import GrammarError
 from .lexer import Token
 from .tree import Tree
-from .visitors import InlineTransformer # XXX Deprecated
+from .visitors import InlineTransformer  # XXX Deprecated
 
 ###{standalone
 from functools import partial, wraps
@@ -17,6 +17,7 @@ class ExpandSingleChild:
             return children[0]
         else:
             return self.node_builder(children)
+
 
 class PropagatePositions:
     def __init__(self, node_builder):
@@ -79,6 +80,7 @@ class ChildFilter:
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR(ChildFilter):
     "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
 
@@ -90,7 +92,7 @@ class ChildFilterLALR(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   # Optimize for left-recursion
+                else:  # Optimize for left-recursion
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
@@ -100,8 +102,10 @@ class ChildFilterLALR(ChildFilter):
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR_NoPlaceholders(ChildFilter):
     "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+
     def __init__(self, to_include, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
@@ -112,14 +116,16 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   # Optimize for left-recursion
+                else:  # Optimize for left-recursion
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
         return self.node_builder(filtered)
 
+
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
+
 
 def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
     # Prepare empty_indices as: How many Nones to insert at each index?
@@ -127,9 +133,9 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
         assert _empty_indices.count(False) == len(expansion)
         s = ''.join(str(int(b)) for b in _empty_indices)
         empty_indices = [len(ones) for ones in s.split('0')]
-        assert len(empty_indices) == len(expansion)+1, (empty_indices, len(expansion))
+        assert len(empty_indices) == len(expansion) + 1, (empty_indices, len(expansion))
     else:
-        empty_indices = [0] * (len(expansion)+1)
+        empty_indices = [0] * (len(expansion) + 1)
 
     to_include = []
     nones_to_add = 0
@@ -141,18 +147,20 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
 
     nones_to_add += empty_indices[len(expansion)]
 
-    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand,_ in to_include):
+    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand, _ in to_include):
         if _empty_indices or ambiguous:
             return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add)
         else:
             # LALR without placeholders
-            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
+            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i, x, _ in to_include])
+
 
 class AmbiguousExpander:
     """Deal with the case where we're expanding children ('_rule') into a parent but the children
        are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
        ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
        into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
+
     def __init__(self, to_expand, tree_class, node_builder):
         self.node_builder = node_builder
         self.tree_class = tree_class
@@ -178,8 +186,9 @@ class AmbiguousExpander:
         if not ambiguous:
             return self.node_builder(children)
 
-        expand = [ iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children) ]
+        expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
         return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     to_expand = [i for i, sym in enumerate(expansion)
@@ -187,11 +196,14 @@ def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     if to_expand:
         return partial(AmbiguousExpander, to_expand, tree_class)
 
+
 def ptb_inline_args(func):
     @wraps(func)
     def f(children):
         return func(*children)
+
     return f
+
 
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
@@ -211,13 +223,12 @@ class ParseTreeBuilder:
 
             wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders and options else None),
+                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous,
+                                          options.empty_indices if self.maybe_placeholders and options else None),
                 self.propagate_positions and PropagatePositions,
-                self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
-            ]))
+                self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens)]))
 
             yield rule, wrapper_chain
-
 
     def create_callback(self, transformer=None):
         callbacks = {}
@@ -238,7 +249,7 @@ class ParseTreeBuilder:
                 f = w(f)
 
             if rule in callbacks:
-                raise GrammarError("Rule '%s' already exists" % (rule,))
+                raise GrammarError("Rule '{}' already exists".format(rule))
 
             callbacks[rule] = f
 

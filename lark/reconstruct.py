@@ -73,6 +73,9 @@ class Reconstructor:
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
         self.rules = list(self._build_recons_rules(rules))
+        callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
+        self.parser = earley.Parser(ParserConf(self.rules, callbacks, parser.options.start),
+                                    self._match, resolve_ambiguity=True)
 
     def _build_recons_rules(self, rules):
         expand1s = {r.origin for r in rules if r.options and r.options.expand1}
@@ -112,9 +115,7 @@ class Reconstructor:
 
     def _reconstruct(self, tree):
         # TODO: ambiguity?
-        callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
-        parser = earley.Parser(ParserConf(self.rules, callbacks, tree.data), self._match, resolve_ambiguity=True)
-        unreduced_tree = parser.parse(tree.children)   # find a full derivation
+        unreduced_tree = self.parser.parse(tree.children, tree.data)   # find a full derivation
         assert unreduced_tree.data == tree.data
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:

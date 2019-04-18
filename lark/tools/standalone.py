@@ -65,6 +65,7 @@ EXTRACT_STANDALONE_FILES = [
     'indenter.py',
     'grammar.py',
     'lexer.py',
+    'common.py',
     'parse_tree_builder.py',
     'parsers/lalr_parser.py',
     'parsers/lalr_analysis.py',

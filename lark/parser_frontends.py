@@ -8,6 +8,7 @@ from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
 from .tree import Tree
+from .common import LexerConf
 
 ###{standalone
 
@@ -50,33 +51,23 @@ class WithLexer(Serialize):
     parser = None
     lexer_conf = None
 
-    __serialize_fields__ = 'parser', 'lexer'
-    __serialize_namespace__ = Rule, ContextualLexer, TraditionalLexer
+    __serialize_fields__ = 'parser', 'lexer_conf'
+    __serialize_namespace__ = LexerConf,
+
+    def __init__(self, lexer_conf, parser_conf, options=None):
+        self.lexer_conf = lexer_conf
+        self.postlex = lexer_conf.postlex
 
     @classmethod
     def deserialize(cls, data, memo, callbacks, postlex):
         inst = super(WithLexer, cls).deserialize(data, memo)
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
+        inst.init_lexer()
         return inst
     
     def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize(memo)
-
-    def init_traditional_lexer(self, lexer_conf):
-        self.lexer_conf = lexer_conf
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
-        self.postlex = lexer_conf.postlex
-
-    def init_contextual_lexer(self, lexer_conf):
-        self.lexer_conf = lexer_conf
-        self.postlex = lexer_conf.postlex
-        states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
-        always_accept = self.postlex.always_accept if self.postlex else ()
-        self.lexer = ContextualLexer(lexer_conf.tokens, states,
-                                     ignore=lexer_conf.ignore,
-                                     always_accept=always_accept,
-                                     user_callbacks=lexer_conf.callbacks)
 
     def lex(self, text):
         stream = self.lexer.lex(text)
@@ -87,26 +78,40 @@ class WithLexer(Serialize):
         sps = self.lexer.set_parser_state
         return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
 
+    def init_traditional_lexer(self):
+        self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
 
-class LALR_TraditionalLexer(WithLexer):
+class LALR_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
         self.parser = LALR_Parser(parser_conf, debug=debug)
-        self.init_traditional_lexer(lexer_conf)
+        WithLexer.__init__(self, lexer_conf, parser_conf, options)
 
-class LALR_ContextualLexer(WithLexer):
-    def __init__(self, lexer_conf, parser_conf, options=None):
-        debug = options.debug if options else False
-        self.parser = LALR_Parser(parser_conf, debug=debug)
-        self.init_contextual_lexer(lexer_conf)
+        self.init_lexer()
 
+    def init_lexer(self):
+        raise NotImplementedError()
+
+class LALR_TraditionalLexer(LALR_WithLexer):
+    def init_lexer(self):
+        self.init_traditional_lexer()
+
+class LALR_ContextualLexer(LALR_WithLexer):
+    def init_lexer(self):
+        states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
+        always_accept = self.postlex.always_accept if self.postlex else ()
+        self.lexer = ContextualLexer(self.lexer_conf.tokens, states,
+                                     ignore=self.lexer_conf.ignore,
+                                     always_accept=always_accept,
+                                     user_callbacks=self.lexer_conf.callbacks)
 ###}
 
-class LALR_CustomLexer(WithLexer):
+class LALR_CustomLexer(LALR_WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.parser = LALR_Parser(parser_conf)
-        self.lexer_conf = lexer_conf
-        self.lexer = lexer_cls(lexer_conf)
+        pass    # TODO
+
+    def init_lexer(self):
+        self.lexer = lexer_cls(self.lexer_conf)
 
 def tokenize_text(text):
     line = 1
@@ -119,7 +124,8 @@ def tokenize_text(text):
 
 class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.init_traditional_lexer(lexer_conf)
+        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+        self.init_traditional_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
         self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity)
@@ -172,7 +178,8 @@ class XEarley_CompleteLex(XEarley):
 class CYK(WithLexer):
 
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.init_traditional_lexer(lexer_conf)
+        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+        self.init_traditional_lexer()
 
         self._analysis = GrammarAnalyzer(parser_conf)
         self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)

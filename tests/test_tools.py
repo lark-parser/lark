@@ -13,6 +13,9 @@ try:
 except ImportError:
     from io import StringIO
 
+
+
+
 class TestStandalone(TestCase):
     def setUp(self):
         pass
@@ -73,6 +76,39 @@ class TestStandalone(TestCase):
         l2 = _Lark(transformer=T())
         x = l2.parse('ABAB')
         self.assertEqual(x, ['a', 'b'])
+
+    def test_postlex(self):
+        from lark.indenter import Indenter
+        class MyIndenter(Indenter):
+            NL_type = '_NEWLINE'
+            OPEN_PAREN_types = ['LPAR', 'LSQB', 'LBRACE']
+            CLOSE_PAREN_types = ['RPAR', 'RSQB', 'RBRACE']
+            INDENT_type = '_INDENT'
+            DEDENT_type = '_DEDENT'
+            tab_len = 8
+
+        grammar = r"""
+            start:  "(" ")" _NEWLINE
+            _NEWLINE: /\n/
+        """
+
+        # from lark import Lark
+        # l = Lark(grammar, parser='lalr', lexer='contextual', postlex=MyIndenter())
+        # x = l.parse('(\n)\n')
+        # print('@@', x)
+
+
+        context = self._create_standalone(grammar)
+        _Lark = context['Lark_StandAlone']
+
+        # l = _Lark(postlex=MyIndenter())
+        # x = l.parse('()\n')
+        # print(x)
+        l = _Lark(postlex=MyIndenter())
+        x = l.parse('(\n)\n')
+        print(x)
+
+
 
 
 if __name__ == '__main__':

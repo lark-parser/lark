@@ -25,7 +25,8 @@ class LALR_Parser(object):
     @classmethod
     def deserialize(cls, data, memo, callbacks):
         inst = cls.__new__(cls)
-        inst.parser = _Parser(IntParseTable.deserialize(data, memo), callbacks)
+        inst._parse_table = IntParseTable.deserialize(data, memo)
+        inst.parser = _Parser(inst._parse_table, callbacks)
         return inst
 
     def serialize(self, memo):

@@ -261,7 +261,7 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
 
-class Lexer(Serialize):
+class Lexer(object):
     """Lexer interface
 
     Method Signatures:
@@ -274,13 +274,6 @@ class Lexer(Serialize):
 
 
 class TraditionalLexer(Lexer):
-    __serialize_fields__ = 'terminals', 'ignore_types', 'newline_types'
-    __serialize_namespace__ = TerminalDef,
-
-    def _deserialize(self):
-        self.user_callbacks = {} # TODO implement
-        self.build()
-
 
     def __init__(self, terminals, ignore=(), user_callbacks={}):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
@@ -329,9 +322,6 @@ class TraditionalLexer(Lexer):
 
 
 class ContextualLexer(Lexer):
-    __serialize_fields__ = 'root_lexer', 'lexers'
-    __serialize_namespace__ = TraditionalLexer,
-
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in terminals:

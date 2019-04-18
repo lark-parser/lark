@@ -103,7 +103,10 @@ class Serialize(object):
 
         inst = cls.__new__(cls)
         for f in fields:
-            setattr(inst, f, _deserialize(data[f], namespace, memo))
+            try:
+                setattr(inst, f, _deserialize(data[f], namespace, memo))
+            except KeyError as e:
+                raise KeyError("Cannot find key for class", cls, e)
         postprocess = getattr(inst, '_deserialize', None)
         if postprocess:
             postprocess()
@@ -164,6 +167,15 @@ def smart_decorator(f, create_decorator):
 
 import sys, re
 Py36 = (sys.version_info[:2] >= (3, 6))
+
+import sre_parse
+import sre_constants
+def get_regexp_width(regexp):
+    try:
+        return sre_parse.parse(regexp).getwidth()
+    except sre_constants.error:
+        raise ValueError(regexp)
+
 ###}
 
 
@@ -208,14 +220,6 @@ except NameError:
             return 1
         return -1
 
-
-import sre_parse
-import sre_constants
-def get_regexp_width(regexp):
-    try:
-        return sre_parse.parse(regexp).getwidth()
-    except sre_constants.error:
-        raise ValueError(regexp)
 
 
 class Enumerator(Serialize):

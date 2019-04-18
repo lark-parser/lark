@@ -6,13 +6,14 @@ In this tutorial we will write a JSON parser in Lark, and explore Lark's various
 
 It has 5 parts.
 
-  1. Writing the grammar
-  2. Creating the parser
-  3. Shaping the tree
-  4. Evaluating the tree
-  5. Optimizing
+1. Writing the grammar
+2. Creating the parser
+3. Shaping the tree
+4. Evaluating the tree
+5. Optimizing
 
 Knowledge assumed:
+
 - Using Python
 - A basic understanding of how to use regular expressions
 
@@ -93,23 +94,24 @@ We simply instantiate Lark, and tell it to accept a "value":
 
 ```python
 from lark import Lark
+
 json_parser = Lark(r"""
     value: dict
          | list
          | ESCAPED_STRING
          | SIGNED_NUMBER
          | "true" | "false" | "null"
-
+    
     list : "[" [value ("," value)*] "]"
-
+    
     dict : "{" [pair ("," pair)*] "}"
     pair : ESCAPED_STRING ":" value
-
+    
     %import common.ESCAPED_STRING
     %import common.SIGNED_NUMBER
     %import common.WS
     %ignore WS
-
+    
     """, start='value')
 ```
 
@@ -118,8 +120,8 @@ It's that simple! Let's test it out:
 ```python
 >>> text = '{"key": ["item0", "item1", 3.14]}'
 >>> json_parser.parse(text)
-Tree(value, [Tree(dict, [Tree(pair, [Token(STRING, "key"), Tree(value, [Tree(list, [Tree(value, [Token(STRING, "item0")]), Tree(value, [Token(STRING, "item1")]), Tree(value, [Token(NUMBER, 3.14)])])])])])])
->>> print( _.pretty() )
+Tree(value, [Tree(dict, [Tree(pair, [Token(ESCAPED_STRING, '"key"'), Tree(value, [Tree(list, [Tree(value, [Token(ESCAPED_STRING, '"item0"')]), Tree(value, [Token(ESCAPED_STRING, '"item1"')]), Tree(value, [Token(SIGNED_NUMBER, '3.14')])])])])])])
+>>> print(_.pretty())
 value
   dict
     pair
@@ -131,7 +133,7 @@ value
           value	3.14
 ```
 
-As promised, Lark automagically creates a tree that represents the parsed text.
+As promised, Lark auto-magically creates a tree that represents the parsed text.
 
 But something is suspiciously missing from the tree. Where are the curly braces, the commas and all the other punctuation literals?
 
@@ -173,6 +175,7 @@ Here is the new grammar:
 
 ```python
 from lark import Lark
+
 json_parser = Lark(r"""
     ?value: dict
           | list
@@ -181,19 +184,19 @@ json_parser = Lark(r"""
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
-
+    
     list : "[" [value ("," value)*] "]"
-
+    
     dict : "{" [pair ("," pair)*] "}"
     pair : string ":" value
-
+    
     string : ESCAPED_STRING
-
+    
     %import common.ESCAPED_STRING
     %import common.SIGNED_NUMBER
     %import common.WS
     %ignore WS
-
+    
     """, start='value')
 ```
 
@@ -201,7 +204,7 @@ And let's test it out:
 
 ```python
 >>> text = '{"key": ["item0", "item1", 3.14, true]}'
->>> print( json_parser.parse(text).pretty() )
+>>> print(json_parser.parse(text).pretty())
 dict
   pair
     string	"key"
@@ -212,7 +215,7 @@ dict
       true
 ```
 
-Ah! That is much much nicer.
+Ah! That is much, much nicer.
 
 ## Part 4 - Evaluating the tree
 
@@ -225,22 +228,29 @@ A transformer is a class with methods corresponding to branch names. For each br
 So let's write a partial transformer, that handles lists and dictionaries:
 
 ```python
-from lark import Transformer
+from lark import Transformer, v_args
 
 class MyTransformer(Transformer):
-    def list(self, items):
+    @staticmethod
+    def list(items):
         return list(items)
-    def pair(self, (k,v)):
+    
+    @staticmethod
+    @v_args(inline=True)
+    def pair(k, v):
         return k, v
-    def dict(self, items):
+    
+    @staticmethod
+    def dict(items):
         return dict(items)
 ```
 
 And when we run it, we get this:
+
 ```python
 >>> tree = json_parser.parse(text)
 >>> MyTransformer().transform(tree)
-{Tree(string, [Token(ANONRE_1, "key")]): [Tree(string, [Token(ANONRE_1, "item0")]), Tree(string, [Token(ANONRE_1, "item1")]), Tree(number, [Token(ANONRE_0, 3.14)]), Tree(true, [])]}
+{Tree(string, [Token(ESCAPED_STRING, '"key"')]): [Tree(string, [Token(ESCAPED_STRING, '"item0"')]), Tree(string, [Token(ESCAPED_STRING, '"item1"')]), Tree(number, [Token(SIGNED_NUMBER, '3.14')]), Tree(true, [])]}
 ```
 
 This is pretty close. Let's write a full transformer that can handle the terminals too.
@@ -248,21 +258,34 @@ This is pretty close. Let's write a full transformer that can handle the termina
 Also, our definitions of list and dict are a bit verbose. We can do better:
 
 ```python
-from lark import Transformer
+from lark import Transformer, v_args
 
 class TreeToJson(Transformer):
-    def string(self, (s,)):
+    @staticmethod
+    @v_args(inline=True)
+    def string(s):
         return s[1:-1]
-    def number(self, (n,)):
+    
+    @staticmethod
+    @v_args(inline=True)
+    def number(n):
         return float(n)
-
+    
     list = list
     pair = tuple
     dict = dict
-
-    null = lambda self, _: None
-    true = lambda self, _: True
-    false = lambda self, _: False
+    
+    @staticmethod
+    def null(_):
+        return None
+    
+    @staticmethod
+    def true(_):
+        return True
+    
+    @staticmethod
+    def false(_):
+        return False
 ```
 
 And when we run it:
@@ -270,7 +293,7 @@ And when we run it:
 ```python
 >>> tree = json_parser.parse(text)
 >>> TreeToJson().transform(tree)
-{u'key': [u'item0', u'item1', 3.14, True]}
+{'key': ['item0', 'item1', 3.14, True]}
 ```
 Magic!
 
@@ -284,13 +307,13 @@ But how fast is it?
 
 Now, of course there are JSON libraries for Python written in C, and we can never compete with them. But since this is applicable to any parser you would write in Lark, let's see how far we can take this.
 
-The first step for optimizing is to have a benchmark. For this benchmark I'm going to take data from [json-generator.com/](http://www.json-generator.com/). I took their default suggestion and changed it to 5000 objects. The result is a 6.6MB sparse JSON file.
+The first step for optimizing is to have a benchmark. For this benchmark I'm going to take data from [json-generator.com](http://www.json-generator.com/). I took their default suggestion and changed it to 5000 objects. The result is a 6.6MB sparse JSON file.
 
 Our first program is going to be just a concatenation of everything we've done so far:
 
 ```python
 import sys
-from lark import Lark, Transformer
+from lark import Lark, Transformer, v_args
 
 json_grammar = r"""
     ?value: dict
@@ -300,14 +323,14 @@ json_grammar = r"""
           | "true"             -> true
           | "false"            -> false
           | "null"             -> null
-
+    
     list : "[" [value ("," value)*] "]"
-
+    
     dict : "{" [pair ("," pair)*] "}"
     pair : string ":" value
-
+    
     string : ESCAPED_STRING
-
+    
     %import common.ESCAPED_STRING
     %import common.SIGNED_NUMBER
     %import common.WS
@@ -315,18 +338,31 @@ json_grammar = r"""
     """
 
 class TreeToJson(Transformer):
-    def string(self, (s,)):
+    @staticmethod
+    @v_args(inline=True)
+    def string(s):
         return s[1:-1]
-    def number(self, (n,)):
+    
+    @staticmethod
+    @v_args(inline=True)
+    def number(n):
         return float(n)
-
+    
     list = list
     pair = tuple
     dict = dict
-
-    null = lambda self, _: None
-    true = lambda self, _: True
-    false = lambda self, _: False
+    
+    @staticmethod
+    def null(_):
+        return None
+    
+    @staticmethod
+    def true(_):
+        return True
+    
+    @staticmethod
+    def false(_):
+        return False
 
 json_parser = Lark(json_grammar, start='value', lexer='standard')
 
@@ -340,9 +376,9 @@ We run it and get this:
 
     $ time python tutorial_json.py json_data > /dev/null
 
-    real	0m36.257s
-    user	0m34.735s
-    sys         0m1.361s
+    real    0m36.257s
+    user    0m34.735s
+    sys     0m1.361s
 
 
 That's unsatisfactory time for a 6MB file. Maybe if we were parsing configuration or a small DSL, but we're trying to handle large amount of data here.
@@ -360,9 +396,9 @@ json_parser = Lark(json_grammar, start='value', parser='lalr')
 ```
     $ time python tutorial_json.py json_data > /dev/null
 
-    real        0m7.554s
-    user        0m7.352s
-    sys         0m0.148s
+    real    0m7.554s
+    user    0m7.352s
+    sys     0m0.148s
 
 Ah, that's much better. The resulting JSON is of course exactly the same. You can run it for yourself and see.
 
@@ -379,16 +415,16 @@ json_parser = Lark(json_grammar, start='value', parser='lalr', transformer=TreeT
 
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:
-        print( json_parser.parse(f.read()) )
+        print(json_parser.parse(f.read()))
 ```
 
 We've used the transformer we've already written, but this time we plug it straight into the parser. Now it can avoid building the parse tree, and just send the data straight into our transformer. The *parse()* method now returns the transformed JSON, instead of a tree.
 
 Let's benchmark it:
 
-    real	0m4.866s
-    user	0m4.722s
-    sys 	0m0.121s
+    real    0m4.866s
+    user    0m4.722s
+    sys     0m0.121s
 
 That's a measurable improvement! Also, this way is more memory efficient. Check out the benchmark table at the end to see just how much.
 
@@ -404,9 +440,9 @@ Let's get some free performance:
 
     $ time pypy tutorial_json.py json_data > /dev/null
 
-    real	0m1.397s
-    user	0m1.296s
-    sys 	0m0.083s
+    real    0m1.397s
+    user    0m1.296s
+    sys     0m0.083s
 
 PyPy is awesome!
 
@@ -441,4 +477,3 @@ This is the end of the tutorial. I hoped you liked it and learned a little about
 To see what else you can do with Lark, check out the [examples](/examples).
 
 For questions or any other subject, feel free to email me at erezshin at gmail dot com.
-

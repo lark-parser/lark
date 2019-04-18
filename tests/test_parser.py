@@ -1111,6 +1111,13 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('N')
             self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
 
+        def test_relative_import_rules_dependencies_imported_only_once(self):
+            l = _Lark_open("test_relative_import_rules_dependencies_imported_only_once.lark", rel_to=__file__)
+            x = l.parse('AAA')
+            self.assertEqual(next(x.find_data('a')).children, ['A'])
+            self.assertEqual(next(x.find_data('b')).children, ['A'])
+            self.assertEqual(next(x.find_data('d')).children, ['A'])
+
         def test_import_errors(self):
             grammar = """
             start: NUMBER WORD

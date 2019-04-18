@@ -735,7 +735,7 @@ class GrammarLoader:
         rule_defs = [options_from_rule(*x) for x in rule_defs]
 
         # Execute statements
-        ignore = []
+        ignore, imports = [], {}
         for (stmt,) in statements:
             if stmt.data == 'ignore':
                 t, = stmt.children
@@ -748,18 +748,16 @@ class GrammarLoader:
                     arg1 = None
 
                 if isinstance(arg1, Tree):  # Multi import
-                    dotted_path = path_node.children
+                    dotted_path = tuple(path_node.children)
                     names = arg1.children
-                    aliases = names  # Can't have aliased multi import, so all aliases will be the same as names
+                    aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
                 else:  # Single import
-                    dotted_path = path_node.children[:-1]
-                    names = [path_node.children[-1]]  # Get name from dotted path
-                    aliases = [arg1] if arg1 else names  # Aliases if exist
-
-                grammar_path = os.path.join(*dotted_path) + EXT
+                    dotted_path = tuple(path_node.children[:-1])
+                    name = path_node.children[-1]  # Get name from dotted path
+                    aliases = {name: arg1 or name}  # Aliases if exist
 
                 if path_node.data == 'import_lib':  # Import from library
-                    g = import_grammar(grammar_path)
+                    base_paths = []
                 else:  # Relative import
                     if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
                         try:
@@ -769,16 +767,16 @@ class GrammarLoader:
                     else:
                         base_file = grammar_name  # Import relative to grammar file path if external grammar file
                     if base_file:
-                        base_path = os.path.split(base_file)[0]
+                        base_paths = [os.path.split(base_file)[0]]
                     else:
-                        base_path = os.path.abspath(os.path.curdir)
-                    g = import_grammar(grammar_path, base_paths=[base_path])
+                        base_paths = [os.path.abspath(os.path.curdir)]
 
-                aliases_dict = dict(zip(names, aliases))
-                new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases_dict)
-
-                term_defs += new_td
-                rule_defs += new_rd
+                try:
+                    import_base_paths, import_aliases = imports[dotted_path]
+                    assert base_paths == import_base_paths, 'Inconsistent base_paths for %s.' % '.'.join(dotted_path)
+                    import_aliases.update(aliases)
+                except KeyError:
+                    imports[dotted_path] = base_paths, aliases
 
             elif stmt.data == 'declare':
                 for t in stmt.children:
@@ -786,6 +784,17 @@ class GrammarLoader:
             else:
                 assert False, stmt
 
+
+        # import grammars
+        for dotted_path, (base_paths, aliases) in imports.items():
+            grammar_path = os.path.join(*dotted_path) + EXT
+            g = import_grammar(grammar_path, base_paths=base_paths)
+            new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
+
+            term_defs += new_td
+            rule_defs += new_rd
+            
+ 
         # Verify correctness 1
         for name, _ in term_defs:
             if name.startswith('__'):

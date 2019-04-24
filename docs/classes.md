@@ -44,6 +44,12 @@ Return a complete parse tree for the text (of type Tree)
 
 If a transformer is supplied to `__init__`, returns whatever is the result of the transformation.
 
+#### valid_parse(self, text)
+
+Return the result same as `parse` method, but return `None` instead to raise a `ParseError`.
+
+Suitable for use in conditional expressions.
+
 ----
 
 ## Tree

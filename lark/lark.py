@@ -6,6 +6,7 @@ from collections import defaultdict
 from io import open
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer
+from .exceptions import ParseError
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -290,5 +291,12 @@ class Lark(Serialize):
     def parse(self, text):
         "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
         return self.parser.parse(text)
+
+    def valid_parse(self, text):
+        "Parse the given text, return `None` if it's invalid."
+        try:
+            return self.parser.parse(text)
+        except ParseError:
+            return None
 
 ###}

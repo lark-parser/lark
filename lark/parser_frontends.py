@@ -65,7 +65,7 @@ class WithLexer(Serialize):
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         inst.init_lexer()
         return inst
-    
+
     def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize(memo)
 
@@ -107,11 +107,12 @@ class LALR_ContextualLexer(LALR_WithLexer):
 ###}
 
 class LALR_CustomLexer(LALR_WithLexer):
-    def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        pass    # TODO
-
-    def init_lexer(self):
+    def __init__(self, lexer_cls, lexer_conf, parser_conf, *, options=None):
         self.lexer = lexer_cls(self.lexer_conf)
+        debug = options.debug if options else False
+        self.parser = LALR_Parser(parser_conf, debug=debug)
+        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+
 
 def tokenize_text(text):
     line = 1

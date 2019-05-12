@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
-from lark.visitors import Transformer
+from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef
 
@@ -150,6 +150,31 @@ class TestParsers(unittest.TestCase):
         r = g.parse("xx")
         self.assertEqual( r.children, ["<c>"] )
 
+    def test_embedded_transformer_inplace(self):
+        class T1(Transformer_InPlace):
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+
+        @v_args(tree=True)
+        class T2(Transformer):
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+
+        class T3(Transformer):
+            @v_args(tree=True)
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+
+        for t in [T1(), T2(), T3()]:
+            g = Lark("""start: a
+                        a : "x"
+                     """, parser='lalr', transformer=t)
+            r = g.parse("x")
+            first, = r.children
+            self.assertEqual(first.children, ["tested"])
 
     def test_alias(self):
         Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)

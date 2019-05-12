@@ -199,8 +199,7 @@ def inplace_transformer(func):
     def f(children):
         # function name in a Transformer is a rule name.
         tree = Tree(func.__name__, children)
-        func(tree)
-        return tree
+        return func(tree)
     return f
 
 class ParseTreeBuilder:

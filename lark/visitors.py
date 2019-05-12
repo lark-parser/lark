@@ -36,7 +36,7 @@ class Transformer:
                     return f(*children)
                 elif getattr(f, 'whole_tree', False):
                     if new_children is not None:
-                        raise NotImplementedError("Doesn't work with the base Transformer class")
+                        tree.children = new_children
                     return f(tree)
                 else:
                     return f(children)

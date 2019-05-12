@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
-from lark.visitors import Transformer
+from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef
 
@@ -150,6 +150,51 @@ class TestParsers(unittest.TestCase):
         r = g.parse("xx")
         self.assertEqual( r.children, ["<c>"] )
 
+    def test_embedded_transformer_inplace(self):
+        @v_args(tree=True)
+        class T1(Transformer_InPlace):
+            def a(self, tree):
+                assert isinstance(tree, Tree), tree
+                tree.children.append("tested")
+                return tree
+
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        @v_args(tree=True)
+        class T2(Transformer):
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+                return tree
+
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        class T3(Transformer):
+            @v_args(tree=True)
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+                return tree
+
+            @v_args(tree=True)
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        for t in [T1(), T2(), T3()]:
+            for internal in [False, True]:
+                g = Lark("""start: a b
+                            a : "x"
+                            b : "y"
+                        """, parser='lalr', transformer=t if internal else None)
+                r = g.parse("xy")
+                if not internal:
+                    r = t.transform(r)
+
+                a, b = r.children
+                self.assertEqual(a.children, ["tested"])
+                self.assertEqual(b.children, ["tested2"])
 
     def test_alias(self):
         Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)

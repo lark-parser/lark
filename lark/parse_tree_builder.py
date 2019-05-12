@@ -2,6 +2,7 @@ from .exceptions import GrammarError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
+from .visitors import Transformer_InPlace
 
 ###{standalone
 from functools import partial, wraps
@@ -193,6 +194,14 @@ def ptb_inline_args(func):
         return func(*children)
     return f
 
+def inplace_transformer(func):
+    @wraps(func)
+    def f(children):
+        # function name in a Transformer is a rule name.
+        tree = Tree(func.__name__, children)
+        return func(tree)
+    return f
+
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
         self.tree_class = tree_class
@@ -231,6 +240,8 @@ class ParseTreeBuilder:
                 # XXX InlineTransformer is deprecated!
                 if getattr(f, 'inline', False) or isinstance(transformer, InlineTransformer):
                     f = ptb_inline_args(f)
+                elif hasattr(f, 'whole_tree') or isinstance(transformer, Transformer_InPlace):
+                    f = inplace_transformer(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

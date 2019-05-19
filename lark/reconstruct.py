@@ -69,7 +69,7 @@ class MakeMatchTree:
 class Reconstructor:
     def __init__(self, parser):
         # XXX TODO calling compile twice returns different results!
-        tokens, rules, _grammar_extra = parser.grammar.compile()
+        tokens, rules, _grammar_extra = parser.grammar.compile(parser.options.start)
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens})
         self.rules = list(self._build_recons_rules(rules))

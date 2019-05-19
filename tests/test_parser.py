@@ -1493,6 +1493,19 @@ def _make_parser_test(LEXER, PARSER):
 
             parser.parse(r'"That" "And a \"b"')
 
+
+        def test_meddling_unused(self):
+            "Unless 'unused' is removed, LALR analysis will fail on reduce-reduce collision"
+
+            grammar = """
+                start: EKS* x
+                x: EKS
+                unused: x*
+                EKS: "x"
+            """
+            parser = _Lark(grammar)
+
+
         @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """

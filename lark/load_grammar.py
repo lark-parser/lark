@@ -205,7 +205,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
 
         def will_not_get_removed(sym):
-            if isinstance(sym, NonTerminal): 
+            if isinstance(sym, NonTerminal):
                 return not sym.name.startswith('_')
             if isinstance(sym, Terminal):
                 return keep_all_tokens or not sym.filter_out
@@ -465,7 +465,7 @@ class Grammar:
         self.rule_defs = rule_defs
         self.ignore = ignore
 
-    def compile(self):
+    def compile(self, start):
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
         term_defs = deepcopy(list(self.term_defs))
@@ -545,6 +545,18 @@ class Grammar:
 
             # Remove duplicates
             compiled_rules = list(set(compiled_rules))
+
+
+        # Filter out unused rules
+        while True:
+            c = len(compiled_rules)
+            used_rules = {s for r in compiled_rules
+                                for s in r.expansion
+                                if isinstance(s, NonTerminal)
+                                and s != r.origin}
+            compiled_rules = [r for r in compiled_rules if r.origin.name==start or r.origin in used_rules]
+            if len(compiled_rules) == c:
+                break
 
         # Filter out unused terminals
         used_terms = {t.name for r in compiled_rules

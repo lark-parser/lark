@@ -200,7 +200,7 @@ class Lark(Serialize):
         self.grammar = load_grammar(grammar, self.source)
 
         # Compile the EBNF grammar into BNF
-        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile()
+        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
 
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.

@@ -178,7 +178,7 @@ HEX_NUMBER.2: /0x[\da-f]*/i
 OCT_NUMBER.2: /0o[0-7]*/i
 BIN_NUMBER.2 : /0b[0-1]*/i
 FLOAT_NUMBER.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
-IMAG_NUMBER.2: /\d+j|${FLOAT_NUMBER}j/i
+IMAG_NUMBER.2: /\d+j/i | FLOAT_NUMBER "j"i
 
 %ignore /[\t \f]+/  // WS
 %ignore /\\[\t \f]*\r?\n/   // LINE_CONT

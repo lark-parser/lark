@@ -134,14 +134,15 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
  - [storyscript](https://github.com/storyscript/storyscript) - The programming language for Application Storytelling
  - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL engine by Dailymotion. Lark is used to parse the GraphQL schemas definitions.
+ - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
  - [Command-Block-Assembly](https://github.com/simon816/Command-Block-Assembly) - An assembly language, and C compiler, for Minecraft commands
  - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks 
- - [https://github.com/aiqm/torchani](Accurate Neural Network Potential on PyTorch)
- - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
+ - [Torchani](https://github.com/aiqm/torchani) - Accurate Neural Network Potential on PyTorch
  - [required](https://github.com/shezadkhan137/required) - multi-field validation using docstrings
  - [miniwdl](https://github.com/chanzuckerberg/miniwdl) - A static analysis toolkit for the Workflow Description Language 
+ - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
 
 
 Using Lark? Send me a message and I'll add your project!

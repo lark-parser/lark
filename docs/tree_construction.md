@@ -23,6 +23,24 @@ Lark filters out certain types of terminals by default, considering them punctua
     - Unnamed regular expressions (like `/[0-9]/`)
     - Named terminals whose name starts with a letter (like `DIGIT`)
 
+Note: Terminals composed of literals and other terminals always include the entire match without filtering any part.
+
+**Example:**
+```
+start:  PNAME pname
+
+PNAME:  "(" NAME ")"
+pname:  "(" NAME ")"
+
+NAME:   /\w+/
+%ignore /\s+/
+```
+Lark will parse "(Hello) (World)" as:
+
+    start
+        (Hello)
+        pname World
+
 Rules prefixed with `!` will retain all their literals regardless.
 
 

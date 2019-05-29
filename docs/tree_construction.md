@@ -22,7 +22,8 @@ Lark filters out certain types of terminals by default, considering them punctua
 
     - Unnamed regular expressions (like `/[0-9]/`)
     - Named terminals whose name starts with a letter (like `DIGIT`)
-    - All terminals concatenated within a terminal
+
+Note: Terminals composed of literals and other terminals always include the entire match without filtering any part.
 
 **Example:**
 ```

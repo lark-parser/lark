@@ -520,7 +520,7 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
-                empty_indices = [x==_EMPTY for i, x in enumerate(expansion)]
+                empty_indices = [x==_EMPTY for x in expansion]
                 if any(empty_indices):
                     exp_options = copy(options) if options else RuleOptions()
                     exp_options.empty_indices = empty_indices

@@ -1523,6 +1523,15 @@ def _make_parser_test(LEXER, PARSER):
             parser3 = Lark.deserialize(d, namespace, m)
             self.assertEqual(parser3.parse('ABC'), Tree('start', [Tree('b', [])]) )
 
+        def test_multi_start(self):
+            parser = _Lark('''
+                a: "x" "a"?
+                b: "x" "b"?
+            ''', start=['a', 'b'])
+
+            self.assertEqual(parser.parse('xa', 'a'), Tree('a', []))
+            self.assertEqual(parser.parse('xb', 'b'), Tree('b', []))
+
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

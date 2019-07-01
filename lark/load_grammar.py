@@ -554,7 +554,8 @@ class Grammar:
                                 for s in r.expansion
                                 if isinstance(s, NonTerminal)
                                 and s != r.origin}
-            compiled_rules = [r for r in compiled_rules if r.origin.name==start or r.origin in used_rules]
+            used_rules |= {NonTerminal(s) for s in start}
+            compiled_rules = [r for r in compiled_rules if r.origin in used_rules]
             if len(compiled_rules) == c:
                 break
 
@@ -690,7 +691,7 @@ class GrammarLoader:
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
 
-        parser_conf = ParserConf(rules, callback, 'start')
+        parser_conf = ParserConf(rules, callback, ['start'])
         self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
 
         self.canonize_tree = CanonizeTree()

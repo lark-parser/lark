@@ -29,10 +29,10 @@ Shift = Action('Shift')
 Reduce = Action('Reduce')
 
 class ParseTable:
-    def __init__(self, states, start_state, end_state):
+    def __init__(self, states, start_states, end_states):
         self.states = states
-        self.start_state = start_state
-        self.end_state = end_state
+        self.start_states = start_states
+        self.end_states = end_states
 
     def serialize(self, memo):
         tokens = Enumerator()
@@ -47,8 +47,8 @@ class ParseTable:
         return {
             'tokens': tokens.reversed(),
             'states': states,
-            'start_state': self.start_state,
-            'end_state': self.end_state,
+            'start_states': self.start_states,
+            'end_states': self.end_states,
         }
 
     @classmethod
@@ -59,7 +59,7 @@ class ParseTable:
                     for token, (action, arg) in actions.items()}
             for state, actions in data['states'].items()
         }
-        return cls(states, data['start_state'], data['end_state'])
+        return cls(states, data['start_states'], data['end_states'])
 
 
 class IntParseTable(ParseTable):
@@ -76,9 +76,9 @@ class IntParseTable(ParseTable):
             int_states[ state_to_idx[s] ] = la
 
 
-        start_state = state_to_idx[parse_table.start_state]
-        end_state = state_to_idx[parse_table.end_state]
-        return cls(int_states, start_state, end_state)
+        start_states = {start:state_to_idx[s] for start, s in parse_table.start_states.items()}
+        end_states = {start:state_to_idx[s] for start, s in parse_table.end_states.items()}
+        return cls(int_states, start_states, end_states)
 
 ###}
 
@@ -124,10 +124,10 @@ class LALR_Analyzer(GrammarAnalyzer):
 
             self.states[state] = {k.name:v[0] for k, v in lookahead.items()}
 
-        for _ in bfs([self.start_state], step):
+        for _ in bfs(self.start_states.values(), step):
             pass
 
-        self._parse_table = ParseTable(self.states, self.start_state, self.end_state)
+        self._parse_table = ParseTable(self.states, self.start_states, self.end_states)
 
         if self.debug:
             self.parse_table = self._parse_table

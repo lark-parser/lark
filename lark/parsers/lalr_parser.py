@@ -39,19 +39,22 @@ class LALR_Parser(object):
 class _Parser:
     def __init__(self, parse_table, callbacks):
         self.states = parse_table.states
-        self.start_state = parse_table.start_state
-        self.end_state = parse_table.end_state
+        self.start_states = parse_table.start_states
+        self.end_states = parse_table.end_states
         self.callbacks = callbacks
 
-    def parse(self, seq, set_state=None):
+    def parse(self, seq, start, set_state=None):
         token = None
         stream = iter(seq)
         states = self.states
 
-        state_stack = [self.start_state]
+        start_state = self.start_states[start]
+        end_state = self.end_states[start]
+
+        state_stack = [start_state]
         value_stack = []
 
-        if set_state: set_state(self.start_state)
+        if set_state: set_state(start_state)
 
         def get_action(token):
             state = state_stack[-1]
@@ -81,7 +84,7 @@ class _Parser:
         for token in stream:
             while True:
                 action, arg = get_action(token)
-                assert arg != self.end_state
+                assert arg != end_state
 
                 if action is Shift:
                     state_stack.append(arg)
@@ -95,7 +98,7 @@ class _Parser:
         while True:
             _action, arg = get_action(token)
             if _action is Shift:
-                assert arg == self.end_state
+                assert arg == end_state
                 val ,= value_stack
                 return val
             else:

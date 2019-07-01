@@ -273,8 +273,9 @@ class Parser:
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
 
-    def parse(self, stream, start_symbol=None):
-        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
+    def parse(self, stream, start):
+        assert start, start
+        start_symbol = NonTerminal(start)
 
         columns = [set()]
         to_scan = set()     # The scan buffer. 'Q' in E.Scott's paper.

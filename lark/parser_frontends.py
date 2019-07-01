@@ -44,18 +44,28 @@ def get_frontend(parser, lexer):
         raise ValueError('Unknown parser: %s' % parser)
 
 
+class _ParserFrontend(Serialize):
+    def _parse(self, input, start, *args):
+        if start is None:
+            start = self.start
+            if len(start) > 1:
+                raise ValueError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
+            start ,= start
+        return self.parser.parse(input, start, *args)
 
 
-class WithLexer(Serialize):
+class WithLexer(_ParserFrontend):
     lexer = None
     parser = None
     lexer_conf = None
+    start = None
 
-    __serialize_fields__ = 'parser', 'lexer_conf'
+    __serialize_fields__ = 'parser', 'lexer_conf', 'start'
     __serialize_namespace__ = LexerConf,
 
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.lexer_conf = lexer_conf
+        self.start = parser_conf.start
         self.postlex = lexer_conf.postlex
 
     @classmethod
@@ -73,10 +83,10 @@ class WithLexer(Serialize):
         stream = self.lexer.lex(text)
         return self.postlex.process(stream) if self.postlex else stream
 
-    def parse(self, text):
+    def parse(self, text, start=None):
         token_stream = self.lex(text)
         sps = self.lexer.set_parser_state
-        return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
+        return self._parse(token_stream, start, *[sps] if sps is not NotImplemented else [])
 
     def init_traditional_lexer(self):
         self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
@@ -135,9 +145,10 @@ class Earley(WithLexer):
         return term.name == token.type
 
 
-class XEarley:
+class XEarley(_ParserFrontend):
     def __init__(self, lexer_conf, parser_conf, options=None, **kw):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+        self.start = parser_conf.start
 
         self._prepare_match(lexer_conf)
         resolve_ambiguity = options.ambiguity == 'resolve'
@@ -167,8 +178,8 @@ class XEarley:
 
             self.regexps[t.name] = re.compile(regexp)
 
-    def parse(self, text):
-        return self.parser.parse(text)
+    def parse(self, text, start):
+        return self._parse(text, start)
 
 class XEarley_CompleteLex(XEarley):
     def __init__(self, *args, **kw):
@@ -187,7 +198,7 @@ class CYK(WithLexer):
 
         self.callbacks = parser_conf.callbacks
 
-    def parse(self, text):
+    def parse(self, text, start):
         tokens = list(self.lex(text))
         parse = self._parser.parse(tokens)
         parse = self._transform(parse)

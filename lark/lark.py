@@ -85,6 +85,9 @@ class LarkOptions(Serialize):
 
             options[name] = value
 
+        if isinstance(options['start'], str):
+            options['start'] = [options['start']]
+
         self.__dict__['options'] = options
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)
@@ -287,8 +290,8 @@ class Lark(Serialize):
             return self.options.postlex.process(stream)
         return stream
 
-    def parse(self, text):
+    def parse(self, text, start=None):
         "Parse the given text, according to the options provided. Returns a tree, unless specified otherwise."
-        return self.parser.parse(text)
+        return self.parser.parse(text, start=start)
 
 ###}

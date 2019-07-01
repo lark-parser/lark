@@ -89,7 +89,7 @@ class Parser(object):
         self.orig_rules = {rule: rule for rule in rules}
         rules = [self._to_rule(rule) for rule in rules]
         self.grammar = to_cnf(Grammar(rules))
-        self.start = NT(start)
+        self.start = NT(start[0])
 
     def _to_rule(self, lark_rule):
         """Converts a lark rule, (lhs, rhs, callback, options), to a Rule."""

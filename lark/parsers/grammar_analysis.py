@@ -109,8 +109,10 @@ class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 
-        root_rule = Rule(NonTerminal('$root'), [NonTerminal(parser_conf.start), Terminal('$END')])
-        rules = parser_conf.rules + [root_rule]
+        root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start), Terminal('$END')])
+                      for start in parser_conf.start}
+
+        rules = parser_conf.rules + list(root_rules.values())
         self.rules_by_origin = classify(rules, lambda r: r.origin)
 
         if len(rules) != len(set(rules)):
@@ -122,10 +124,11 @@ class GrammarAnalyzer(object):
                 if not (sym.is_term or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym) # TODO test validation
 
-        self.start_state = self.expand_rule(root_rule.origin)
+        self.start_states = {start: self.expand_rule(root_rule.origin)
+                             for start, root_rule in root_rules.items()}
 
-        end_rule = RulePtr(root_rule, len(root_rule.expansion))
-        self.end_state = fzset({end_rule})
+        self.end_states = {start: fzset({RulePtr(root_rule, len(root_rule.expansion))})
+                           for start, root_rule in root_rules.items()}
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 

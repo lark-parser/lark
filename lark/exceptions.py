@@ -52,7 +52,7 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None):
+    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
         message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
 
         self.line = line
@@ -65,6 +65,8 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         message += '\n\n' + self.get_context(seq)
         if allowed:
             message += '\nExpecting: %s\n' % allowed
+        if token_history:
+            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in token_history)
 
         super(UnexpectedCharacters, self).__init__(message)
 

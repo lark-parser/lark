@@ -20,6 +20,7 @@ class LexerConf(Serialize):
 
 class ParserConf:
     def __init__(self, rules, callbacks, start):
+        assert isinstance(start, list)
         self.rules = rules
         self.callbacks = callbacks
         self.start = start

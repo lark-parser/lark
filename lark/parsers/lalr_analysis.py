@@ -85,7 +85,6 @@ class IntParseTable(ParseTable):
 class LALR_Analyzer(GrammarAnalyzer):
 
     def compute_lookahead(self):
-        self.end_states = []
 
         self.states = {}
         def step(state):
@@ -105,8 +104,6 @@ class LALR_Analyzer(GrammarAnalyzer):
 
                 new_state = fzset(rps)
                 lookahead[sym].append((Shift, new_state))
-                if sym == Terminal('$END'):
-                    self.end_states.append( new_state )
                 yield new_state
 
             for k, v in lookahead.items():
@@ -129,8 +126,6 @@ class LALR_Analyzer(GrammarAnalyzer):
 
         for _ in bfs([self.start_state], step):
             pass
-
-        self.end_state ,= self.end_states
 
         self._parse_table = ParseTable(self.states, self.start_state, self.end_state)
 

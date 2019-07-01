@@ -194,13 +194,13 @@ class CYK(WithLexer):
         self.init_traditional_lexer()
 
         self._analysis = GrammarAnalyzer(parser_conf)
-        self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
+        self.parser = cyk.Parser(parser_conf.rules)
 
         self.callbacks = parser_conf.callbacks
 
     def parse(self, text, start):
         tokens = list(self.lex(text))
-        parse = self._parser.parse(tokens)
+        parse = self._parse(tokens, start)
         parse = self._transform(parse)
         return parse
 

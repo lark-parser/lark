@@ -274,7 +274,7 @@ class Parser:
         assert i == len(columns)-1
 
     def parse(self, stream, start_symbol=None):
-        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
+        start_symbol = NonTerminal(start_symbol or self.parser_conf.start[0])
 
         columns = [set()]
         to_scan = set()     # The scan buffer. 'Q' in E.Scott's paper.

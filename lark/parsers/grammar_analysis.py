@@ -109,7 +109,7 @@ class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 
-        rules = parser_conf.rules + [Rule(NonTerminal('$root'), [NonTerminal(parser_conf.start), Terminal('$END')])]
+        rules = parser_conf.rules + [Rule(NonTerminal('$root'), [NonTerminal(s), Terminal('$END')]) for s in parser_conf.start]
         self.rules_by_origin = classify(rules, lambda r: r.origin)
 
         if len(rules) != len(set(rules)):

@@ -85,6 +85,9 @@ class LarkOptions(Serialize):
 
             options[name] = value
 
+        if isinstance(options['start'], str):
+            options['start'] = [options['start']]
+
         self.__dict__['options'] = options
 
         assert self.parser in ('earley', 'lalr', 'cyk', None)

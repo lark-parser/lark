@@ -40,7 +40,7 @@ class _Parser:
     def __init__(self, parse_table, callbacks):
         self.states = parse_table.states
         self.start_state = parse_table.start_state
-        self.end_state = parse_table.end_state
+        self.end_states = parse_table.end_states
         self.callbacks = callbacks
 
     def parse(self, seq, set_state=None):
@@ -81,7 +81,7 @@ class _Parser:
         for token in stream:
             while True:
                 action, arg = get_action(token)
-                assert arg != self.end_state
+                assert arg not in self.end_states
 
                 if action is Shift:
                     state_stack.append(arg)
@@ -95,7 +95,7 @@ class _Parser:
         while True:
             _action, arg = get_action(token)
             if _action is Shift:
-                assert arg == self.end_state
+                assert arg in self.end_states
                 val ,= value_stack
                 return val
             else:

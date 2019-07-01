@@ -29,10 +29,10 @@ Shift = Action('Shift')
 Reduce = Action('Reduce')
 
 class ParseTable:
-    def __init__(self, states, start_state, end_state):
+    def __init__(self, states, start_state, end_states):
         self.states = states
         self.start_state = start_state
-        self.end_state = end_state
+        self.end_states = end_states
 
     def serialize(self, memo):
         tokens = Enumerator()
@@ -48,7 +48,7 @@ class ParseTable:
             'tokens': tokens.reversed(),
             'states': states,
             'start_state': self.start_state,
-            'end_state': self.end_state,
+            'end_states': self.end_states,
         }
 
     @classmethod
@@ -59,7 +59,7 @@ class ParseTable:
                     for token, (action, arg) in actions.items()}
             for state, actions in data['states'].items()
         }
-        return cls(states, data['start_state'], data['end_state'])
+        return cls(states, data['start_state'], data['end_states'])
 
 
 class IntParseTable(ParseTable):
@@ -77,8 +77,8 @@ class IntParseTable(ParseTable):
 
 
         start_state = state_to_idx[parse_table.start_state]
-        end_state = state_to_idx[parse_table.end_state]
-        return cls(int_states, start_state, end_state)
+        end_states = [state_to_idx[s] for s in parse_table.end_states]
+        return cls(int_states, start_state, end_states)
 
 ###}
 
@@ -130,9 +130,7 @@ class LALR_Analyzer(GrammarAnalyzer):
         for _ in bfs([self.start_state], step):
             pass
 
-        self.end_state ,= self.end_states
-
-        self._parse_table = ParseTable(self.states, self.start_state, self.end_state)
+        self._parse_table = ParseTable(self.states, self.start_state, self.end_states)
 
         if self.debug:
             self.parse_table = self._parse_table

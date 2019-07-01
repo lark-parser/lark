@@ -149,6 +149,7 @@ class _Lex:
         newline_types = frozenset(newline_types)
         ignore_types = frozenset(ignore_types)
         line_ctr = LineCounter()
+        last_token = None
 
         while line_ctr.char_pos < len(stream):
             lexer = self.lexer
@@ -166,6 +167,7 @@ class _Lex:
                         t = lexer.callback[t.type](t)
                         if not isinstance(t, Token):
                             raise ValueError("Callbacks must return a token (returned %r)" % t)
+                    last_token = t
                     yield t
                 else:
                     if type_ in lexer.callback:
@@ -180,7 +182,7 @@ class _Lex:
                 break
             else:
                 allowed = {v for m, tfi in lexer.mres for v in tfi.values()}
-                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, state=self.state)
+                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, state=self.state, token_history=last_token and [last_token])
 
 
 class UnlessCallback:

@@ -1505,6 +1505,18 @@ def _make_parser_test(LEXER, PARSER):
             """
             parser = _Lark(grammar)
 
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol(self):
+            grammar = """
+                start: a b?
+                a: "a" $
+                b: "b"
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('a'), Tree('start', [Tree('a', [])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
+
 
         @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
         def test_serialize(self):

@@ -1,6 +1,7 @@
 from .utils import Serialize
 
 ###{standalone
+END = '_END$'
 
 class Symbol(Serialize):
     is_term = NotImplemented

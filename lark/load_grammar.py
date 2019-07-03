@@ -11,7 +11,7 @@ from .lexer import Token, TerminalDef, PatternStr, PatternRE
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, END
 from .utils import classify, suppress, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
@@ -91,6 +91,7 @@ TERMINALS = {
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
     'NUMBER': r'\d+',
+    '_END': r'\$',
 }
 
 RULES = {
@@ -122,7 +123,8 @@ RULES = {
     'value': ['terminal',
               'nonterminal',
               'literal',
-              'range'],
+              'range',
+              'end'],
 
     'terminal': ['TERMINAL'],
     'nonterminal': ['RULE'],
@@ -131,6 +133,7 @@ RULES = {
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOT _DOT STRING'],
+    'end': ['_END'],
 
     'term': ['TERMINAL _COLON expansions _NL',
               'TERMINAL _DOT NUMBER _COLON expansions _NL'],
@@ -284,6 +287,9 @@ class CanonizeTree(Transformer_InPlace):
             return list(args)
         tokenmods, value = args
         return tokenmods + [value]
+
+    def end(self):
+        return Token('TERMINAL', END)
 
 class PrepareAnonTerminals(Transformer_InPlace):
     "Create a unique list of anonymous terminals. Attempt to give meaningful names to them when we add them"
@@ -735,6 +741,7 @@ class GrammarLoader:
 
         term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
         term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
+        term_defs.append((END, (None, 0)))
         rule_defs = [options_from_rule(*x) for x in rule_defs]
 
         # Execute statements
@@ -827,7 +834,7 @@ class GrammarLoader:
                 raise GrammarError("Terminal '%s' defined more than once" % name)
             terminal_names.add(name)
 
-        if set(ignore_names) > terminal_names:
+        if set(ignore_names) - terminal_names:
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(ignore_names) - terminal_names))
 
         resolve_term_references(term_defs)

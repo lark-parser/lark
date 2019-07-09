@@ -1,11 +1,9 @@
 from __future__ import absolute_import
 
 import sys
-import unittest
-from unittest import TestCase
+from unittest import TestCase, main
 
 from lark.tree import Tree
-
 from lark.tools import standalone
 
 try:
@@ -49,6 +47,8 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
         self.assertEqual(x.children, ['12', 'elephants'])
+        x = l.parse('16 candles')
+        self.assertEqual(x.children, ['16', 'candles'])
 
     def test_contextual(self):
         grammar = """
@@ -92,26 +92,19 @@ class TestStandalone(TestCase):
             _NEWLINE: /\n/
         """
 
-        # from lark import Lark
-        # l = Lark(grammar, parser='lalr', lexer='contextual', postlex=MyIndenter())
-        # x = l.parse('(\n)\n')
-        # print('@@', x)
-
-
         context = self._create_standalone(grammar)
         _Lark = context['Lark_StandAlone']
 
-        # l = _Lark(postlex=MyIndenter())
-        # x = l.parse('()\n')
-        # print(x)
+        l = _Lark(postlex=MyIndenter())
+        x = l.parse('()\n')
+        self.assertEqual(x, Tree('start', []))
         l = _Lark(postlex=MyIndenter())
         x = l.parse('(\n)\n')
-        print(x)
-
+        self.assertEqual(x, Tree('start', []))
 
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()
 
 

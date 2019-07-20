@@ -1029,6 +1029,32 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B.-20: "b"
+            AB.-10: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+            self.assertEqual(res.children, ['a', 'b'])
+
+
+            grammar = """
+            start: A B | AB
+            A.-99999999999999999999999: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['ab'])
+
+
+
+
+
 
         def test_import(self):
             grammar = """

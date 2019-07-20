@@ -90,7 +90,7 @@ TERMINALS = {
     '_IGNORE': r'%ignore',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
-    'NUMBER': r'\d+',
+    'NUMBER': r'[+-]?\d+',
 }
 
 RULES = {
@@ -196,7 +196,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 mn = mx = int(args[0])
             else:
                 mn, mx = map(int, args)
-                if mx < mn:
+                if mx < mn or mn < 0:
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
             return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx+1)])
         assert False, op

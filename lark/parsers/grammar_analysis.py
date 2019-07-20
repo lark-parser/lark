@@ -132,7 +132,7 @@ class GrammarAnalyzer(object):
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-    def expand_rule(self, rule):
+    def expand_rule(self, source_rule):
         "Returns all init_ptrs accessible by rule (recursive)"
         init_ptrs = set()
         def _expand_rule(rule):
@@ -147,14 +147,7 @@ class GrammarAnalyzer(object):
                     if not new_r.is_term:
                         yield new_r
 
-        for _ in bfs([rule], _expand_rule):
+        for _ in bfs([source_rule], _expand_rule):
             pass
 
         return fzset(init_ptrs)
-
-    def _first(self, r):
-        if r.is_term:
-            return {r}
-        else:
-            return {rp.next for rp in self.expand_rule(r) if rp.next.is_term}
-

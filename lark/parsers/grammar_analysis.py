@@ -38,7 +38,7 @@ class RulePtr(object):
 
 
 def update_set(set1, set2):
-    if not set2:
+    if not set2 or set1 > set2:
         return False
 
     copy = set(set1)
@@ -82,10 +82,11 @@ def calculate_sets(rules):
                     changed = True
 
             for i, sym in enumerate(rule.expansion):
-                if set(rule.expansion[:i]) > NULLABLE:
+                if set(rule.expansion[:i]) <= NULLABLE:
+                    if update_set(FIRST[rule.origin], FIRST[sym]):
+                        changed = True
+                else:
                     break
-                if update_set(FIRST[rule.origin], FIRST[sym]):
-                    changed = True
 
     # Calculate FOLLOW
     changed = True

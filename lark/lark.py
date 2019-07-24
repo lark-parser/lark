@@ -205,6 +205,8 @@ class Lark(Serialize):
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
 
+        self._terminals_dict = {t.name:t for t in self.terminals}
+
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.
         if self.options.priority == 'invert':
@@ -289,6 +291,10 @@ class Lark(Serialize):
         if self.options.postlex:
             return self.options.postlex.process(stream)
         return stream
+
+    def get_terminal(self, name):
+        "Get information about a terminal"
+        return self._terminals_dict[name]
 
     def parse(self, text, start=None):
         """Parse the given text, according to the options provided.

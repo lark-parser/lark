@@ -41,6 +41,8 @@ class Pattern(Serialize):
 
 
 class PatternStr(Pattern):
+    type = "str"
+    
     def to_regexp(self):
         return self._get_flags(re.escape(self.value))
 
@@ -50,6 +52,8 @@ class PatternStr(Pattern):
     max_width = min_width
 
 class PatternRE(Pattern):
+    type = "re"
+
     def to_regexp(self):
         return self._get_flags(self.value)
 

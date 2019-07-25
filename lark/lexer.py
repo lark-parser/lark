@@ -57,12 +57,18 @@ class PatternRE(Pattern):
     def to_regexp(self):
         return self._get_flags(self.value)
 
+    _width = None
+    def _get_width(self):
+        if self._width is None:
+            self._width = get_regexp_width(self.to_regexp())
+        return self._width
+
     @property
     def min_width(self):
-        return get_regexp_width(self.to_regexp())[0]
+        return self._get_width()[0]
     @property
     def max_width(self):
-        return get_regexp_width(self.to_regexp())[1]
+        return self._get_width()[1]
 
 
 class TerminalDef(Serialize):

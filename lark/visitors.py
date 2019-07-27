@@ -1,5 +1,6 @@
 from functools import wraps
 
+from .lexer import Token
 from .utils import smart_decorator
 from .tree import Tree
 from .exceptions import VisitError, GrammarError
@@ -21,7 +22,7 @@ class Transformer:
     Can be used to implement map or reduce.
     """
 
-    def _call_userfunc(self, tree, new_children=None):
+    def _call_userfunc_tree(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
         try:
@@ -45,16 +46,22 @@ class Transformer:
             except Exception as e:
                 raise VisitError(tree, e)
 
+    def _transform_child(self, c):
+        if isinstance(c, Tree):
+            return self._transform_tree(c)
+        else:
+            return c
+
     def _transform_children(self, children):
         for c in children:
             try:
-                yield self._transform_tree(c) if isinstance(c, Tree) else c
+                yield self._transform_child(c)
             except Discard:
                 pass
 
     def _transform_tree(self, tree):
         children = list(self._transform_children(tree.children))
-        return self._call_userfunc(tree, children)
+        return self._call_userfunc_tree(tree, children)
 
     def transform(self, tree):
         return self._transform_tree(tree)
@@ -88,8 +95,41 @@ class Transformer:
         return cls
 
 
-class InlineTransformer(Transformer):   # XXX Deprecated
-    def _call_userfunc(self, tree, new_children=None):
+class TokenTransformer(Transformer):
+    """Visits the tree recursively, starting with the leaves and finally the root (bottom-up),
+    also including the Tokens
+
+    Calls its methods (provided by user via inheritance) according to tree.data or token.type
+    The returned value replaces the old one in the structure.
+
+    Can be used to implement map or reduce.
+    """
+
+    def _call_userfunc_token(self, token):
+        # Assumes tree is already transformed
+        try:
+            f = getattr(self, token.type)
+        except AttributeError:
+            return token
+        else:
+            try:
+                return f(token)
+            except (GrammarError, Discard):
+                raise
+            except Exception as e:
+                raise VisitError(token, e)
+
+    def _transform_child(self, c):
+        if isinstance(c, Tree):
+            return self._transform_tree(c)
+        elif isinstance(c, Token):
+            return self._call_userfunc_token(c)
+        else:
+            return c
+
+
+class InlineTransformer(Transformer):  # XXX Deprecated
+    def _call_userfunc_tree(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
         try:
@@ -115,8 +155,8 @@ class TransformerChain(object):
 
 class Transformer_InPlace(Transformer):
     "Non-recursive. Changes the tree in-place instead of returning new instances"
-    def _transform_tree(self, tree):           # Cancel recursion
-        return self._call_userfunc(tree)
+    def _transform_tree(self, tree):  # Cancel recursion
+        return self._call_userfunc_tree(tree)
 
     def transform(self, tree):
         for subtree in tree.iter_subtrees():
@@ -129,20 +169,26 @@ class Transformer_InPlaceRecursive(Transformer):
     "Recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
-        return self._call_userfunc(tree)
+        return self._call_userfunc_tree(tree)
 
 
 
 # Visitors
 
 class VisitorBase:
-    def _call_userfunc(self, tree):
-        return getattr(self, tree.data, self.__default__)(tree)
+    def _call_userfunc(self, obj):
+        if isinstance(obj, Tree):
+            return getattr(self, obj.data, self.__default_tree__)(obj)
+        elif isinstance(obj, Token):
+            return getattr(self, obj.type, self.__default_token__)(obj)
 
-    def __default__(self, tree):
+    def __default_tree__(self, tree):
         "Default operation on tree (for override)"
         return tree
 
+    def __default_token__(self, token):
+        "Default operation on token (for override)"
+        return token
 
 class Visitor(VisitorBase):
     """Bottom-up visitor, non-recursive
@@ -151,9 +197,23 @@ class Visitor(VisitorBase):
     Calls its methods (provided by user via inheritance) according to tree.data
     """
 
+    def visit(self, tree):
+        for subtree in tree.iter_subtrees():
+            self._call_userfunc(subtree)
+        return tree
+
+
+class TokenVisitor(VisitorBase):
+    """Bottom-up visitor, non-recursive, also visits Tokens
+
+    Visits the tree, starting with the leaves and finally the root (bottom-up)
+    Calls its methods (provided by user via inheritance) according to tree.data or token.type"""
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
+            for c in subtree.children:
+                if isinstance(c, Token):
+                    self._call_userfunc(c)
             self._call_userfunc(subtree)
         return tree
 
@@ -169,10 +229,7 @@ class Visitor_Recursive(VisitorBase):
             if isinstance(child, Tree):
                 self.visit(child)
 
-        f = getattr(self, tree.data, self.__default__)
-        f(tree)
-        return tree
-
+        return self._call_userfunc(tree)
 
 
 def visit_children_decor(func):

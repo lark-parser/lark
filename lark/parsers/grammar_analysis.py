@@ -36,6 +36,23 @@ class RulePtr(object):
     def __hash__(self):
         return hash((self.rule, self.index))
 
+class LR0ItemSet(object):
+    __slots__ = ('kernel', 'closure', 'transitions')
+
+    def __init__(self, kernel, closure):
+        self.kernel = fzset(kernel)
+        self.closure = fzset(closure)
+        self.transitions = {}
+
+    def __eq__(self, other):
+        return self.kernel == other.kernel
+
+    def __hash__(self):
+        return hash(self.kernel)
+
+    def __repr__(self):
+        return '{%s | %s}' % (', '.join([repr(r) for r in self.kernel]), ', '.join([repr(r) for r in self.closure]))
+
 
 def update_set(set1, set2):
     if not set2:
@@ -130,15 +147,29 @@ class GrammarAnalyzer(object):
         self.end_states = {start: fzset({RulePtr(root_rule, len(root_rule.expansion))})
                            for start, root_rule in root_rules.items()}
 
+        lr0_root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start)])
+                for start in parser_conf.start}
+
+        lr0_rules = parser_conf.rules + list(lr0_root_rules.values())
+
+        self.lr0_rules_by_origin = classify(lr0_rules, lambda r: r.origin)
+
+        self.lr0_start_states = {start: LR0ItemSet([RulePtr(root_rule, 0)], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
+                for start, root_rule in lr0_root_rules.items()}
+
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-    def expand_rule(self, rule):
+    def expand_rule(self, rule, rules_by_origin=None):
         "Returns all init_ptrs accessible by rule (recursive)"
+
+        if rules_by_origin is None:
+            rules_by_origin = self.rules_by_origin
+
         init_ptrs = set()
         def _expand_rule(rule):
             assert not rule.is_term, rule
 
-            for r in self.rules_by_origin[rule]:
+            for r in rules_by_origin[rule]:
                 init_ptr = RulePtr(r, 0)
                 init_ptrs.add(init_ptr)
 
@@ -157,4 +188,3 @@ class GrammarAnalyzer(object):
             return {r}
         else:
             return {rp.next for rp in self.expand_rule(r) if rp.next.is_term}
-

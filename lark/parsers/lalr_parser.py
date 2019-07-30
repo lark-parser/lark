@@ -6,7 +6,7 @@ from ..exceptions import UnexpectedToken
 from ..lexer import Token
 from ..utils import Enumerator, Serialize
 
-from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable
+from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
 
 ###{standalone
@@ -15,7 +15,10 @@ class LALR_Parser(object):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
-        analysis.compute_lookahead()
+        analysis.generate_lr0_states()
+        analysis.discover_lookaheads()
+        analysis.propagate_lookaheads()
+        analysis.generate_lalr1_states()
         callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table
@@ -65,6 +68,9 @@ class _Parser:
                 raise UnexpectedToken(token, expected, state=state)
 
         def reduce(rule):
+            if state_stack[-1] == end_state:
+                return True
+
             size = len(rule.expansion)
             if size:
                 s = value_stack[-size:]
@@ -79,6 +85,8 @@ class _Parser:
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)
+
+            return False
 
         # Main LALR-parser loop
         for token in stream:
@@ -97,11 +105,8 @@ class _Parser:
         token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
         while True:
             _action, arg = get_action(token)
-            if _action is Shift:
-                assert arg == end_state
-                val ,= value_stack
-                return val
-            else:
-                reduce(arg)
+            assert(_action is Reduce)
+            if reduce(arg):
+                return value_stack[-1]
 
 ###}

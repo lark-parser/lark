@@ -7,7 +7,7 @@ An [Earley Parser](https://www.wikiwand.com/en/Earley_parser) is a chart parser 
 
 Lark's Earley implementation runs on top of a skipping chart parser, which allows it to use regular expressions, instead of matching characters one-by-one. This is a huge improvement to Earley that is unique to Lark. This feature is used by default, but can also be requested explicitely using `lexer='dynamic'`.
 
-It's possible to bypass the dynamic lexer, and use the regular Earley parser with a traditional lexer, that tokenizes as an independant first step. Doing so will provide a speed benefit, but will tokenize without using Earley's ambiguity-resolution ability. So choose this only if you know why! Activate with `lexer='standard'`
+It's possible to bypass the dynamic lexing, and use the regular Earley parser with a traditional lexer, that tokenizes as an independant first step. Doing so will provide a speed benefit, but will tokenize without using Earley's ambiguity-resolution ability. So choose this only if you know why! Activate with `lexer='standard'`
 
 **SPPF & Ambiguity resolution**
 

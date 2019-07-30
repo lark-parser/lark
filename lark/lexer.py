@@ -41,6 +41,8 @@ class Pattern(Serialize):
 
 
 class PatternStr(Pattern):
+    type = "str"
+    
     def to_regexp(self):
         return self._get_flags(re.escape(self.value))
 
@@ -50,15 +52,23 @@ class PatternStr(Pattern):
     max_width = min_width
 
 class PatternRE(Pattern):
+    type = "re"
+
     def to_regexp(self):
         return self._get_flags(self.value)
 
+    _width = None
+    def _get_width(self):
+        if self._width is None:
+            self._width = get_regexp_width(self.to_regexp())
+        return self._width
+
     @property
     def min_width(self):
-        return get_regexp_width(self.to_regexp())[0]
+        return self._get_width()[0]
     @property
     def max_width(self):
-        return get_regexp_width(self.to_regexp())[1]
+        return self._get_width()[1]
 
 
 class TerminalDef(Serialize):
@@ -88,7 +98,7 @@ class Token(Str):
 
         self.type = type_
         self.pos_in_stream = pos_in_stream
-        self.value = value
+        self.value = Str(value)
         self.line = line
         self.column = column
         self.end_line = end_line

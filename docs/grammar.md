@@ -45,6 +45,12 @@ Literals can be one of:
 * `/re with flags/imulx`
 * Literal range: `"a".."z"`, `"1".."9"`, etc.
 
+### Priority
+
+Terminals can be assigned priority only when using a lexer (future versions may support Earley's dynamic lexing).
+
+Priority can be either positive or negative. In not specified for a terminal, it's assumed to be 1 (i.e. the default).
+
 #### Notes for when using a lexer:
 
 When using a lexer (standard or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched in an order according to the following criteria:
@@ -90,7 +96,7 @@ Each item is one of:
 * `item*` - Zero or more instances of item
 * `item+` - One or more instances of item
 * `item ~ n` - Exactly *n* instances of item
-* `item ~ n..m` - Between *n* to *m* instances of item
+* `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
 
 **Examples:**
 ```perl
@@ -102,6 +108,11 @@ expr: expr operator expr
 four_words: word ~ 4
 ```
 
+### Priority
+
+Rules can be assigned priority only when using Earley (future versions may support LALR as well).
+
+Priority can be either positive or negative. In not specified for a terminal, it's assumed to be 1 (i.e. the default).
 
 ## Directives
 

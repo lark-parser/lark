@@ -55,7 +55,7 @@ class LR0ItemSet(object):
 
 
 def update_set(set1, set2):
-    if not set2:
+    if not set2 or set1 > set2:
         return False
 
     copy = set(set1)
@@ -102,6 +102,8 @@ def calculate_sets(rules):
                 if set(rule.expansion[:i]) <= NULLABLE:
                     if update_set(FIRST[rule.origin], FIRST[sym]):
                         changed = True
+                else:
+                    break
 
     # Calculate FOLLOW
     changed = True
@@ -159,7 +161,7 @@ class GrammarAnalyzer(object):
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-    def expand_rule(self, rule, rules_by_origin=None):
+    def expand_rule(self, source_rule, rules_by_origin=None):
         "Returns all init_ptrs accessible by rule (recursive)"
 
         if rules_by_origin is None:
@@ -178,13 +180,7 @@ class GrammarAnalyzer(object):
                     if not new_r.is_term:
                         yield new_r
 
-        for _ in bfs([rule], _expand_rule):
+        for _ in bfs([source_rule], _expand_rule):
             pass
 
         return fzset(init_ptrs)
-
-    def _first(self, r):
-        if r.is_term:
-            return {r}
-        else:
-            return {rp.next for rp in self.expand_rule(r) if rp.next.is_term}

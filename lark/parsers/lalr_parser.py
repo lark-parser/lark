@@ -8,6 +8,8 @@ from ..utils import Enumerator, Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
+import time
+
 
 ###{standalone
 class LALR_Parser(object):
@@ -15,10 +17,20 @@ class LALR_Parser(object):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
+        t0 = time.time()
         analysis.generate_lr0_states()
+        t1 = time.time()
         analysis.discover_lookaheads()
+        t2 = time.time()
         analysis.propagate_lookaheads()
+        t3 = time.time()
         analysis.generate_lalr1_states()
+        t4 = time.time()
+        print('Generating lr0 states took {:.3f}'.format(t1 - t0))
+        print('Discovering lookaheads took {:.3f}'.format(t2 - t1))
+        print('Propagating lookaheads took took {:.3f}'.format(t3 - t2))
+        print('Generating lalr states (closure) took {:.3f}'.format(t4 - t3))
+        print('-' * 32)
         callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table

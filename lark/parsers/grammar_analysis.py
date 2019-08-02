@@ -1,18 +1,41 @@
-from collections import Counter
+from collections import Counter, defaultdict
 
 from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal
+import time
 
+t_firsts = 0
+t_xy = 0
+t_call = 0
+cache_hits = 0
+cache_misses = 0
+
+# used to be just a tuple (rp, la)
+# but by making it an object,
+# the hash and equality become trivial
+# (slightly faster for sets which are hashtables?)
+class RulePtrLookahead(object):
+    __slots__ = 'rp', 'la'
+
+    def __init__(self, rp, la):
+        self.rp = rp
+        self.la = la
 
 class RulePtr(object):
-    __slots__ = ('rule', 'index')
+    __slots__ = ('rule', 'index', '_advance', '_lookaheads', '_next_rules_by_origin', '_first')
 
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)
         self.rule = rule
         self.index = index
+        #self._hash = hash((self.rule, self.index))
+        #self._hash = None
+        self._advance = None
+        self._lookaheads = {}
+        self._next_rules_by_origin = None
+        self._first = None
 
     def __repr__(self):
         before = [x.name for x in self.rule.expansion[:self.index]]
@@ -23,32 +46,102 @@ class RulePtr(object):
     def next(self):
         return self.rule.expansion[self.index]
 
+    # don't create duplicate RulePtrs
     def advance(self, sym):
         assert self.next == sym
-        return RulePtr(self.rule, self.index+1)
+        a = self._advance
+        if a is None:
+            a = RulePtr(self.rule, self.index + 1)
+            self._advance = a
+        return a
 
     @property
     def is_satisfied(self):
         return self.index == len(self.rule.expansion)
 
+    def lookahead(self, la):
+        rp_la = self._lookaheads.get(la, None)
+        if rp_la is None:
+            rp_la = RulePtrLookahead(self, la)
+            self._lookaheads[la] = rp_la
+        return rp_la
+
+    def next_rules_by_origin(self, rules_by_origin):
+        n = self._next_rules_by_origin
+        if n is None:
+            n = rules_by_origin[self.next]
+            self._next_rules_by_origin = n
+        return n
+
+    # recursive form of lalr_analyis.py:343 (which is easier to understand IMO)
+    # normally avoid recursion but this allows us to cache
+    # each intermediate step in a corresponding RulePtr
+    def first(self, i, firsts, nullable, t):
+        global cache_hits
+        global cache_misses
+        global t_firsts
+        global t_xy
+        global t_call
+        t_call += time.time() - t
+        n = len(self.rule.expansion)
+        if i == n:
+            return ([], True)
+        x = self._first
+        t_x = time.time()
+        if x is None:
+            t0 = time.time()
+            t_y = time.time()
+            cache_misses += 1
+            s = self.rule.expansion[i]
+            l = list(firsts.get(s, []))
+            b = (s in nullable)
+            if b:
+                t1 = time.time()
+                t_firsts += t1 - t0
+                l_b_2 = self.advance(s).first(i + 1, firsts, nullable, time.time())
+                #l_b_2 = first(self.advance(self.next), i + 1, firsts, nullable, time.time())
+                t0 = time.time()
+                l.extend(l_b_2[0])
+                b = l_b_2[1]
+            x = (l, b)
+            self._first = x
+            t1 = time.time()
+            t_firsts += t1 - t0
+        else:
+            t_y = time.time()
+            cache_hits += 1
+        t_xy += t_y - t_x
+        return x
+
+    # optimizations were made so that there should never be
+    # two distinct equal RulePtrs
+    # should help set/hashtable lookups?
+    '''
     def __eq__(self, other):
         return self.rule == other.rule and self.index == other.index
     def __hash__(self):
-        return hash((self.rule, self.index))
+        return self._hash
+    '''
+
 
 class LR0ItemSet(object):
-    __slots__ = ('kernel', 'closure', 'transitions')
+    __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads', '_hash')
 
     def __init__(self, kernel, closure):
         self.kernel = fzset(kernel)
         self.closure = fzset(closure)
         self.transitions = {}
+        self.lookaheads = defaultdict(set)
+        #self._hash = hash(self.kernel)
 
+    # state generation ensures no duplicate LR0ItemSets
+    '''
     def __eq__(self, other):
         return self.kernel == other.kernel
 
     def __hash__(self):
-        return hash(self.kernel)
+        return self._hash
+    '''
 
     def __repr__(self):
         return '{%s | %s}' % (', '.join([repr(r) for r in self.kernel]), ', '.join([repr(r) for r in self.closure]))
@@ -153,13 +246,21 @@ class GrammarAnalyzer(object):
                 for start in parser_conf.start}
 
         lr0_rules = parser_conf.rules + list(lr0_root_rules.values())
+        assert(len(lr0_rules) == len(set(lr0_rules)))
 
         self.lr0_rules_by_origin = classify(lr0_rules, lambda r: r.origin)
 
-        self.lr0_start_states = {start: LR0ItemSet([RulePtr(root_rule, 0)], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
+        # cache RulePtr(r, 0) in r (no duplicate RulePtr objects)
+        for root_rule in lr0_root_rules.values():
+            root_rule._rp = RulePtr(root_rule, 0)
+        self.lr0_start_states = {start: LR0ItemSet([root_rule._rp], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
                 for start, root_rule in lr0_root_rules.items()}
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
+
+        # unused, did not help
+        self.lr1_cache = {}
+        self.lr1_cache2 = {}
 
     def expand_rule(self, source_rule, rules_by_origin=None):
         "Returns all init_ptrs accessible by rule (recursive)"
@@ -172,7 +273,11 @@ class GrammarAnalyzer(object):
             assert not rule.is_term, rule
 
             for r in rules_by_origin[rule]:
-                init_ptr = RulePtr(r, 0)
+                # don't create duplicate RulePtr objects
+                init_ptr = r._rp
+                if init_ptr is None:
+                    init_ptr = RulePtr(r, 0)
+                    r._rp = init_ptr
                 init_ptrs.add(init_ptr)
 
                 if r.expansion: # if not empty rule

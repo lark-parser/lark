@@ -3,10 +3,13 @@ from .utils import Serialize
 ###{standalone
 
 class Symbol(Serialize):
+    __slots__ = ('name', '_hash')
+
     is_term = NotImplemented
 
     def __init__(self, name):
         self.name = name
+        self._hash = hash(self.name)
 
     def __eq__(self, other):
         assert isinstance(other, Symbol), other
@@ -16,7 +19,7 @@ class Symbol(Serialize):
         return not (self == other)
 
     def __hash__(self):
-        return hash(self.name)
+        return self._hash
 
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.name)
@@ -31,6 +34,7 @@ class Terminal(Symbol):
 
     def __init__(self, name, filter_out=False):
         self.name = name
+        self._hash = hash(self.name)
         self.filter_out = filter_out
 
     @property
@@ -69,7 +73,7 @@ class Rule(Serialize):
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
     """
-    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
+    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash', '_rp')
 
     __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
     __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
@@ -81,6 +85,7 @@ class Rule(Serialize):
         self.order = order
         self.options = options
         self._hash = hash((self.origin, tuple(self.expansion)))
+        self._rp = None
 
     def _deserialize(self):
         self._hash = hash((self.origin, tuple(self.expansion)))

@@ -1558,6 +1558,27 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(parser.parse('xa', 'a'), Tree('a', []))
             self.assertEqual(parser.parse('xb', 'b'), Tree('b', []))
 
+        def test_lexer_detect_newline_tokens(self):
+            # Detect newlines in regular tokens
+            g = Lark(r"""start: "go" tail*
+            tail : SA "a" | SB "b" | SC "c" | SD "d"
+            SA : /\n/
+            SB : /./
+            SC : /[^a-z]/
+            SD : /\s/g
+            """, parser=PARSER, lexer=LEXER)
+            _, _, a, _, b, _, c, _, d = g.lex('go\na\nb\nc\nd')
+            self.assertEqual(a.line, 2)
+            self.assertEqual(b.line, 3)
+            self.assertEqual(c.line, 4)
+            self.assertEqual(d.line, 5)
+
+            # Detect newlines in ignored tokens
+            for re in ['/\\n/', '/[^a-z]/', '/\\s/']:
+                g = Lark('start: "a" [start]\n%ignore {}'.format(re), lexer=LEXER, parser=PARSER)
+                a, b = g.lex('a\na')
+                self.assertEqual(a.line, 1)
+                self.assertEqual(b.line, 2)
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

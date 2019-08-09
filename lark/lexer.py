@@ -270,8 +270,9 @@ def _regexp_has_newline(r):
         - escaped newline (\\n)
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
+        - spaces (\s)
     """
-    return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
+    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 class Lexer(object):
     """Lexer interface

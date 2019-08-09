@@ -4,6 +4,7 @@
 /lark_parser.egg-info/**
 tags
 .vscode
+.idea
 .ropeproject
 .cache
 /dist

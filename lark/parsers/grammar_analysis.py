@@ -3,20 +3,16 @@ from collections import Counter, defaultdict
 from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal
-import time
 
 
-# optimizations were made so that there should never be two distinct equal RulePtrs
-# to help with hashtable lookup
 class RulePtr(object):
-    __slots__ = ('rule', 'index', '_advance')
+    __slots__ = ('rule', 'index')
 
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)
         self.rule = rule
         self.index = index
-        self._advance = None
 
     def __repr__(self):
         before = [x.name for x in self.rule.expansion[:self.index]]
@@ -27,18 +23,18 @@ class RulePtr(object):
     def next(self):
         return self.rule.expansion[self.index]
 
-    # don't create duplicate RulePtrs
     def advance(self, sym):
         assert self.next == sym
-        a = self._advance
-        if a is None:
-            a = RulePtr(self.rule, self.index + 1)
-            self._advance = a
-        return a
+        return RulePtr(self.rule, self.index+1)
 
     @property
     def is_satisfied(self):
         return self.index == len(self.rule.expansion)
+
+    def __eq__(self, other):
+        return self.rule == other.rule and self.index == other.index
+    def __hash__(self):
+        return hash((self.rule, self.index))
 
 
 # state generation ensures no duplicate LR0ItemSets
@@ -159,18 +155,10 @@ class GrammarAnalyzer(object):
         self.lr0_rules_by_origin = classify(lr0_rules, lambda r: r.origin)
 
         # cache RulePtr(r, 0) in r (no duplicate RulePtr objects)
-        for root_rule in lr0_root_rules.values():
-            root_rule._rp = RulePtr(root_rule, 0)
-        self.lr0_start_states = {start: LR0ItemSet([root_rule._rp], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
+        self.lr0_start_states = {start: LR0ItemSet([RulePtr(root_rule, 0)], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
                 for start, root_rule in lr0_root_rules.items()}
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
-
-        self.nonterminal_transitions = []
-        self.directly_reads = defaultdict(set)
-        self.reads = defaultdict(set)
-        self.includes = defaultdict(set)
-        self.lookback = defaultdict(set)
 
     def expand_rule(self, source_rule, rules_by_origin=None):
         "Returns all init_ptrs accessible by rule (recursive)"
@@ -183,11 +171,7 @@ class GrammarAnalyzer(object):
             assert not rule.is_term, rule
 
             for r in rules_by_origin[rule]:
-                # don't create duplicate RulePtr objects
-                init_ptr = r._rp
-                if init_ptr is None:
-                    init_ptr = RulePtr(r, 0)
-                    r._rp = init_ptr
+                init_ptr = RulePtr(r, 0)
                 init_ptrs.add(init_ptr)
 
                 if r.expansion: # if not empty rule

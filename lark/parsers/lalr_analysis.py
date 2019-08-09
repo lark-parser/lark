@@ -15,8 +15,6 @@ from ..exceptions import GrammarError
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
 from ..grammar import Rule
 
-import time
-
 ###{standalone
 
 class Action:
@@ -115,8 +113,8 @@ def traverse(x, S, N, X, R, G, F):
     S.append(x)
     d = len(S)
     N[x] = d
-    F[x] = G(x)
-    for y in R(x):
+    F[x] = G[x]
+    for y in R[x]:
         if N[y] == 0:
             traverse(y, S, N, X, R, G, F)
         n_x = N[x]
@@ -137,9 +135,17 @@ def traverse(x, S, N, X, R, G, F):
 
 
 class LALR_Analyzer(GrammarAnalyzer):
+    def __init__(self, parser_conf, debug=False):
+        GrammarAnalyzer.__init__(self, parser_conf, debug)
+        self.nonterminal_transitions = []
+        self.directly_reads = defaultdict(set)
+        self.reads = defaultdict(set)
+        self.includes = defaultdict(set)
+        self.lookback = defaultdict(set)
+
 
     def compute_lr0_states(self):
-        self.states = set()
+        self.lr0_states = set()
         # map of kernels to LR0ItemSets
         cache = {}
 
@@ -161,7 +167,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 state.transitions[sym] = new_state
                 yield new_state
 
-            self.states.add(state)
+            self.lr0_states.add(state)
 
         for _ in bfs(self.lr0_start_states.values(), step):
             pass
@@ -174,14 +180,14 @@ class LALR_Analyzer(GrammarAnalyzer):
                 assert(rp.index == 0)
                 self.directly_reads[(root, rp.next)] = set([ Terminal('$END') ])
 
-        for state in self.states:
+        for state in self.lr0_states:
             seen = set()
             for rp in state.closure:
                 if rp.is_satisfied:
                     continue
                 s = rp.next
                 # if s is a not a nonterminal
-                if not s in self.lr0_rules_by_origin:
+                if s not in self.lr0_rules_by_origin:
                     continue
                 if s in seen:
                     continue
@@ -201,11 +207,6 @@ class LALR_Analyzer(GrammarAnalyzer):
                     if s2 in self.NULLABLE:
                         r.add((next_state, s2))
 
-    def compute_read_sets(self):
-        R = lambda nt: self.reads[nt]
-        G = lambda nt: self.directly_reads[nt]
-        self.read_sets = digraph(self.nonterminal_transitions, R, G)
-
     def compute_includes_lookback(self):
         for nt in self.nonterminal_transitions:
             state, nonterminal = nt
@@ -220,9 +221,8 @@ class LALR_Analyzer(GrammarAnalyzer):
                     s = rp.rule.expansion[i]
                     nt2 = (state2, s)
                     state2 = state2.transitions[s]
-                    if not nt2 in self.reads:
+                    if nt2 not in self.reads:
                         continue
-                    j = i + 1
                     for j in range(i + 1, len(rp.rule.expansion)):
                         if not rp.rule.expansion[j] in self.NULLABLE:
                             break
@@ -236,20 +236,18 @@ class LALR_Analyzer(GrammarAnalyzer):
             for nt2 in includes:
                 self.includes[nt2].add(nt)
 
-    def compute_follow_sets(self):
-        R = lambda nt: self.includes[nt]
-        G = lambda nt: self.read_sets[nt]
-        self.follow_sets = digraph(self.nonterminal_transitions, R, G)
-
     def compute_lookaheads(self):
+        read_sets = digraph(self.nonterminal_transitions, self.reads, self.directly_reads)
+        follow_sets = digraph(self.nonterminal_transitions, self.includes, read_sets)
+
         for nt, lookbacks in self.lookback.items():
             for state, rule in lookbacks:
-                for s in self.follow_sets[nt]:
+                for s in follow_sets[nt]:
                     state.lookaheads[s].add(rule)
 
     def compute_lalr1_states(self):
         m = {}
-        for state in self.states:
+        for state in self.lr0_states:
             actions = {}
             for la, next_state in state.transitions.items():
                 actions[la] = (Shift, next_state.closure)
@@ -281,3 +279,10 @@ class LALR_Analyzer(GrammarAnalyzer):
             self.parse_table = self._parse_table
         else:
             self.parse_table = IntParseTable.from_ParseTable(self._parse_table)
+
+    def compute_lalr(self):
+        self.compute_lr0_states()
+        self.compute_reads_relations()
+        self.compute_includes_lookback()
+        self.compute_lookaheads()
+        self.compute_lalr1_states()

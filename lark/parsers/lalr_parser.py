@@ -8,8 +8,6 @@ from ..utils import Enumerator, Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
-import time
-
 
 ###{standalone
 class LALR_Parser(object):
@@ -17,13 +15,7 @@ class LALR_Parser(object):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
-        analysis.compute_lr0_states()
-        analysis.compute_reads_relations()
-        analysis.compute_read_sets()
-        analysis.compute_includes_lookback()
-        analysis.compute_follow_sets()
-        analysis.compute_lookaheads()
-        analysis.compute_lalr1_states()
+        analysis.compute_lalr()
         callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table
@@ -88,11 +80,6 @@ class _Parser:
             state_stack.append(new_state)
             value_stack.append(value)
 
-            if state_stack[-1] == end_state:
-                return True
-
-            return False
-
         # Main LALR-parser loop
         for token in stream:
             while True:
@@ -111,7 +98,8 @@ class _Parser:
         while True:
             _action, arg = get_action(token)
             assert(_action is Reduce)
-            if reduce(arg):
+            reduce(arg)
+            if state_stack[-1] == end_state:
                 return value_stack[-1]
 
 ###}

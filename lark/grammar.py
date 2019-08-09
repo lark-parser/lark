@@ -71,7 +71,7 @@ class Rule(Serialize):
         expansion : a list of symbols
         order : index of this expansion amongst all rules of the same name
     """
-    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash', '_rp')
+    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
 
     __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
     __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
@@ -83,7 +83,6 @@ class Rule(Serialize):
         self.order = order
         self.options = options
         self._hash = hash((self.origin, tuple(self.expansion)))
-        self._rp = None
 
     def _deserialize(self):
         self._hash = hash((self.origin, tuple(self.expansion)))

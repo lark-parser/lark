@@ -3,13 +3,12 @@ from .utils import Serialize
 ###{standalone
 
 class Symbol(Serialize):
-    __slots__ = ('name', '_hash')
+    __slots__ = ('name',)
 
     is_term = NotImplemented
 
     def __init__(self, name):
         self.name = name
-        self._hash = hash(self.name)
 
     def __eq__(self, other):
         assert isinstance(other, Symbol), other
@@ -19,7 +18,7 @@ class Symbol(Serialize):
         return not (self == other)
 
     def __hash__(self):
-        return self._hash
+        return hash(self.name)
 
     def __repr__(self):
         return '%s(%r)' % (type(self).__name__, self.name)
@@ -28,13 +27,12 @@ class Symbol(Serialize):
 
 
 class Terminal(Symbol):
-    __serialize_fields__ = 'name', 'filter_out', '_hash'
+    __serialize_fields__ = 'name', 'filter_out'
 
     is_term = True
 
     def __init__(self, name, filter_out=False):
         self.name = name
-        self._hash = hash(self.name)
         self.filter_out = filter_out
 
     @property
@@ -44,7 +42,7 @@ class Terminal(Symbol):
 
 
 class NonTerminal(Symbol):
-    __serialize_fields__ = 'name', '_hash'
+    __serialize_fields__ = 'name',
 
     is_term = False
 

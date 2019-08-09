@@ -17,20 +17,13 @@ class LALR_Parser(object):
         assert all(r.options is None or r.options.priority is None
                    for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
-        t0 = time.time()
-        analysis.generate_lr0_states()
-        t1 = time.time()
-        analysis.discover_lookaheads()
-        t2 = time.time()
-        analysis.propagate_lookaheads()
-        t3 = time.time()
-        analysis.generate_lalr1_states()
-        t4 = time.time()
-        print('Generating lr0 states took {:.3f}'.format(t1 - t0))
-        print('Discovering lookaheads took {:.3f}'.format(t2 - t1))
-        print('Propagating lookaheads took took {:.3f}'.format(t3 - t2))
-        print('Generating lalr states (closure) took {:.3f}'.format(t4 - t3))
-        print('-' * 32)
+        analysis.compute_lr0_states()
+        analysis.compute_reads_relations()
+        analysis.compute_read_sets()
+        analysis.compute_includes_lookback()
+        analysis.compute_follow_sets()
+        analysis.compute_lookaheads()
+        analysis.compute_lalr1_states()
         callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table
@@ -80,9 +73,6 @@ class _Parser:
                 raise UnexpectedToken(token, expected, state=state)
 
         def reduce(rule):
-            if state_stack[-1] == end_state:
-                return True
-
             size = len(rule.expansion)
             if size:
                 s = value_stack[-size:]
@@ -97,6 +87,9 @@ class _Parser:
             assert _action is Shift
             state_stack.append(new_state)
             value_stack.append(value)
+
+            if state_stack[-1] == end_state:
+                return True
 
             return False
 

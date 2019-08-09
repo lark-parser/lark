@@ -5,37 +5,18 @@ from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal
 import time
 
-t_firsts = 0
-t_xy = 0
-t_call = 0
-cache_hits = 0
-cache_misses = 0
 
-# used to be just a tuple (rp, la)
-# but by making it an object,
-# the hash and equality become trivial
-# (slightly faster for sets which are hashtables?)
-class RulePtrLookahead(object):
-    __slots__ = 'rp', 'la'
-
-    def __init__(self, rp, la):
-        self.rp = rp
-        self.la = la
-
+# optimizations were made so that there should never be two distinct equal RulePtrs
+# to help with hashtable lookup
 class RulePtr(object):
-    __slots__ = ('rule', 'index', '_advance', '_lookaheads', '_next_rules_by_origin', '_first')
+    __slots__ = ('rule', 'index', '_advance')
 
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)
         self.rule = rule
         self.index = index
-        #self._hash = hash((self.rule, self.index))
-        #self._hash = None
         self._advance = None
-        self._lookaheads = {}
-        self._next_rules_by_origin = None
-        self._first = None
 
     def __repr__(self):
         before = [x.name for x in self.rule.expansion[:self.index]]
@@ -59,89 +40,16 @@ class RulePtr(object):
     def is_satisfied(self):
         return self.index == len(self.rule.expansion)
 
-    def lookahead(self, la):
-        rp_la = self._lookaheads.get(la, None)
-        if rp_la is None:
-            rp_la = RulePtrLookahead(self, la)
-            self._lookaheads[la] = rp_la
-        return rp_la
 
-    def next_rules_by_origin(self, rules_by_origin):
-        n = self._next_rules_by_origin
-        if n is None:
-            n = rules_by_origin[self.next]
-            self._next_rules_by_origin = n
-        return n
-
-    # recursive form of lalr_analyis.py:343 (which is easier to understand IMO)
-    # normally avoid recursion but this allows us to cache
-    # each intermediate step in a corresponding RulePtr
-    def first(self, i, firsts, nullable, t):
-        global cache_hits
-        global cache_misses
-        global t_firsts
-        global t_xy
-        global t_call
-        t_call += time.time() - t
-        n = len(self.rule.expansion)
-        if i == n:
-            return ([], True)
-        x = self._first
-        t_x = time.time()
-        if x is None:
-            t0 = time.time()
-            t_y = time.time()
-            cache_misses += 1
-            s = self.rule.expansion[i]
-            l = list(firsts.get(s, []))
-            b = (s in nullable)
-            if b:
-                t1 = time.time()
-                t_firsts += t1 - t0
-                l_b_2 = self.advance(s).first(i + 1, firsts, nullable, time.time())
-                #l_b_2 = first(self.advance(self.next), i + 1, firsts, nullable, time.time())
-                t0 = time.time()
-                l.extend(l_b_2[0])
-                b = l_b_2[1]
-            x = (l, b)
-            self._first = x
-            t1 = time.time()
-            t_firsts += t1 - t0
-        else:
-            t_y = time.time()
-            cache_hits += 1
-        t_xy += t_y - t_x
-        return x
-
-    # optimizations were made so that there should never be
-    # two distinct equal RulePtrs
-    # should help set/hashtable lookups?
-    '''
-    def __eq__(self, other):
-        return self.rule == other.rule and self.index == other.index
-    def __hash__(self):
-        return self._hash
-    '''
-
-
+# state generation ensures no duplicate LR0ItemSets
 class LR0ItemSet(object):
-    __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads', '_hash')
+    __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads')
 
     def __init__(self, kernel, closure):
         self.kernel = fzset(kernel)
         self.closure = fzset(closure)
         self.transitions = {}
         self.lookaheads = defaultdict(set)
-        #self._hash = hash(self.kernel)
-
-    # state generation ensures no duplicate LR0ItemSets
-    '''
-    def __eq__(self, other):
-        return self.kernel == other.kernel
-
-    def __hash__(self):
-        return self._hash
-    '''
 
     def __repr__(self):
         return '{%s | %s}' % (', '.join([repr(r) for r in self.kernel]), ', '.join([repr(r) for r in self.closure]))
@@ -258,9 +166,11 @@ class GrammarAnalyzer(object):
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-        # unused, did not help
-        self.lr1_cache = {}
-        self.lr1_cache2 = {}
+        self.nonterminal_transitions = []
+        self.directly_reads = defaultdict(set)
+        self.reads = defaultdict(set)
+        self.includes = defaultdict(set)
+        self.lookback = defaultdict(set)
 
     def expand_rule(self, source_rule, rules_by_origin=None):
         "Returns all init_ptrs accessible by rule (recursive)"

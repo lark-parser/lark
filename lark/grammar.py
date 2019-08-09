@@ -28,7 +28,7 @@ class Symbol(Serialize):
 
 
 class Terminal(Symbol):
-    __serialize_fields__ = 'name', 'filter_out'
+    __serialize_fields__ = 'name', 'filter_out', '_hash'
 
     is_term = True
 
@@ -44,7 +44,7 @@ class Terminal(Symbol):
 
 
 class NonTerminal(Symbol):
-    __serialize_fields__ = 'name',
+    __serialize_fields__ = 'name', '_hash'
 
     is_term = False
 

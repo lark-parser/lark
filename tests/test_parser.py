@@ -1560,14 +1560,14 @@ def _make_parser_test(LEXER, PARSER):
 
         def test_lexer_detect_newline_tokens(self):
             # Detect newlines in regular tokens
-            g = Lark(r"""start: "go" tail*
-            tail : SA "a" | SB "b" | SC "c" | SD "d"
-            SA : /\n/
-            SB : /./
-            SC : /[^a-z]/
-            SD : /\s/g
-            """, parser=PARSER, lexer=LEXER)
-            _, _, a, _, b, _, c, _, d = g.lex('go\na\nb\nc\nd')
+            g = _Lark(r"""start: "go" tail*
+            !tail : SA "@" | SB "@" | SC "@" | SD "@"
+            SA : "a" /\n/
+            SB : /b./s
+            SC : "c" /[^a-z]/
+            SD : "d" /\s/
+            """)
+            a,b,c,d = [x.children[1] for x in g.parse('goa\n@b\n@c\n@d\n@').children]
             self.assertEqual(a.line, 2)
             self.assertEqual(b.line, 3)
             self.assertEqual(c.line, 4)
@@ -1575,8 +1575,9 @@ def _make_parser_test(LEXER, PARSER):
 
             # Detect newlines in ignored tokens
             for re in ['/\\n/', '/[^a-z]/', '/\\s/']:
-                g = Lark('start: "a" [start]\n%ignore {}'.format(re), lexer=LEXER, parser=PARSER)
-                a, b = g.lex('a\na')
+                g = _Lark('''!start: "a" "a"
+                             %ignore {}'''.format(re))
+                a, b = g.parse('a\na').children
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 

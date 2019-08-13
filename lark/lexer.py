@@ -8,7 +8,6 @@ from .exceptions import UnexpectedCharacters, LexError
 ###{standalone
 
 class Pattern(Serialize):
-    __serialize_fields__ = 'value', 'flags'
 
     def __init__(self, value, flags=()):
         self.value = value
@@ -41,6 +40,8 @@ class Pattern(Serialize):
 
 
 class PatternStr(Pattern):
+    __serialize_fields__ = 'value', 'flags'
+
     type = "str"
     
     def to_regexp(self):
@@ -52,6 +53,8 @@ class PatternStr(Pattern):
     max_width = min_width
 
 class PatternRE(Pattern):
+    __serialize_fields__ = 'value', 'flags', '_width'
+
     type = "re"
 
     def to_regexp(self):

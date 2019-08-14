@@ -5,4 +5,4 @@ from .exceptions import ParseError, LexError, GrammarError, UnexpectedToken, Une
 from .lexer import Token
 from .lark import Lark
 
-__version__ = "0.7.2"
+__version__ = "0.7.3"

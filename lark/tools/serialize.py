@@ -12,7 +12,7 @@ argparser = argparse.ArgumentParser(prog='python -m lark.tools.serialize') #desc
 
 argparser.add_argument('grammar_file', type=argparse.FileType('r'), help='A valid .lark file')
 argparser.add_argument('-o', '--out', type=argparse.FileType('w'), default=sys.stdout, help='json file path to create (default=stdout)')
-argparser.add_argument('-s', '--start', default='start', help='start symbol (default="start")')
+argparser.add_argument('-s', '--start', default='start', help='start symbol (default="start")', nargs='+')
 argparser.add_argument('-l', '--lexer', default='standard', choices=['standard', 'contextual'], help='lexer type (default="standard")')
 
 
@@ -33,8 +33,7 @@ def main():
         argparser.print_help()
     else:
         args = argparser.parse_args()
-
-    serialize(args.grammar_file, args.out, args.lexer, args.start)
+        serialize(args.grammar_file, args.out, args.lexer, args.start)
 
 if __name__ == '__main__':
     main()

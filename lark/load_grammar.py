@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress, dedup_list
+from .utils import classify, suppress, dedup_list, Str
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
@@ -451,9 +451,9 @@ class PrepareSymbols(Transformer_InPlace):
         if isinstance(v, Tree):
             return v
         elif v.type == 'RULE':
-            return NonTerminal(v.value)
+            return NonTerminal(Str(v.value))
         elif v.type == 'TERMINAL':
-            return Terminal(v.value, filter_out=v.startswith('_'))
+            return Terminal(Str(v.value), filter_out=v.startswith('_'))
         assert False
 
 def _choice_of_rules(rules):

@@ -101,7 +101,7 @@ class Token(Str):
 
         self.type = type_
         self.pos_in_stream = pos_in_stream
-        self.value = Str(value)
+        self.value = value
         self.line = line
         self.column = column
         self.end_line = end_line

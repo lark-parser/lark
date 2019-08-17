@@ -1,2 +1,5 @@
 version: 2
+mkdocs:
+  configuration: mkdocs.yml
+  fail_on_warning: false
 formats: all

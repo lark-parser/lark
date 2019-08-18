@@ -20,10 +20,11 @@ from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, ForestToAmbiguousTreeVisitor
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
+        self.debug = debug
 
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
@@ -296,6 +297,10 @@ class Parser:
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        if self.debug:
+            from .earley_forest import ForestToPyDotVisitor
+            debug_walker = ForestToPyDotVisitor()
+            debug_walker.visit(solutions[0], "sppf.png")
 
         if not solutions:
             expected_tokens = [t.expect for t in to_scan]

@@ -151,16 +151,16 @@ class TestTrees(TestCase):
 
         tree = Tree("start", [Tree("a", ["test1"]), Tree("b", ["test2"])])
 
-        def test(t, s):
-            return s.upper()
+        def test(prefix, s, postfix):
+            return prefix + s.upper() + postfix
 
         @v_args(inline=True)
         class T(Transformer):
-            a = functools.partial(test)
-            b = functools.partial(lambda t, s: s + "!")
+            a = functools.partial(test, "@", postfix="!")
+            b = functools.partial(lambda s: s + "!")
 
         res = T().transform(tree)
-        assert res.children == ["TEST1", "test2!"]
+        assert res.children == ["@TEST1!", "test2!"]
 
 
     def test_discard(self):

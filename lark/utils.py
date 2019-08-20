@@ -160,7 +160,7 @@ def smart_decorator(f, create_decorator):
 
     elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        return wraps(f.func)(create_decorator(f.func, True))
+        return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
 
     else:
         return create_decorator(f.__func__.__call__, True)

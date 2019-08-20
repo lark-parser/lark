@@ -72,7 +72,7 @@ Lark is great at handling ambiguity. Let's parse the phrase "fruit flies like ba
 
 ![fruitflies.png](examples/fruitflies.png)
 
-See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
+See more [examples here](https://github.com/lark-parser/lark/tree/master/examples)
 
 
 
@@ -95,7 +95,7 @@ See more [examples in the wiki](https://github.com/erezsh/lark/wiki/Examples)
  - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
  - And much more!
 
-See the full list of [features in the wiki](https://github.com/erezsh/lark/wiki/Features)
+See the full list of [features here](https://lark-parser.readthedocs.io/en/latest/features/)
 
 
 ### Comparison to other libraries

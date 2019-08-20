@@ -122,7 +122,7 @@ class PackedNode(ForestNode):
         ambiguously. Hence, we use the sort order to identify
         the order in which ambiguous children should be considered.
         """
-        return self.is_empty, -self.priority, -self.rule.order
+        return self.is_empty, -self.priority, self.rule.order
 
     def __iter__(self):
         return iter([self.left, self.right])

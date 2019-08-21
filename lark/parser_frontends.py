@@ -118,7 +118,7 @@ class LALR_ContextualLexer(LALR_WithLexer):
 
 class LALR_CustomLexer(LALR_WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.lexer = lexer_cls(self.lexer_conf)
+        self.lexer = lexer_cls(lexer_conf)
         debug = options.debug if options else False
         self.parser = LALR_Parser(parser_conf, debug=debug)
         WithLexer.__init__(self, lexer_conf, parser_conf, options)

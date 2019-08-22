@@ -76,7 +76,9 @@ class Transformer:
             # Make sure the function isn't inherited (unless it's overwritten)
             if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
                 continue
-            if not callable(cls.__dict__[name]):
+            # Check the actual value here, as staticmethod is a descriptor and
+            # as such returns False for callable.
+            if not callable(value):
                 continue
 
             # Skip if v_args already applied (at the function level)

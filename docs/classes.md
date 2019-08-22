@@ -142,10 +142,22 @@ class EvalExpressions(Transformer):
     def expr(self, args):
             return eval(args[0])
 
-t = Tree('a', [Tree('expr', ['1+2'])])
+    # lambdas provide for neat one liners
+
+    # by default lambda will bind, taking self as the first argument
+    mul = lambda self, args: args[0] * args[1]
+
+    # if you don't need self, wrap it in a staticmethod
+    add = staticmethod(lambda args: args[0] + args[1])
+
+t = Tree('a', [
+        Tree('expr', ['1+2']),
+        Tree('mul', [3, 4]),
+        Tree('add', [3, 4])
+    ])
 print(EvalExpressions().transform( t ))
 
-# Prints: Tree(a, [3])
+# Prints: Tree(a, [3, 12, 7])
 ```
 
 
@@ -177,6 +189,20 @@ class SolveArith(Transformer):
     def add(self, left, right):
         return left + right
 
+    # neat one liner for dealing with hex that works with v_args inline
+    hexnumber = functools.partial(int, base=16)
+
+    mul = staticmethod(lambda left, right: left * right)
+
+t = Tree('a', [
+        Tree('add', [5, 6]),
+        Tree('mul', [
+            Tree('hexnumber', ['0x3']),
+            4
+        ])
+    ])
+print(SolveArith().transform( t ))
+# Prints: Tree(a, [11, 12])
 
 class ReverseNotation(Transformer_InPlace):
     @v_args(tree=True):

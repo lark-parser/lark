@@ -2,7 +2,7 @@ from .exceptions import GrammarError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
-from .visitors import Transformer_InPlace
+from .visitors import Transformer_InPlace, Discard
 
 ###{standalone
 from functools import partial, wraps
@@ -18,6 +18,13 @@ class ExpandSingleChild:
             return children[0]
         else:
             return self.node_builder(children)
+
+class FilterDiscard:
+    def __init__(self, node_builder):
+        self.node_builder = node_builder
+
+    def __call__(self, children):
+        return self.node_builder([c for c in children if c is not Discard])
 
 class PropagatePositions:
     def __init__(self, node_builder):
@@ -219,6 +226,7 @@ class ParseTreeBuilder:
             expand_single_child = options.expand1 if options else False
 
             wrapper_chain = list(filter(None, [
+                FilterDiscard,
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders and options else None),
                 self.propagate_positions and PropagatePositions,

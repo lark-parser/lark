@@ -268,7 +268,7 @@ def build_mres(terminals, match_whole=False):
     return _build_mres(terminals, len(terminals), match_whole)
 
 def _regexp_has_newline(r):
-    """Expressions that may indicate newlines in a regexp:
+    r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
         - anything but ([^...])

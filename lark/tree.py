@@ -56,30 +56,6 @@ class Tree(object):
 
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
-###}
-
-    def expand_kids_by_index(self, *indices):
-        "Expand (inline) children at the given indices"
-        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
-            kid = self.children[i]
-            self.children[i:i+1] = kid.children
-
-    def find_pred(self, pred):
-        "Find all nodes where pred(tree) == True"
-        return filter(pred, self.iter_subtrees())
-
-    def find_data(self, data):
-        "Find all nodes where tree.data == data"
-        return self.find_pred(lambda t: t.data == data)
-
-    def scan_values(self, pred):
-        for c in self.children:
-            if isinstance(c, Tree):
-                for t in c.scan_values(pred):
-                    yield t
-            else:
-                if pred(c):
-                    yield c
 
     def iter_subtrees(self):
         # TODO: Re-write as a more efficient version
@@ -101,6 +77,31 @@ class Tree(object):
             if id(x) not in seen:
                 yield x
                 seen.add(id(x))
+
+    def find_pred(self, pred):
+        "Find all nodes where pred(tree) == True"
+        return filter(pred, self.iter_subtrees())
+
+    def find_data(self, data):
+        "Find all nodes where tree.data == data"
+        return self.find_pred(lambda t: t.data == data)
+
+###}
+
+    def expand_kids_by_index(self, *indices):
+        "Expand (inline) children at the given indices"
+        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
+            kid = self.children[i]
+            self.children[i:i+1] = kid.children
+
+    def scan_values(self, pred):
+        for c in self.children:
+            if isinstance(c, Tree):
+                for t in c.scan_values(pred):
+                    yield t
+            else:
+                if pred(c):
+                    yield c
 
     def iter_subtrees_topdown(self):
         stack = [self]

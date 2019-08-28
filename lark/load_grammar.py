@@ -351,7 +351,10 @@ def _fix_escaping(s):
     for n in i:
         w += n
         if n == '\\':
-            n2 = next(i)
+            try:
+                n2 = next(i)
+            except StopIteration:
+                raise ValueError("Literal ended unexpectedly (bad escaping): `%r`" % s)
             if n2 == '\\':
                 w += '\\\\'
             elif n2 not in 'uxnftr':

@@ -605,6 +605,7 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
             _, tree, _ = imported_rules[symbol]
         except KeyError:
             raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
+        tree = next(tree.find_data("expansion"))    # Skip "alias" or other annotations
         return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
 
     def get_namespace_name(name):

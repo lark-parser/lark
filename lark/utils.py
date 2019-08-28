@@ -172,7 +172,7 @@ import sre_parse
 import sre_constants
 def get_regexp_width(regexp):
     try:
-        return sre_parse.parse(regexp).getwidth()
+        return [int(x) for x in sre_parse.parse(regexp).getwidth()]
     except sre_constants.error:
         raise ValueError(regexp)
 

@@ -12,7 +12,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress, dedup_list
+from .utils import classify, suppress, dedup_list, Str
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
@@ -351,7 +351,10 @@ def _fix_escaping(s):
     for n in i:
         w += n
         if n == '\\':
-            n2 = next(i)
+            try:
+                n2 = next(i)
+            except StopIteration:
+                raise ValueError("Literal ended unexpectedly (bad escaping): `%r`" % s)
             if n2 == '\\':
                 w += '\\\\'
             elif n2 not in 'uxnftr':
@@ -451,9 +454,9 @@ class PrepareSymbols(Transformer_InPlace):
         if isinstance(v, Tree):
             return v
         elif v.type == 'RULE':
-            return NonTerminal(v.value)
+            return NonTerminal(Str(v.value))
         elif v.type == 'TERMINAL':
-            return Terminal(v.value, filter_out=v.startswith('_'))
+            return Terminal(Str(v.value), filter_out=v.startswith('_'))
         assert False
 
 def _choice_of_rules(rules):
@@ -511,12 +514,12 @@ class Grammar:
 
         simplify_rule = SimplifyRule_Visitor()
         compiled_rules = []
-        for i, rule_content in enumerate(rules):
+        for rule_content in rules:
             name, tree, options = rule_content
             simplify_rule.visit(tree)
             expansions = rule_tree_to_text.transform(tree)
 
-            for expansion, alias in expansions:
+            for i, (expansion, alias) in enumerate(expansions):
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)" % (name, alias))
 
@@ -538,7 +541,7 @@ class Grammar:
             for dups in duplicates.values():
                 if len(dups) > 1:
                     if dups[0].expansion:
-                        raise GrammarError("Rules defined twice: %s" % ', '.join(str(i) for i in duplicates))
+                        raise GrammarError("Rules defined twice: %s\n\n(Might happen due to colliding expansion of optionals: [] or ?)" % ''.join('\n  * %s' % i for i in dups))
 
                     # Empty rule; assert all other attributes are equal
                     assert len({(r.alias, r.order, r.options) for r in dups}) == len(dups)
@@ -605,7 +608,9 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
             _, tree, _ = imported_rules[symbol]
         except KeyError:
             raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
-        return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
+
+        return _find_used_symbols(tree)
+
 
     def get_namespace_name(name):
         try:
@@ -681,6 +686,11 @@ class PrepareGrammar(Transformer_InPlace):
     def nonterminal(self, name):
         return name
 
+
+def _find_used_symbols(tree):
+    assert tree.data == 'expansions'
+    return {t for x in tree.find_data('expansion')
+              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
     def __init__(self):
@@ -843,9 +853,7 @@ class GrammarLoader:
             rule_names.add(name)
 
         for name, expansions, _o in rules:
-            used_symbols = {t for x in expansions.find_data('expansion')
-                              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
-            for sym in used_symbols:
+            for sym in _find_used_symbols(expansions):
                 if sym.type == 'TERMINAL':
                     if sym not in terminal_names:
                         raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, name))

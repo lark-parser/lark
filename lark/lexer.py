@@ -8,7 +8,6 @@ from .exceptions import UnexpectedCharacters, LexError
 ###{standalone
 
 class Pattern(Serialize):
-    __serialize_fields__ = 'value', 'flags'
 
     def __init__(self, value, flags=()):
         self.value = value
@@ -41,6 +40,8 @@ class Pattern(Serialize):
 
 
 class PatternStr(Pattern):
+    __serialize_fields__ = 'value', 'flags'
+
     type = "str"
     
     def to_regexp(self):
@@ -52,6 +53,8 @@ class PatternStr(Pattern):
     max_width = min_width
 
 class PatternRE(Pattern):
+    __serialize_fields__ = 'value', 'flags', '_width'
+
     type = "re"
 
     def to_regexp(self):
@@ -98,7 +101,7 @@ class Token(Str):
 
         self.type = type_
         self.pos_in_stream = pos_in_stream
-        self.value = Str(value)
+        self.value = value
         self.line = line
         self.column = column
         self.end_line = end_line
@@ -265,13 +268,14 @@ def build_mres(terminals, match_whole=False):
     return _build_mres(terminals, len(terminals), match_whole)
 
 def _regexp_has_newline(r):
-    """Expressions that may indicate newlines in a regexp:
+    r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
         - anything but ([^...])
         - any-char (.) when the flag (?s) exists
+        - spaces (\s)
     """
-    return '\n' in r or '\\n' in r or '[^' in r or ('(?s' in r and '.' in r)
+    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 class Lexer(object):
     """Lexer interface

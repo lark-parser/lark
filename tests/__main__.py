@@ -21,6 +21,7 @@ from .test_parser import (
         TestCykStandard,
         TestLalrContextual,
         TestEarleyDynamic,
+        TestLalrCustom,
 
         # TestFullEarleyStandard,
         TestFullEarleyDynamic,

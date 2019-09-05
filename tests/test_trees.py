@@ -4,6 +4,7 @@ import unittest
 from unittest import TestCase
 import copy
 import pickle
+import functools
 
 from lark.tree import Tree
 from lark.visitors import Transformer, Interpreter, visit_children_decor, v_args, Discard
@@ -145,6 +146,22 @@ class TestTrees(TestCase):
 
         res = T().transform(t)
         self.assertEqual(res, 2.9)
+
+    def test_partial(self):
+
+        tree = Tree("start", [Tree("a", ["test1"]), Tree("b", ["test2"])])
+
+        def test(prefix, s, postfix):
+            return prefix + s.upper() + postfix
+
+        @v_args(inline=True)
+        class T(Transformer):
+            a = functools.partial(test, "@", postfix="!")
+            b = functools.partial(lambda s: s + "!")
+
+        res = T().transform(tree)
+        assert res.children == ["@TEST1!", "test2!"]
+
 
     def test_discard(self):
         class MyTransformer(Transformer):

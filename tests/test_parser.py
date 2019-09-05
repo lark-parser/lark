@@ -22,7 +22,7 @@ from lark.exceptions import GrammarError, ParseError, UnexpectedToken, Unexpecte
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
-from lark.lexer import TerminalDef
+from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -431,12 +431,22 @@ def _make_full_earley_test(LEXER):
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
 
+class CustomLexer(Lexer):
+    """
+    Purpose of this custom lexer is to test the integration,
+    so it uses the traditionalparser as implementation without custom lexing behaviour.
+    """
+    def __init__(self, lexer_conf):
+        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+    def lex(self, *args, **kwargs):
+        return self.lexer.lex(*args, **kwargs)
 
 def _make_parser_test(LEXER, PARSER):
+    lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
     def _Lark(grammar, **kwargs):
-        return Lark(grammar, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
-        return Lark.open(gfilename, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*
@@ -1532,7 +1542,7 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
 
 
-        @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
+        @unittest.skipIf(PARSER!='lalr' or LEXER=='custom', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -1558,6 +1568,28 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(parser.parse('xa', 'a'), Tree('a', []))
             self.assertEqual(parser.parse('xb', 'b'), Tree('b', []))
 
+        def test_lexer_detect_newline_tokens(self):
+            # Detect newlines in regular tokens
+            g = _Lark(r"""start: "go" tail*
+            !tail : SA "@" | SB "@" | SC "@" | SD "@"
+            SA : "a" /\n/
+            SB : /b./s
+            SC : "c" /[^a-z]/
+            SD : "d" /\s/
+            """)
+            a,b,c,d = [x.children[1] for x in g.parse('goa\n@b\n@c\n@d\n@').children]
+            self.assertEqual(a.line, 2)
+            self.assertEqual(b.line, 3)
+            self.assertEqual(c.line, 4)
+            self.assertEqual(d.line, 5)
+
+            # Detect newlines in ignored tokens
+            for re in ['/\\n/', '/[^a-z]/', '/\\s/']:
+                g = _Lark('''!start: "a" "a"
+                             %ignore {}'''.format(re))
+                a, b = g.parse('a\na').children
+                self.assertEqual(a.line, 1)
+                self.assertEqual(b.line, 2)
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
@@ -1572,6 +1604,7 @@ _TO_TEST = [
         ('dynamic_complete', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
+        ('custom', 'lalr'),
         # (None, 'earley'),
 ]
 

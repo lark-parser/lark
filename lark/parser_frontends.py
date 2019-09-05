@@ -118,7 +118,7 @@ class LALR_ContextualLexer(LALR_WithLexer):
 
 class LALR_CustomLexer(LALR_WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.lexer = lexer_cls(self.lexer_conf)
+        self.lexer = lexer_cls(lexer_conf)
         debug = options.debug if options else False
         self.parser = LALR_Parser(parser_conf, debug=debug)
         WithLexer.__init__(self, lexer_conf, parser_conf, options)
@@ -139,7 +139,8 @@ class Earley(WithLexer):
         self.init_traditional_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
-        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity)
+        debug = options.debug if options else False
+        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug)
 
     def match(self, term, token):
         return term.name == token.type
@@ -152,10 +153,12 @@ class XEarley(_ParserFrontend):
 
         self._prepare_match(lexer_conf)
         resolve_ambiguity = options.ambiguity == 'resolve'
+        debug = options.debug if options else False
         self.parser = xearley.Parser(parser_conf,
                                     self.match,
                                     ignore=lexer_conf.ignore,
                                     resolve_ambiguity=resolve_ambiguity,
+                                    debug=debug,
                                     **kw
                                     )
 

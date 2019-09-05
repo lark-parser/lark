@@ -608,8 +608,9 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
             _, tree, _ = imported_rules[symbol]
         except KeyError:
             raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
-        tree = next(tree.find_data("expansion"))    # Skip "alias" or other annotations
-        return tree.scan_values(lambda x: x.type in ('RULE', 'TERMINAL'))
+
+        return _find_used_symbols(tree)
+
 
     def get_namespace_name(name):
         try:
@@ -685,6 +686,11 @@ class PrepareGrammar(Transformer_InPlace):
     def nonterminal(self, name):
         return name
 
+
+def _find_used_symbols(tree):
+    assert tree.data == 'expansions'
+    return {t for x in tree.find_data('expansion')
+              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
     def __init__(self):
@@ -847,9 +853,7 @@ class GrammarLoader:
             rule_names.add(name)
 
         for name, expansions, _o in rules:
-            used_symbols = {t for x in expansions.find_data('expansion')
-                              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
-            for sym in used_symbols:
+            for sym in _find_used_symbols(expansions):
                 if sym.type == 'TERMINAL':
                     if sym not in terminal_names:
                         raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, name))

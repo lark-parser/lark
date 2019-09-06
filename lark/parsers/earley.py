@@ -10,6 +10,7 @@ is better documented here:
     http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+import logging
 from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
@@ -299,8 +300,13 @@ class Parser:
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
-            debug_walker = ForestToPyDotVisitor()
-            debug_walker.visit(solutions[0], "sppf.png")
+            try:
+                debug_walker = ForestToPyDotVisitor()
+            except ImportError:
+                logging.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
+            else:
+                debug_walker.visit(solutions[0], "sppf.png")
+
 
         if not solutions:
             expected_tokens = [t.expect for t in to_scan]

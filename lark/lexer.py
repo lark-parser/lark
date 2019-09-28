@@ -168,7 +168,9 @@ class _Lex:
             lexer = self.lexer
             res = lexer.match(stream, line_ctr.char_pos)
             if not res:
-                allowed = {v for m, tfi in lexer.mres for v in tfi.values()}
+                allowed = {v for m, tfi in lexer.mres for v in tfi.values()} - ignore_types
+                if not allowed:
+                    allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, state=self.state, token_history=last_token and [last_token])
 
             value, type_ = res
@@ -382,7 +384,6 @@ class ContextualLexer(Lexer):
 
             value, type_ = root_match
             t = Token(type_, value, e.pos_in_stream, e.line, e.column)
-            expected = {v for m, tfi in l.lexer.mres for v in tfi.values()}
-            raise UnexpectedToken(t, expected)
+            raise UnexpectedToken(t, e.allowed)
 
 ###}

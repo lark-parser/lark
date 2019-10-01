@@ -46,12 +46,8 @@ class Parser:
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules.
             if self.forest_sum_visitor is None and rule.options and rule.options.priority is not None:
-                self.forest_sum_visitor = ForestSumVisitor()
+                self.forest_sum_visitor = ForestSumVisitor
 
-        if resolve_ambiguity:
-            self.forest_tree_visitor = ForestToTreeVisitor(self.callbacks, self.forest_sum_visitor)
-        else:
-            self.forest_tree_visitor = ForestToAmbiguousTreeVisitor(self.callbacks, self.forest_sum_visitor)
         self.term_matcher = term_matcher
 
 
@@ -316,7 +312,10 @@ class Parser:
             assert False, 'Earley should not generate multiple start symbol items!'
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        return self.forest_tree_visitor.visit(solutions[0])
+        forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else ForestToAmbiguousTreeVisitor
+        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+
+        return forest_tree_visitor.visit(solutions[0])
 
 
 class ApplyCallbacks(Transformer_InPlace):

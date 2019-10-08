@@ -13,6 +13,14 @@ class ParseError(LarkError):
 class LexError(LarkError):
     pass
 
+class UnexpectedEOF(ParseError):
+    def __init__(self, expected):
+        self.expected = expected
+
+        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
+        super(UnexpectedEOF, self).__init__(message)
+
+
 class UnexpectedInput(LarkError):
     pos_in_stream = None
 

@@ -14,7 +14,7 @@ import logging
 from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
-from ..exceptions import ParseError, UnexpectedToken
+from ..exceptions import UnexpectedEOF, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
@@ -270,6 +270,7 @@ class Parser:
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
+        return to_scan
 
     def parse(self, stream, start):
         assert start, start
@@ -288,7 +289,7 @@ class Parser:
             else:
                 columns[0].add(item)
 
-        self._parse(stream, columns, to_scan, start_symbol)
+        to_scan = self._parse(stream, columns, to_scan, start_symbol)
 
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
@@ -306,8 +307,7 @@ class Parser:
 
         if not solutions:
             expected_tokens = [t.expect for t in to_scan]
-            # raise ParseError('Incomplete parse: Could not find a solution to input')
-            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+            raise UnexpectedEOF(expected_tokens)
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 

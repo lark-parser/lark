@@ -7,7 +7,7 @@ There are many ways you can help the project:
 * Write new grammars for Lark's library
 * Write a blog post introducing Lark to your audience
 * Port Lark to another language
-* Help me with code developemnt
+* Help me with code development
 
 If you're interested in taking one of these on, let me know and I will provide more details and assist you in the process.
 

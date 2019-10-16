@@ -179,7 +179,7 @@ All occurrences of the terminal will be ignored, and won't be part of the parse.
 
 Using the `%ignore` directive results in a cleaner grammar.
 
-It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extranous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
+It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extraneous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
 
 **Syntax:**
 ```html

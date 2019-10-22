@@ -86,7 +86,7 @@ class LarkOptions(Serialize):
 
             options[name] = value
 
-        if isinstance(options['start'], str):
+        if isinstance(options['start'], STRING_TYPE):
             options['start'] = [options['start']]
 
         self.__dict__['options'] = options

@@ -384,6 +384,6 @@ class ContextualLexer(Lexer):
 
             value, type_ = root_match
             t = Token(type_, value, e.pos_in_stream, e.line, e.column)
-            raise UnexpectedToken(t, e.allowed)
+            raise UnexpectedToken(t, e.allowed, state=e.state)
 
 ###}

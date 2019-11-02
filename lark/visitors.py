@@ -186,6 +186,11 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
+    def visit_topdown(self,tree):
+        for subtree in tree.iter_subtrees_topdown():
+            self._call_userfunc(subtree)
+        return tree        
+
 class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive
 
@@ -198,8 +203,16 @@ class Visitor_Recursive(VisitorBase):
             if isinstance(child, Tree):
                 self.visit(child)
 
-        f = getattr(self, tree.data, self.__default__)
-        f(tree)
+        self._call_userfunc(tree)
+        return tree
+
+    def visit_topdown(self,tree):
+        self._call_userfunc(tree)
+
+        for child in tree.children:
+            if isinstance(child, Tree):
+                self.visit_topdown(child)
+        
         return tree
 
 

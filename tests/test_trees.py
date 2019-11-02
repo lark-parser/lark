@@ -7,7 +7,7 @@ import pickle
 import functools
 
 from lark.tree import Tree
-from lark.visitors import Transformer, Interpreter, visit_children_decor, v_args, Discard
+from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard
 
 
 class TestTrees(TestCase):
@@ -33,6 +33,43 @@ class TestTrees(TestCase):
                     Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]
         nodes = list(self.tree1.iter_subtrees_topdown())
         self.assertEqual(nodes, expected)
+
+    def test_visitor(self):
+        class Visitor1(Visitor):
+            def __init__(self):
+                self.nodes=[]
+
+            def __default__(self,tree):
+                self.nodes.append(tree)
+        class Visitor1_Recursive(Visitor_Recursive):
+            def __init__(self):
+                self.nodes=[]
+
+            def __default__(self,tree):
+                self.nodes.append(tree)
+
+        visitor1=Visitor1()
+        visitor1_recursive=Visitor1_Recursive()
+
+        expected_top_down = [Tree('a', [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]),
+                    Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]
+        expected_botton_up= [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z'),
+                    Tree('a', [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')])]
+
+        visitor1.visit(self.tree1)
+        self.assertEqual(visitor1.nodes,expected_botton_up)
+
+        visitor1_recursive.visit(self.tree1)
+        self.assertEqual(visitor1_recursive.nodes,expected_botton_up)
+
+        visitor1.nodes=[]
+        visitor1_recursive.nodes=[]
+
+        visitor1.visit_topdown(self.tree1)
+        self.assertEqual(visitor1.nodes,expected_top_down)
+
+        visitor1_recursive.visit_topdown(self.tree1)
+        self.assertEqual(visitor1_recursive.nodes,expected_top_down)
 
     def test_interp(self):
         t = Tree('a', [Tree('b', []), Tree('c', []), 'd'])

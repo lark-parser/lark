@@ -92,8 +92,27 @@ Trees can be hashed and compared.
 
 ----
 
-## Transformers & Visitors
+[Guide](transfromer_and_vistor.md)
 
+## Token
+
+When using a lexer, the resulting tokens in the trees will be of the Token class, which inherits from Python's string. So, normal string comparisons and operations will work as expected. Tokens also have other useful attributes:
+
+* `type` - Name of the token (as specified in grammar).
+* `pos_in_stream` - the index of the token in the text
+* `line` - The line of the token in the text (starting with 1)
+* `column` - The column of the token in the text (starting with 1)
+* `end_line` - The line where the token ends
+* `end_column` - The next column after the end of the token. For example, if the token is a single character with a `column` value of 4, `end_column` will be 5.
+
+
+## UnexpectedInput
+
+- `UnexpectedInput`
+    - `UnexpectedToken` - The parser recieved an unexpected token
+    - `UnexpectedCharacters` - The lexer encountered an unexpected string
+
+After catching one of these exceptions, you may call the following helper methods to create a nicer error message:
 
 ### Methods
 

@@ -2,9 +2,9 @@
 
 Transformers & Visitors provide a convenient interface to process the parse-trees that Lark returns.
 
-They are used by inheriting from the correct class (visitor or transformer), and implementing methods corresponding to the rule you wish to process. Each methods accepts the children as an argument. That can be modified using the `v_args` decorator, which allows to inline the arguments (akin to `*args`), or add the tree `meta` property as an argument.
+They are used by inheriting from the correct class (visitor or transformer), and implementing methods corresponding to the rule you wish to process. Each method accepts the children as an argument. That can be modified using the `v_args` decorator, which allows to inline the arguments (akin to `*args`), or add the tree `meta` property as an argument.
 
-See: https://github.com/lark-parser/lark/blob/master/lark/visitors.py
+See: <a href="https://github.com/lark-parser/lark/blob/master/lark/visitors.py">visitors.py</a>
 
 ### Visitors
 
@@ -40,6 +40,8 @@ Because nodes are reduced from leaf to root, at any point the callbacks may assu
 
 Transformers can be chained into a new transformer by using multiplication.
 
+`Transformer` can do anything `Visitor` can do, but because it reconstructs the tree, it is slightly less efficient.
+
 
 **Example:**
 ```python
@@ -55,24 +57,29 @@ print(EvalExpressions().transform( t ))
 # Prints: Tree(a, [3])
 ```
 
-By default, transformer works only on rules, `visit_tokens=True` will make transfomer process tokens. This is handy in parsing simple token, such as turn `INT` to `int`, `NUMBER` to `float`. etc.
-
-```python
-class T(Transformer):
-    INT = int # same with def INT(self, tok): int(tok)
-    NUMBER = float # same with def INT(self, tok): int(tok)
-    def NAME(self, name):
-        return lookup_dict.get(name, name)
-    
-
-T(visit_tokens=True).transform(tree)
-```
-
-Here are the classes that implement the transformer interface:
+All these classes implement the transformer interface:
 
 - Transformer - Recursively transforms the tree. This is the one you probably want.
 - Transformer_InPlace - Non-recursive. Changes the tree in-place instead of returning new instances
 - Transformer_InPlaceRecursive - Recursive. Changes the tree in-place instead of returning new instances
+
+### visit_tokens
+
+By default, transformers only visit rules. `visit_tokens=True` will tell Transformer to visit tokens as well. This is a slightly slower alternative to `lexer_callbacks`, but it's easier to maintain and works for all algorithms (even when there isn't a lexer).
+
+Example:
+
+```python
+class T(Transformer):
+    INT = int
+    NUMBER = float
+    def NAME(self, name):
+        return lookup_dict.get(name, name)
+
+
+T(visit_tokens=True).transform(tree)
+```
+
 
 ### v_args
 

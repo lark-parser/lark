@@ -1,14 +1,12 @@
-# Classes - Reference
+# Classes Reference
 
 This page details the important classes in Lark.
 
 ----
 
-## Lark
+## lark.Lark
 
 The Lark class is the main interface for the library. It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
-
-### Methods
 
 #### \_\_init\_\_(self, grammar, **options)
 
@@ -50,13 +48,9 @@ If a transformer is supplied to `__init__`, returns whatever is the result of th
 
 The main tree class
 
-### Properties
-
 * `data` - The name of the rule or alias
 * `children` - List of matched sub-rules and terminals
 * `meta` - Line & Column numbers, if using `propagate_positions`
-
-### Methods
 
 #### \_\_init\_\_(self, data, children)
 
@@ -92,8 +86,6 @@ Trees can be hashed and compared.
 
 ----
 
-[Guide](transfromer_and_vistor.md)
-
 ## Token
 
 When using a lexer, the resulting tokens in the trees will be of the Token class, which inherits from Python's string. So, normal string comparisons and operations will work as expected. Tokens also have other useful attributes:
@@ -105,16 +97,24 @@ When using a lexer, the resulting tokens in the trees will be of the Token class
 * `end_line` - The line where the token ends
 * `end_column` - The next column after the end of the token. For example, if the token is a single character with a `column` value of 4, `end_column` will be 5.
 
+## Transformer
+## Visitor
+## Interpreter
+
+See the [visitors page](visitors.md)
+
 
 ## UnexpectedInput
+
+## UnexpectedToken
+
+## UnexpectedException
 
 - `UnexpectedInput`
     - `UnexpectedToken` - The parser recieved an unexpected token
     - `UnexpectedCharacters` - The lexer encountered an unexpected string
 
 After catching one of these exceptions, you may call the following helper methods to create a nicer error message:
-
-### Methods
 
 #### get_context(text, span)
 

@@ -9,5 +9,6 @@ pages:
     - How To Develop (Guide): how_to_develop.md
     - Grammar Reference: grammar.md
     - Tree Construction Reference: tree_construction.md
+    - Visitors and Transformers: visitors.md
     - Classes Reference: classes.md
     - Recipes: recipes.md

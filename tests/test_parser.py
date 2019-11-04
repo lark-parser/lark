@@ -94,6 +94,24 @@ class TestParsers(unittest.TestCase):
         r = g.parse('xx')
         self.assertEqual( r.children[0].data, "c" )
 
+    def test_visit_tokens(self):
+        class T(Transformer):
+            def a(self, children):
+                return children[0] + "!"
+            def A(self, tok):
+                return tok.upper()
+
+        # Test regular
+        g = Lark("""start: a
+                    a : A
+                    A: "x"
+                 """, parser='lalr')
+        r = T().transform(g.parse("x"))
+        self.assertEqual( r.children, ["x!"] )
+        r = T(True).transform(g.parse("x"))
+        self.assertEqual( r.children, ["X!"] )
+
+
     def test_embedded_transformer(self):
         class T(Transformer):
             def a(self, children):

@@ -147,3 +147,4 @@ class Parser(BaseParser):
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
+        return to_scan

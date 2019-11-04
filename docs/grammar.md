@@ -1,5 +1,13 @@
 # Grammar Reference
 
+Table of contents:
+
+1. [Definitions](#defs)
+1. [Terminals](#terms)
+1. [Rules](#rules)
+1. [Directives](#dirs)
+
+<a name="defs"></a>
 ## Definitions
 
 **A grammar** is a list of rules and terminals, that together define a language.
@@ -25,6 +33,7 @@ Lark begins the parse with the rule 'start', unless specified otherwise in the o
 Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects, for the shape of the generated parse-tree, and the automatic construction of the lexer (aka tokenizer, or scanner).
 
 
+<a name="terms"></a>
 ## Terminals
 
 Terminals are used to match text into symbols. They can be defined as a combination of literals and other terminals.
@@ -70,6 +79,53 @@ WHITESPACE: (" " | /\t/ )+
 SQL_SELECT: "select"i
 ```
 
+### Regular expressions & Ambiguity
+
+Each terminal is eventually compiled to a regular expression. All the operators and references inside it are mapped to their respective expressions.
+
+For example, in the following grammar, `A1` and `A2`, are equivalent:
+```perl
+A1: "a" | "b"
+A2: /a|b/
+```
+
+This means that inside terminals, Lark cannot detect or resolve ambiguity, even when using Earley.
+
+For example, for this grammar:
+```perl
+start           : (A | B)+
+A               : "a" | "ab"
+B               : "b"
+```
+We get this behavior:
+
+```bash
+>>> p.parse("ab")
+Tree(start, [Token(A, 'a'), Token(B, 'b')])
+```
+
+This is happening because Python's regex engine always returns the first matching option.
+
+If you find yourself in this situation, the recommended solution is to use rules instead.
+
+Example:
+
+```python
+>>> p = Lark("""start: (a | b)+
+...             !a: "a" | "ab"
+...             !b: "b"
+...             """, ambiguity="explicit")
+>>> print(p.parse("ab").pretty())
+_ambig
+  start
+    a   ab
+  start
+    a   a
+    b   b
+```
+
+
+<a name="rules"></a>
 ## Rules
 
 **Syntax:**
@@ -114,6 +170,7 @@ Rules can be assigned priority only when using Earley (future versions may suppo
 
 Priority can be either positive or negative. In not specified for a terminal, it's assumed to be 1 (i.e. the default).
 
+<a name="dirs"></a>
 ## Directives
 
 ### %ignore
@@ -122,7 +179,7 @@ All occurrences of the terminal will be ignored, and won't be part of the parse.
 
 Using the `%ignore` directive results in a cleaner grammar.
 
-It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extranous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
+It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extraneous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
 
 **Syntax:**
 ```html

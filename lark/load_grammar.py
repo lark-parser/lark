@@ -479,7 +479,7 @@ class Grammar:
         # ===================
 
         # Convert terminal-trees to strings/regexps
-        transformer = PrepareLiterals() * TerminalTreeToPattern()
+
         for name, (term_tree, priority) in term_defs:
             if term_tree is None:  # Terminal added through %declare
                 continue
@@ -487,7 +487,8 @@ class Grammar:
             if len(expansions) == 1 and not expansions[0].children:
                 raise GrammarError("Terminals cannot be empty (%s)" % name)
 
-        terminals = [TerminalDef(name, transformer.transform(term_tree), priority)
+        transformer = PrepareLiterals() * TerminalTreeToPattern()
+        terminals = [TerminalDef(name, transformer.transform( term_tree ), priority)
                   for name, (term_tree, priority) in term_defs if term_tree]
 
         # =================
@@ -638,11 +639,10 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
 
 
 def resolve_term_references(term_defs):
-    # TODO Cycles detection
     # TODO Solve with transitive closure (maybe)
 
-    token_dict = {k:t for k, (t,_p) in term_defs}
-    assert len(token_dict) == len(term_defs), "Same name defined twice?"
+    term_dict = {k:t for k, (t,_p) in term_defs}
+    assert len(term_dict) == len(term_defs), "Same name defined twice?"
 
     while True:
         changed = False
@@ -655,10 +655,20 @@ def resolve_term_references(term_defs):
                     if item.type == 'RULE':
                         raise GrammarError("Rules aren't allowed inside terminals (%s in %s)" % (item, name))
                     if item.type == 'TERMINAL':
-                        exp.children[0] = token_dict[item]
+                        term_value = term_dict[item]
+                        assert term_value is not None
+                        exp.children[0] = term_value
                         changed = True
         if not changed:
             break
+
+    for name, term in term_dict.items():
+        if term:    # Not just declared
+            for child in term.children:
+                ids = [id(x) for x in child.iter_subtrees()]
+                if id(term) in ids:
+                    raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
+
 
 def options_from_rule(name, *x):
     if len(x) > 1:

@@ -3,6 +3,7 @@ from functools import wraps
 from .utils import smart_decorator
 from .tree import Tree
 from .exceptions import VisitError, GrammarError
+from .lexer import Token
 
 ###{standalone
 from inspect import getmembers, getmro
@@ -20,6 +21,10 @@ class Transformer:
 
     Can be used to implement map or reduce.
     """
+
+    __visit_tokens__ = False   # For backwards compatibility
+    def __init__(self,  visit_tokens=False):
+        self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
@@ -45,10 +50,29 @@ class Transformer:
             except Exception as e:
                 raise VisitError(tree, e)
 
+    def _call_userfunc_token(self, token):
+        try:
+            f = getattr(self, token.type)
+        except AttributeError:
+            return self.__default_token__(token)
+        else:
+            try:
+                return f(token)
+            except (GrammarError, Discard):
+                raise
+            except Exception as e:
+                raise VisitError(token, e)
+
+
     def _transform_children(self, children):
         for c in children:
             try:
-                yield self._transform_tree(c) if isinstance(c, Tree) else c
+                if isinstance(c, Tree):
+                    yield self._transform_tree(c)
+                elif self.__visit_tokens__ and isinstance(c, Token):
+                    yield self._call_userfunc_token(c)
+                else:
+                    yield c
             except Discard:
                 pass
 
@@ -65,6 +89,11 @@ class Transformer:
     def __default__(self, data, children, meta):
         "Default operation on tree (for override)"
         return Tree(data, children, meta)
+
+    def __default_token__(self, token):
+        "Default operation on token (for override)"
+        return token
+
 
     @classmethod
     def _apply_decorator(cls, decorator, **kwargs):
@@ -157,6 +186,11 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
+    def visit_topdown(self,tree):
+        for subtree in tree.iter_subtrees_topdown():
+            self._call_userfunc(subtree)
+        return tree        
+
 class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive
 
@@ -169,8 +203,16 @@ class Visitor_Recursive(VisitorBase):
             if isinstance(child, Tree):
                 self.visit(child)
 
-        f = getattr(self, tree.data, self.__default__)
-        f(tree)
+        self._call_userfunc(tree)
+        return tree
+
+    def visit_topdown(self,tree):
+        self._call_userfunc(tree)
+
+        for child in tree.children:
+            if isinstance(child, Tree):
+                self.visit_topdown(child)
+        
         return tree
 
 

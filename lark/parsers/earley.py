@@ -10,10 +10,11 @@ is better documented here:
     http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+import logging
 from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
-from ..exceptions import ParseError, UnexpectedToken
+from ..exceptions import UnexpectedEOF, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
@@ -45,12 +46,8 @@ class Parser:
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules.
             if self.forest_sum_visitor is None and rule.options and rule.options.priority is not None:
-                self.forest_sum_visitor = ForestSumVisitor()
+                self.forest_sum_visitor = ForestSumVisitor
 
-        if resolve_ambiguity:
-            self.forest_tree_visitor = ForestToTreeVisitor(self.callbacks, self.forest_sum_visitor)
-        else:
-            self.forest_tree_visitor = ForestToAmbiguousTreeVisitor(self.callbacks, self.forest_sum_visitor)
         self.term_matcher = term_matcher
 
 
@@ -273,6 +270,7 @@ class Parser:
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
+        return to_scan
 
     def parse(self, stream, start):
         assert start, start
@@ -291,7 +289,7 @@ class Parser:
             else:
                 columns[0].add(item)
 
-        self._parse(stream, columns, to_scan, start_symbol)
+        to_scan = self._parse(stream, columns, to_scan, start_symbol)
 
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
@@ -299,18 +297,25 @@ class Parser:
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
-            debug_walker = ForestToPyDotVisitor()
-            debug_walker.visit(solutions[0], "sppf.png")
+            try:
+                debug_walker = ForestToPyDotVisitor()
+            except ImportError:
+                logging.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
+            else:
+                debug_walker.visit(solutions[0], "sppf.png")
+
 
         if not solutions:
             expected_tokens = [t.expect for t in to_scan]
-            # raise ParseError('Incomplete parse: Could not find a solution to input')
-            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+            raise UnexpectedEOF(expected_tokens)
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        return self.forest_tree_visitor.visit(solutions[0])
+        forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else ForestToAmbiguousTreeVisitor
+        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+
+        return forest_tree_visitor.visit(solutions[0])
 
 
 class ApplyCallbacks(Transformer_InPlace):

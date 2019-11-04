@@ -69,6 +69,7 @@ class LarkOptions(Serialize):
         'propagate_positions': False,
         'lexer_callbacks': {},
         'maybe_placeholders': False,
+        'edit_terminals': None,
     }
 
     def __init__(self, options_dict):
@@ -85,7 +86,7 @@ class LarkOptions(Serialize):
 
             options[name] = value
 
-        if isinstance(options['start'], str):
+        if isinstance(options['start'], STRING_TYPE):
             options['start'] = [options['start']]
 
         self.__dict__['options'] = options
@@ -204,6 +205,10 @@ class Lark(Serialize):
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
+
+        if self.options.edit_terminals:
+            for t in self.terminals:
+                self.options.edit_terminals(t)
 
         self._terminals_dict = {t.name:t for t in self.terminals}
 

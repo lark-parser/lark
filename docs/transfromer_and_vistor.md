@@ -40,6 +40,7 @@ Because nodes are reduced from leaf to root, at any point the callbacks may assu
 
 Transformers can be chained into a new transformer by using multiplication.
 
+
 **Example:**
 ```python
 from lark import Tree, Transformer
@@ -54,6 +55,18 @@ print(EvalExpressions().transform( t ))
 # Prints: Tree(a, [3])
 ```
 
+By default, transformer works only on rules, `visit_tokens=True` will make transfomer process tokens. This is handy in parsing simple token, such as turn `INT` to `int`, `NUMBER` to `float`. etc.
+
+```python
+class T(Transformer):
+    INT = int # same with def INT(self, tok): int(tok)
+    NUMBER = float # same with def INT(self, tok): int(tok)
+    def NAME(self, name):
+        return lookup_dict.get(name, name)
+    
+
+T(visit_tokens=True).transform(tree)
+```
 
 Here are the classes that implement the transformer interface:
 

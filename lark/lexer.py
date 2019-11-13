@@ -175,24 +175,24 @@ class _Lex:
 
             value, type_ = res
 
-            t = None
             if type_ not in ignore_types:
                 t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                line_ctr.feed(value, type_ in newline_types)
+                t.end_line = line_ctr.line
+                t.end_column = line_ctr.column
                 if t.type in lexer.callback:
                     t = lexer.callback[t.type](t)
                     if not isinstance(t, Token):
                         raise ValueError("Callbacks must return a token (returned %r)" % t)
-                last_token = t
                 yield t
+                last_token = t
             else:
                 if type_ in lexer.callback:
-                    t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                    lexer.callback[type_](t)
+                    t2 = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    lexer.callback[type_](t2)
+                line_ctr.feed(value, type_ in newline_types)
 
-            line_ctr.feed(value, type_ in newline_types)
-            if t:
-                t.end_line = line_ctr.line
-                t.end_column = line_ctr.column
+
 
 
 class UnlessCallback:

@@ -25,14 +25,8 @@ test_json = '''
 
 def test_earley():
 
-    json_parser = Lark(json_grammar)
+    json_parser = Lark(json_grammar, maybe_placeholders=False)
     tree = json_parser.parse(test_json)
-
-    # print ('@@', tree.pretty())
-    # for x in tree.find_data('true'):
-    #     x.data = 'false'
-    #     # x.children[0].value = '"HAHA"'
-
 
     new_json = Reconstructor(json_parser).reconstruct(tree)
     print (new_json)
@@ -41,7 +35,7 @@ def test_earley():
 
 def test_lalr():
 
-    json_parser = Lark(json_grammar, parser='lalr')
+    json_parser = Lark(json_grammar, parser='lalr', maybe_placeholders=False)
     tree = json_parser.parse(test_json)
 
     new_json = Reconstructor(json_parser).reconstruct(tree)

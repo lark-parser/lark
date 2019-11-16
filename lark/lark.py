@@ -66,9 +66,9 @@ class LarkOptions(Serialize):
         'profile': False,
         'priority': 'auto',
         'ambiguity': 'auto',
-        'propagate_positions': False,
+        'propagate_positions': True,
         'lexer_callbacks': {},
-        'maybe_placeholders': False,
+        'maybe_placeholders': True,
         'edit_terminals': None,
     }
 

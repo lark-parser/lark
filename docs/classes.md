@@ -12,29 +12,31 @@ The Lark class is the main interface for the library. It's mostly a thin wrapper
 
 The Lark class accepts a grammar string or file object, and keyword options:
 
-* start - The symbol in the grammar that begins the parse (Default: `"start"`)
+* **start** - A list of the rules in the grammar that begin the parse (Default: `["start"]`)
 
-* parser - Decides which parser engine to use, "earley", "lalr" or "cyk". (Default: `"earley"`)
+* **parser** - Decides which parser engine to use, "earley", "lalr" or "cyk". (Default: `"earley"`)
 
-* lexer - Overrides default lexer.
+* **lexer** - Overrides default lexer, depending on parser.
 
-* transformer - Applies the transformer instead of building a parse tree (only allowed with parser="lalr")
+* **transformer** - Applies the provided transformer instead of building a parse tree (only allowed with parser="lalr")
 
-* postlex - Lexer post-processing (Default: None. only works when lexer is "standard" or "contextual")
+* **postlex** - Lexer post-processing (Default: `None`. only works when lexer is "standard" or "contextual")
 
-* ambiguity (only relevant for earley and cyk)
+* **ambiguity** (only relevant for earley and cyk)
 
      * "explicit" - Return all derivations inside an "_ambig" data node.
 
      * "resolve" - Let the parser choose the best derivation (greedy for tokens, non-greedy for rules. Default)
 
-* debug - Display warnings (such as Shift-Reduce warnings for LALR)
+* **debug** - Display warnings (such as Shift-Reduce warnings for LALR)
 
-* keep_all_tokens - Don't throw away any terminals from the tree (Default=False)
+* **keep_all_tokens** - Don't throw away any terminals from the tree (Default=`False`)
 
-* propagate_positions - Propagate line/column count to tree nodes (default=False)
+* **propagate_positions** - Propagate line/column count to tree nodes, at the cost of performance (default=`True`)
 
-* lexer_callbacks - A dictionary of callbacks of type f(Token) -> Token, used to interface with the lexer Token generation. Only works with the standard and contextual lexers. See [Recipes](recipes.md) for more information.
+* **maybe_placeholders** - The `[]` operator returns `None` when not matched. Setting this to `False` makes it behave like the `?` operator, and return no value at all, which may be a little faster (default=`True`)
+
+* **lexer_callbacks** - A dictionary of callbacks of type f(Token) -> Token, used to interface with the lexer Token generation. Only works with the standard and contextual lexers. See [Recipes](recipes.md) for more information.
 
 #### parse(self, text)
 
@@ -50,7 +52,7 @@ The main tree class
 
 * `data` - The name of the rule or alias
 * `children` - List of matched sub-rules and terminals
-* `meta` - Line & Column numbers, if using `propagate_positions`
+* `meta` - Line & Column numbers (unless `propagate_positions` is disabled)
 
 #### \_\_init\_\_(self, data, children)
 

@@ -963,7 +963,7 @@ def _make_parser_test(LEXER, PARSER):
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
-            g = """!start: [["A"]]
+            g = """!start: ("A"?)?
                 """
             l = _Lark(g)
             tree = l.parse('A')

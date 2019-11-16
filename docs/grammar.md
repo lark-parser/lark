@@ -147,7 +147,7 @@ Each item is one of:
 * `TERMINAL`
 * `"string literal"` or `/regexp literal/`
 * `(item item ..)` - Group items
-* `[item item ..]` - Maybe. Same as `(item item ..)?`
+* `[item item ..]` - Maybe. Same as `(item item ..)?`, but generates `None` if there is no match
 * `item?` - Zero or one instances of item ("maybe")
 * `item*` - Zero or more instances of item
 * `item+` - One or more instances of item
@@ -157,7 +157,7 @@ Each item is one of:
 **Examples:**
 ```perl
 hello_world: "hello" "world"
-mul: [mul "*"] number     //# Left-recursion is allowed!
+mul: (mul "*")? number     //# Left-recursion is allowed and encouraged!
 expr: expr operator expr
     | value               //# Multi-line, belongs to expr
 

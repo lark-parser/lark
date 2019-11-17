@@ -225,7 +225,16 @@ class Lark(Serialize):
             for rule in self.rules:
                 if rule.options and rule.options.priority is not None:
                     rule.options.priority = None
-        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
+
+        # TODO Deprecate lexer_callbacks?
+        lexer_callbacks = dict(self.options.lexer_callbacks)
+        if self.options.transformer:
+            t = self.options.transformer
+            for term in self.terminals:
+                if hasattr(t, term.name):
+                    lexer_callbacks[term.name] = getattr(t, term.name)
+
+        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks)
 
         if self.options.parser:
             self.parser = self._build_parser()

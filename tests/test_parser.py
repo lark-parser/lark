@@ -99,16 +99,22 @@ class TestParsers(unittest.TestCase):
             def a(self, children):
                 return children[0] + "!"
             def A(self, tok):
-                return tok.upper()
+                return tok.update(value=tok.upper())
 
         # Test regular
-        g = Lark("""start: a
-                    a : A
-                    A: "x"
-                 """, parser='lalr')
-        r = T().transform(g.parse("x"))
+        g = """start: a
+            a : A
+            A: "x"
+            """
+        p = Lark(g, parser='lalr')
+        r = T(False).transform(p.parse("x"))
         self.assertEqual( r.children, ["x!"] )
-        r = T(True).transform(g.parse("x"))
+        r = T().transform(p.parse("x"))
+        self.assertEqual( r.children, ["X!"] )
+
+        # Test internal transformer
+        p = Lark(g, parser='lalr', transformer=T())
+        r = p.parse("x")
         self.assertEqual( r.children, ["X!"] )
 
 

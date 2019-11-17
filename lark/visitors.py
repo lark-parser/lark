@@ -48,7 +48,7 @@ class Transformer:
             except (GrammarError, Discard):
                 raise
             except Exception as e:
-                raise VisitError(tree, e)
+                raise VisitError(tree.data, tree, e)
 
     def _call_userfunc_token(self, token):
         try:
@@ -61,7 +61,7 @@ class Transformer:
             except (GrammarError, Discard):
                 raise
             except Exception as e:
-                raise VisitError(token, e)
+                raise VisitError(token.type, token, e)
 
 
     def _transform_children(self, children):

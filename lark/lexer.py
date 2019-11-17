@@ -108,6 +108,13 @@ class Token(Str):
         self.end_column = end_column
         return self
 
+    def update(self, type_=None, value=None):
+        return Token.new_borrow_pos(
+            type_ if type_ is not None else self.type,
+            value if value is not None else self.value,
+            self
+        )
+
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
         return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column)

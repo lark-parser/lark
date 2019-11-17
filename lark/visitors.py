@@ -22,8 +22,8 @@ class Transformer:
     Can be used to implement map or reduce.
     """
 
-    __visit_tokens__ = False   # For backwards compatibility
-    def __init__(self,  visit_tokens=False):
+    __visit_tokens__ = True   # For backwards compatibility
+    def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
@@ -189,7 +189,7 @@ class Visitor(VisitorBase):
     def visit_topdown(self,tree):
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
-        return tree        
+        return tree
 
 class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive
@@ -212,7 +212,7 @@ class Visitor_Recursive(VisitorBase):
         for child in tree.children:
             if isinstance(child, Tree):
                 self.visit_topdown(child)
-        
+
         return tree
 
 

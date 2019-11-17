@@ -51,7 +51,7 @@ class PropagatePositions:
                 elif isinstance(c, Token):
                     res.meta.end_line = c.end_line
                     res.meta.end_column = c.end_column
-                    res.meta.end_pos = c.pos_in_stream + len(c.value)
+                    res.meta.end_pos = c.end_pos
                     res.meta.empty = False
                     break
 

@@ -29,7 +29,7 @@ parser = Lark("""
         data_item: STR INT*
 
         %declare STR INT
-        """, parser='lalr', lexer=TypeLexer, propagate_positions=False)
+        """, parser='lalr', lexer=TypeLexer)
 
 
 class ParseToDict(Transformer):

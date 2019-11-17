@@ -90,9 +90,9 @@ class TerminalDef(Serialize):
 
 
 class Token(Str):
-    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column')
+    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
-    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None):
+    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
@@ -106,6 +106,7 @@ class Token(Str):
         self.column = column
         self.end_line = end_line
         self.end_column = end_column
+        self.end_pos = end_pos
         return self
 
     def update(self, type_=None, value=None):
@@ -117,7 +118,7 @@ class Token(Str):
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column)
+        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
@@ -187,6 +188,7 @@ class _Lex:
                 line_ctr.feed(value, type_ in newline_types)
                 t.end_line = line_ctr.line
                 t.end_column = line_ctr.column
+                t.end_pos = line_ctr.char_pos
                 if t.type in lexer.callback:
                     t = lexer.callback[t.type](t)
                     if not isinstance(t, Token):

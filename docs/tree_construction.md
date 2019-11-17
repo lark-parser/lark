@@ -7,6 +7,10 @@ For example, the rule `node: child1 child2` will create a tree node with two chi
 
 Using `item+` or `item*` will result in a list of items, equivalent to writing `item item item ..`.
 
+Using `item?` will return the item if it matched, or nothing.
+
+Using `[item]` will return the item if it matched, or the value `None`, if it didn't. It's possible to force `[]` to behave like `()?`, by using the `maybe_placeholders=False` option when initializing Lark.
+
 ### Terminals
 
 Terminals are always values in the tree, never branches.

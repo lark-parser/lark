@@ -85,7 +85,7 @@ TERMINALS = {
     'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
-    'COMMENT': r'//[^\n]*',
+    'COMMENT': r'\s*//[^\n]*',
     '_TO': '->',
     '_IGNORE': r'%ignore',
     '_DECLARE': r'%declare',

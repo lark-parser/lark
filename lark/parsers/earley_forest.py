@@ -195,7 +195,7 @@ class ForestVisitor(object):
                     continue
 
                 if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar!")
+                    raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
                 continue

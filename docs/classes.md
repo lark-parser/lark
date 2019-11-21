@@ -53,6 +53,7 @@ The main tree class
 * `data` - The name of the rule or alias
 * `children` - List of matched sub-rules and terminals
 * `meta` - Line & Column numbers (unless `propagate_positions` is disabled)
+    * meta attributes: `line`, `column`, `start_pos`, `end_line`, `end_column`, `end_pos`
 
 #### \_\_init\_\_(self, data, children)
 
@@ -98,6 +99,7 @@ When using a lexer, the resulting tokens in the trees will be of the Token class
 * `column` - The column of the token in the text (starting with 1)
 * `end_line` - The line where the token ends
 * `end_column` - The next column after the end of the token. For example, if the token is a single character with a `column` value of 4, `end_column` will be 5.
+* `end_pos` - the index where the token ends (basically pos_in_stream + len(token))
 
 ## Transformer
 ## Visitor

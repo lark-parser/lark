@@ -4,6 +4,7 @@ import os.path
 import sys
 from ast import literal_eval
 from copy import copy, deepcopy
+from io import open
 
 from .utils import bfs
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -580,13 +581,13 @@ def import_grammar(grammar_path, base_paths=[]):
         for import_path in import_paths:
             with suppress(IOError):
                 joined_path = os.path.join(import_path, grammar_path)
-                with open(joined_path) as f:
+                with open(joined_path, encoding='utf8') as f:
                     text = f.read()
                 grammar = load_grammar(text, joined_path)
                 _imported_grammars[grammar_path] = grammar
                 break
         else:
-            open(grammar_path)
+            open(grammar_path, encoding='utf8')
             assert False
 
     return _imported_grammars[grammar_path]

@@ -1126,6 +1126,12 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'lions'])
 
 
+        def test_relative_import_unicode(self):
+            l = _Lark_open('test_relative_import_unicode.lark', rel_to=__file__)
+            x = l.parse(u'Ø')
+            self.assertEqual(x.children, [u'Ø'])
+
+
         def test_relative_import_rename(self):
             l = _Lark_open('test_relative_import_rename.lark', rel_to=__file__)
             x = l.parse('12 lions')

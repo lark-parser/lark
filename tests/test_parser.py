@@ -5,6 +5,7 @@ import unittest
 import logging
 import os
 import sys
+from copy import deepcopy
 try:
     from cStringIO import StringIO as cStringIO
 except ImportError:
@@ -117,6 +118,61 @@ class TestParsers(unittest.TestCase):
         r = p.parse("x")
         self.assertEqual( r.children, ["X!"] )
 
+    def test_vargs_meta(self):
+
+        @v_args(meta=True)
+        class T1(Transformer):
+            def a(self, children, meta):
+                assert not children
+                return meta.line
+
+            def start(self, children, meta):
+                return children
+
+        @v_args(meta=True, inline=True)
+        class T2(Transformer):
+            def a(self, meta):
+                return meta.line
+
+            def start(self, meta, *res):
+                return list(res)
+
+        for T in (T1, T2):
+            for internal in [False, True]:
+                try:
+                    g = Lark(r"""start: a+
+                                a : "x" _NL?
+                                _NL: /\n/+
+                            """, parser='lalr', transformer=T() if internal else None)
+                except NotImplementedError:
+                    assert internal
+                    continue
+
+                res = g.parse("xx\nx\nxxx\n\n\nxx")
+                assert not internal
+                res = T().transform(res)
+
+                self.assertEqual(res, [1, 1, 2, 3, 3, 3, 6, 6])
+
+    def test_vargs_tree(self):
+        tree = Lark('''
+            start: a a a
+            !a: "A"
+        ''').parse('AAA')
+        tree_copy = deepcopy(tree)
+
+        @v_args(tree=True)
+        class T(Transformer):
+            def a(self, tree):
+                return 1
+            def start(self, tree):
+                return tree.children
+
+        res = T().transform(tree)
+        self.assertEqual(res, [1, 1, 1])
+        self.assertEqual(tree, tree_copy)
+
+
 
     def test_embedded_transformer(self):
         class T(Transformer):
@@ -188,7 +244,7 @@ class TestParsers(unittest.TestCase):
         @v_args(tree=True)
         class T2(Transformer):
             def a(self, tree):
-                assert isinstance(tree, Tree)
+                assert isinstance(tree, Tree), tree
                 tree.children.append("tested")
                 return tree
 

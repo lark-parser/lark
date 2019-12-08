@@ -35,14 +35,9 @@ class Transformer:
             return self.__default__(tree.data, children, tree.meta)
         else:
             try:
-                if getattr(f, 'meta', False):
-                    return f(children, tree.meta)
-                elif getattr(f, 'inline', False):
-                    return f(*children)
-                elif getattr(f, 'whole_tree', False):
-                    if new_children is not None:
-                        tree.children = new_children
-                    return f(tree)
+                wrapper = getattr(f, 'visit_wrapper', None)
+                if wrapper is not None:
+                    return f.visit_wrapper(f, tree.data, children, tree.meta)
                 else:
                     return f(children)
             except (GrammarError, Discard):
@@ -282,8 +277,7 @@ def inline_args(obj):   # XXX Deprecated
 
 
 
-def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, static=False):
-    assert [whole_tree, meta, inline].count(True) <= 1
+def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     def create_decorator(_f, with_self):
         if with_self:
             def f(self, *args, **kwargs):
@@ -298,17 +292,42 @@ def _visitor_args_func_dec(func, inline=False, meta=False, whole_tree=False, sta
     else:
         f = smart_decorator(func, create_decorator)
     f.vargs_applied = True
-    f.inline = inline
-    f.meta = meta
-    f.whole_tree = whole_tree
+    f.visit_wrapper = visit_wrapper
     return f
 
-def v_args(inline=False, meta=False, tree=False):
+
+def _vargs_inline(f, data, children, meta):
+    return f(*children)
+def _vargs_meta_inline(f, data, children, meta):
+    return f(meta, *children)
+def _vargs_meta(f, data, children, meta):
+    return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
+def _vargs_tree(f, data, children, meta):
+    return f(Tree(data, children, meta))
+
+def v_args(inline=False, meta=False, tree=False, wrapper=None):
     "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
-    if [tree, meta, inline].count(True) > 1:
-        raise ValueError("Visitor functions can either accept tree, or meta, or be inlined. These cannot be combined.")
+    if tree and (meta or inline):
+        raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
+
+    func = None
+    if meta:
+        if inline:
+            func = _vargs_meta_inline
+        else:
+            func = _vargs_meta
+    elif inline:
+        func = _vargs_inline
+    elif tree:
+        func = _vargs_tree
+
+    if wrapper is not None:
+        if func is not None:
+            raise ValueError("Cannot use 'wrapper' along with 'tree', 'meta' or 'inline'.")
+        func = wrapper
+
     def _visitor_args_dec(obj):
-        return _apply_decorator(obj, _visitor_args_func_dec, inline=inline, meta=meta, whole_tree=tree)
+        return _apply_decorator(obj, _visitor_args_func_dec, visit_wrapper=func)
     return _visitor_args_dec
 
 

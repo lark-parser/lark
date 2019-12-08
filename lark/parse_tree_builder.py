@@ -3,6 +3,7 @@ from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
 from .visitors import Transformer_InPlace
+from . import visitors
 
 ###{standalone
 from functools import partial, wraps
@@ -202,6 +203,15 @@ def inplace_transformer(func):
         return func(tree)
     return f
 
+def apply_visit_wrapper(func, name, wrapper):
+    if wrapper is visitors._vargs_meta or wrapper is visitors._vargs_meta_inline:
+        raise NotImplementedError("Meta args not supported for internal transformer")
+    @wraps(func)
+    def f(children):
+        return wrapper(func, name, children, None)
+    return f
+
+
 class ParseTreeBuilder:
     def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
         self.tree_class = tree_class
@@ -236,12 +246,15 @@ class ParseTreeBuilder:
             user_callback_name = rule.alias or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
-                assert not getattr(f, 'meta', False), "Meta args not supported for internal transformer"
                 # XXX InlineTransformer is deprecated!
-                if getattr(f, 'inline', False) or isinstance(transformer, InlineTransformer):
-                    f = ptb_inline_args(f)
-                elif hasattr(f, 'whole_tree') or isinstance(transformer, Transformer_InPlace):
-                    f = inplace_transformer(f)
+                wrapper = getattr(f, 'visit_wrapper', None)
+                if wrapper is not None:
+                    f = apply_visit_wrapper(f, user_callback_name, wrapper)
+                else:
+                    if isinstance(transformer, InlineTransformer):
+                        f = ptb_inline_args(f)
+                    elif isinstance(transformer, Transformer_InPlace):
+                        f = inplace_transformer(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

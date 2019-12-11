@@ -34,13 +34,16 @@ Lark has no dependencies.
 
 [![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
 
-### Syntax Highlighting (new)
+### Syntax Highlighting
 
-Lark now provides syntax highlighting for its grammar files (\*.lark):
+Lark provides syntax highlighting for its grammar files (\*.lark):
 
 - [Sublime Text & TextMate](https://github.com/lark-parser/lark_syntax)
 - [vscode](https://github.com/lark-parser/vscode-lark)
 
+### Clones
+
+- [Lerchen (Julia)](https://github.com/jamesrhester/Lerchen.jl) - an unofficial clone, written entirely in Julia. 
 
 ### Hello World
 

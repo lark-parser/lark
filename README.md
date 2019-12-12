@@ -43,7 +43,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 
 ### Clones
 
-- [Lerchen (Julia)](https://github.com/jamesrhester/Lerchen.jl) - an unofficial clone, written entirely in Julia. 
+- [Lerche (Julia)](https://github.com/jamesrhester/Lerche.jl) - an unofficial clone, written entirely in Julia. 
 
 ### Hello World
 

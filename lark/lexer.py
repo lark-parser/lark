@@ -288,10 +288,7 @@ class Lexer(object):
 
     Method Signatures:
         lex(self, stream) -> Iterator[Token]
-
-        set_parser_state(self, state)   # Optional
     """
-    set_parser_state = NotImplemented
     lex = NotImplemented
 
 
@@ -349,6 +346,7 @@ class TraditionalLexer(Lexer):
 
 
 class ContextualLexer(Lexer):
+
     def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
         tokens_by_name = {}
         for t in terminals:
@@ -371,18 +369,15 @@ class ContextualLexer(Lexer):
 
         self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks)
 
-        self.set_parser_state(None) # Needs to be set on the outside
-
-    def set_parser_state(self, state):
-        self.parser_state = state
-
-    def lex(self, stream):
-        l = _Lex(self.lexers[self.parser_state], self.parser_state)
+    def lex(self, stream, get_parser_state):
+        parser_state = get_parser_state()
+        l = _Lex(self.lexers[parser_state], parser_state)
         try:
             for x in l.lex(stream, self.root_lexer.newline_types, self.root_lexer.ignore_types):
                 yield x
-                l.lexer = self.lexers[self.parser_state]
-                l.state = self.parser_state
+                parser_state = get_parser_state()
+                l.lexer = self.lexers[parser_state]
+                l.state = parser_state # For debug only, no need to worry about multithreading
         except UnexpectedCharacters as e:
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined,
             # but not in the current context.

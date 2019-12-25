@@ -44,7 +44,6 @@ class LarkOptions(Serialize):
         cache_grammar - Cache the Lark grammar (Default: False)
         postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
         start - The start symbol, either a string, or a list of strings for multiple possible starts (Default: "start")
-        profile - Measure run-time usage in Lark. Read results from the profiler proprety (Default: False)
         priority - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
@@ -63,7 +62,6 @@ class LarkOptions(Serialize):
         'lexer': 'auto',
         'transformer': None,
         'start': 'start',
-        'profile': False,
         'priority': 'auto',
         'ambiguity': 'auto',
         'propagate_positions': True,
@@ -114,30 +112,6 @@ class LarkOptions(Serialize):
         return cls(data)
 
 
-class Profiler:
-    def __init__(self):
-        self.total_time = defaultdict(float)
-        self.cur_section = '__init__'
-        self.last_enter_time = time.time()
-
-    def enter_section(self, name):
-        cur_time = time.time()
-        self.total_time[self.cur_section] += cur_time - self.last_enter_time
-        self.last_enter_time = cur_time
-        self.cur_section = name
-
-    def make_wrapper(self, name, f):
-        def wrapper(*args, **kwargs):
-            last_section = self.cur_section
-            self.enter_section(name)
-            try:
-                return f(*args, **kwargs)
-            finally:
-                self.enter_section(last_section)
-
-        return wrapper
-
-
 class Lark(Serialize):
     def __init__(self, grammar, **options):
         """
@@ -164,9 +138,6 @@ class Lark(Serialize):
 
         if self.options.cache_grammar:
             raise NotImplementedError("Not available yet")
-
-        assert not self.options.profile, "Feature temporarily disabled"
-        # self.profiler = Profiler() if self.options.profile else None
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':

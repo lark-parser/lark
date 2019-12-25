@@ -96,7 +96,7 @@ class Parser(object):
         assert all(isinstance(x, Symbol) for x in lark_rule.expansion)
         return Rule(
             lark_rule.origin, lark_rule.expansion,
-            weight=lark_rule.options.priority if lark_rule.options and lark_rule.options.priority else 0,
+            weight=lark_rule.options.priority if lark_rule.options.priority else 0,
             alias=lark_rule)
 
     def parse(self, tokenized, start):  # pylint: disable=invalid-name

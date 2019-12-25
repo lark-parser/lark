@@ -187,14 +187,14 @@ class Lark(Serialize):
         # This replaces the old 'resolve__antiscore_sum' option.
         if self.options.priority == 'invert':
             for rule in self.rules:
-                if rule.options and rule.options.priority is not None:
+                if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
         # Else, if the user asked to disable priorities, strip them from the
         # rules. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
         elif self.options.priority == None:
             for rule in self.rules:
-                if rule.options and rule.options.priority is not None:
+                if rule.options.priority is not None:
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?

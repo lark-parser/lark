@@ -1305,8 +1305,7 @@ class ParseTreeBuilder:
 
 class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
-        assert all(r.options is None or r.options.priority is None
-                   for r in parser_conf.rules), "LALR doesn't yet support prioritization"
+        assert all(r.options.priority is None for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lookahead()
         callbacks = parser_conf.callbacks
@@ -1508,7 +1507,7 @@ class WithLexer(Serialize):
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         return inst
-    
+
     def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize(memo)
 
@@ -1740,14 +1739,14 @@ class Lark(Serialize):
         # This replaces the old 'resolve__antiscore_sum' option.
         if self.options.priority == 'invert':
             for rule in self.rules:
-                if rule.options and rule.options.priority is not None:
+                if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
         # Else, if the user asked to disable priorities, strip them from the
         # rules. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
         elif self.options.priority == None:
             for rule in self.rules:
-                if rule.options and rule.options.priority is not None:
+                if rule.options.priority is not None:
                     rule.options.priority = None
         self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, self.options.lexer_callbacks)
 

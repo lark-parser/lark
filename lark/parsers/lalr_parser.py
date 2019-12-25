@@ -12,8 +12,7 @@ from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 ###{standalone
 class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
-        assert all(r.options is None or r.options.priority is None
-                   for r in parser_conf.rules), "LALR doesn't yet support prioritization"
+        assert all(r.options.priority is None for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lalr()
         callbacks = parser_conf.callbacks

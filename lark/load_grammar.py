@@ -503,7 +503,7 @@ class Grammar:
         ebnf_to_bnf = EBNF_to_BNF()
         rules = []
         for name, rule_tree, options in rule_defs:
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))
@@ -527,7 +527,7 @@ class Grammar:
 
                 empty_indices = [x==_EMPTY for x in expansion]
                 if any(empty_indices):
-                    exp_options = copy(options) if options else RuleOptions()
+                    exp_options = copy(options)
                     exp_options.empty_indices = empty_indices
                     expansion = [x for x in expansion if x!=_EMPTY]
                 else:

@@ -45,7 +45,7 @@ class Parser:
             #  the priorities will be stripped from all rules before they reach us, allowing us to
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules.
-            if self.forest_sum_visitor is None and rule.options and rule.options.priority is not None:
+            if self.forest_sum_visitor is None and rule.options.priority is not None:
                 self.forest_sum_visitor = ForestSumVisitor
 
         self.term_matcher = term_matcher

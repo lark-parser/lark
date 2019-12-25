@@ -108,7 +108,7 @@ class Reconstructor:
                                     self._match, resolve_ambiguity=True)
 
     def _build_recons_rules(self, rules):
-        expand1s = {r.origin for r in rules if r.options and r.options.expand1}
+        expand1s = {r.origin for r in rules if r.options.expand1}
 
         aliases = defaultdict(list)
         for r in rules:

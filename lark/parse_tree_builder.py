@@ -29,7 +29,7 @@ class PropagatePositions:
 
         if isinstance(res, Tree):
             for c in children:
-                if isinstance(c, Tree) and c.children and not c.meta.empty:
+                if isinstance(c, Tree) and not c.meta.empty:
                     res.meta.line = c.meta.line
                     res.meta.column = c.meta.column
                     res.meta.start_pos = c.meta.start_pos
@@ -43,7 +43,7 @@ class PropagatePositions:
                     break
 
             for c in reversed(children):
-                if isinstance(c, Tree) and c.children and not c.meta.empty:
+                if isinstance(c, Tree) and not c.meta.empty:
                     res.meta.end_line = c.meta.end_line
                     res.meta.end_column = c.meta.end_column
                     res.meta.end_pos = c.meta.end_pos

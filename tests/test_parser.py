@@ -63,6 +63,14 @@ class TestParsers(unittest.TestCase):
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
 
+        g = Lark("""start: x
+                    x: a
+                    a: "a"
+                 """, propagate_positions=True)
+
+        r = g.parse('a')
+        self.assertEqual( r.children[0].meta.line, 1 )
+
     def test_expand1(self):
 
         g = Lark("""start: a

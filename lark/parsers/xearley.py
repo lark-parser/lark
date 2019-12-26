@@ -24,8 +24,8 @@ from .earley_forest import SymbolNode
 
 
 class Parser(BaseParser):
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False):
-        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug)
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False, priority_decay=1):
+        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug, priority_decay)
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 

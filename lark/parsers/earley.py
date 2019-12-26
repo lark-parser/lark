@@ -21,7 +21,7 @@ from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, ForestToAmbiguousTreeVisitor
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, priority_decay=1):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
@@ -46,7 +46,7 @@ class Parser:
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules.
             if self.forest_sum_visitor is None and rule.options.priority is not None:
-                self.forest_sum_visitor = ForestSumVisitor
+                self.forest_sum_visitor = ForestSumVisitor(priority_decay)
 
         self.term_matcher = term_matcher
 
@@ -313,7 +313,7 @@ class Parser:
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
         forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else ForestToAmbiguousTreeVisitor
-        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor)
 
         return forest_tree_visitor.visit(solutions[0])
 

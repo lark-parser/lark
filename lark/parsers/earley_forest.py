@@ -71,7 +71,10 @@ class SymbolNode(ForestNode):
     @property
     def children(self):
         if not self.paths_loaded: self.load_paths()
-        return sorted(self._children, key=attrgetter('sort_key'))
+        return self._children
+
+    def sorted_children(self):
+        return sorted(self.children, key=attrgetter('sort_key'))
 
     def __iter__(self):
         return iter(self._children)
@@ -243,6 +246,9 @@ class ForestSumVisitor(ForestVisitor):
     items created during parsing than there are SPPF nodes in the
     final tree.
     """
+    def __init__(self, decay):
+        self._decay = decay
+
     def visit_packed_node_in(self, node):
         return iter([node.left, node.right])
 
@@ -251,9 +257,9 @@ class ForestSumVisitor(ForestVisitor):
 
     def visit_packed_node_out(self, node):
         priority = node.rule.options.priority if not node.parent.is_intermediate and node.rule.options.priority else 0
-        priority += getattr(node.right, 'priority', 0)
-        priority += getattr(node.left, 'priority', 0)
-        node.priority = priority
+        l = getattr(node.right, 'priority', 0)
+        r = getattr(node.left, 'priority', 0)
+        node.priority = priority + (l + r) * self._decay
 
     def visit_symbol_node_out(self, node):
         node.priority = max(child.priority for child in node.children)
@@ -286,7 +292,7 @@ class ForestToTreeVisitor(ForestVisitor):
     def visit_symbol_node_in(self, node):
         if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
             self.forest_sum_visitor.visit(node)
-        return next(iter(node.children))
+        return next(iter(node.sorted_children()))
 
     def visit_packed_node_in(self, node):
         if not node.parent.is_intermediate:
@@ -321,7 +327,7 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
     This is mainly used by the test framework, to make it simpler to write
     tests ensuring the SPPF contains the right results.
     """
-    def __init__(self, callbacks, forest_sum_visitor = ForestSumVisitor):
+    def __init__(self, callbacks, forest_sum_visitor):
         super(ForestToAmbiguousTreeVisitor, self).__init__(callbacks, forest_sum_visitor)
 
     def visit_token_node(self, node):
@@ -349,7 +355,9 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
 
     def visit_packed_node_out(self, node):
         if not node.parent.is_intermediate:
-            result = self.callbacks[node.rule](self.output_stack.pop().children)
+            drv_node = self.output_stack.pop()
+            assert drv_node.data == 'drv'
+            result = self.callbacks[node.rule](drv_node.children)
             if self.output_stack:
                 self.output_stack[-1].children.append(result)
             else:

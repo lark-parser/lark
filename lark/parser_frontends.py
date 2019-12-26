@@ -148,7 +148,8 @@ class Earley(WithLexer):
 
         resolve_ambiguity = options.ambiguity == 'resolve'
         debug = options.debug if options else False
-        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug)
+        priority_decay = 0.5 if options and options.priority == 'decay' else 1
+        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug, priority_decay=priority_decay)
 
     def match(self, term, token):
         return term.name == token.type
@@ -162,11 +163,13 @@ class XEarley(_ParserFrontend):
         self._prepare_match(lexer_conf)
         resolve_ambiguity = options.ambiguity == 'resolve'
         debug = options.debug if options else False
+        priority_decay = 0.5 if options and options.priority == 'decay' else 1
         self.parser = xearley.Parser(parser_conf,
                                     self.match,
                                     ignore=lexer_conf.ignore,
                                     resolve_ambiguity=resolve_ambiguity,
                                     debug=debug,
+                                    priority_decay=priority_decay,
                                     **kw
                                     )
 

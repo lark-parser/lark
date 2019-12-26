@@ -167,7 +167,7 @@ class Lark(Serialize):
         elif self.options.priority in ('invert', 'normal'):
             assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
 
-        assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
+        assert self.options.priority in ('auto', None, 'normal', 'invert', 'decay'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
 

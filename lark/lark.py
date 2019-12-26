@@ -99,7 +99,11 @@ class LarkOptions(Serialize):
             raise ValueError("Unknown options: %s" % o.keys())
 
     def __getattr__(self, name):
-        return self.options[name]
+        try:
+            return self.options[name]
+        except KeyError as e:
+            raise AttributeError(e)
+
     def __setattr__(self, name, value):
         assert name in self.options
         self.options[name] = value

@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 
 import os
-import time
-from collections import defaultdict
 from io import open
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer

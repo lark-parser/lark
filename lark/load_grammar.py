@@ -2,11 +2,10 @@
 
 import os.path
 import sys
-from ast import literal_eval
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs
+from .utils import bfs, eval_escaping
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -346,31 +345,6 @@ def _rfind(s, choices):
 
 
 
-def _fix_escaping(s):
-    w = ''
-    i = iter(s)
-    for n in i:
-        w += n
-        if n == '\\':
-            try:
-                n2 = next(i)
-            except StopIteration:
-                raise ValueError("Literal ended unexpectedly (bad escaping): `%r`" % s)
-            if n2 == '\\':
-                w += '\\\\'
-            elif n2 not in 'uxnftr':
-                w += '\\'
-            w += n2
-    w = w.replace('\\"', '"').replace("'", "\\'")
-
-    to_eval = "u'''%s'''" % w
-    try:
-        s = literal_eval(to_eval)
-    except SyntaxError as e:
-        raise ValueError(s, e)
-
-    return s
-
 
 def _literal_to_pattern(literal):
     v = literal.value
@@ -383,7 +357,7 @@ def _literal_to_pattern(literal):
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
 
-    s = _fix_escaping(x)
+    s = eval_escaping(x)
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
@@ -401,7 +375,7 @@ class PrepareLiterals(Transformer_InPlace):
         assert start.type == end.type == 'STRING'
         start = start.value[1:-1]
         end = end.value[1:-1]
-        assert len(_fix_escaping(start)) == len(_fix_escaping(end)) == 1, (start, end, len(_fix_escaping(start)), len(_fix_escaping(end)))
+        assert len(eval_escaping(start)) == len(eval_escaping(end)) == 1, (start, end, len(eval_escaping(start)), len(eval_escaping(end)))
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 
@@ -543,7 +517,8 @@ class Grammar:
             for dups in duplicates.values():
                 if len(dups) > 1:
                     if dups[0].expansion:
-                        raise GrammarError("Rules defined twice: %s\n\n(Might happen due to colliding expansion of optionals: [] or ?)" % ''.join('\n  * %s' % i for i in dups))
+                        raise GrammarError("Rules defined twice: %s\n\n(Might happen due to colliding expansion of optionals: [] or ?)"
+                                           % ''.join('\n  * %s' % i for i in dups))
 
                     # Empty rule; assert all other attributes are equal
                     assert len({(r.alias, r.order, r.options) for r in dups}) == len(dups)

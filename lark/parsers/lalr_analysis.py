@@ -202,7 +202,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                         continue
                     s2 = rp2.next
                     # if s2 is a terminal
-                    if not s2 in self.lr0_rules_by_origin:
+                    if s2 not in self.lr0_rules_by_origin:
                         dr.add(s2)
                     if s2 in self.NULLABLE:
                         r.add((next_state, s2))

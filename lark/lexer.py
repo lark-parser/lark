@@ -303,7 +303,7 @@ class TraditionalLexer(Lexer):
         for t in terminals:
             try:
                 re.compile(t.pattern.to_regexp())
-            except:
+            except re.error:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
             if t.pattern.min_width == 0:

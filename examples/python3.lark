@@ -81,7 +81,7 @@ with_item: test ["as" expr]
 except_clause: "except" [test ["as" NAME]]
 suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
-?test: or_test ["if" or_test "else" test] | lambdef
+?test: or_test ("if" or_test "else" test)? | lambdef
 ?test_nocond: or_test | lambdef_nocond
 lambdef: "lambda" [varargslist] ":" test
 lambdef_nocond: "lambda" [varargslist] ":" test_nocond
@@ -107,7 +107,7 @@ star_expr: "*" expr
 // sake of a __future__ import described in PEP 401 (which really works :-)
 !_comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
 
-?power: await_expr ["**" factor]
+?power: await_expr ("**" factor)?
 ?await_expr: AWAIT? atom_expr
 AWAIT: "await"
 
@@ -137,7 +137,7 @@ dictorsetmaker: ( ((test ":" test | "**" expr) (comp_for | ("," (test ":" test |
 
 classdef: "class" NAME ["(" [arguments] ")"] ":" suite
 
-arguments: argvalue ("," argvalue)*  ["," [ starargs | kwargs]]
+arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
          | starargs
          | kwargs
          | test comp_for
@@ -145,7 +145,7 @@ arguments: argvalue ("," argvalue)*  ["," [ starargs | kwargs]]
 starargs: "*" test ("," "*" test)* ("," argvalue)* ["," kwargs]
 kwargs: "**" test
 
-?argvalue: test ["=" test]
+?argvalue: test ("=" test)?
 
 
 

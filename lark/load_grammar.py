@@ -478,6 +478,7 @@ class Grammar:
         rules = []
         for name, rule_tree, options in rule_defs:
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
+            ebnf_to_bnf.prefix = name
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))

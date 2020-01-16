@@ -54,6 +54,10 @@ Literals can be one of:
 * `/re with flags/imulx`
 * Literal range: `"a".."z"`, `"1".."9"`, etc.
 
+Terminals also support grammar operators, such as `|`, `+`, `*` and `?`.
+
+Terminals are a linear construct, and therefor may not contain themselves (recursion isn't allowed).
+
 ### Priority
 
 Terminals can be assigned priority only when using a lexer (future versions may support Earley's dynamic lexing).
@@ -74,7 +78,7 @@ When using a lexer (standard or contextual), it is the grammar-author's responsi
 IF: "if"
 INTEGER : /[0-9]+/
 INTEGER2 : ("0".."9")+          //# Same as INTEGER
-DECIMAL.2: INTEGER "." INTEGER  //# Will be matched before INTEGER
+DECIMAL.2: INTEGER? "." INTEGER  //# Will be matched before INTEGER
 WHITESPACE: (" " | /\t/ )+
 SQL_SELECT: "select"i
 ```

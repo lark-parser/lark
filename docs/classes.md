@@ -32,7 +32,7 @@ The Lark class accepts a grammar string or file object, and keyword options:
 
 * **keep_all_tokens** - Don't throw away any terminals from the tree (Default=`False`)
 
-* **propagate_positions** - Propagate line/column count to tree nodes, at the cost of performance (default=`True`)
+* **propagate_positions** - Propagate line/column count to tree nodes, at the cost of performance (default=`False`)
 
 * **maybe_placeholders** - The `[]` operator returns `None` when not matched. Setting this to `False` makes it behave like the `?` operator, and return no value at all, which may be a little faster (default=`True`)
 
@@ -52,7 +52,7 @@ The main tree class
 
 * `data` - The name of the rule or alias
 * `children` - List of matched sub-rules and terminals
-* `meta` - Line & Column numbers (unless `propagate_positions` is disabled)
+* `meta` - Line & Column numbers (if `propagate_positions` is enabled)
     * meta attributes: `line`, `column`, `start_pos`, `end_line`, `end_column`, `end_pos`
 
 #### \_\_init\_\_(self, data, children)

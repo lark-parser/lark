@@ -43,7 +43,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 
 ### Clones
 
-- [Lerche (Julia)](https://github.com/jamesrhester/Lerche.jl) - an unofficial clone, written entirely in Julia. 
+- [Lerche (Julia)](https://github.com/jamesrhester/Lerche.jl) - an unofficial clone, written entirely in Julia.
 
 ### Hello World
 
@@ -141,10 +141,10 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
  - [Command-Block-Assembly](https://github.com/simon816/Command-Block-Assembly) - An assembly language, and C compiler, for Minecraft commands
- - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks 
+ - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks
  - [Torchani](https://github.com/aiqm/torchani) - Accurate Neural Network Potential on PyTorch
  - [required](https://github.com/shezadkhan137/required) - multi-field validation using docstrings
- - [miniwdl](https://github.com/chanzuckerberg/miniwdl) - A static analysis toolkit for the Workflow Description Language 
+ - [miniwdl](https://github.com/chanzuckerberg/miniwdl) - A static analysis toolkit for the Workflow Description Language
  - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
 
 

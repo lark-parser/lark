@@ -151,7 +151,7 @@ class TestParsers(unittest.TestCase):
                     g = Lark(r"""start: a+
                                 a : "x" _NL?
                                 _NL: /\n/+
-                            """, parser='lalr', transformer=T() if internal else None)
+                            """, parser='lalr', transformer=T() if internal else None, propagate_positions=True)
                 except NotImplementedError:
                     assert internal
                     continue

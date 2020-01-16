@@ -62,7 +62,7 @@ class LarkOptions(Serialize):
         'start': 'start',
         'priority': 'auto',
         'ambiguity': 'auto',
-        'propagate_positions': True,
+        'propagate_positions': False,
         'lexer_callbacks': {},
         'maybe_placeholders': True,
         'edit_terminals': None,

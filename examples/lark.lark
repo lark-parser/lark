@@ -33,7 +33,7 @@ name: RULE
     | TOKEN
 
 _VBAR: _NL? "|"
-OP: /[+*][?]?|[?](?![a-z])/
+OP: /[+*]|[?](?![a-z])/
 RULE: /!?[_?]?[a-z][_a-z0-9]*/
 TOKEN: /_?[A-Z][_A-Z0-9]*/
 STRING: _STRING "i"?

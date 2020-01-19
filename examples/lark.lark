@@ -13,7 +13,8 @@ statement: "%ignore" expansions _NL                -> ignore
          | "%import" import_args ["->" name] _NL   -> import
          | "%declare" name+                        -> declare
 
-import_args: "."? name ("." name)*
+import_args: import_path ["(" name ("," name)* ")"]
+import_path: "."? name ("." name)*
 
 ?expansions: alias (_VBAR alias)*
 

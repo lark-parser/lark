@@ -141,6 +141,8 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
  - [Command-Block-Assembly](https://github.com/simon816/Command-Block-Assembly) - An assembly language, and C compiler, for Minecraft commands
+ - [Hyperledger Fabric Python SDK](https://github.com/hyperledger/fabric-sdk-py) - Fabric-SDK-Py is an implementation of the Hyperledger fabric SDK with Python 3.x
+ - [Datacube-core](https://github.com/opendatacube/datacube-core) - Open Data Cube analyses continental scale Earth Observation data through time
  - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks
  - [Torchani](https://github.com/aiqm/torchani) - Accurate Neural Network Potential on PyTorch
  - [required](https://github.com/shezadkhan137/required) - multi-field validation using docstrings

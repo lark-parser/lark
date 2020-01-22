@@ -28,8 +28,6 @@ class WriteTokensTransformer(Transformer_InPlace):
         self.term_subs = term_subs
 
     def __default__(self, data, children, meta):
-        #  if not isinstance(t, MatchTree):
-            #  return t
         if not getattr(meta, 'match_tree', False):
             return Tree(data, children)
 
@@ -97,11 +95,10 @@ class Reconstructor:
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens}, term_subs)
         self.rules = list(self._build_recons_rules(rules))
         self.rules.reverse()
-        # print(len(self.rules))
-        self.rules = best_from_group(self.rules, lambda r: r, lambda r: -len(r.expansion))
-        # print(len(self.rules))
 
-        # self.rules = list(set(list(self._build_recons_rules(rules))))
+        # Choose the best rule from each group of {rule => [rule.alias]}, since we only really need one derivation.
+        self.rules = best_from_group(self.rules, lambda r: r, lambda r: -len(r.expansion))
+
         self.rules.sort(key=lambda r: len(r.expansion))
         callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
         self.parser = earley.Parser(ParserConf(self.rules, callbacks, parser.options.start),

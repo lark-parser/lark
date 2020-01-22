@@ -3,7 +3,7 @@ from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer # XXX Deprecated
 from .visitors import Transformer_InPlace
-from . import visitors
+from .visitors import _vargs_meta, _vargs_meta_inline
 
 ###{standalone
 from functools import partial, wraps
@@ -204,7 +204,7 @@ def inplace_transformer(func):
     return f
 
 def apply_visit_wrapper(func, name, wrapper):
-    if wrapper is visitors._vargs_meta or wrapper is visitors._vargs_meta_inline:
+    if wrapper is _vargs_meta or wrapper is _vargs_meta_inline:
         raise NotImplementedError("Meta args not supported for internal transformer")
     @wraps(func)
     def f(children):

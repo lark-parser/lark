@@ -106,9 +106,12 @@ class TestParsers(unittest.TestCase):
     def test_comment_in_rule_definition(self):
         g = Lark("""start: a
                a: "a"
-               // A comment
-               // Another
+                // A comment
+                // Another comment
                 | "b"
+                // Still more
+
+               c: "unrelated"
             """)
         r = g.parse('b')
         self.assertEqual( r.children[0].data, "a" )

@@ -77,7 +77,8 @@ TERMINALS = {
     '_COLON': ':',
     '_COMMA': ',',
     '_OR': r'\|',
-    '_DOT': r'\.',
+    '_DOT': r'\.(?!\.)',
+    '_DOTDOT': r'\.\.',
     'TILDE': '~',
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
@@ -112,7 +113,7 @@ RULES = {
     '?expr': ['atom',
               'atom OP',
               'atom TILDE NUMBER',
-              'atom TILDE NUMBER _DOT _DOT NUMBER',
+              'atom TILDE NUMBER _DOTDOT NUMBER',
               ],
 
     '?atom': ['_LPAR expansions _RPAR',
@@ -130,7 +131,7 @@ RULES = {
     '?name': ['RULE', 'TERMINAL'],
 
     'maybe': ['_LBRA expansions _RBRA'],
-    'range': ['STRING _DOT _DOT STRING'],
+    'range': ['STRING _DOTDOT STRING'],
 
     'term': ['TERMINAL _COLON expansions _NL',
               'TERMINAL _DOT NUMBER _COLON expansions _NL'],

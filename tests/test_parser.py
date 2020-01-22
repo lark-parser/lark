@@ -103,6 +103,16 @@ class TestParsers(unittest.TestCase):
         r = g.parse('xx')
         self.assertEqual( r.children[0].data, "c" )
 
+    def test_comment_in_rule_definition(self):
+        g = Lark("""start: a
+               a: "a"
+               // A comment
+               // Another
+                | "b"
+            """)
+        r = g.parse('b')
+        self.assertEqual( r.children[0].data, "a" )
+
     def test_visit_tokens(self):
         class T(Transformer):
             def a(self, children):

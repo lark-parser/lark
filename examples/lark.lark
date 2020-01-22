@@ -46,7 +46,7 @@ _NL: /(\r?\n)+\s*/
 %import common.INT -> NUMBER
 %import common.WS_INLINE
 
-COMMENT: "//" /[^\n]/*
+COMMENT: /\s*/ "//" /[^\n]/*
 
 %ignore WS_INLINE
 %ignore COMMENT

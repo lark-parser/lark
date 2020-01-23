@@ -5,6 +5,7 @@
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
 from ..utils import Enumerator, Serialize
+from ..grammar import END
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 
@@ -93,7 +94,7 @@ class _Parser:
                 else:
                     reduce(arg)
 
-        token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+        token = Token.new_borrow_pos(END, None, token) if token else Token(END, None, 0, 1, 1)
         while True:
             _action, arg = get_action(token)
             assert(_action is Reduce)

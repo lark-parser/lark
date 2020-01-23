@@ -13,7 +13,7 @@ from ..utils import classify, classify_bool, bfs, fzset, Serialize, Enumerator
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
-from ..grammar import Rule
+from ..grammar import Rule, END
 
 ###{standalone
 

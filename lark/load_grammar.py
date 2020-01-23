@@ -91,12 +91,8 @@ TERMINALS = {
     '_IGNORE': r'%ignore',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
-<<<<<<< HEAD
     'NUMBER': r'[+-]?\d+',
-=======
-    'NUMBER': r'\d+',
     '_END': r'\$',
->>>>>>> end_symbol
 }
 
 RULES = {
@@ -137,12 +133,8 @@ RULES = {
     '?name': ['RULE', 'TERMINAL'],
 
     'maybe': ['_LBRA expansions _RBRA'],
-<<<<<<< HEAD
     'range': ['STRING _DOTDOT STRING'],
-=======
-    'range': ['STRING _DOT _DOT STRING'],
     'end': ['_END'],
->>>>>>> end_symbol
 
     'term': ['TERMINAL _COLON expansions _NL',
               'TERMINAL _DOT NUMBER _COLON expansions _NL'],

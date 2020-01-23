@@ -97,9 +97,13 @@ class _Parser:
         token = Token.new_borrow_pos(END, None, token) if token else Token(END, None, 0, 1, 1)
         while True:
             _action, arg = get_action(token)
-            assert(_action is Reduce)
-            reduce(arg)
-            if state_stack[-1] == end_state:
-                return value_stack[-1]
+            if _action is Shift:
+                state_stack.append(arg)
+                value_stack.append(token)
+            else:
+                assert(_action is Reduce)
+                reduce(arg)
+                if state_stack[-1] == end_state:
+                    return value_stack[-1]
 
 ###}

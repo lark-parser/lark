@@ -148,6 +148,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [required](https://github.com/shezadkhan137/required) - multi-field validation using docstrings
  - [miniwdl](https://github.com/chanzuckerberg/miniwdl) - A static analysis toolkit for the Workflow Description Language
  - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
+ - [harmalysis](https://github.com/napulen/harmalysis) - A language for harmonic analysis and music theory
 
 
 Using Lark? Send me a message and I'll add your project!

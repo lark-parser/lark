@@ -262,23 +262,23 @@ class LALR_Analyzer(GrammarAnalyzer):
                     actions[la] = (Reduce, list(rules)[0])
             m[state] = { k.name: v for k, v in actions.items() }
 
-        self.states = { k.closure: v for k, v in m.items() }
+        states = { k.closure: v for k, v in m.items() }
 
         # compute end states
         end_states = {}
-        for state in self.states:
+        for state in states:
             for rp in state:
                 for start in self.lr0_start_states:
                     if rp.rule.origin.name == ('$root_' + start) and rp.is_satisfied:
                         assert(not start in end_states)
                         end_states[start] = state
 
-        self._parse_table = ParseTable(self.states, { start: state.closure for start, state in self.lr0_start_states.items() }, end_states)
+        _parse_table = ParseTable(states, { start: state.closure for start, state in self.lr0_start_states.items() }, end_states)
 
         if self.debug:
-            self.parse_table = self._parse_table
+            self.parse_table = _parse_table
         else:
-            self.parse_table = IntParseTable.from_ParseTable(self._parse_table)
+            self.parse_table = IntParseTable.from_ParseTable(_parse_table)
 
     def compute_lalr(self):
         self.compute_lr0_states()

@@ -9,7 +9,9 @@ Using `item+` or `item*` will result in a list of items, equivalent to writing `
 
 Using `item?` will return the item if it matched, or nothing.
 
-Using `[item]` will return the item if it matched, or the value `None`, if it didn't. It's possible to force `[]` to behave like `()?`, by using the `maybe_placeholders=False` option when initializing Lark.
+If `maybe_placeholders=False` (the default), then `[]` behaves like `()?`.
+
+If `maybe_placeholders=True`, then using `[item]` will return the item if it matched, or the value `None`, if it didn't.
 
 ### Terminals
 

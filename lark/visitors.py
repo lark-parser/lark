@@ -13,7 +13,31 @@ class Discard(Exception):
 
 # Transformers
 
-class Transformer:
+class _Decoratable:
+    @classmethod
+    def _apply_decorator(cls, decorator, **kwargs):
+        mro = getmro(cls)
+        assert mro[0] is cls
+        libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
+        for name, value in getmembers(cls):
+
+            # Make sure the function isn't inherited (unless it's overwritten)
+            if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
+                continue
+            if not callable(cls.__dict__[name]):
+                continue
+
+            # Skip if v_args already applied (at the function level)
+            if hasattr(cls.__dict__[name], 'vargs_applied'):
+                continue
+
+            static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
+            setattr(cls, name, decorator(value, static=static, **kwargs))
+        return cls
+
+
+
+class Transformer(_Decoratable):
     """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
 
     Calls its methods (provided by user via inheritance) according to tree.data
@@ -89,27 +113,6 @@ class Transformer:
         "Default operation on token (for override)"
         return token
 
-
-    @classmethod
-    def _apply_decorator(cls, decorator, **kwargs):
-        mro = getmro(cls)
-        assert mro[0] is cls
-        libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
-        for name, value in getmembers(cls):
-
-            # Make sure the function isn't inherited (unless it's overwritten)
-            if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
-                continue
-            if not callable(cls.__dict__[name]):
-                continue
-
-            # Skip if v_args already applied (at the function level)
-            if hasattr(cls.__dict__[name], 'vargs_applied'):
-                continue
-
-            static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
-            setattr(cls, name, decorator(value, static=static, **kwargs))
-        return cls
 
 
 class InlineTransformer(Transformer):   # XXX Deprecated
@@ -221,7 +224,7 @@ def visit_children_decor(func):
     return inner
 
 
-class Interpreter:
+class Interpreter(_Decoratable):
     """Top-down visitor, recursive
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -230,8 +233,14 @@ class Interpreter:
     Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
     The user has to explicitly call visit_children, or use the @visit_children_decor
     """
+
     def visit(self, tree):
-        return getattr(self, tree.data)(tree)
+        f = getattr(self, tree.data)
+        wrapper = getattr(f, 'visit_wrapper', None)
+        if wrapper is not None:
+            return f.visit_wrapper(f, tree.data, tree.children, tree.meta)
+        else:
+            return f(tree)
 
     def visit_children(self, tree):
         return [self.visit(child) if isinstance(child, Tree) else child

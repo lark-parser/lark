@@ -35,13 +35,11 @@ class _Decoratable:
             setattr(cls, name, decorator(value, static=static, **kwargs))
         return cls
 
-
-class _GenericMeta(type):
-    def __getitem__(self, _):
-        return self
+    def __class_getitem__(cls, _):
+        return cls
 
 
-class Transformer(_Decoratable, metaclass=_GenericMeta):
+class Transformer(_Decoratable):
     """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
 
     Calls its methods (provided by user via inheritance) according to tree.data
@@ -49,7 +47,6 @@ class Transformer(_Decoratable, metaclass=_GenericMeta):
 
     Can be used to implement map or reduce.
     """
-
     __visit_tokens__ = True   # For backwards compatibility
     def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
@@ -174,14 +171,16 @@ class VisitorBase:
         "Default operation on tree (for override)"
         return tree
 
+    def __class_getitem__(cls, _):
+        return cls
 
-class Visitor(VisitorBase, metaclass=_GenericMeta):
+
+class Visitor(VisitorBase):
     """Bottom-up visitor, non-recursive
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
     Calls its methods (provided by user via inheritance) according to tree.data
     """
-
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
@@ -228,7 +227,7 @@ def visit_children_decor(func):
     return inner
 
 
-class Interpreter(_Decoratable, metaclass=_GenericMeta):
+class Interpreter(_Decoratable):
     """Top-down visitor, recursive
 
     Visits the tree, starting with the root and finally the leaves (top-down)

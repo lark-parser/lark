@@ -24,8 +24,8 @@ from .earley_forest import SymbolNode
 
 
 class Parser(BaseParser):
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False):
-        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity)
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False):
+        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug)
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 
@@ -147,3 +147,4 @@ class Parser(BaseParser):
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
+        return to_scan

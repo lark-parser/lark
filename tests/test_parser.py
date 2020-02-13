@@ -5,6 +5,7 @@ import unittest
 import logging
 import os
 import sys
+from copy import deepcopy
 try:
     from cStringIO import StringIO as cStringIO
 except ImportError:
@@ -20,9 +21,9 @@ logging.basicConfig(level=logging.INFO)
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
-from lark.visitors import Transformer
+from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
-from lark.lexer import TerminalDef
+from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -62,6 +63,14 @@ class TestParsers(unittest.TestCase):
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
 
+        g = Lark("""start: x
+                    x: a
+                    a: "a"
+                 """, propagate_positions=True)
+
+        r = g.parse('a')
+        self.assertEqual( r.children[0].meta.line, 1 )
+
     def test_expand1(self):
 
         g = Lark("""start: a
@@ -93,6 +102,98 @@ class TestParsers(unittest.TestCase):
                  """)
         r = g.parse('xx')
         self.assertEqual( r.children[0].data, "c" )
+
+    def test_comment_in_rule_definition(self):
+        g = Lark("""start: a
+               a: "a"
+                // A comment
+                // Another comment
+                | "b"
+                // Still more
+
+               c: "unrelated"
+            """)
+        r = g.parse('b')
+        self.assertEqual( r.children[0].data, "a" )
+
+    def test_visit_tokens(self):
+        class T(Transformer):
+            def a(self, children):
+                return children[0] + "!"
+            def A(self, tok):
+                return tok.update(value=tok.upper())
+
+        # Test regular
+        g = """start: a
+            a : A
+            A: "x"
+            """
+        p = Lark(g, parser='lalr')
+        r = T(False).transform(p.parse("x"))
+        self.assertEqual( r.children, ["x!"] )
+        r = T().transform(p.parse("x"))
+        self.assertEqual( r.children, ["X!"] )
+
+        # Test internal transformer
+        p = Lark(g, parser='lalr', transformer=T())
+        r = p.parse("x")
+        self.assertEqual( r.children, ["X!"] )
+
+    def test_vargs_meta(self):
+
+        @v_args(meta=True)
+        class T1(Transformer):
+            def a(self, children, meta):
+                assert not children
+                return meta.line
+
+            def start(self, children, meta):
+                return children
+
+        @v_args(meta=True, inline=True)
+        class T2(Transformer):
+            def a(self, meta):
+                return meta.line
+
+            def start(self, meta, *res):
+                return list(res)
+
+        for T in (T1, T2):
+            for internal in [False, True]:
+                try:
+                    g = Lark(r"""start: a+
+                                a : "x" _NL?
+                                _NL: /\n/+
+                            """, parser='lalr', transformer=T() if internal else None, propagate_positions=True)
+                except NotImplementedError:
+                    assert internal
+                    continue
+
+                res = g.parse("xx\nx\nxxx\n\n\nxx")
+                assert not internal
+                res = T().transform(res)
+
+                self.assertEqual(res, [1, 1, 2, 3, 3, 3, 6, 6])
+
+    def test_vargs_tree(self):
+        tree = Lark('''
+            start: a a a
+            !a: "A"
+        ''').parse('AAA')
+        tree_copy = deepcopy(tree)
+
+        @v_args(tree=True)
+        class T(Transformer):
+            def a(self, tree):
+                return 1
+            def start(self, tree):
+                return tree.children
+
+        res = T().transform(tree)
+        self.assertEqual(res, [1, 1, 1])
+        self.assertEqual(tree, tree_copy)
+
+
 
     def test_embedded_transformer(self):
         class T(Transformer):
@@ -150,6 +251,51 @@ class TestParsers(unittest.TestCase):
         r = g.parse("xx")
         self.assertEqual( r.children, ["<c>"] )
 
+    def test_embedded_transformer_inplace(self):
+        @v_args(tree=True)
+        class T1(Transformer_InPlace):
+            def a(self, tree):
+                assert isinstance(tree, Tree), tree
+                tree.children.append("tested")
+                return tree
+
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        @v_args(tree=True)
+        class T2(Transformer):
+            def a(self, tree):
+                assert isinstance(tree, Tree), tree
+                tree.children.append("tested")
+                return tree
+
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        class T3(Transformer):
+            @v_args(tree=True)
+            def a(self, tree):
+                assert isinstance(tree, Tree)
+                tree.children.append("tested")
+                return tree
+
+            @v_args(tree=True)
+            def b(self, tree):
+                return Tree(tree.data, tree.children + ['tested2'])
+
+        for t in [T1(), T2(), T3()]:
+            for internal in [False, True]:
+                g = Lark("""start: a b
+                            a : "x"
+                            b : "y"
+                        """, parser='lalr', transformer=t if internal else None)
+                r = g.parse("xy")
+                if not internal:
+                    r = t.transform(r)
+
+                a, b = r.children
+                self.assertEqual(a.children, ["tested"])
+                self.assertEqual(b.children, ["tested2"])
 
     def test_alias(self):
         Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)
@@ -386,12 +532,22 @@ def _make_full_earley_test(LEXER):
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
 
+class CustomLexer(Lexer):
+    """
+    Purpose of this custom lexer is to test the integration,
+    so it uses the traditionalparser as implementation without custom lexing behaviour.
+    """
+    def __init__(self, lexer_conf):
+        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+    def lex(self, *args, **kwargs):
+        return self.lexer.lex(*args, **kwargs)
 
 def _make_parser_test(LEXER, PARSER):
+    lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
     def _Lark(grammar, **kwargs):
-        return Lark(grammar, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
-        return Lark.open(gfilename, lexer=LEXER, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*
@@ -890,7 +1046,7 @@ def _make_parser_test(LEXER, PARSER):
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
-            g = """!start: [["A"]]
+            g = """!start: ("A"?)?
                 """
             l = _Lark(g)
             tree = l.parse('A')
@@ -984,6 +1140,32 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B.-20: "b"
+            AB.-10: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+            self.assertEqual(res.children, ['a', 'b'])
+
+
+            grammar = """
+            start: A B | AB
+            A.-99999999999999999999999: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['ab'])
+
+
+
+
+
 
         def test_import(self):
             grammar = """
@@ -1019,6 +1201,12 @@ def _make_parser_test(LEXER, PARSER):
             l = _Lark_open('test_relative_import.lark', rel_to=__file__)
             x = l.parse('12 lions')
             self.assertEqual(x.children, ['12', 'lions'])
+
+
+        def test_relative_import_unicode(self):
+            l = _Lark_open('test_relative_import_unicode.lark', rel_to=__file__)
+            x = l.parse(u'Ø')
+            self.assertEqual(x.children, [u'Ø'])
 
 
         def test_relative_import_rename(self):
@@ -1448,7 +1636,20 @@ def _make_parser_test(LEXER, PARSER):
 
             parser.parse(r'"That" "And a \"b"')
 
-        @unittest.skipIf(PARSER!='lalr', "Serialize currently only works for LALR parsers (though it should be easy to extend)")
+
+        def test_meddling_unused(self):
+            "Unless 'unused' is removed, LALR analysis will fail on reduce-reduce collision"
+
+            grammar = """
+                start: EKS* x
+                x: EKS
+                unused: x*
+                EKS: "x"
+            """
+            parser = _Lark(grammar)
+
+
+        @unittest.skipIf(PARSER!='lalr' or LEXER=='custom', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -1465,6 +1666,37 @@ def _make_parser_test(LEXER, PARSER):
             parser3 = Lark.deserialize(d, namespace, m)
             self.assertEqual(parser3.parse('ABC'), Tree('start', [Tree('b', [])]) )
 
+        def test_multi_start(self):
+            parser = _Lark('''
+                a: "x" "a"?
+                b: "x" "b"?
+            ''', start=['a', 'b'])
+
+            self.assertEqual(parser.parse('xa', 'a'), Tree('a', []))
+            self.assertEqual(parser.parse('xb', 'b'), Tree('b', []))
+
+        def test_lexer_detect_newline_tokens(self):
+            # Detect newlines in regular tokens
+            g = _Lark(r"""start: "go" tail*
+            !tail : SA "@" | SB "@" | SC "@" | SD "@"
+            SA : "a" /\n/
+            SB : /b./s
+            SC : "c" /[^a-z]/
+            SD : "d" /\s/
+            """)
+            a,b,c,d = [x.children[1] for x in g.parse('goa\n@b\n@c\n@d\n@').children]
+            self.assertEqual(a.line, 2)
+            self.assertEqual(b.line, 3)
+            self.assertEqual(c.line, 4)
+            self.assertEqual(d.line, 5)
+
+            # Detect newlines in ignored tokens
+            for re in ['/\\n/', '/[^a-z]/', '/\\s/']:
+                g = _Lark('''!start: "a" "a"
+                             %ignore {}'''.format(re))
+                a, b = g.parse('a\na').children
+                self.assertEqual(a.line, 1)
+                self.assertEqual(b.line, 2)
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
@@ -1479,6 +1711,7 @@ _TO_TEST = [
         ('dynamic_complete', 'earley'),
         ('standard', 'lalr'),
         ('contextual', 'lalr'),
+        ('custom', 'lalr'),
         # (None, 'earley'),
 ]
 

@@ -230,7 +230,8 @@ from lark import Transformer
 class MyTransformer(Transformer):
     def list(self, items):
         return list(items)
-    def pair(self, (k,v)):
+    def pair(self, key_value):
+        k, v = key_value
         return k, v
     def dict(self, items):
         return dict(items)
@@ -251,9 +252,11 @@ Also, our definitions of list and dict are a bit verbose. We can do better:
 from lark import Transformer
 
 class TreeToJson(Transformer):
-    def string(self, (s,)):
+    def string(self, s):
+        (s,) = s
         return s[1:-1]
-    def number(self, (n,)):
+    def number(self, n):
+        (n,) = n
         return float(n)
 
     list = list
@@ -315,9 +318,11 @@ json_grammar = r"""
     """
 
 class TreeToJson(Transformer):
-    def string(self, (s,)):
+    def string(self, s):
+        (s,) = s
         return s[1:-1]
-    def number(self, (n,)):
+    def number(self, n):
+        (n,) = n
         return float(n)
 
     list = list

@@ -1,4 +1,5 @@
 import sys
+from ast import literal_eval
 from collections import deque
 
 class fzset(frozenset):
@@ -160,7 +161,7 @@ def smart_decorator(f, create_decorator):
 
     elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        return create_decorator(f.__func__, True)
+        return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
 
     else:
         return create_decorator(f.__func__.__call__, True)
@@ -172,7 +173,7 @@ import sre_parse
 import sre_constants
 def get_regexp_width(regexp):
     try:
-        return sre_parse.parse(regexp).getwidth()
+        return [int(x) for x in sre_parse.parse(regexp).getwidth()]
     except sre_constants.error:
         raise ValueError(regexp)
 
@@ -239,3 +240,28 @@ class Enumerator(Serialize):
         assert len(r) == len(self.enums)
         return r
 
+
+def eval_escaping(s):
+    w = ''
+    i = iter(s)
+    for n in i:
+        w += n
+        if n == '\\':
+            try:
+                n2 = next(i)
+            except StopIteration:
+                raise ValueError("Literal ended unexpectedly (bad escaping): `%r`" % s)
+            if n2 == '\\':
+                w += '\\\\'
+            elif n2 not in 'uxnftr':
+                w += '\\'
+            w += n2
+    w = w.replace('\\"', '"').replace("'", "\\'")
+
+    to_eval = "u'''%s'''" % w
+    try:
+        s = literal_eval(to_eval)
+    except SyntaxError as e:
+        raise ValueError(s, e)
+
+    return s

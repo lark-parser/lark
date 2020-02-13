@@ -10,20 +10,22 @@ is better documented here:
     http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+import logging
 from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
-from ..exceptions import ParseError, UnexpectedToken
+from ..exceptions import UnexpectedEOF, UnexpectedToken
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, ForestToAmbiguousTreeVisitor
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
+        self.debug = debug
 
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
@@ -43,13 +45,9 @@ class Parser:
             #  the priorities will be stripped from all rules before they reach us, allowing us to
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules.
-            if self.forest_sum_visitor is None and rule.options and rule.options.priority is not None:
-                self.forest_sum_visitor = ForestSumVisitor()
+            if self.forest_sum_visitor is None and rule.options.priority is not None:
+                self.forest_sum_visitor = ForestSumVisitor
 
-        if resolve_ambiguity:
-            self.forest_tree_visitor = ForestToTreeVisitor(self.callbacks, self.forest_sum_visitor)
-        else:
-            self.forest_tree_visitor = ForestToAmbiguousTreeVisitor(self.callbacks, self.forest_sum_visitor)
         self.term_matcher = term_matcher
 
 
@@ -272,9 +270,11 @@ class Parser:
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1
+        return to_scan
 
-    def parse(self, stream, start_symbol=None):
-        start_symbol = NonTerminal(start_symbol or self.parser_conf.start)
+    def parse(self, stream, start):
+        assert start, start
+        start_symbol = NonTerminal(start)
 
         columns = [set()]
         to_scan = set()     # The scan buffer. 'Q' in E.Scott's paper.
@@ -289,22 +289,33 @@ class Parser:
             else:
                 columns[0].add(item)
 
-        self._parse(stream, columns, to_scan, start_symbol)
+        to_scan = self._parse(stream, columns, to_scan, start_symbol)
 
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        if self.debug:
+            from .earley_forest import ForestToPyDotVisitor
+            try:
+                debug_walker = ForestToPyDotVisitor()
+            except ImportError:
+                logging.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
+            else:
+                debug_walker.visit(solutions[0], "sppf.png")
+
 
         if not solutions:
             expected_tokens = [t.expect for t in to_scan]
-            # raise ParseError('Incomplete parse: Could not find a solution to input')
-            raise ParseError('Unexpected end of input! Expecting a terminal of: %s' % expected_tokens)
+            raise UnexpectedEOF(expected_tokens)
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        return self.forest_tree_visitor.visit(solutions[0])
+        forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else ForestToAmbiguousTreeVisitor
+        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+
+        return forest_tree_visitor.visit(solutions[0])
 
 
 class ApplyCallbacks(Transformer_InPlace):

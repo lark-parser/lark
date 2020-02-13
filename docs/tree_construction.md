@@ -7,6 +7,12 @@ For example, the rule `node: child1 child2` will create a tree node with two chi
 
 Using `item+` or `item*` will result in a list of items, equivalent to writing `item item item ..`.
 
+Using `item?` will return the item if it matched, or nothing.
+
+If `maybe_placeholders=False` (the default), then `[]` behaves like `()?`.
+
+If `maybe_placeholders=True`, then using `[item]` will return the item if it matched, or the value `None`, if it didn't.
+
 ### Terminals
 
 Terminals are always values in the tree, never branches.
@@ -22,6 +28,24 @@ Lark filters out certain types of terminals by default, considering them punctua
 
     - Unnamed regular expressions (like `/[0-9]/`)
     - Named terminals whose name starts with a letter (like `DIGIT`)
+
+Note: Terminals composed of literals and other terminals always include the entire match without filtering any part.
+
+**Example:**
+```
+start:  PNAME pname
+
+PNAME:  "(" NAME ")"
+pname:  "(" NAME ")"
+
+NAME:   /\w+/
+%ignore /\s+/
+```
+Lark will parse "(Hello) (World)" as:
+
+    start
+        (Hello)
+        pname World
 
 Rules prefixed with `!` will retain all their literals regardless.
 

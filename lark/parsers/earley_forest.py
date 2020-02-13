@@ -122,7 +122,7 @@ class PackedNode(ForestNode):
         ambiguously. Hence, we use the sort order to identify
         the order in which ambiguous children should be considered.
         """
-        return self.is_empty, -self.priority, -self.rule.order
+        return self.is_empty, -self.priority, self.rule.order
 
     def __iter__(self):
         return iter([self.left, self.right])
@@ -195,7 +195,7 @@ class ForestVisitor(object):
                     continue
 
                 if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar!")
+                    raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
                 continue
@@ -250,7 +250,7 @@ class ForestSumVisitor(ForestVisitor):
         return iter(node.children)
 
     def visit_packed_node_out(self, node):
-        priority = node.rule.options.priority if not node.parent.is_intermediate and node.rule.options and node.rule.options.priority else 0
+        priority = node.rule.options.priority if not node.parent.is_intermediate and node.rule.options.priority else 0
         priority += getattr(node.right, 'priority', 0)
         priority += getattr(node.left, 'priority', 0)
         node.priority = priority

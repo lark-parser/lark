@@ -44,18 +44,28 @@ def get_frontend(parser, lexer):
         raise ValueError('Unknown parser: %s' % parser)
 
 
+class _ParserFrontend(Serialize):
+    def _parse(self, input, start, *args):
+        if start is None:
+            start = self.start
+            if len(start) > 1:
+                raise ValueError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
+            start ,= start
+        return self.parser.parse(input, start, *args)
 
 
-class WithLexer(Serialize):
+class WithLexer(_ParserFrontend):
     lexer = None
     parser = None
     lexer_conf = None
+    start = None
 
-    __serialize_fields__ = 'parser', 'lexer_conf'
+    __serialize_fields__ = 'parser', 'lexer_conf', 'start'
     __serialize_namespace__ = LexerConf,
 
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.lexer_conf = lexer_conf
+        self.start = parser_conf.start
         self.postlex = lexer_conf.postlex
 
     @classmethod
@@ -65,18 +75,17 @@ class WithLexer(Serialize):
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         inst.init_lexer()
         return inst
-    
+
     def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize(memo)
 
-    def lex(self, text):
-        stream = self.lexer.lex(text)
+    def lex(self, *args):
+        stream = self.lexer.lex(*args)
         return self.postlex.process(stream) if self.postlex else stream
 
-    def parse(self, text):
+    def parse(self, text, start=None):
         token_stream = self.lex(text)
-        sps = self.lexer.set_parser_state
-        return self.parser.parse(token_stream, *[sps] if sps is not NotImplemented else [])
+        return self._parse(token_stream, start)
 
     def init_traditional_lexer(self):
         self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
@@ -104,14 +113,24 @@ class LALR_ContextualLexer(LALR_WithLexer):
                                      ignore=self.lexer_conf.ignore,
                                      always_accept=always_accept,
                                      user_callbacks=self.lexer_conf.callbacks)
+
+
+    def parse(self, text, start=None):
+        parser_state = [None]
+        def set_parser_state(s):
+            parser_state[0] = s
+
+        token_stream = self.lex(text, lambda: parser_state[0])
+        return self._parse(token_stream, start, set_parser_state)
 ###}
 
 class LALR_CustomLexer(LALR_WithLexer):
     def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        pass    # TODO
+        self.lexer = lexer_cls(lexer_conf)
+        debug = options.debug if options else False
+        self.parser = LALR_Parser(parser_conf, debug=debug)
+        WithLexer.__init__(self, lexer_conf, parser_conf, options)
 
-    def init_lexer(self):
-        self.lexer = lexer_cls(self.lexer_conf)
 
 def tokenize_text(text):
     line = 1
@@ -128,22 +147,26 @@ class Earley(WithLexer):
         self.init_traditional_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
-        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity)
+        debug = options.debug if options else False
+        self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug)
 
     def match(self, term, token):
         return term.name == token.type
 
 
-class XEarley:
+class XEarley(_ParserFrontend):
     def __init__(self, lexer_conf, parser_conf, options=None, **kw):
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+        self.start = parser_conf.start
 
         self._prepare_match(lexer_conf)
         resolve_ambiguity = options.ambiguity == 'resolve'
+        debug = options.debug if options else False
         self.parser = xearley.Parser(parser_conf,
                                     self.match,
                                     ignore=lexer_conf.ignore,
                                     resolve_ambiguity=resolve_ambiguity,
+                                    debug=debug,
                                     **kw
                                     )
 
@@ -166,8 +189,8 @@ class XEarley:
 
             self.regexps[t.name] = re.compile(regexp)
 
-    def parse(self, text):
-        return self.parser.parse(text)
+    def parse(self, text, start):
+        return self._parse(text, start)
 
 class XEarley_CompleteLex(XEarley):
     def __init__(self, *args, **kw):
@@ -182,13 +205,13 @@ class CYK(WithLexer):
         self.init_traditional_lexer()
 
         self._analysis = GrammarAnalyzer(parser_conf)
-        self._parser = cyk.Parser(parser_conf.rules, parser_conf.start)
+        self.parser = cyk.Parser(parser_conf.rules)
 
         self.callbacks = parser_conf.callbacks
 
-    def parse(self, text):
+    def parse(self, text, start):
         tokens = list(self.lex(text))
-        parse = self._parser.parse(tokens)
+        parse = self._parse(tokens, start)
         parse = self._transform(parse)
         return parse
 

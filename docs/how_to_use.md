@@ -10,7 +10,7 @@ This is the recommended process for working with Lark:
 
 3. Try your grammar in Lark against each input sample. Make sure the resulting parse-trees make sense.
 
-4. Use Lark's grammar features to [[shape the tree|Tree Construction]]: Get rid of superfluous rules by inlining them, and use aliases when specific cases need clarification.
+4. Use Lark's grammar features to [shape the tree](tree_construction.md): Get rid of superfluous rules by inlining them, and use aliases when specific cases need clarification.
 
   - You can perform steps 1-4 repeatedly, gradually growing your grammar to include more sentences.
 

@@ -10,10 +10,12 @@ token: TOKEN priority? ":" expansions _NL
 priority: "." NUMBER
 
 statement: "%ignore" expansions _NL                -> ignore
-         | "%import" import_args ["->" name] _NL   -> import
+         | "%import" import_path ["->" name] _NL   -> import
+         | "%import" import_path name_list _NL     -> multi_import
          | "%declare" name+                        -> declare
 
-import_args: "."? name ("." name)*
+!import_path: "."? name ("." name)*
+name_list: "(" name ("," name)* ")"
 
 ?expansions: alias (_VBAR alias)*
 
@@ -33,7 +35,7 @@ name: RULE
     | TOKEN
 
 _VBAR: _NL? "|"
-OP: /[+*][?]?|[?](?![a-z])/
+OP: /[+*]|[?](?![a-z])/
 RULE: /!?[_?]?[a-z][_a-z0-9]*/
 TOKEN: /_?[A-Z][_A-Z0-9]*/
 STRING: _STRING "i"?
@@ -44,7 +46,7 @@ _NL: /(\r?\n)+\s*/
 %import common.INT -> NUMBER
 %import common.WS_INLINE
 
-COMMENT: "//" /[^\n]/*
+COMMENT: /\s*/ "//" /[^\n]/*
 
 %ignore WS_INLINE
 %ignore COMMENT

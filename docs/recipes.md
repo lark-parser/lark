@@ -19,18 +19,18 @@ It only works with the standard and contextual lexers.
 ### Example 1: Replace string values with ints for INT tokens
 
 ```python
-from lark import Lark, Token
+from lark import Lark, Transformer
 
-def tok_to_int(tok):
-    "Convert the value of `tok` from string to int, while maintaining line number & column."
-    # tok.type == 'INT'
-    return Token.new_borrow_pos(tok.type, int(tok), tok)
+class T(Transformer):
+    def INT(self, tok):
+        "Convert the value of `tok` from string to int, while maintaining line number & column."
+        return tok.update(value=int(tok))
 
 parser = Lark("""
 start: INT*
 %import common.INT
 %ignore " "
-""", parser="lalr", lexer_callbacks = {'INT': tok_to_int})
+""", parser="lalr", transformer=T())
 
 print(parser.parse('3 14 159'))
 ```

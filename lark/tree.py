@@ -56,30 +56,6 @@ class Tree(object):
 
     def __hash__(self):
         return hash((self.data, tuple(self.children)))
-###}
-
-    def expand_kids_by_index(self, *indices):
-        "Expand (inline) children at the given indices"
-        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
-            kid = self.children[i]
-            self.children[i:i+1] = kid.children
-
-    def find_pred(self, pred):
-        "Find all nodes where pred(tree) == True"
-        return filter(pred, self.iter_subtrees())
-
-    def find_data(self, data):
-        "Find all nodes where tree.data == data"
-        return self.find_pred(lambda t: t.data == data)
-
-    def scan_values(self, pred):
-        for c in self.children:
-            if isinstance(c, Tree):
-                for t in c.scan_values(pred):
-                    yield t
-            else:
-                if pred(c):
-                    yield c
 
     def iter_subtrees(self):
         # TODO: Re-write as a more efficient version
@@ -101,6 +77,31 @@ class Tree(object):
             if id(x) not in seen:
                 yield x
                 seen.add(id(x))
+
+    def find_pred(self, pred):
+        "Find all nodes where pred(tree) == True"
+        return filter(pred, self.iter_subtrees())
+
+    def find_data(self, data):
+        "Find all nodes where tree.data == data"
+        return self.find_pred(lambda t: t.data == data)
+
+###}
+
+    def expand_kids_by_index(self, *indices):
+        "Expand (inline) children at the given indices"
+        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
+            kid = self.children[i]
+            self.children[i:i+1] = kid.children
+
+    def scan_values(self, pred):
+        for c in self.children:
+            if isinstance(c, Tree):
+                for t in c.scan_values(pred):
+                    yield t
+            else:
+                if pred(c):
+                    yield c
 
     def iter_subtrees_topdown(self):
         stack = [self]
@@ -141,17 +142,19 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree, filename, rankdir="LR"):
+def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
     directed graphs drawn from top to bottom, from left to right, from bottom to
-    top, and from right to left, respectively. See:
-    https://www.graphviz.org/doc/info/attrs.html#k:rankdir
+    top, and from right to left, respectively.
+
+    `kwargs` can be any graph attribute (e. g. `dpi=200`). For a list of
+    possible attributes, see https://www.graphviz.org/doc/info/attrs.html.
     """
 
     import pydot
-    graph = pydot.Dot(graph_type='digraph', rankdir=rankdir)
+    graph = pydot.Dot(graph_type='digraph', rankdir=rankdir, **kwargs)
 
     i = [0]
 

@@ -3,6 +3,8 @@ from .utils import Serialize
 ###{standalone
 
 class Symbol(Serialize):
+    __slots__ = ('name',)
+
     is_term = NotImplemented
 
     def __init__(self, name):
@@ -79,7 +81,7 @@ class Rule(Serialize):
         self.expansion = expansion
         self.alias = alias
         self.order = order
-        self.options = options
+        self.options = options or RuleOptions()
         self._hash = hash((self.origin, tuple(self.expansion)))
 
     def _deserialize(self):

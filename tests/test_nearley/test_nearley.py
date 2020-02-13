@@ -15,8 +15,11 @@ NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
 if not os.path.exists(NEARLEY_PATH):
-    print("Skipping Nearley tests!")
+    logging.warn("Nearley not installed. Skipping Nearley tests!")
     raise ImportError("Skipping Nearley tests!")
+
+import js2py    # Ensures that js2py exists, to avoid failing tests
+
 
 class TestNearley(unittest.TestCase):
     def test_css(self):

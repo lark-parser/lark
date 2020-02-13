@@ -18,7 +18,7 @@ nearley_grammar = r"""
 
     expansion: expr+ js
 
-    ?expr: item [":" /[+*?]/]
+    ?expr: item (":" /[+*?]/)?
 
     ?item: rule|string|regexp|null
          | "(" expansions ")"
@@ -167,7 +167,7 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
     emit("    __default__ = lambda self, n, c, m: c if c else None")
 
     emit()
-    emit('parser = Lark(grammar, start="n_%s")' % start)
+    emit('parser = Lark(grammar, start="n_%s", maybe_placeholders=False)' % start)
     emit('def parse(text):')
     emit('    return TransformNearley().transform(parser.parse(text))')
 

@@ -11,7 +11,7 @@ setup(
     requires = [],
     install_requires = [],
 
-    package_data = { '': ['*.md', '*.lark'] },
+    package_data = { '': ['*.md', '*.lark', '*.pyi'], 'lark': ['py.typed'] },
 
     test_suite = 'tests.__main__',
 

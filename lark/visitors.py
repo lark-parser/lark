@@ -36,8 +36,12 @@ class _Decoratable:
         return cls
 
 
+class _GenericMeta(type):
+    def __getitem__(self, _):
+        return self
 
-class Transformer(_Decoratable):
+
+class Transformer(_Decoratable, metaclass=_GenericMeta):
     """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
 
     Calls its methods (provided by user via inheritance) according to tree.data
@@ -171,7 +175,7 @@ class VisitorBase:
         return tree
 
 
-class Visitor(VisitorBase):
+class Visitor(VisitorBase, metaclass=_GenericMeta):
     """Bottom-up visitor, non-recursive
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
@@ -224,7 +228,7 @@ def visit_children_decor(func):
     return inner
 
 
-class Interpreter(_Decoratable):
+class Interpreter(_Decoratable, metaclass=_GenericMeta):
     """Top-down visitor, recursive
 
     Visits the tree, starting with the root and finally the leaves (top-down)

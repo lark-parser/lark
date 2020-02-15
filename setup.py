@@ -1,17 +1,17 @@
 import re
-from setuptools import setup
+from setuptools import find_packages, setup
 
 __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read())
 
 setup(
     name = "lark-parser",
     version = __version__,
-    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars'],
+    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark-stubs'],
 
     requires = [],
     install_requires = [],
 
-    package_data = { '': ['*.md', '*.lark', '*.pyi'], 'lark': ['py.typed'] },
+    package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},
 
     test_suite = 'tests.__main__',
 

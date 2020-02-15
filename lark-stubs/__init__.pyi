@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from .tree import Tree
-from .visitors import Transformer, Visitor, v_args, Discard
-from .visitors import InlineTransformer, inline_args   # XXX Deprecated
-from .exceptions import ParseError, LexError, GrammarError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
-from .lexer import Token
-from .lark import Lark
+from .tree import *
+from .visitors import *
+from .exceptions import *
+from .lexer import *
+from .lark import *
 
 __version__: str

@@ -6,4 +6,4 @@ from .exceptions import *
 from .lexer import *
 from .lark import *
 
-__version__: str
+__version__: str = ...

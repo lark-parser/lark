@@ -48,6 +48,7 @@ class Transformer(_Decoratable):
     Can be used to implement map or reduce.
     """
     __visit_tokens__ = True   # For backwards compatibility
+
     def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 

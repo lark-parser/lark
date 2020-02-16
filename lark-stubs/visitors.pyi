@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import TypeVar, List, Callable, Generic, Type
+from typing import TypeVar, Tuple, List, Callable, Generic, Type
 from abc import ABC
 from .tree import Tree
 
@@ -15,6 +15,22 @@ class Transformer(ABC, Generic[_T]):
         ...
 
     def transform(self, tree: Tree) -> _T:
+        ...
+
+    def __mul__(self, other: Transformer[_T]) -> TransformerChain[_T]:
+        ...
+
+
+class TransformerChain(Generic[_T]):
+    transformers: Tuple[Transformer[_T], ...]
+
+    def __init__(self, *transformers: Transformer[_T]):
+        ...
+
+    def transform(self, tree: Tree) -> _T:
+        ...
+
+    def __mul__(self, other: Transformer[_T]) -> TransformerChain[_T]:
         ...
 
 

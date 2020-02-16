@@ -23,7 +23,7 @@ class LexError(LarkError):
 class UnexpectedInput(LarkError):
     pos_in_stream: int
 
-    def get_context(self, text: str, span: int = 40):
+    def get_context(self, text: str, span: int = ...):
         ...
 
     def match_examples(
@@ -39,4 +39,9 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
+    line: int
+    column: int
+
+
+class VisitError(LarkError):
     pass

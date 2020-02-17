@@ -7,7 +7,6 @@ from typing import (
 from abc import abstractmethod, ABC
 
 _T = TypeVar('_T')
-_MRes = List[Tuple[REPattern, Dict[int, str]]]
 
 
 class Pattern(ABC):
@@ -97,63 +96,6 @@ class Token(str):
 _Callback = Callable[[Token], Token]
 
 
-def build_mres(terminals: Collection[TerminalDef], match_whole: bool = False) -> _MRes:
-    ...
-
-
-class UnlessCallback:
-    mres: _MRes
-
-    def __init__(self, mres: _MRes):
-        ...
-
-    def __call__(self, t: Token) -> Token:
-        ...
-
-
-class CallChain:
-    callback1: _Callback
-    callback2: _Callback
-    cond: Callable[[Token], bool]
-
-    def __init__(
-        self,
-        callback1: _Callback,
-        callback2: _Callback,
-        cond: Callable[[Token], bool]
-    ):
-        ...
-
-
-class LineCounter:
-    newline_char: str
-    char_pos: int
-    line: int
-    column: int
-    line_start_pos: int
-
-    def __init__(self):
-        ...
-
-    def feed(self, token: str, test_newline: bool = True):
-        ...
-
-
-class _Lex:
-    lexer: TraditionalLexer
-
-    def __init__(self, lexer: TraditionalLexer, state: Optional[str] = None):
-        ...
-
-    def lex(
-        self,
-        stream: str,
-        newline_types: Collection[str],
-        ignore_types: Collection[str]
-    ) -> Iterator[Token]:
-        ...
-
-
 class Lexer(ABC):
     lex: Callable[..., Iterator[Token]]
 
@@ -164,7 +106,7 @@ class TraditionalLexer(Lexer):
     newline_types: List[str]
     user_callbacks: Dict[str, _Callback]
     callback: Dict[str, _Callback]
-    mres: _MRes
+    mres: List[Tuple[REPattern, Dict[int, str]]]
 
     def __init__(
         self,

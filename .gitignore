@@ -7,5 +7,6 @@ tags
 .idea
 .ropeproject
 .cache
+.mypy_cache
 /dist
 /build

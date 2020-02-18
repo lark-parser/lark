@@ -35,6 +35,8 @@ class _Decoratable:
             setattr(cls, name, decorator(value, static=static, **kwargs))
         return cls
 
+    def __class_getitem__(cls, _):
+        return cls
 
 
 class Transformer(_Decoratable):
@@ -45,8 +47,8 @@ class Transformer(_Decoratable):
 
     Can be used to implement map or reduce.
     """
-
     __visit_tokens__ = True   # For backwards compatibility
+
     def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 
@@ -170,6 +172,9 @@ class VisitorBase:
         "Default operation on tree (for override)"
         return tree
 
+    def __class_getitem__(cls, _):
+        return cls
+
 
 class Visitor(VisitorBase):
     """Bottom-up visitor, non-recursive
@@ -177,7 +182,6 @@ class Visitor(VisitorBase):
     Visits the tree, starting with the leaves and finally the root (bottom-up)
     Calls its methods (provided by user via inheritance) according to tree.data
     """
-
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():

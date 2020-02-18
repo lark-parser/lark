@@ -74,3 +74,54 @@ Prints out:
 ```
 
 *Note: We don't have to return a token, because comments are ignored*
+
+## CollapseAmbiguities
+
+Parsing ambiguous texts with earley and `ambiguity='explicit'` produces a single tree with `_ambig` nodes to mark where the ambiguity occured.
+
+However, it's sometimes more convenient instead to work with a list of all possible unambiguous trees.
+
+Lark provides a utility transformer for that purpose:
+
+```python
+from lark import Lark, Tree, Transformer
+from lark.visitors import CollapseAmbiguities
+
+grammar = """
+    !start: x y
+
+    !x: "a" "b"
+      | "ab"
+      | "abc"
+
+    !y: "c" "d"
+      | "cd"
+      | "d"
+
+"""
+parser = Lark(grammar, ambiguity='explicit')
+
+t = parser.parse('abcd')
+for x in CollapseAmbiguities().transform(t):
+    print(x.pretty())
+```
+
+This prints out:
+
+    start
+    x
+        a
+        b
+    y
+        c
+        d
+
+    start
+    x     ab
+    y     cd
+
+    start
+    x     abc
+    y     d
+
+While convenient, this should be used carefully, as highly ambiguous trees will soon create an exponential explosion of such unambiguous derivations.

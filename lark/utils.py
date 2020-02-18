@@ -1,4 +1,5 @@
 import sys
+from functools import reduce
 from ast import literal_eval
 from collections import deque
 
@@ -265,3 +266,24 @@ def eval_escaping(s):
         raise ValueError(s, e)
 
     return s
+
+
+def combine_alternatives(lists):
+    """
+    Accepts a list of alternatives, and enumerates all their possible concatinations.
+
+    Examples:
+        >>> combine_alternatives([range(2), [4,5]])
+        [[0, 4], [0, 5], [1, 4], [1, 5]]
+
+        >>> combine_alternatives(["abc", "xy", '$'])
+        [['a', 'x', '$'], ['a', 'y', '$'], ['b', 'x', '$'], ['b', 'y', '$'], ['c', 'x', '$'], ['c', 'y', '$']]
+
+        >>> combine_alternatives([])
+        [[]]
+    """
+    if not lists:
+        return [[]]
+    assert all(l for l in lists), lists
+    init = [[x] for x in lists[0]]
+    return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)

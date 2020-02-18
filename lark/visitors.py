@@ -1,6 +1,6 @@
 from functools import wraps
 
-from .utils import smart_decorator
+from .utils import smart_decorator, combine_alternatives
 from .tree import Tree
 from .exceptions import VisitError, GrammarError
 from .lexer import Token
@@ -345,3 +345,23 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 
 
 ###}
+
+
+#--- Visitor Utilities ---
+
+class CollapseAmbiguities(Transformer):
+    """
+    Transforms a tree that contains any number of _ambig nodes into a list of trees,
+    each one containing an unambiguous tree.
+
+    The length of the resulting list is the product of the length of all _ambig nodes.
+
+    Warning: This may quickly explode for highly ambiguous trees.
+
+    """
+    def _ambig(self, options):
+        return sum(options, [])
+    def __default__(self, data, children_lists, meta):
+        return [Tree(data, children, meta) for children in combine_alternatives(children_lists)]
+    def __default_token__(self, t):
+        return [t]

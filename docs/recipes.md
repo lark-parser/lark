@@ -3,20 +3,11 @@
 A collection of recipes to use Lark and its various features
 
 
+## Use a transformer to parse integer tokens
 
-## lexer_callbacks
+Transformers are the common interface for processing matched rules and tokens.
 
-Use it to interface with the lexer as it generates tokens.
-
-Accepts a dictionary of the form
-
-    {TOKEN_TYPE: callback}
-
-Where callback is of type `f(Token) -> Token`
-
-It only works with the standard and contextual lexers.
-
-### Example 1: Replace string values with ints for INT tokens
+They can be used during parsing for better performance.
 
 ```python
 from lark import Lark, Transformer
@@ -42,7 +33,20 @@ Tree(start, [Token(INT, 3), Token(INT, 14), Token(INT, 159)])
 ```
 
 
-### Example 2: Collect all comments
+## Collect all comments with lexer_callbacks
+
+`lexer_callbacks` can be used to interface with the lexer as it generates tokens.
+
+It accepts a dictionary of the form
+
+    {TOKEN_TYPE: callback}
+
+Where callback is of type `f(Token) -> Token`
+
+It only works with the standard and contextual lexers.
+
+This has the same effect of using a transformer, but can also process ignored tokens.
+
 ```python
 from lark import Lark
 

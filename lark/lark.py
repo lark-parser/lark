@@ -2,13 +2,15 @@ from __future__ import absolute_import
 
 import os
 from io import open
+import pickle
+
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer, TraditionalLexer
+from .lexer import Lexer, TraditionalLexer, TerminalDef
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 from .grammar import Rule
@@ -238,14 +240,27 @@ class Lark(Serialize):
             memo = SerializeMemoizer.deserialize(memo, namespace, {})
         inst = cls.__new__(cls)
         options = dict(data['options'])
-        options['transformer'] = transformer
-        options['postlex'] = postlex
+        if transformer is not None:
+            options['transformer'] = transformer
+        if postlex is not None:
+            options['postlex'] = postlex
         inst.options = LarkOptions.deserialize(options, memo)
         inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         inst.source = '<deserialized>'
         inst._prepare_callbacks()
         inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
         return inst
+
+    def save(self, f):
+        data, m = self.memo_serialize([TerminalDef, Rule])
+        pickle.dump({'data': data, 'memo': m}, f)
+
+    @classmethod
+    def load(cls, f):
+        d = pickle.load(f)
+        namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}
+        memo = d['memo']
+        return Lark.deserialize(d['data'], namespace, memo)
 
 
     @classmethod

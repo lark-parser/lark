@@ -11,27 +11,16 @@
 #
 #    >>> LICENSE
 #
-#    This tool and its generated code use a separate license from Lark.
-#
-#    It is licensed under GPLv2 or above.
+#    This tool and its generated code use a separate license from Lark,
+#    and are subject to the terms of the Mozilla Public License, v. 2.0.
+#    If a copy of the MPL was not distributed with this
+#    file, You can obtain one at https://mozilla.org/MPL/2.0/.
 #
 #    If you wish to purchase a commercial license for this tool and its
-#    generated code, contact me via email.
+#    generated code, you may contact me via email or otherwise.
 #
-#    If GPL is incompatible with your free or open-source project,
-#    contact me and we'll work it out (for free).
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation, either version 2 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    See <http://www.gnu.org/licenses/>.
+#    If MPL2 is incompatible with your free or open-source project,
+#    contact me and we'll work it out.
 #
 #
 

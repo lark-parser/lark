@@ -176,7 +176,7 @@ You can use the output as a regular python module:
 
 Lark uses the [MIT license](LICENSE).
 
-(The standalone tool is under GPL2)
+(The standalone tool is under MPL2)
 
 ## Contribute
 

@@ -6,11 +6,12 @@
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
  - Stand-alone parser generator - create a small independent parser to embed in your project.
- - Automatic line & column tracking
+ - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
  - Standard library of terminals (strings, numbers, names, etc.)
  - Unicode fully supported
  - Extensive test suite
+ - MyPy support using type stubs
  - Python 2 & Python 3 compatible
  - Pure-Python implementation
 

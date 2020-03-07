@@ -96,6 +96,7 @@ See more [examples here](https://github.com/lark-parser/lark/tree/master/example
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js
  - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
+ - MyPy support using type stubs
  - And much more!
 
 See the full list of [features here](https://lark-parser.readthedocs.io/en/latest/features/)

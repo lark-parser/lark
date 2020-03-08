@@ -24,7 +24,32 @@ A **parsing algorithm** is an algorithm that takes a grammar definition and a se
 
 Grammars in Lark are based on [EBNF](https://en.wikipedia.org/wiki/Extended_Backus–Naur_form) syntax, with several enhancements.
 
-Lark grammars are composed of a list of definitions and directives, each on its own line. A definition is either a named rule, or a named terminal.
+EBNF is basically a short-hand for common BNF patterns.
+
+Optionals are expanded:
+
+```ebnf
+  a b? c    ->    (a c | a b c)
+```
+
+Repetition is extracted into a recursion:
+
+```ebnf
+  a: b*    ->    a: _b_tag
+                 _b_tag: (_b_tag b)?
+```
+
+And so on.
+
+Lark grammars are composed of a list of definitions and directives, each on its own line. A definition is either a named rule, or a named terminal, with the following syntax, respectively:
+
+```c
+  rule: <EBNF EXPRESSION>
+      | etc.
+
+  TERM: <EBNF EXPRESSION>   // Rules aren't allowed
+```
+
 
 **Comments** start with `//` and last to the end of the line (C++ style)
 

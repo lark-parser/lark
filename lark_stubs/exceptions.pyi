@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Iterable, Callable
+from typing import Dict, Iterable, Callable, Union
 from .tree import Tree
+from .lexer import Token
 
 
 class LarkError(Exception):
@@ -44,4 +45,5 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class VisitError(LarkError):
-    pass
+    obj: Union[Tree, Token]
+    orig_exc: Exception

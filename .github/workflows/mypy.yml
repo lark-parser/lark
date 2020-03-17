@@ -16,4 +16,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install mypy
       - name: Lint with mypy
-        run: mypy -m lark-stubs || true
+        run: mypy -m lark_stubs || true

@@ -93,6 +93,7 @@ class Parser(BaseParser):
                 if token is not None:
                     token.end_line = text_line
                     token.end_column = text_column + 1
+                    token.end_pos = i + 1
 
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)

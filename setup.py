@@ -6,12 +6,12 @@ __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read(
 setup(
     name = "lark-parser",
     version = __version__,
-    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark-stubs'],
+    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark_stubs'],
 
     requires = [],
     install_requires = [],
 
-    package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},
+    package_data = {'': ['*.md', '*.lark'], 'lark_stubs': ['*.pyi']},
 
     test_suite = 'tests.__main__',
 

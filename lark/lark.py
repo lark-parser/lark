@@ -48,6 +48,7 @@ class LarkOptions(Serialize):
         propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
         lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
         maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None
+        global_flags - Flags that are applied to all Terminals (Regex and Strings)
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -68,6 +69,7 @@ class LarkOptions(Serialize):
         'lexer_callbacks': {},
         'maybe_placeholders': False,
         'edit_terminals': None,
+        'global_flags': 0,
     }
 
     def __init__(self, options_dict):
@@ -209,7 +211,7 @@ class Lark(Serialize):
                 if hasattr(t, term.name):
                     lexer_callbacks[term.name] = getattr(t, term.name)
 
-        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks)
+        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.global_flags)
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -222,7 +224,7 @@ class Lark(Serialize):
     __serialize_fields__ = 'parser', 'rules', 'options'
 
     def _build_lexer(self):
-        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, global_flags=self.lexer_conf.global_flags)
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)

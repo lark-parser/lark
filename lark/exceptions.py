@@ -97,6 +97,12 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         super(UnexpectedToken, self).__init__(message)
 
 class VisitError(LarkError):
+    """VisitError is raised when visitors are interrupted by an exception
+
+    It provides the following attributes for inspection:
+    - obj: the tree node or token it was processing when the exception was raised
+    - orig_exc: the exception that cause it to fail
+    """
     def __init__(self, rule, obj, orig_exc):
         self.obj = obj
         self.orig_exc = orig_exc

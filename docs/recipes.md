@@ -129,3 +129,19 @@ This prints out:
     y     d
 
 While convenient, this should be used carefully, as highly ambiguous trees will soon create an exponential explosion of such unambiguous derivations.
+
+
+## Keeping track of parents when visiting
+
+The following visitor assigns a `parent` attribute for every node in the tree.
+
+If your tree nodes aren't unique (if there is a shared Tree instance), the assert will fail.
+
+```python
+class Parent(Visitor):
+    def visit(self, tree):
+        for subtree in tree.children:
+            if isinstance(subtree, Tree):
+                assert not hasattr(subtree, 'parent')
+                subtree.parent = tree
+```

@@ -539,7 +539,7 @@ class CustomLexer(Lexer):
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
     def __init__(self, lexer_conf):
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, global_flags=lexer_conf.global_flags)
+        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, g_regex_flags=lexer_conf.g_regex_flags)
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
 
@@ -833,13 +833,13 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse("starts")
             self.assertSequenceEqual(x.children, ['starts'])
         
-        def test_global_flags(self):
+        def test_g_regex_flags(self):
             g = _Lark("""
                     start: "a" /b+/ C
                     C: "C" | D
                     D: "D" E
                     E: "e"
-                    """, global_flags=re.I)
+                    """, g_regex_flags=re.I)
             x1 = g.parse("ABBc")
             x2 = g.parse("abdE")
 

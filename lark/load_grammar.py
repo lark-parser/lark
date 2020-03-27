@@ -73,6 +73,8 @@ TERMINALS = {
     '_RPAR': r'\)',
     '_LBRA': r'\[',
     '_RBRA': r'\]',
+    '_LBRACE': r'\{',
+    '_RBRACE': r'\}',
     'OP': '[+*]|[?](?![a-z])',
     '_COLON': ':',
     '_COMMA': ',',
@@ -97,7 +99,13 @@ TERMINALS = {
 RULES = {
     'start': ['_list'],
     '_list':  ['_item', '_list _item'],
-    '_item':  ['rule', 'term', 'statement', '_NL'],
+    '_item':  ['rule', 'rule_template', 'term', 'statement', '_NL'],
+
+    'template': ['RULE _LBRACE template_params _RBRACE _COLON expansions _NL',
+                 'RULE _LBRACE template_params _RBRACE _DOT NUMBER  _COLON expansions _NL'],
+
+    'template_params': ['RULE',
+                        'template_params _COMMA RULE'],
 
     'rule': ['RULE _COLON expansions _NL',
              'RULE _DOT NUMBER _COLON expansions _NL'],
@@ -123,7 +131,8 @@ RULES = {
     'value': ['terminal',
               'nonterminal',
               'literal',
-              'range'],
+              'range',
+              'template_usage'],
 
     'terminal': ['TERMINAL'],
     'nonterminal': ['RULE'],
@@ -132,9 +141,13 @@ RULES = {
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
+    
+    'template_usage': ['RULE _LBRACE template_args _RBRACE'],
+    'template_args': ['atom',
+                      'template_args _COMMA atom'],
 
     'term': ['TERMINAL _COLON expansions _NL',
-              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
+             'TERMINAL _DOT NUMBER _COLON expansions _NL'],
     'statement': ['ignore', 'import', 'declare'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
@@ -648,8 +661,8 @@ def resolve_term_references(term_defs):
                     raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
-def options_from_rule(name, *x):
-    if len(x) > 1:
+def options_from_rule(name, *x,is_template=False):
+    if len(x) > (1+is_template):
         priority, expansions = x
         priority = int(priority)
     else:
@@ -728,12 +741,14 @@ class GrammarLoader:
         defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
         term_defs = defs.pop('term', [])
         rule_defs = defs.pop('rule', [])
+        template_defs = defs.pop('template', [])
         statements = defs.pop('statement', [])
         assert not defs
 
         term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
         term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
         rule_defs = [options_from_rule(*x) for x in rule_defs]
+        template_defs = [options_from_rule(*x, is_template=True) for x in rule_defs]
 
         # Execute statements
         ignore, imports = [], {}

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+import re
 import unittest
 import logging
 import os
@@ -538,7 +539,7 @@ class CustomLexer(Lexer):
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
     def __init__(self, lexer_conf):
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks)
+        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, g_regex_flags=lexer_conf.g_regex_flags)
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
 
@@ -831,7 +832,16 @@ def _make_parser_test(LEXER, PARSER):
 
             x = g.parse("starts")
             self.assertSequenceEqual(x.children, ['starts'])
-
+        
+        def test_g_regex_flags(self):
+            g = _Lark("""
+                    start: "a" /b+/ C
+                    C: "C" | D
+                    D: "D" E
+                    E: "e"
+                    """, g_regex_flags=re.I)
+            x1 = g.parse("ABBc")
+            x2 = g.parse("abdE")
 
         # def test_string_priority(self):
         #     g = _Lark("""start: (A | /a?bb/)+
@@ -1701,6 +1711,7 @@ def _make_parser_test(LEXER, PARSER):
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME
+    _TestParser.__qualname__ = "tests.test_parser." + _NAME
     globals()[_NAME] = _TestParser
 
 # Note: You still have to import them in __main__ for the tests to run

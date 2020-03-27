@@ -112,7 +112,8 @@ class TraditionalLexer(Lexer):
         self,
         terminals: Collection[TerminalDef],
         ignore: Collection[str] = ...,
-        user_callbacks: Dict[str, _Callback] = ...
+        user_callbacks: Dict[str, _Callback] = ...,
+        g_regex_flags: int = ...
     ):
         ...
 
@@ -136,7 +137,8 @@ class ContextualLexer(Lexer):
         states: Dict[str, Collection[str]],
         ignore: Collection[str] = ...,
         always_accept: Collection[str] = ...,
-        user_callbacks: Dict[str, _Callback] = ...
+        user_callbacks: Dict[str, _Callback] = ...,
+        g_regex_flags: int = ...
     ):
         ...
 

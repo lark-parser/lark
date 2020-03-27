@@ -810,6 +810,20 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('Hello HelloWorld')
             self.assertSequenceEqual(x.children, ['HelloWorld'])
 
+        def test_templates(self):
+            g = _Lark(r"""
+                       start: number_list "\n" number_dict
+                       sep{item, delim}: item (delim item)*
+                       number_list: "[" sep{NUMBER, ","} "]"
+                       number_dict: "{" sep{(NUMBER ":" NUMBER), ";"} "}" // Just to test this
+                       NUMBER: /\d+/
+                       %ignore " "
+                       """)
+            x = g.parse("[1, 2, 3, 4] {1:2, 3:4, 5:6}")
+            print(x)
+            x = g.parse("[1] {1:2}")
+            print(x)
+
         def test_token_collision_WS(self):
             g = _Lark(r"""start: "Hello" NAME
                         NAME: /\w/+

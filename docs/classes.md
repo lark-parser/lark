@@ -8,41 +8,86 @@ This page details the important classes in Lark.
 
 The Lark class is the main interface for the library. It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
 
-#### \_\_init\_\_(self, grammar, **options)
+#### \_\_init\_\_(self, grammar_string, **options)
 
-The Lark class accepts a grammar string or file object, and keyword options:
+Creates an instance of Lark with the given grammar
 
-* **start** - A list of the rules in the grammar that begin the parse (Default: `["start"]`)
+#### open(cls, grammar_filename, rel_to=None, **options)
 
-* **parser** - Decides which parser engine to use, "earley", "lalr" or "cyk". (Default: `"earley"`)
+Creates an instance of Lark with the grammar given by its filename
 
-* **lexer** - Overrides default lexer, depending on parser.
+If rel_to is provided, the function will find the grammar filename in relation to it.
 
-* **transformer** - Applies the provided transformer instead of building a parse tree (only allowed with parser="lalr")
+Example:
 
-* **postlex** - Lexer post-processing (Default: `None`. only works when lexer is "standard" or "contextual")
-
-* **ambiguity** (only relevant for earley and cyk)
-
-     * "explicit" - Return all derivations inside an "_ambig" data node.
-
-     * "resolve" - Let the parser choose the best derivation (greedy for tokens, non-greedy for rules. Default)
-
-* **debug** - Display warnings (such as Shift-Reduce warnings for LALR)
-
-* **keep_all_tokens** - Don't throw away any terminals from the tree (Default=`False`)
-
-* **propagate_positions** - Propagate line/column count to tree nodes, at the cost of performance (default=`False`)
-
-* **maybe_placeholders** - When True, the `[]` operator returns `None` when not matched. When `False`,  `[]` behaves like the `?` operator, and return no value at all, which may be a little faster (default=`False`)
-
-* **lexer_callbacks** - A dictionary of callbacks of type f(Token) -> Token, used to interface with the lexer Token generation. Only works with the standard and contextual lexers. See [Recipes](recipes.md) for more information.
+```python
+    >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
+    Lark(...)
+```
 
 #### parse(self, text)
 
 Return a complete parse tree for the text (of type Tree)
 
 If a transformer is supplied to `__init__`, returns whatever is the result of the transformation.
+
+
+#### save(self, f) / load(cls, f)
+
+Useful for caching and multiprocessing.
+
+`save` saves the instance into the given file object
+
+`load` loads an instance from the given file object
+
+####
+
+
+### Lark Options
+#### General options
+
+**start** - The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
+
+**debug** - Display debug information, such as warnings (default: False)
+
+**transformer** - Applies the transformer to every parse tree (equivlent to applying it after the parse, but faster)
+
+**propagate_positions** - Propagates (line, column, end_line, end_column) attributes into all tree branches.
+
+**maybe_placeholders** -
+- When True, the `[]` operator returns `None` when not matched.
+- When `False`,  `[]` behaves like the `?` operator, and returns no value at all.
+- (default=`False`. Recommended to set to `True`)
+
+**g_regex_flags** - Flags that are applied to all terminals (both regex and strings)
+
+**keep_all_tokens** - Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
+
+**cache_grammar** - Cache the Lark grammar (Default: False)
+
+#### Algorithm
+
+**parser** - Decides which parser engine to use, "earley" or "lalr". (Default: "earley")
+            (there is also a "cyk" option for legacy)
+
+**lexer** - Decides whether or not to use a lexer stage
+
+- "auto" (default): Choose for me based on the parser
+- "standard": Use a standard lexer
+- "contextual": Stronger lexer (only works with parser="lalr")
+- "dynamic": Flexible and powerful (only with parser="earley")
+- "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible. (only with parser="earley")
+
+**ambiguity** - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
+- "resolve": The parser will automatically choose the simplest derivation (it chooses consistently: greedy for tokens, non-greedy for rules)
+- "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+
+#### Domain Specific
+
+- **postlex** - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
+- **priority** - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+- **lexer_callbacks** - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
+- **edit_terminals** - A callback
 
 ----
 

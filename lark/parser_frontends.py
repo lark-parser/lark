@@ -88,7 +88,7 @@ class WithLexer(_ParserFrontend):
         return self._parse(token_stream, start)
 
     def init_traditional_lexer(self):
-        self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
 
 class LALR_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
@@ -112,7 +112,8 @@ class LALR_ContextualLexer(LALR_WithLexer):
         self.lexer = ContextualLexer(self.lexer_conf.tokens, states,
                                      ignore=self.lexer_conf.ignore,
                                      always_accept=always_accept,
-                                     user_callbacks=self.lexer_conf.callbacks)
+                                     user_callbacks=self.lexer_conf.callbacks,
+                                     g_regex_flags=self.lexer_conf.g_regex_flags)
 
 
     def parse(self, text, start=None):
@@ -187,7 +188,7 @@ class XEarley(_ParserFrontend):
                 if width == 0:
                     raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
 
-            self.regexps[t.name] = re.compile(regexp)
+            self.regexps[t.name] = re.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
         return self._parse(text, start)

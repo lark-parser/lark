@@ -230,7 +230,7 @@ class CallChain:
 
 
 
-def _create_unless(terminals):
+def _create_unless(terminals, g_regex_flags):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
@@ -241,19 +241,19 @@ def _create_unless(terminals):
             if strtok.priority > retok.priority:
                 continue
             s = strtok.pattern.value
-            m = re.match(retok.pattern.to_regexp(), s)
+            m = re.match(retok.pattern.to_regexp(), s, g_regex_flags)
             if m and m.group(0) == s:
                 unless.append(strtok)
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(build_mres(unless, match_whole=True))
+            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, match_whole=True))
 
     terminals = [t for t in terminals if t not in embedded_strs]
     return terminals, callback
 
 
-def _build_mres(terminals, max_size, match_whole):
+def _build_mres(terminals, max_size, g_regex_flags, match_whole):
     # Python sets an unreasonable group limit (currently 100) in its re module
     # Worse, the only way to know we reached it is by catching an AssertionError!
     # This function recursively tries less and less groups until it's successful.
@@ -261,17 +261,17 @@ def _build_mres(terminals, max_size, match_whole):
     mres = []
     while terminals:
         try:
-            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]))
+            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]), g_regex_flags)
         except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(terminals, max_size//2, match_whole)
+            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole)
 
         # terms_from_name = {t.name: t for t in terminals[:max_size]}
         mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
         terminals = terminals[max_size:]
     return mres
 
-def build_mres(terminals, match_whole=False):
-    return _build_mres(terminals, len(terminals), match_whole)
+def build_mres(terminals, g_regex_flags, match_whole=False):
+    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole)
 
 def _regexp_has_newline(r):
     r"""Expressions that may indicate newlines in a regexp:
@@ -294,7 +294,7 @@ class Lexer(object):
 
 class TraditionalLexer(Lexer):
 
-    def __init__(self, terminals, ignore=(), user_callbacks={}):
+    def __init__(self, terminals, ignore=(), user_callbacks={}, g_regex_flags=0):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
         terminals = list(terminals)
@@ -302,7 +302,7 @@ class TraditionalLexer(Lexer):
         # Sanitization
         for t in terminals:
             try:
-                re.compile(t.pattern.to_regexp())
+                re.compile(t.pattern.to_regexp(), g_regex_flags)
             except re.error:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
@@ -318,10 +318,10 @@ class TraditionalLexer(Lexer):
         terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
         self.terminals = terminals
         self.user_callbacks = user_callbacks
-        self.build()
+        self.build(g_regex_flags)
 
-    def build(self):
-        terminals, self.callback = _create_unless(self.terminals)
+    def build(self, g_regex_flags=0):
+        terminals, self.callback = _create_unless(self.terminals, g_regex_flags)
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
@@ -331,7 +331,7 @@ class TraditionalLexer(Lexer):
             else:
                 self.callback[type_] = f
 
-        self.mres = build_mres(terminals)
+        self.mres = build_mres(terminals, g_regex_flags)
 
     def match(self, stream, pos):
         for mre, type_from_index in self.mres:
@@ -347,7 +347,7 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
 
-    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}):
+    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}, g_regex_flags=0):
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
@@ -362,12 +362,12 @@ class ContextualLexer(Lexer):
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
-                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks)
+                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks)
+        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
 
     def lex(self, stream, get_parser_state):
         parser_state = get_parser_state()

@@ -34,6 +34,7 @@ class LarkOptions:
     maybe_placeholders: bool
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache_grammar: bool
+    g_regex_flags: int
 
 
 class Lark:
@@ -56,7 +57,8 @@ class Lark:
         keep_all_tokens: bool = False,
         propagate_positions: bool = False,
         maybe_placeholders: bool = False,
-        lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None
+        lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
+        g_regex_flags: int = ...
     ):
         ...
 

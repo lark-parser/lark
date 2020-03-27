@@ -22,32 +22,56 @@ class LarkOptions(Serialize):
 
     """
     OPTIONS_DOC = """
-        parser - Decides which parser engine to use, "earley" or "lalr". (Default: "earley")
-                 Note: "lalr" requires a lexer
+# General
 
-        lexer - Decides whether or not to use a lexer stage
-            "standard": Use a standard lexer
-            "contextual": Stronger lexer (only works with parser="lalr")
-            "dynamic": Flexible and powerful (only with parser="earley")
-            "dynamic_complete": Same as dynamic, but tries *every* variation
-                                of tokenizing possible. (only with parser="earley")
-            "auto" (default): Choose for me based on grammar and parser
+    start - The start symbol. Either a string, or a list of strings for
+            multiple possible starts (Default: "start")
+    debug - Display debug information, such as warnings (default: False)
+    transformer - Applies the transformer to every parse tree (equivlent to
+                  applying it after the parse, but faster)
+    propagate_positions - Propagates (line, column, end_line, end_column)
+                          attributes into all tree branches.
+    maybe_placeholders - When True, the `[]` operator returns `None` when not matched.
+                         When `False`,  `[]` behaves like the `?` operator,
+                             and returns no value at all.
+                         (default=`False`. Recommended to set to `True`)
+    cache_grammar - Cache the Lark grammar (Default: False)
+    g_regex_flags - Flags that are applied to all terminals
+                    (both regex and strings)
+    keep_all_tokens - Prevent the tree builder from automagically
+                      removing "punctuation" tokens (default: False)
 
-        ambiguity - Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
-            "resolve": The parser will automatically choose the simplest derivation
-                       (it chooses consistently: greedy for tokens, non-greedy for rules)
-            "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+# Algorithm
 
-        transformer - Applies the transformer to every parse tree
-        debug - Affects verbosity (default: False)
-        keep_all_tokens - Don't automagically remove "punctuation" tokens (default: False)
-        cache_grammar - Cache the Lark grammar (Default: False)
-        postlex - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
-        start - The start symbol, either a string, or a list of strings for multiple possible starts (Default: "start")
-        priority - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
-        propagate_positions - Propagates [line, column, end_line, end_column] attributes into all tree branches.
-        lexer_callbacks - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
-        maybe_placeholders - Experimental feature. Instead of omitting optional rules (i.e. rule?), replace them with None
+    parser - Decides which parser engine to use
+             Accepts "earley" or "lalr". (Default: "earley")
+             (there is also a "cyk" option for legacy)
+
+    lexer - Decides whether or not to use a lexer stage
+        "auto" (default): Choose for me based on the parser
+        "standard": Use a standard lexer
+        "contextual": Stronger lexer (only works with parser="lalr")
+        "dynamic": Flexible and powerful (only with parser="earley")
+        "dynamic_complete": Same as dynamic, but tries *every* variation
+                            of tokenizing possible.
+
+    ambiguity - Decides how to handle ambiguity in the parse.
+                Only relevant if parser="earley"
+        "resolve": The parser will automatically choose the simplest
+                    derivation (it chooses consistently: greedy for
+                    tokens, non-greedy for rules)
+        "explicit": The parser will return all derivations wrapped
+                    in "_ambig" tree nodes (i.e. a forest).
+
+# Domain Specific
+
+    postlex - Lexer post-processing (Default: None) Only works with the
+                standard and contextual lexers.
+    priority - How priorities should be evaluated - auto, none, normal,
+                invert (Default: auto)
+    lexer_callbacks - Dictionary of callbacks for the lexer. May alter
+                        tokens during lexing. Use with caution.
+    edit_terminals - A callback
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -68,6 +92,7 @@ class LarkOptions(Serialize):
         'lexer_callbacks': {},
         'maybe_placeholders': False,
         'edit_terminals': None,
+        'g_regex_flags': 0,
     }
 
     def __init__(self, options_dict):
@@ -209,7 +234,7 @@ class Lark(Serialize):
                 if hasattr(t, term.name):
                     lexer_callbacks[term.name] = getattr(t, term.name)
 
-        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks)
+        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags)
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -217,12 +242,12 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
     if __init__.__doc__:
-        __init__.__doc__ += "\nOPTIONS:" + LarkOptions.OPTIONS_DOC
+        __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
     def _build_lexer(self):
-        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks)
+        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)

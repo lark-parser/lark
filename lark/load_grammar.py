@@ -99,17 +99,14 @@ TERMINALS = {
 RULES = {
     'start': ['_list'],
     '_list':  ['_item', '_list _item'],
-    '_item':  ['rule', 'template', 'term', 'statement', '_NL'],
+    '_item':  ['rule', 'term', 'statement', '_NL'],
 
-    'template': ['RULE _LBRACE template_params _RBRACE _COLON expansions _NL',
-                 'RULE _LBRACE template_params _RBRACE _DOT NUMBER  _COLON expansions _NL'],
-
-    'template_params': ['_template_params'],
+    'rule': ['RULE template_params _COLON expansions _NL',
+             'RULE template_params _DOT NUMBER _COLON expansions _NL'],
+    'template_params': ['_LBRACE _template_params _RBRACE',
+                        ''],
     '_template_params': ['RULE',
                          '_template_params _COMMA RULE'],
-
-    'rule': ['RULE _COLON expansions _NL',
-             'RULE _DOT NUMBER _COLON expansions _NL'],
     'expansions': ['alias',
                    'expansions _OR alias',
                    'expansions _NL _OR alias'],
@@ -369,28 +366,31 @@ class _ReplaceSymbols(Transformer_InPlace):
 class ApplyTemplates(Transformer_InPlace):
     " Apply the templates, creating new rules that represent the used templates "
 
-    def __init__(self, temp_defs, rule_defs):
+    def __init__(self, rule_defs):
         super(ApplyTemplates, self).__init__()
-        self.temp_defs = temp_defs
         self.rule_defs = rule_defs
         self.replacer = _ReplaceSymbols()
         self.created_templates = set()
     
-    def _get_template_name(self, name, args):
-        return "_%s{%s}" % (name, ",".join(a.name for a in args))
-    
     def template_usage(self, c):
         name = c[0]
         args = c[1:]
-        result_name = self._get_template_name(name.value, args)
+        result_name = "%s{%s}" % (name, ",".join(a.name for a in args))
         if result_name not in self.created_templates:
             self.created_templates.add(result_name)
-            (_n, params, tree, options) ,= (t for t in self.temp_defs if t[0] == name)
+            (_n, params, tree, options) ,= (t for t in self.rule_defs if t[0] == name)
             assert len(params) == len(args), args
             result_tree = deepcopy(tree)
             self.replacer.names = dict(zip(params, args))
             self.replacer.transform(result_tree)
-            self.rule_defs.append((result_name, result_tree, deepcopy(options)))
+            if name[0] != '_':
+                if result_tree.data == 'expansions':
+                    for i, c in enumerate(result_tree.children):
+                        if not (isinstance(c, Tree) and c.data == 'alias'):
+                            result_tree.children[i] = ST('alias', [c, name])
+                elif result_tree.data != 'alias':
+                    result_tree = ST('alias', [result_tree, name])
+            self.rule_defs.append((result_name, [], result_tree, deepcopy(options)))
         return NonTerminal(result_name)
 
 
@@ -492,10 +492,9 @@ def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
 class Grammar:
-    def __init__(self, rule_defs, term_defs, temp_defs, ignore):
+    def __init__(self, rule_defs, term_defs, ignore):
         self.term_defs = term_defs
         self.rule_defs = rule_defs
-        self.temp_defs = temp_defs
         self.ignore = ignore
 
     def compile(self, start):
@@ -503,7 +502,6 @@ class Grammar:
         # So deepcopy allows calling compile more than once.
         term_defs = deepcopy(list(self.term_defs))
         rule_defs = deepcopy(self.rule_defs)
-        temp_defs = deepcopy(self.temp_defs)
 
         # ===================
         #  Compile Terminals
@@ -531,20 +529,22 @@ class Grammar:
 
         # 2. Inline Templates
 
-        transformer *= ApplyTemplates(temp_defs, rule_defs)
+        transformer *= ApplyTemplates(rule_defs)
 
         # 3. Convert EBNF to BNF (and apply step 1 & 2)
         ebnf_to_bnf = EBNF_to_BNF()
         rules = []
         i = 0
         while i < len(rule_defs): # We have to do it like this because rule_defs might grow due to templates
-            name, rule_tree, options = rule_defs[i]
+            name, params, rule_tree, options = rule_defs[i]
+            i += 1
+            if len(params) != 0: # Dont transform templates
+                continue
             ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
             ebnf_to_bnf.prefix = name
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))
-            i += 1
         rules += ebnf_to_bnf.new_rules
 
         assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
@@ -637,26 +637,28 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
     """
 
     imported_terms = dict(grammar.term_defs)
-    imported_rules = {n:(n,deepcopy(t),o) for n,t,o in grammar.rule_defs}
-    imported_temps = {n:(n,p,deepcopy(t),o) for n,p,t,o in grammar.temp_defs}
+    imported_rules = {n:(n,p,deepcopy(t),o) for n,p,t,o in grammar.rule_defs}
 
     term_defs = []
     rule_defs = []
-    temp_defs = []
 
     def rule_dependencies(symbol):
         if symbol.type != 'RULE':
             return []
-        if symbol in imported_rules:
-            return _find_used_symbols(imported_rules[symbol][1])
-        elif symbol in imported_temps:
-            return _find_used_symbols(imported_temps[symbol][2]) - set(imported_temps[symbol][1])
-        else:
+        try:
+            _, params, tree,_ = imported_rules[symbol]
+        except KeyError:
             raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
+        return _find_used_symbols(tree) - set(params)
 
 
 
-    def get_namespace_name(name):
+    def get_namespace_name(name, params):
+        if params is not None:
+            try:
+                return params[name]
+            except KeyError:
+                pass
         try:
             return aliases[name].value
         except KeyError:
@@ -667,27 +669,20 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
     to_import = list(bfs(aliases, rule_dependencies))
     for symbol in to_import:
         if symbol.type == 'TERMINAL':
-            term_defs.append([get_namespace_name(symbol), imported_terms[symbol]])
+            term_defs.append([get_namespace_name(symbol, None), imported_terms[symbol]])
         else:
             assert symbol.type == 'RULE'
-            if symbol in imported_rules:
-                rule = imported_rules[symbol]
-                for t in rule[1].iter_subtrees():
-                    for i, c in enumerate(t.children):
-                        if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
-                            t.children[i] = Token(c.type, get_namespace_name(c))
-                rule_defs.append((get_namespace_name(symbol), rule[1], rule[2]))
-            else:
-                temp = imported_temps[symbol]
-                for t in temp[2].iter_subtrees():
-                    for i, c in enumerate(t.children):
-                        if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
-                            t.children[i] = Token(c.type, get_namespace_name(c))
-                params = [('%s__%s' if p[0]!='_' else '_%s__%s' ) % (namespace, p) for p in temp[1]]
-                temp_defs.append((get_namespace_name(symbol), params, temp[2], temp[3]))
+            _, params, tree, options = imported_rules[symbol]
+            params_map = {p: ('%s__%s' if p[0]!='_' else '_%s__%s' ) % (namespace, p) for p in params}
+            for t in tree.iter_subtrees():
+                for i, c in enumerate(t.children):
+                    if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
+                        t.children[i] = Token(c.type, get_namespace_name(c, params_map))
+            params = [params_map[p] for p in params] # We can not rely on ordered dictionaries
+            rule_defs.append((get_namespace_name(symbol, params_map), params, tree, options))
 
 
-    return term_defs, rule_defs, temp_defs
+    return term_defs, rule_defs
 
 
 
@@ -723,29 +718,14 @@ def resolve_term_references(term_defs):
                     raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
-def options_from_rule(name, *x):
+def options_from_rule(name, params, *x):
     if len(x) > 1:
         priority, expansions = x
         priority = int(priority)
     else:
         expansions ,= x
         priority = None
-
-    keep_all_tokens = name.startswith('!')
-    name = name.lstrip('!')
-    expand1 = name.startswith('?')
-    name = name.lstrip('?')
-
-    return name, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
-
-def options_from_template(name, params, *x):
-    if len(x) > 1:
-        priority, expansions = x
-        priority = int(priority)
-    else:
-        expansions ,= x
-        priority = None
-    params = [t.value for t in params.children]
+    params = [t.value for t in params.children] if params is not None else [] # For the grammar parser
 
     keep_all_tokens = name.startswith('!')
     name = name.lstrip('!')
@@ -775,8 +755,8 @@ class GrammarLoader:
     def __init__(self):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
-        rules = [options_from_rule(name, x) for name, x in  RULES.items()]
-        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, xs, o in rules for i, x in enumerate(xs)]
+        rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
+        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
 
@@ -819,14 +799,12 @@ class GrammarLoader:
         defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
         term_defs = defs.pop('term', [])
         rule_defs = defs.pop('rule', [])
-        temp_defs = defs.pop('template', [])
         statements = defs.pop('statement', [])
         assert not defs
 
         term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
         term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
         rule_defs = [options_from_rule(*x) for x in rule_defs]
-        temp_defs = [options_from_template(*x) for x in temp_defs]
 
         # Execute statements
         ignore, imports = [], {}
@@ -882,11 +860,10 @@ class GrammarLoader:
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
             g = import_grammar(grammar_path, base_paths=base_paths)
-            new_td, new_rd, new_tp = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
+            new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
             rule_defs += new_rd
-            temp_defs += new_tp
 
         # Verify correctness 1
         for name, _ in term_defs:
@@ -926,53 +903,38 @@ class GrammarLoader:
 
         rules = rule_defs
 
-        rule_names = set()
-        for name, _x, _o in rules:
+        rule_names = {}
+        for name, params, _x, _o in rules:
             if name.startswith('__'):
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
             if name in rule_names:
                 raise GrammarError("Rule '%s' defined more than once" % name)
-            rule_names.add(name)
-        temp_names = set()
-        for name, _p, _x, _o in temp_defs:
-            if name.startswith('__'):
-                raise GrammarError('Names starting with double-underscore are reserved (Error at %s (template))' % name)
-            if name.startswith('_'):  # TODO: rethink this decision (not the error msg)
-                raise GrammarError('Templates are always inline, they should not start with a underscore (Error ar %s)' % name)
-            if name in temp_names:
-                raise GrammarError("Template '%s' defined more than once" % name)
-            temp_names.add(name)
-            if name in rule_names:
-                raise GrammarError("Template '%s' conflicts with rule of same name" % name)
+            rule_names[name] = len(params)
 
-        for name, expansions, _o in rules:
+        for name, params , expansions, _o in rules:
+            for i, p in enumerate(params):
+                if p in rule_names:
+                    raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
+                if p in params[:i]:
+                    raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
+            for temp in expansions.find_data('template_usage'):
+                sym = temp.children[0]
+                args = temp.children[1:]
+                if sym not in rule_names:
+                    raise GrammarError("Template '%s' used but not defined (in rule %s)" % (sym, name))
+                if len(args) != rule_names[sym]:
+                    raise GrammarError("Wrong number of template arguments used for %s "
+                                       "(expected %s, got %s) (in rule %s)"%(sym, rule_names[sym], len(args), name))
             for sym in _find_used_symbols(expansions):
                 if sym.type == 'TERMINAL':
                     if sym not in terminal_names:
                         raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, name))
                 else:
-                    if sym not in rule_names and sym not in temp_names:  # TODO: check that sym is actually used as template
+                    if sym not in rule_names and sym not in params:
                         raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, name))
 
-        for name, params, expansions, _o in temp_defs:
-            for i, p in enumerate(params):
-                if p in rule_names:
-                    raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
-                if p in temp_names:
-                    raise GrammarError("Template Parameter conflicts with template %s (in template %s)" % (p, name))
-                if p in params[:i]:
-                    raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
-            for sym in _find_used_symbols(expansions):
-                if sym.type == 'TERMINAL':
-                    if sym not in terminal_names:
-                        raise GrammarError("Token '%s' used but not defined (in template %s)" % (sym, name))
-                else:
-                    if sym not in rule_names and sym not in temp_names and sym not in params: 
-                        raise GrammarError("Rule '%s' used but not defined (in template %s)" % (sym, name))
-                    # TODO: check that sym is actually used as template
-                    # TODO: number of template arguments matches requirement
 
-        return Grammar(rules, term_defs, temp_defs, ignore_names)
+        return Grammar(rules, term_defs, ignore_names)
 
 
 

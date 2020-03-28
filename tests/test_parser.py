@@ -835,6 +835,13 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse("[1]")
             self.assertSequenceEqual(x.children,['1'])
 
+        def test_templates_import(self):
+            g = _Lark_open("test_templates_import.lark", rel_to=__file__)
+            x = g.parse("[1, 2, 3, 4]")
+            self.assertSequenceEqual(x.children,['1', '2', '3', '4'])
+            x = g.parse("[1]")
+            self.assertSequenceEqual(x.children,['1'])
+
         def test_token_collision_WS(self):
             g = _Lark(r"""start: "Hello" NAME
                         NAME: /\w/+

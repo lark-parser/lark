@@ -822,7 +822,18 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children,['1', '2', '3', '4'])
             x = g.parse("[1]")
             self.assertSequenceEqual(x.children,['1'])
-            print(x)
+
+        def test_templates_recursion(self):
+            g = _Lark(r"""
+                       start: "[" sep{NUMBER, ","} "]"
+                       sep{item, delim}: item | sep{item, delim} delim item
+                       NUMBER: /\d+/
+                       %ignore " "
+                       """)
+            x = g.parse("[1, 2, 3, 4]")
+            self.assertSequenceEqual(x.children,['1', '2', '3', '4'])
+            x = g.parse("[1]")
+            self.assertSequenceEqual(x.children,['1'])
 
         def test_token_collision_WS(self):
             g = _Lark(r"""start: "Hello" NAME

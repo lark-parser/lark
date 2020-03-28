@@ -384,6 +384,7 @@ class ApplyTemplates(Transformer_InPlace):
         args = c[1:]
         result_name = self._get_template_name(name.value, args)
         if result_name not in self.created_templates:
+            self.created_templates.add(result_name)
             (_n, params, tree, options) ,= (t for t in self.temp_defs if t[0] == name)
             assert len(params) == len(args), args
             result_tree = deepcopy(tree)

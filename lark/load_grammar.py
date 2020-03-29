@@ -385,9 +385,13 @@ class ApplyTemplates(Transformer_InPlace):
             self.replacer.transform(result_tree)
             if name[0] != '_':
                 if result_tree.data == 'expansions':
-                    for i, c in enumerate(result_tree.children):
-                        if not (isinstance(c, Tree) and c.data == 'alias'):
-                            result_tree.children[i] = ST('alias', [c, name])
+                    t = result_tree
+                    while len(t.children) == 2:
+                        if t.children[-1].data != 'alias':
+                            t.children[-1] = ST('alias', [t.children[-1], name])
+                        t = t.children[0]
+                    if t.children[-1].data != 'alias':
+                        t.children[-1] = ST('alias', [t.children[-1], name])
                 elif result_tree.data != 'alias':
                     result_tree = ST('alias', [result_tree, name])
             self.rule_defs.append((result_name, [], result_tree, deepcopy(options)))

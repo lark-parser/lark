@@ -383,17 +383,6 @@ class ApplyTemplates(Transformer_InPlace):
             result_tree = deepcopy(tree)
             self.replacer.names = dict(zip(params, args))
             self.replacer.transform(result_tree)
-            if name[0] != '_':
-                if result_tree.data == 'expansions':
-                    t = result_tree
-                    while len(t.children) == 2:
-                        if t.children[-1].data != 'alias':
-                            t.children[-1] = ST('alias', [t.children[-1], name])
-                        t = t.children[0]
-                    if t.children[-1].data != 'alias':
-                        t.children[-1] = ST('alias', [t.children[-1], name])
-                elif result_tree.data != 'alias':
-                    result_tree = ST('alias', [result_tree, name])
             self.rule_defs.append((result_name, [], result_tree, deepcopy(options)))
         return NonTerminal(result_name)
 
@@ -736,7 +725,8 @@ def options_from_rule(name, params, *x):
     expand1 = name.startswith('?')
     name = name.lstrip('?')
 
-    return name, params, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority)
+    return name, params, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority,
+                                                 template_source=(name if params else None))
 
 
 def symbols_from_strcase(expansion):

@@ -863,6 +863,38 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse("[1]")
             self.assertSequenceEqual(x.children, [Tree('sep', ['1'])])
 
+        def test_templates_alias(self):
+            g = _Lark(r"""
+                       start: expr{"C"}
+                       expr{t}: "A" t
+                              | "B" t -> b
+                       """)
+            x = g.parse("AC")
+            self.assertSequenceEqual(x.children, [Tree('expr', [])])
+            x = g.parse("BC")
+            self.assertSequenceEqual(x.children, [Tree('b', [])])
+            
+        def test_templates_modifiers(self):
+            g = _Lark(r"""
+                       start: expr{"B"}
+                       !expr{t}: "A" t
+                       """)
+            x = g.parse("AB")
+            self.assertSequenceEqual(x.children, [Tree('expr', ["A", "B"])])
+            g = _Lark(r"""
+                       start: _expr{"B"}
+                       !_expr{t}: "A" t
+                       """)
+            x = g.parse("AB")
+            self.assertSequenceEqual(x.children, ["A", "B"])
+            g = _Lark(r"""
+                       start: expr{b}
+                       b: "B"
+                       ?expr{t}: "A" t
+                       """)
+            x = g.parse("AB")
+            self.assertSequenceEqual(x.children, [Tree('b',[])])
+
         def test_g_regex_flags(self):
             g = _Lark("""
                     start: "a" /b+/ C

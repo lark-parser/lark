@@ -49,19 +49,21 @@ class NonTerminal(Symbol):
 
 
 class RuleOptions(Serialize):
-    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'empty_indices'
+    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
 
-    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, empty_indices=()):
+    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, template_source=None, empty_indices=()):
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
+        self.template_source = template_source
         self.empty_indices = empty_indices
 
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r)' % (
+        return 'RuleOptions(%r, %r, %r, %r)' % (
             self.keep_all_tokens,
             self.expand1,
             self.priority,
+            self.template_source
         )
 
 

@@ -4,8 +4,11 @@ _item: rule
      | token
      | statement
 
-rule: RULE priority? ":" expansions _NL
-token: TOKEN priority? ":" expansions _NL
+rule: RULE rule_params priority? ":" expansions _NL
+token: TOKEN token_params priority? ":" expansions _NL
+
+rule_params: ["{" RULE ("," RULE)* "}"]
+token_params: ["{" TOKEN ("," TOKEN)* "}"]
 
 priority: "." NUMBER
 
@@ -27,9 +30,12 @@ name_list: "(" name ("," name)* ")"
 
 ?atom: "(" expansions ")"
      | "[" expansions "]" -> maybe
-     | STRING ".." STRING -> literal_range
-     | name
-     | (REGEXP | STRING) -> literal
+     | value
+
+?value: STRING ".." STRING -> literal_range
+      | name
+      | (REGEXP | STRING) -> literal
+      | name "{" value ("," value)* "}" -> template_usage
 
 name: RULE
     | TOKEN

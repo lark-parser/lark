@@ -243,7 +243,7 @@ class ParseTreeBuilder:
 
         for rule, wrapper_chain in self.rule_builders:
 
-            user_callback_name = rule.alias or rule.origin.name
+            user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
                 # XXX InlineTransformer is deprecated!

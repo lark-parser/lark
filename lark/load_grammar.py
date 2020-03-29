@@ -358,9 +358,14 @@ class _ReplaceSymbols(Transformer_InPlace):
         self.names = {}
 
     def value(self, c):
-        if len(c) == 1 and isinstance(c[0], Token) and c[0].type == 'RULE' and c[0].value in self.names:
+        if len(c) == 1 and isinstance(c[0], Token) and c[0].value in self.names:
             return self.names[c[0].value]
         return self.__default__('value', c, None)
+    
+    def template_usage(self, c):
+        if c[0] in self.names:
+            return self.__default__('template_usage', [self.names[c[0]].name] + c[1:], None) 
+        return self.__default__('template_usage', c, None)
 
 class ApplyTemplates(Transformer_InPlace):
     " Apply the templates, creating new rules that represent the used templates "
@@ -912,11 +917,12 @@ class GrammarLoader:
             for temp in expansions.find_data('template_usage'):
                 sym = temp.children[0]
                 args = temp.children[1:]
-                if sym not in rule_names:
-                    raise GrammarError("Template '%s' used but not defined (in rule %s)" % (sym, name))
-                if len(args) != rule_names[sym]:
-                    raise GrammarError("Wrong number of template arguments used for %s "
-                                       "(expected %s, got %s) (in rule %s)"%(sym, rule_names[sym], len(args), name))
+                if sym not in params:
+                    if sym not in rule_names:
+                        raise GrammarError("Template '%s' used but not defined (in rule %s)" % (sym, name))
+                    if len(args) != rule_names[sym]:
+                        raise GrammarError("Wrong number of template arguments used for %s "
+                                           "(expected %s, got %s) (in rule %s)"%(sym, rule_names[sym], len(args), name))
             for sym in _find_used_symbols(expansions):
                 if sym.type == 'TERMINAL':
                     if sym not in terminal_names:

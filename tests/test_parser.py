@@ -895,6 +895,13 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse("AB")
             self.assertSequenceEqual(x.children, [Tree('b',[])])
 
+        def test_templates_templates(self):
+            g = _Lark('''start: a{b}
+                         a{t}: t{"a"}
+                         b{x}: x''')
+            x = g.parse('a')
+            self.assertSequenceEqual(x.children, [Tree('a', [Tree('b',[])])])
+
         def test_g_regex_flags(self):
             g = _Lark("""
                     start: "a" /b+/ C

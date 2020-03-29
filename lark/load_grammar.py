@@ -355,7 +355,6 @@ class _ReplaceSymbols(Transformer_InPlace):
     " Helper for ApplyTemplates "
     
     def __init__(self):
-        super(_ReplaceSymbols, self).__init__()
         self.names = {}
 
     def value(self, c):
@@ -367,7 +366,6 @@ class ApplyTemplates(Transformer_InPlace):
     " Apply the templates, creating new rules that represent the used templates "
 
     def __init__(self, rule_defs):
-        super(ApplyTemplates, self).__init__()
         self.rule_defs = rule_defs
         self.replacer = _ReplaceSymbols()
         self.created_templates = set()

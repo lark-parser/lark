@@ -1,20 +1,24 @@
 # Lark - a modern parsing library for Python
 
-Parse any context-free grammar, FAST and EASY!
+Lark is a parser built with a focus on ergonomics, performance and resilience.
 
-**Beginners**: Lark is not just another parser. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs a parse-tree for you, without additional code on your part.
+Lark can parse all context-free languages. That means it is capable of parsing almost any programming language out there, and to some degree most natural languages too.
 
-**Experts**: Lark implements both Earley(SPPF) and LALR(1), and several different lexers, so you can trade-off power and speed, according to your requirements. It also provides a variety of sophisticated features and utilities.
+**Who is it for?**
 
-Lark can:
+   - **Beginners**: Lark is very friendly for experimentation. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs an annotated parse-tree for you, using only the grammar, and it gives you convienient and flexible tools to process that parse-tree.
+
+   - **Experts**: Lark implements both Earley(SPPF) and LALR(1), and several different lexers, so you can trade-off power and speed, according to your requirements. It also provides a variety of sophisticated features and utilities.
+
+**What can it do?**
 
  - Parse all context-free grammars, and handle any ambiguity
- - Build a parse-tree automagically, no construction code required
- - Outperform all other Python libraries when using LALR(1) (Yes, including PLY)
+ - Build an annotated parse-tree automagically, no construction code required.
+ - Provide first-rate performance in terms of both Big-O complexity and measured run-time (considering that this is Python ;)
  - Run on every Python interpreter (it's pure-python)
  - Generate a stand-alone parser (for LALR(1) grammars)
 
-And many more features. Read ahead and find out.
+And many more features. Read ahead and find out!
 
 Most importantly, Lark will save you time and prevent you from getting parsing headaches.
 

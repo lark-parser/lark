@@ -106,8 +106,7 @@ def main(fobj, start):
     print('Shift = 0')
     print('Reduce = 1')
     print("def Lark_StandAlone(transformer=None, postlex=None):")
-    print("  namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}")
-    print("  return Lark.deserialize(DATA, namespace, MEMO, transformer=transformer, postlex=postlex)")
+    print("  return Lark._load_from_dict(DATA, MEMO, transformer=transformer, postlex=postlex)")
 
 
 

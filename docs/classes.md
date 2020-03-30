@@ -63,7 +63,10 @@ Useful for caching and multiprocessing.
 
 **keep_all_tokens** - Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
 
-**cache_grammar** - Cache the Lark grammar (Default: False)
+**cache** - Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
+- When `False`, does nothing (default)
+- When `True`, caches to a temporary file in the local directory
+- When given a string, caches to the path pointed by the string
 
 #### Algorithm
 

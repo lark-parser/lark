@@ -1,11 +1,10 @@
 from __future__ import absolute_import
 
-import os
+import sys, os, pickle, hashlib, logging
 from io import open
-import pickle
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -35,7 +34,12 @@ class LarkOptions(Serialize):
                          When `False`,  `[]` behaves like the `?` operator,
                              and returns no value at all.
                          (default=`False`. Recommended to set to `True`)
-    cache_grammar - Cache the Lark grammar (Default: False)
+    cache - Cache the results of the Lark grammar analysis, for x2 to x3 faster loading.
+            LALR only for now.
+        When `False`, does nothing (default)
+        When `True`, caches to a temporary file in the local directory
+        When given a string, caches to the path pointed by the string
+
     g_regex_flags - Flags that are applied to all terminals
                     (both regex and strings)
     keep_all_tokens - Prevent the tree builder from automagically
@@ -80,7 +84,7 @@ class LarkOptions(Serialize):
         'debug': False,
         'keep_all_tokens': False,
         'tree_class': None,
-        'cache_grammar': False,
+        'cache': False,
         'postlex': None,
         'parser': 'earley',
         'lexer': 'auto',
@@ -102,7 +106,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool):
+                if isinstance(default, bool) and name != 'cache':
                     value = bool(value)
             else:
                 value = default
@@ -147,6 +151,7 @@ class Lark(Serialize):
             grammar : a string or file-object containing the grammar spec (using Lark's ebnf syntax)
             options : a dictionary controlling various aspects of Lark.
         """
+
         self.options = LarkOptions(options)
 
         # Some, but not all file-like objects have a 'name' attribute
@@ -165,8 +170,24 @@ class Lark(Serialize):
 
         assert isinstance(grammar, STRING_TYPE)
 
-        if self.options.cache_grammar:
-            raise NotImplementedError("Not available yet")
+        cache_fn = None
+        if self.options.cache:
+            if isinstance(self.options.cache, STRING_TYPE):
+                cache_fn = self.options.cache
+            else:
+                if self.options.cache is not True:
+                    raise ValueError("cache must be bool or str")
+                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+                s = grammar + options_str
+                md5 = hashlib.md5(s.encode()).hexdigest()
+                cache_fn = '.lark_cache_%s.tmp' % md5
+
+            if FS.exists(cache_fn):
+                logging.debug('Loading grammar from cache: %s', cache_fn)
+                with FS.open(cache_fn, 'rb') as f:
+                    self._load(f, self.options.transformer, self.options.postlex)
+                return
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
@@ -241,6 +262,11 @@ class Lark(Serialize):
         elif lexer:
             self.lexer = self._build_lexer()
 
+        if cache_fn:
+            logging.debug('Saving grammar to cache: %s', cache_fn)
+            with FS.open(cache_fn, 'wb') as f:
+                self.save(f)
+
     if __init__.__doc__:
         __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
@@ -259,34 +285,41 @@ class Lark(Serialize):
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
-    @classmethod
-    def deserialize(cls, data, namespace, memo, transformer=None, postlex=None):
-        if memo:
-            memo = SerializeMemoizer.deserialize(memo, namespace, {})
-        inst = cls.__new__(cls)
-        options = dict(data['options'])
-        if transformer is not None:
-            options['transformer'] = transformer
-        if postlex is not None:
-            options['postlex'] = postlex
-        inst.options = LarkOptions.deserialize(options, memo)
-        inst.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        inst.source = '<deserialized>'
-        inst._prepare_callbacks()
-        inst.parser = inst.parser_class.deserialize(data['parser'], memo, inst._callbacks, inst.options.postlex)
-        return inst
-
     def save(self, f):
         data, m = self.memo_serialize([TerminalDef, Rule])
         pickle.dump({'data': data, 'memo': m}, f)
 
     @classmethod
     def load(cls, f):
-        d = pickle.load(f)
-        namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}
-        memo = d['memo']
-        return Lark.deserialize(d['data'], namespace, memo)
+        inst = cls.__new__(cls)
+        return inst._load(f)
 
+    def _load(self, f, transformer=None, postlex=None):
+        if isinstance(f, dict):
+            d = f
+        else:
+            d = pickle.load(f)
+        memo = d['memo']
+        data = d['data']
+
+        assert memo
+        memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
+        options = dict(data['options'])
+        if transformer is not None:
+            options['transformer'] = transformer
+        if postlex is not None:
+            options['postlex'] = postlex
+        self.options = LarkOptions.deserialize(options, memo)
+        self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
+        self.source = '<deserialized>'
+        self._prepare_callbacks()
+        self.parser = self.parser_class.deserialize(data['parser'], memo, self._callbacks, self.options.postlex)
+        return self
+
+    @classmethod
+    def _load_from_dict(cls, data, memo, transformer=None, postlex=None):
+        inst = cls.__new__(cls)
+        return inst._load({'data': data, 'memo': memo}, transformer, postlex)
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):

@@ -1,4 +1,5 @@
 import sys
+import os
 from functools import reduce
 from ast import literal_eval
 from collections import deque
@@ -37,9 +38,6 @@ def bfs(initial, expand):
 
 
 def _serialize(value, memo):
-    # if memo and memo.in_types(value):
-    #     return {'__memo__': memo.memoized.get(value)}
-
     if isinstance(value, Serialize):
         return value.serialize(memo)
     elif isinstance(value, list):
@@ -287,3 +285,9 @@ def combine_alternatives(lists):
     assert all(l for l in lists), lists
     init = [[x] for x in lists[0]]
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
+
+
+
+class FS:
+    open = open
+    exists = os.path.exists

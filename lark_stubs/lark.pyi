@@ -33,7 +33,7 @@ class LarkOptions:
     propagate_positions: bool
     maybe_placeholders: bool
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
-    cache_grammar: bool
+    cache: Union[bool, str]
     g_regex_flags: int
 
 

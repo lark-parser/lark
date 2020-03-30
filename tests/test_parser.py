@@ -14,6 +14,7 @@ except ImportError:
     cStringIO = None
 from io import (
         StringIO as uStringIO,
+        BytesIO,
         open,
     )
 
@@ -25,6 +26,8 @@ from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
+
+
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -873,7 +876,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual(x.children, [Tree('expr', [])])
             x = g.parse("BC")
             self.assertSequenceEqual(x.children, [Tree('b', [])])
-            
+
         def test_templates_modifiers(self):
             g = _Lark(r"""
                        start: expr{"B"}
@@ -1736,14 +1739,11 @@ def _make_parser_test(LEXER, PARSER):
                 b: "B"
             """
             parser = _Lark(grammar)
-            d = parser.serialize()
-            parser2 = Lark.deserialize(d, {}, {})
+            s = BytesIO()
+            parser.save(s)
+            s.seek(0)
+            parser2 = Lark.load(s)
             self.assertEqual(parser2.parse('ABC'), Tree('start', [Tree('b', [])]) )
-
-            namespace = {'Rule': Rule, 'TerminalDef': TerminalDef}
-            d, m = parser.memo_serialize(namespace.values())
-            parser3 = Lark.deserialize(d, namespace, m)
-            self.assertEqual(parser3.parse('ABC'), Tree('start', [Tree('b', [])]) )
 
         def test_multi_start(self):
             parser = _Lark('''

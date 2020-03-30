@@ -1809,7 +1809,7 @@ class LarkOptions(Serialize):
         'debug': False,
         'keep_all_tokens': False,
         'tree_class': None,
-        'cache_grammar': False,
+        'cache: False,
         'postlex': None,
         'parser': 'earley',
         'lexer': 'auto',

@@ -158,28 +158,30 @@ class Transformer_NonRecursive(Transformer):
     "Non-recursive. Doesn't change the original tree."
 
     def transform(self, tree):
-        q = [tree]
-
         # Tree to postfix
         rev_postfix = []
+        q = [tree]
         while q:
             t = q.pop()
             rev_postfix.append( t )
             if isinstance(t, Tree):
-                q += t.children[::-1]
+                q += t.children
 
         # Postfix to tree
         stack = []
         for x in reversed(rev_postfix):
             if isinstance(x, Tree):
                 size = len(x.children)
-                args = [stack.pop() for _ in range(size)]
+                if size:
+                    args = stack[-size:]
+                    del stack[-size:]
+                else:
+                    args = []
                 stack.append(self._call_userfunc(x, args))
             else:
                 stack.append(x)
 
         t ,= stack  # We should have only one tree remaining
-        assert t == tree
         return t
 
 

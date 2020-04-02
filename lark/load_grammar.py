@@ -275,7 +275,9 @@ class SimplifyRule_Visitor(Visitor):
 
     def expansions(self, tree):
         self._flatten(tree)
-        tree.children = dedup_list(tree.children)
+        # Ensure all children are unique
+        if len(set(tree.children)) != len(tree.children):
+            tree.children = dedup_list(tree.children)   # dedup is expensive, so try to minimize its use
 
 
 class RuleTreeToText(Transformer):

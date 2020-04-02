@@ -35,6 +35,13 @@ def _read(n, *args):
         return f.read()
 
 class TestParsers(unittest.TestCase):
+    def test_big_list(self):
+        Lark(r"""
+            start: {}
+        """.format(
+            "|".join(['"%s"'%i for i in range(250)])
+        ))
+
     def test_same_ast(self):
         "Tests that Earley and LALR parsers produce equal trees"
         g = Lark(r"""start: "(" name_list ("," "*" NAME)? ")"

@@ -16,7 +16,7 @@ from .utils import classify, suppress, dedup_list, Str
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
-from .visitors import Transformer, Visitor, v_args, Transformer_InPlace
+from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
 inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
@@ -139,7 +139,7 @@ RULES = {
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
-    
+
     'template_usage': ['RULE _LBRACE _template_args _RBRACE'],
     '_template_args': ['value',
                        '_template_args _COMMA value'],
@@ -353,7 +353,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
 
 class _ReplaceSymbols(Transformer_InPlace):
     " Helper for ApplyTemplates "
-    
+
     def __init__(self):
         self.names = {}
 
@@ -361,10 +361,10 @@ class _ReplaceSymbols(Transformer_InPlace):
         if len(c) == 1 and isinstance(c[0], Token) and c[0].value in self.names:
             return self.names[c[0].value]
         return self.__default__('value', c, None)
-    
+
     def template_usage(self, c):
         if c[0] in self.names:
-            return self.__default__('template_usage', [self.names[c[0]].name] + c[1:], None) 
+            return self.__default__('template_usage', [self.names[c[0]].name] + c[1:], None)
         return self.__default__('template_usage', c, None)
 
 class ApplyTemplates(Transformer_InPlace):
@@ -374,7 +374,7 @@ class ApplyTemplates(Transformer_InPlace):
         self.rule_defs = rule_defs
         self.replacer = _ReplaceSymbols()
         self.created_templates = set()
-    
+
     def template_usage(self, c):
         name = c[0]
         args = c[1:]
@@ -487,6 +487,10 @@ class PrepareSymbols(Transformer_InPlace):
 def _choice_of_rules(rules):
     return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
 
+def nr_deepcopy_tree(t):
+    "Deepcopy tree `t` without recursion"
+    return Transformer_NonRecursive(False).transform(t)
+
 class Grammar:
     def __init__(self, rule_defs, term_defs, ignore):
         self.term_defs = term_defs
@@ -497,7 +501,7 @@ class Grammar:
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
         term_defs = deepcopy(list(self.term_defs))
-        rule_defs = deepcopy(self.rule_defs)
+        rule_defs = [(n,p,nr_deepcopy_tree(t),o) for n,p,t,o in self.rule_defs]
 
         # ===================
         #  Compile Terminals

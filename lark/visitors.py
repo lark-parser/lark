@@ -154,6 +154,36 @@ class Transformer_InPlace(Transformer):
         return self._transform_tree(tree)
 
 
+class Transformer_NonRecursive(Transformer):
+    "Non-recursive. Doesn't change the original tree."
+
+    def transform(self, tree):
+        q = [tree]
+
+        # Tree to postfix
+        rev_postfix = []
+        while q:
+            t = q.pop()
+            rev_postfix.append( t )
+            if isinstance(t, Tree):
+                q += t.children[::-1]
+
+        # Postfix to tree
+        stack = []
+        for x in reversed(rev_postfix):
+            if isinstance(x, Tree):
+                size = len(x.children)
+                args = [stack.pop() for _ in range(size)]
+                stack.append(self._call_userfunc(x, args))
+            else:
+                stack.append(x)
+
+        t ,= stack  # We should have only one tree remaining
+        assert t == tree
+        return t
+
+
+
 class Transformer_InPlaceRecursive(Transformer):
     "Recursive. Changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):

@@ -9,7 +9,7 @@ try:
   cnffile = open('larkc.txt')
   if cnffile.read() == '1':
     hook = open('lark-hook.py','w')
-    hook.write('from PyInstaller.utils.hooks import collect_data_files;datas = collect_data_files('lark')')
+    hook.write("from PyInstaller.utils.hooks import collect_data_files;datas = collect_data_files('lark')")
     hook.close()
 except:
   pass

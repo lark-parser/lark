@@ -24,6 +24,7 @@ $ pip install lark-parser
 
 - [Sublime Text & TextMate](https://github.com/lark-parser/lark_syntax)
 - [Visual Studio Code](https://github.com/lark-parser/vscode-lark) (Or install through the vscode plugin system)
+- [Intellij & PyCharm](https://github.com/lark-parser/intellij-syntax-highlighting)
 
 -----
 

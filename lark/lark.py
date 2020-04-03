@@ -172,6 +172,8 @@ class Lark(Serialize):
 
         cache_fn = None
         if self.options.cache:
+            if self.options.parser != 'lalr':
+                raise NotImplementedError("cache only works with parser='lalr' for now")
             if isinstance(self.options.cache, STRING_TYPE):
                 cache_fn = self.options.cache
             else:

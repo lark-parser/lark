@@ -57,6 +57,10 @@ Main Features:
         "Topic :: Text Processing :: Linguistic",
         "License :: OSI Approved :: MIT License",
     ],
-
+    entry_points = {
+        'pyinstaller40': [
+            'hook-dirs = lark.__pyinstaller:get_hook_dirs'
+        ]
+    },
 )
 

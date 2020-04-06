@@ -10,7 +10,7 @@ Table of contents:
 <a name="defs"></a>
 ## Definitions
 
-**A grammar** is a list of rules and terminals, that together define a language.
+A **grammar** is a list of rules and terminals, that together define a language.
 
 Terminals define the alphabet of the language, while rules define its structure.
 
@@ -81,17 +81,17 @@ Literals can be one of:
 
 Terminals also support grammar operators, such as `|`, `+`, `*` and `?`.
 
-Terminals are a linear construct, and therefor may not contain themselves (recursion isn't allowed).
+Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
 
 ### Priority
 
 Terminals can be assigned priority only when using a lexer (future versions may support Earley's dynamic lexing).
 
-Priority can be either positive or negative. In not specified for a terminal, it's assumed to be 1 (i.e. the default).
+Priority can be either positive or negative. If not specified for a terminal, it defaults to 1.
 
 #### Notes for when using a lexer:
 
-When using a lexer (standard or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched in an order according to the following criteria:
+When using a lexer (standard or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched according to the following precedence:
 
 1. Highest priority first (priority is specified as: TERM.number: ...)
 2. Length of match (for regexps, the longest theoretical match is used)

@@ -24,11 +24,11 @@ class _Decoratable:
             # Make sure the function isn't inherited (unless it's overwritten)
             if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
                 continue
-            if not callable(cls.__dict__[name]):
+            if not callable(value):
                 continue
 
             # Skip if v_args already applied (at the function level)
-            if hasattr(cls.__dict__[name], 'vargs_applied'):
+            if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
                 continue
 
             static = isinstance(cls.__dict__[name], (staticmethod, classmethod))

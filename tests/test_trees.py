@@ -166,6 +166,15 @@ class TestTrees(TestCase):
         x = MyTransformer().transform( Tree('hello', [2]))
         self.assertEqual(x, 'hello')
 
+    def test_inline_static(self):
+        @v_args(inline=True)
+        class T(Transformer):
+            @staticmethod
+            def test(a, b):
+                return a + b
+        x = T().transform(Tree('test', ['a', 'b']))
+        self.assertEqual(x, 'ab')
+
     def test_vargs_override(self):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
 

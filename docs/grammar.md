@@ -233,7 +233,7 @@ When importing rules, all their dependencies will be imported into a namespace, 
 %import <module>.<rule>
 %import <module>.<TERMINAL> -> <NEWTERMINAL>
 %import <module>.<rule> -> <newrule>
-%import <module> (<TERM1> <TERM2> <rule1> <rule2>)
+%import <module> (<TERM1>, <TERM2>, <rule1>, <rule2>)
 ```
 
 If the module path is absolute, Lark will attempt to load it from the built-in directory (currently, only `common.lark` is available).
@@ -246,7 +246,7 @@ The rule or terminal can be imported under an other name with the `->` syntax.
 ```perl
 %import common.NUMBER
 
-%import .terminals_file (A B C)
+%import .terminals_file (A, B, C)
 
 %import .rules_file.rulea -> ruleb
 ```

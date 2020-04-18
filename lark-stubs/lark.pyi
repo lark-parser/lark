@@ -9,11 +9,6 @@ from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
 
 _T = TypeVar('_T')
-_Start = Union[None, str, List[str]]
-_Parser = Literal["earley", "lalr", "cyk"]
-_Lexer = Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Lexer]
-_Ambiguity = Literal["explicit", "resolve"]
-
 
 class PostLex(Protocol):
 
@@ -22,12 +17,12 @@ class PostLex(Protocol):
 
 
 class LarkOptions:
-    start: _Start
-    parser: _Parser
-    lexer: _Lexer
+    start: List[str]
+    parser: str
+    lexer: str
     transformer: Optional[Transformer]
     postlex: Optional[PostLex]
-    ambiguity: _Ambiguity
+    ambiguity: str
     debug: bool
     keep_all_tokens: bool
     propagate_positions: bool
@@ -47,12 +42,12 @@ class Lark:
         self,
         grammar: Union[str, IO[str]],
         *,
-        start: _Start = ...,
-        parser: _Parser = ...,
-        lexer: _Lexer = ...,
+        start: Union[None, str, List[str]] = "start",
+        parser: Literal["earley", "lalr", "cyk"] = "auto",
+        lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Lexer] = "auto",
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
-        ambiguity: _Ambiguity = ...,
+        ambiguity: Literal["explicit", "resolve"] = "resolve",
         debug: bool = False,
         keep_all_tokens: bool = False,
         propagate_positions: bool = False,
@@ -62,7 +57,7 @@ class Lark:
     ):
         ...
 
-    def parse(self, text: str, start: _Start = None) -> Tree:
+    def parse(self, text: str, start: Optional[str] = None) -> Tree:
         ...
 
     @classmethod

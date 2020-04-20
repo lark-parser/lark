@@ -94,7 +94,7 @@ class LarkOptions(Serialize):
         'ambiguity': 'auto',
         'propagate_positions': False,
         'lexer_callbacks': {},
-        'maybe_placeholders': False,
+        'maybe_placeholders': True,
         'edit_terminals': None,
         'g_regex_flags': 0,
     }

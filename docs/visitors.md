@@ -12,7 +12,7 @@ Visitors visit each node of the tree, and run the appropriate method on it accor
 
 They work bottom-up, starting with the leaves and ending at the root of the tree.
 
-**Example**
+**Example:**
 ```python
 class IncreaseAllNumbers(Visitor):
   def number(self, tree):
@@ -67,7 +67,7 @@ All these classes implement the transformer interface:
 
 By default, transformers only visit rules. `visit_tokens=True` will tell Transformer to visit tokens as well. This is a slightly slower alternative to `lexer_callbacks`, but it's easier to maintain and works for all algorithms (even when there isn't a lexer).
 
-Example:
+**Example:**
 
 ```python
 class T(Transformer):
@@ -95,7 +95,7 @@ When used on a transformer/visitor class definition, it applies to all the callb
 - `meta` - Provides two arguments: `children` and `meta` (instead of just the first)
 - `tree` - Provides the entire tree as the argument, instead of the children.
 
-Examples:
+**Examples:**
 
 ```python
 @v_args(inline=True)
@@ -105,10 +105,18 @@ class SolveArith(Transformer):
 
 
 class ReverseNotation(Transformer_InPlace):
-    @v_args(tree=True):
+    @v_args(tree=True)
     def tree_node(self, tree):
         tree.children = tree.children[::-1]
 ```
+
+### `__default__` and `__default_token__`
+These are the functions that are called on if a function with a corresponding name has not been found.
+
+- The `__default__` method has the signature `(data, children, meta)`, with `data` being the data attribute of the node. It defaults to reconstruct the Tree
+
+- The `__default_token__` just takes the `Token` as an argument. It defaults to just return the argument.
+
 
 ### Discard
 

@@ -93,7 +93,7 @@ See more [examples here](https://github.com/lark-parser/lark/tree/master/example
  - **LALR(1)** parser
     - Fast and light, competitive with PLY
     - Can generate a stand-alone parser
- - **CYK** parser, for highly ambiguous grammars (NEW! Courtesy of [ehudt](https://github.com/ehudt))
+ - **CYK** parser, for highly ambiguous grammars
  - **EBNF** grammar
  - **Unicode** fully supported
  - **Python 2 & 3** compatible

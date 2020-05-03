@@ -4,6 +4,7 @@ except ImportError:
     pass
 
 from copy import deepcopy
+from collections import OrderedDict
 
 
 ###{standalone
@@ -58,25 +59,17 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def iter_subtrees(self):
-        # TODO: Re-write as a more efficient version
+        queue = [self]
+        subtrees = OrderedDict()
+        for subtree in queue:
+            if id(subtree) in subtrees:
+                continue
+            subtrees[id(subtree)] = subtree
+            queue += [c for c in reversed(subtree.children) if isinstance(c, Tree)]
 
-        visited = set()
-        q = [self]
-
-        l = []
-        while q:
-            subtree = q.pop()
-            l.append( subtree )
-            if id(subtree) in visited:
-                continue    # already been here from another branch
-            visited.add(id(subtree))
-            q += [c for c in subtree.children if isinstance(c, Tree)]
-
-        seen = set()
-        for x in reversed(l):
-            if id(x) not in seen:
-                yield x
-                seen.add(id(x))
+        del queue
+        for subtree in reversed(list(subtrees.values())):
+            yield subtree
 
     def find_pred(self, pred):
         "Find all nodes where pred(tree) == True"

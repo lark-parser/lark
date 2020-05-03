@@ -22,11 +22,11 @@ Of course, some specific use-cases may deviate from this process. Feel free to s
 
 Browse the [Examples](https://github.com/lark-parser/lark/tree/master/examples) to find a template that suits your purposes.
 
-Read the tutorials to get a better understanding of how everything works. (links in the [main page](/))
+Read the tutorials to get a better understanding of how everything works. (links in the [main page](https://github.com/lark-parser/lark/tree/master/docs))
 
 Use the [Cheatsheet (PDF)](lark_cheatsheet.pdf) for quick reference.
 
-Use the reference pages for more in-depth explanations. (links in the [main page](/)]
+Use the reference pages for more in-depth explanations. (links in the [main page](https://github.com/lark-parser/lark/tree/master/docs))
 
 ## LALR usage
 

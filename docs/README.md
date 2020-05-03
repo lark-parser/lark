@@ -37,6 +37,7 @@ $ pip install lark-parser
 * Tutorials
     * [How to write a DSL](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/) - Implements a toy LOGO-like language with an interpreter
     * [How to write a JSON parser](json_tutorial.md) - Teaches you how to use Lark
+    * [How to build a stand-alone parser](http://blog.erezsh.com/create-a-stand-alone-lalr1-parser-in-python/)
     * Unofficial
         * [Program Synthesis is Possible](https://www.cs.cornell.edu/~asampson/blog/minisynth.html) - Creates a DSL for Z3
 * Guides

@@ -27,33 +27,39 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
+        # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
+            res_meta = res.meta
             for c in children:
-                if isinstance(c, Tree) and not c.meta.empty:
-                    res.meta.line = c.meta.line
-                    res.meta.column = c.meta.column
-                    res.meta.start_pos = c.meta.start_pos
-                    res.meta.empty = False
-                    break
+                if isinstance(c, Tree):
+                    child_meta = c.meta
+                    if not child_meta.empty:
+                        res_meta.line = child_meta.line
+                        res_meta.column = child_meta.column
+                        res_meta.start_pos = child_meta.start_pos
+                        res_meta.empty = False
+                        break
                 elif isinstance(c, Token):
-                    res.meta.line = c.line
-                    res.meta.column = c.column
-                    res.meta.start_pos = c.pos_in_stream
-                    res.meta.empty = False
+                    res_meta.line = c.line
+                    res_meta.column = c.column
+                    res_meta.start_pos = c.pos_in_stream
+                    res_meta.empty = False
                     break
 
             for c in reversed(children):
-                if isinstance(c, Tree) and not c.meta.empty:
-                    res.meta.end_line = c.meta.end_line
-                    res.meta.end_column = c.meta.end_column
-                    res.meta.end_pos = c.meta.end_pos
-                    res.meta.empty = False
-                    break
+                if isinstance(c, Tree):
+                    child_meta = c.meta
+                    if not child_meta.empty:
+                        res_meta.end_line = child_meta.end_line
+                        res_meta.end_column = child_meta.end_column
+                        res_meta.end_pos = child_meta.end_pos
+                        res_meta.empty = False
+                        break
                 elif isinstance(c, Token):
-                    res.meta.end_line = c.end_line
-                    res.meta.end_column = c.end_column
-                    res.meta.end_pos = c.end_pos
-                    res.meta.empty = False
+                    res_meta.end_line = c.end_line
+                    res_meta.end_column = c.end_column
+                    res_meta.end_pos = c.end_pos
+                    res_meta.empty = False
                     break
 
         return res

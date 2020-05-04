@@ -62,14 +62,12 @@ class Tree(object):
         queue = [self]
         subtrees = OrderedDict()
         for subtree in queue:
-            if id(subtree) in subtrees:
-                continue
             subtrees[id(subtree)] = subtree
-            queue += [c for c in reversed(subtree.children) if isinstance(c, Tree)]
+            queue += [c for c in reversed(subtree.children)
+                      if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
-        for subtree in reversed(list(subtrees.values())):
-            yield subtree
+        return reversed(list(subtrees.values()))
 
     def find_pred(self, pred):
         "Find all nodes where pred(tree) == True"

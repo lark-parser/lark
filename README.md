@@ -141,8 +141,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 ### Projects using Lark
 
- - [storyscript](https://github.com/storyscript/storyscript) - The programming language for Application Storytelling
- - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL engine by Dailymotion. Lark is used to parse the GraphQL schemas definitions.
+ - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
@@ -150,13 +149,12 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks
  - [Torchani](https://github.com/aiqm/torchani) - Accurate Neural Network Potential on PyTorch
  - [Command-Block-Assembly](https://github.com/simon816/Command-Block-Assembly) - An assembly language, and C compiler, for Minecraft commands
+ - [EQL](https://github.com/endgameinc/eql) - Event Query Language
  - [Fabric-SDK-Py](https://github.com/hyperledger/fabric-sdk-py) - Hyperledger fabric SDK with Python 3.x
  - [required](https://github.com/shezadkhan137/required) - multi-field validation using docstrings
  - [miniwdl](https://github.com/chanzuckerberg/miniwdl) - A static analysis toolkit for the Workflow Description Language
  - [pytreeview](https://gitlab.com/parmenti/pytreeview) - a lightweight tree-based grammar explorer
  - [harmalysis](https://github.com/napulen/harmalysis) - A language for harmonic analysis and music theory
- - [EQL](https://github.com/endgameinc/eql) - Event Query Language
-
 
 Using Lark? Send me a message and I'll add your project!
 

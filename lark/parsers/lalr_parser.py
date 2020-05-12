@@ -19,7 +19,7 @@ class LALR_Parser(object):
 
         self._parse_table = analysis.parse_table
         self.parser_conf = parser_conf
-        self.parser = _Parser(analysis.parse_table, callbacks)
+        self.parser = _Parser(analysis.parse_table, callbacks, debug)
 
     @classmethod
     def deserialize(cls, data, memo, callbacks):
@@ -36,11 +36,12 @@ class LALR_Parser(object):
 
 
 class _Parser:
-    def __init__(self, parse_table, callbacks):
+    def __init__(self, parse_table, callbacks, debug=False):
         self.states = parse_table.states
         self.start_states = parse_table.start_states
         self.end_states = parse_table.end_states
         self.callbacks = callbacks
+        self.debug = debug
 
     def parse(self, seq, start, set_state=None):
         token = None
@@ -80,18 +81,29 @@ class _Parser:
             value_stack.append(value)
 
         # Main LALR-parser loop
-        for token in stream:
-            while True:
-                action, arg = get_action(token)
-                assert arg != end_state
+        try:
+            for token in stream:
+                while True:
+                    action, arg = get_action(token)
+                    assert arg != end_state
 
-                if action is Shift:
-                    state_stack.append(arg)
-                    value_stack.append(token)
-                    if set_state: set_state(arg)
-                    break # next token
-                else:
-                    reduce(arg)
+                    if action is Shift:
+                        state_stack.append(arg)
+                        value_stack.append(token)
+                        if set_state: set_state(arg)
+                        break # next token
+                    else:
+                        reduce(arg)
+        except Exception as e:
+            if self.debug:
+                print("")
+                print("STATE STACK DUMP")
+                print("----------------")
+                for i, s in enumerate(state_stack):
+                    print('%d)' % i , s)
+                print("")
+
+            raise
 
         token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
         while True:

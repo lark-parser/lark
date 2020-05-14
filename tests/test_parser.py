@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 import unittest
 import logging
 import os

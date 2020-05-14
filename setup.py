@@ -1,4 +1,7 @@
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 from setuptools import find_packages, setup
 
 __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read())

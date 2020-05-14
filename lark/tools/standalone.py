@@ -91,7 +91,10 @@ class LexerAtoms:
                          for name, c in lexer.callback.items()}
 
     def print_python(self):
-        print('import re')
+        print('try:')
+        print('    import regex as re')
+        print('except ImportError:')
+        print('    import re')
         print('MRES = (')
         pprint(self.mres)
         print(')')

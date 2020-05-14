@@ -1,6 +1,8 @@
 ## Lexer Implementation
-
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 
 from .utils import Str, classify
 from .common import PatternStr, PatternRE, TokenDef

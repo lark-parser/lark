@@ -1,4 +1,7 @@
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 import sys
 
 from .utils import get_regexp_width

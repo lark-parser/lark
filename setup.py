@@ -10,6 +10,9 @@ setup(
 
     requires = [],
     install_requires = [],
+    extras_require = {
+        'regex':  ['regex'],
+    },
 
     package_data = { '': ['*.md', '*.lark'] },
 

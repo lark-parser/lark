@@ -39,7 +39,7 @@ class UnexpectedInput(LarkError):
         """
         assert self.state is not None, "Not supported for this exception"
 
-        candidate = None
+        candidate = (None, False)
         for label, example in examples.items():
             assert not isinstance(example, STRING_TYPE)
 
@@ -51,12 +51,16 @@ class UnexpectedInput(LarkError):
                         try:
                             if ut.token == self.token:  # Try exact match first
                                 return label
+
+                            if (ut.token.type == self.token.type) and not candidate[-1]: # Fallback to token types match
+                                candidate = label, True
+
                         except AttributeError:
                             pass
-                        if not candidate:
-                            candidate = label
+                        if not candidate[0]:
+                            candidate = label, False
 
-        return candidate
+        return candidate[0]
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

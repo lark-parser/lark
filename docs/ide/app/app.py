@@ -25,11 +25,11 @@ class App(html5.Div):
 			</menu>
 			<div id="inputs">
 				<div>
-					Grammar:
+					<div>Grammar:</div>
 					<textarea [name]="grammar" id="grammar" placeholder="Lark Grammar..."></textarea>
 				</div>
 				<div>
-					Input:
+					<div>Input:</div>
 					<textarea [name]="input" id="input" placeholder="Parser input..."></textarea>
 				</div>
 			</div>
@@ -74,3 +74,10 @@ class App(html5.Div):
 		print(ast)
 		traverse = lambda node: html5.Li([node.data, html5.Ul([traverse(c) for c in node.children])] if isinstance(node, Tree) else node)
 		self.ast.appendChild(traverse(ast), replace=True)
+
+
+def start():
+	html5.Body().appendChild(
+		App()
+	)
+

@@ -101,5 +101,5 @@ class app {
 }
 
 (function () {
-	window.top.app = new app({"app": "."}, "app.start()");
+	window.top.app = new app({"app": "app"}, "import app.app; app.app.start()");
 })();

@@ -34,6 +34,7 @@ $ pip install lark-parser
 * [Philosophy & Design Choices](philosophy.md)
 * [Full List of Features](features.md)
 * [Examples](https://github.com/lark-parser/lark/tree/master/examples)
+* [Online IDE](https://lark-parser.github.io/lark/ide/app.html)
 * Tutorials
     * [How to write a DSL](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/) - Implements a toy LOGO-like language with an interpreter
     * [How to write a JSON parser](json_tutorial.md) - Teaches you how to use Lark

@@ -26,6 +26,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 - [Documentation @readthedocs](https://lark-parser.readthedocs.io/)
 - [Cheatsheet (PDF)](/docs/lark_cheatsheet.pdf)
+- [Online IDE (very basic)](https://lark-parser.github.io/lark/ide/app.html)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 - [Gitter chat](https://gitter.im/lark-parser/Lobby)

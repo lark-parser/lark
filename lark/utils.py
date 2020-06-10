@@ -165,14 +165,29 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+try:
+    import regex
+except ImportError:
+    regex = None
+
 import sys, re
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 import sre_parse
 import sre_constants
+categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
 def get_regexp_width(regexp):
+    if regex:
+        # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
+        # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex
+        # match here below.
+        regexp_final = re.sub(categ_pattern, 'A', regexp)
+    else:
+        if re.search(categ_pattern, regexp):
+            raise ImportError('`regex` module must be installed in order to use Unicode categories.', regexp)
+        regexp_final = regexp
     try:
-        return [int(x) for x in sre_parse.parse(regexp).getwidth()]
+        return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
         raise ValueError(regexp)
 
@@ -182,7 +197,7 @@ def get_regexp_width(regexp):
 def dedup_list(l):
     """Given a list (l) will removing duplicates from the list,
        preserving the original order of the list. Assumes that
-       the list entrie are hashable."""
+       the list entries are hashable."""
     dedup = set()
     return [ x for x in l if not (x in dedup or dedup.add(x))]
 

@@ -1737,6 +1737,42 @@ def _make_parser_test(LEXER, PARSER):
             """
             parser = _Lark(grammar)
 
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol(self):
+            grammar = """
+                start: a b?
+                a: "a" $
+                b: "b"
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('a'), Tree('start', [Tree('a', [])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
+
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol2(self):
+            grammar = """
+                start: (a|b)+
+                a: "a" ("x"|$)
+                b: "b"
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('axa'), Tree('start', [Tree('a', []),Tree('a', [])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
+
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol3(self):
+            grammar = """
+                start: (a|b)+
+                a: "a" (e|"x")
+                b: "b"
+                e: $
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('axa'), Tree('start', [Tree('a', []),Tree('a', [Tree('e', [])])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
 
         @unittest.skipIf(PARSER!='lalr' or LEXER=='custom', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):

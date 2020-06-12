@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 
 from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
-from ..grammar import Rule, Terminal, NonTerminal
+from ..grammar import Rule, Terminal, NonTerminal, END
 
 
 class RulePtr(object):
@@ -125,7 +125,7 @@ class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 
-        root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start), Terminal('$END')])
+        root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start), Terminal(END)])
                       for start in parser_conf.start}
 
         rules = parser_conf.rules + list(root_rules.values())

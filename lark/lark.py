@@ -180,8 +180,9 @@ class Lark(Serialize):
                 if self.options.cache is not True:
                     raise ValueError("cache must be bool or str")
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                from . import __version__
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
-                s = grammar + options_str
+                s = grammar + options_str + __version__
                 md5 = hashlib.md5(s.encode()).hexdigest()
                 cache_fn = '.lark_cache_%s.tmp' % md5
 

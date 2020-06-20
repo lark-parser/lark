@@ -37,19 +37,16 @@ class LALR_Parser(object):
 
 class _Parser:
     def __init__(self, parse_table, callbacks, debug=False):
-        self.states = parse_table.states
-        self.start_states = parse_table.start_states
-        self.end_states = parse_table.end_states
+        self.parse_table = parse_table
         self.callbacks = callbacks
         self.debug = debug
 
     def parse(self, seq, start, set_state=None):
         token = None
         stream = iter(seq)
-        states = self.states
-
-        start_state = self.start_states[start]
-        end_state = self.end_states[start]
+        states = self.parse_table.states
+        start_state = self.parse_table.start_states[start]
+        end_state = self.parse_table.end_states[start]
 
         state_stack = [start_state]
         value_stack = []

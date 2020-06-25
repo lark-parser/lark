@@ -6,6 +6,7 @@
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
  - Stand-alone parser generator - create a small independent parser to embed in your project.
+ - Flexible error handling by using a "puppet parser" mechanism (LALR only)
  - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
  - Standard library of terminals (strings, numbers, names, etc.)

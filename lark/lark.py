@@ -364,7 +364,7 @@ class Lark(Serialize):
 
         Parameters:
             start: str - required if Lark was given multiple possible start symbols (using the start option).
-            on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing.
+            on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing. LALR only.
 
         Returns a tree, unless specified otherwise.
         """

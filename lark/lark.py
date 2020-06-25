@@ -9,7 +9,7 @@ from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer, TraditionalLexer, TerminalDef
+from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend
 from .grammar import Rule
@@ -359,13 +359,28 @@ class Lark(Serialize):
         "Get information about a terminal"
         return self._terminals_dict[name]
 
-    def parse(self, text, start=None):
+    def parse(self, text, start=None, on_error=None):
         """Parse the given text, according to the options provided.
 
-        The 'start' parameter is required if Lark was given multiple possible start symbols (using the start option).
+        Parameters:
+            start: str - required if Lark was given multiple possible start symbols (using the start option).
+            on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing.
 
         Returns a tree, unless specified otherwise.
         """
-        return self.parser.parse(text, start=start)
+        try:
+            return self.parser.parse(text, start=start)
+        except UnexpectedToken as e:
+            if on_error is None:
+                raise
+
+            while True:
+                if not on_error(e):
+                    raise e
+                try:
+                    return e.puppet.resume_parse()
+                except UnexpectedToken as e2:
+                    e = e2
+
 
 ###}

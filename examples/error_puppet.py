@@ -28,7 +28,7 @@ def ignore_errors(e):
 def main():
     s = "[0 1, 2,, 3,,, 4, 5 6 ]"
     res = json_parser.parse(s, on_error=ignore_errors)
-    print(res)      # prints [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    print(res)      # prints [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
 
 main()
 

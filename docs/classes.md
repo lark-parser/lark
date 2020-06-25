@@ -25,12 +25,21 @@ Example:
     Lark(...)
 ```
 
-#### parse(self, text)
+#### parse(self, text, start=None, on_error=None)
 
-Return a complete parse tree for the text (of type Tree)
+Parse the given text, according to the options provided.
+
+Returns a complete parse tree for the text (of type Tree)
 
 If a transformer is supplied to `__init__`, returns whatever is the result of the transformation.
 
+Parameters:
+
+* start: str - required if Lark was given multiple possible start symbols (using the start option).
+
+* on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing. LALR only.
+
+(See `examples/error_puppet.py` for an example of how to use `on_error`.)
 
 #### save(self, f) / load(cls, f)
 
@@ -159,6 +168,8 @@ See the [visitors page](visitors.md)
 ## UnexpectedInput
 
 ## UnexpectedToken
+
+TODO: Explain puppet mechanism (related to on_error)
 
 ## UnexpectedException
 

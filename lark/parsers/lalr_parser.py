@@ -41,15 +41,15 @@ class _Parser:
         self.callbacks = callbacks
         self.debug = debug
 
-    def parse(self, seq, start, set_state=None):
+    def parse(self, seq, start, set_state=None, value_stack=None, state_stack=None):
         token = None
         stream = iter(seq)
         states = self.parse_table.states
         start_state = self.parse_table.start_states[start]
         end_state = self.parse_table.end_states[start]
 
-        state_stack = [start_state]
-        value_stack = []
+        state_stack = state_stack or [start_state]
+        value_stack = value_stack or []
 
         if set_state: set_state(start_state)
 
@@ -59,7 +59,7 @@ class _Parser:
                 return states[state][token.type]
             except KeyError:
                 expected = [s for s in states[state].keys() if s.isupper()]
-                raise UnexpectedToken(token, expected, state=state)
+                raise UnexpectedToken(token, expected, state=state, puppet=_ParserPuppet(self, state_stack, value_stack, start, stream, set_state))
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -111,3 +111,59 @@ class _Parser:
                 return value_stack[-1]
 
 ###}
+
+
+
+
+class _ParserPuppet:
+    def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
+        self.parser = parser
+        self._state_stack = state_stack
+        self._value_stack = value_stack
+        self._start = start
+        self._stream = stream
+        self._set_state = set_state
+
+    def feed_token(self, token):
+        end_state = self.parser.parse_table.end_states[self._start]
+        state_stack = self._state_stack
+        value_stack = self._value_stack
+
+        state = state_stack[-1]
+        action, arg = self.parser.parse_table.states[state][token.type]
+        assert arg != end_state
+
+        while action is Reduce:
+            rule = arg
+            size = len(rule.expansion)
+            if size:
+                s = value_stack[-size:]
+                del state_stack[-size:]
+                del value_stack[-size:]
+            else:
+                s = []
+
+            value = self.parser.callbacks[rule](s)
+
+            _action, new_state = self.parser.parse_table.states[state_stack[-1]][rule.origin.name]
+            assert _action is Shift
+            state_stack.append(new_state)
+            value_stack.append(value)
+
+            if state_stack[-1] == end_state:
+                return value_stack[-1]
+
+            state = state_stack[-1]
+            action, arg = self.parser.parse_table.states[state][token.type]
+            assert arg != end_state
+
+        assert action is Shift
+        state_stack.append(arg)
+        value_stack.append(token)
+
+
+    def choices(self):
+        return self.parser.parse_table.states[self._state_stack[-1]]
+
+    def resume_parse(self):
+        return self.parser.parse(self._stream, self._start, self._set_state, self._value_stack, self._state_stack)

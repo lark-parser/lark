@@ -50,6 +50,10 @@ class TestStandalone(TestCase):
         x = l.parse('16 candles')
         self.assertEqual(x.children, ['16', 'candles'])
 
+        self.assertRaises(context['UnexpectedToken'], l.parse, 'twelve monkeys')
+        self.assertRaises(context['UnexpectedToken'], l.parse, 'twelve')
+        self.assertRaises(context['UnexpectedCharacters'], l.parse, '$ talks')
+
     def test_contextual(self):
         grammar = """
         start: a b

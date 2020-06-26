@@ -105,7 +105,7 @@ class Tree(object):
                 stack.append(n)
 
     def __deepcopy__(self, memo):
-        return type(self)(self.data, deepcopy(self.children, memo))
+        return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
 
     def copy(self):
         return type(self)(self.data, self.children)

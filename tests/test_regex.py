@@ -17,7 +17,7 @@ class TestRegex(unittest.TestCase):
                     NAME: ID_START ID_CONTINUE*
                     ID_START: /[\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}_]+/
                     ID_CONTINUE: ID_START | /[\p{Mn}\p{Mc}\p{Nd}\p{Pc}·]+/
-                """)
+                """, regex=True)
 
         self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
@@ -26,7 +26,7 @@ class TestRegex(unittest.TestCase):
         g = Lark(r"""
                     ?start: NAME
                     NAME: /[\w]+/
-                """)
+                """, regex=True)
         self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
 

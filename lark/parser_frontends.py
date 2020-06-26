@@ -1,7 +1,3 @@
-try:
-    import regex as re
-except ImportError:
-    import re
 from functools import partial
 
 from .utils import get_regexp_width, Serialize
@@ -66,14 +62,16 @@ class WithLexer(_ParserFrontend):
     __serialize_fields__ = 'parser', 'lexer_conf', 'start'
     __serialize_namespace__ = LexerConf,
 
-    def __init__(self, lexer_conf, parser_conf, options=None):
+    def __init__(self, lexer_conf, parser_conf, re_, options=None):
         self.lexer_conf = lexer_conf
         self.start = parser_conf.start
         self.postlex = lexer_conf.postlex
+        self.re = re_
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, postlex):
+    def deserialize(cls, data, memo, callbacks, postlex, re_):
         inst = super(WithLexer, cls).deserialize(data, memo)
+        inst.re = re_
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
         inst.init_lexer()
@@ -91,13 +89,14 @@ class WithLexer(_ParserFrontend):
         return self._parse(token_stream, start)
 
     def init_traditional_lexer(self):
-        self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
+        self.lexer = TraditionalLexer(self.lexer_conf.tokens, re_=self.re, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
 
 class LALR_WithLexer(WithLexer):
-    def __init__(self, lexer_conf, parser_conf, options=None):
+    def __init__(self, lexer_conf, parser_conf, re_, options=None):
         debug = options.debug if options else False
+        self.re = re_
         self.parser = LALR_Parser(parser_conf, debug=debug)
-        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+        WithLexer.__init__(self, lexer_conf, parser_conf, re_, options)
 
         self.init_lexer()
 
@@ -113,6 +112,7 @@ class LALR_ContextualLexer(LALR_WithLexer):
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = self.postlex.always_accept if self.postlex else ()
         self.lexer = ContextualLexer(self.lexer_conf.tokens, states,
+                                     re_=self.re,
                                      ignore=self.lexer_conf.ignore,
                                      always_accept=always_accept,
                                      user_callbacks=self.lexer_conf.callbacks,
@@ -129,11 +129,11 @@ class LALR_ContextualLexer(LALR_WithLexer):
 ###}
 
 class LALR_CustomLexer(LALR_WithLexer):
-    def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.lexer = lexer_cls(lexer_conf)
+    def __init__(self, lexer_cls, lexer_conf, parser_conf, re_, options=None):
+        self.lexer = lexer_cls(lexer_conf, re_=re_)
         debug = options.debug if options else False
         self.parser = LALR_Parser(parser_conf, debug=debug)
-        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+        WithLexer.__init__(self, lexer_conf, parser_conf, re_, options)
 
 
 def tokenize_text(text):
@@ -146,8 +146,8 @@ def tokenize_text(text):
         yield Token('CHAR', ch, line=line, column=i - col_start_pos)
 
 class Earley(WithLexer):
-    def __init__(self, lexer_conf, parser_conf, options=None):
-        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+    def __init__(self, lexer_conf, parser_conf, re_, options=None):
+        WithLexer.__init__(self, lexer_conf, parser_conf, re_, options)
         self.init_traditional_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
@@ -159,7 +159,9 @@ class Earley(WithLexer):
 
 
 class XEarley(_ParserFrontend):
-    def __init__(self, lexer_conf, parser_conf, options=None, **kw):
+    def __init__(self, lexer_conf, parser_conf, re_, options=None, **kw):
+        self.re = re_
+
         self.token_by_name = {t.name:t for t in lexer_conf.tokens}
         self.start = parser_conf.start
 
@@ -191,7 +193,7 @@ class XEarley(_ParserFrontend):
                 if width == 0:
                     raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
 
-            self.regexps[t.name] = re.compile(regexp, lexer_conf.g_regex_flags)
+            self.regexps[t.name] = self.re.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
         return self._parse(text, start)
@@ -204,8 +206,8 @@ class XEarley_CompleteLex(XEarley):
 
 class CYK(WithLexer):
 
-    def __init__(self, lexer_conf, parser_conf, options=None):
-        WithLexer.__init__(self, lexer_conf, parser_conf, options)
+    def __init__(self, lexer_conf, parser_conf, re_, options=None):
+        WithLexer.__init__(self, lexer_conf, parser_conf, re_, options)
         self.init_traditional_lexer()
 
         self._analysis = GrammarAnalyzer(parser_conf)

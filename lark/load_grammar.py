@@ -616,7 +616,7 @@ class Grammar:
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path, base_paths=[]):
+def import_grammar(grammar_path, re_, base_paths=[]):
     if grammar_path not in _imported_grammars:
         import_paths = base_paths + IMPORT_PATHS
         for import_path in import_paths:
@@ -624,7 +624,7 @@ def import_grammar(grammar_path, base_paths=[]):
                 joined_path = os.path.join(import_path, grammar_path)
                 with open(joined_path, encoding='utf8') as f:
                     text = f.read()
-                grammar = load_grammar(text, joined_path)
+                grammar = load_grammar(text, joined_path, re_)
                 _imported_grammars[grammar_path] = grammar
                 break
         else:
@@ -755,7 +755,8 @@ def _find_used_symbols(tree):
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
-    def __init__(self):
+    def __init__(self, re_):
+        self.re = re_
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
@@ -764,7 +765,7 @@ class GrammarLoader:
         lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, ['start'])
-        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
+        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf, re_)
 
         self.canonize_tree = CanonizeTree()
 
@@ -862,7 +863,7 @@ class GrammarLoader:
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, base_paths=base_paths)
+            g = import_grammar(grammar_path, self.re, base_paths=base_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -942,4 +943,5 @@ class GrammarLoader:
 
 
 
-load_grammar = GrammarLoader().load_grammar
+def load_grammar(grammar, source, re_):
+    return GrammarLoader(re_).load_grammar(grammar, source)

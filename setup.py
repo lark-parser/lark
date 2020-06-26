@@ -14,6 +14,10 @@ setup(
     requires = [],
     install_requires = [],
 
+    extras_require = {
+        "regex": ["regex"]
+    },
+
     package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},
 
     test_suite = 'tests.__main__',

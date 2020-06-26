@@ -14,7 +14,6 @@ class TestRegex(unittest.TestCase):
     @unittest.skipIf(sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
     def test_unicode_class(self):
         "Tests that character classes from the `regex` module work correctly."
-        print(sys.version_info)
         g = Lark(r"""
                     ?start: NAME
                     NAME: ID_START ID_CONTINUE*

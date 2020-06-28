@@ -107,6 +107,7 @@ class TraditionalLexer(Lexer):
     user_callbacks: Dict[str, _Callback]
     callback: Dict[str, _Callback]
     mres: List[Tuple[REPattern, Dict[int, str]]]
+    re: ModuleType
 
     def __init__(
         self,

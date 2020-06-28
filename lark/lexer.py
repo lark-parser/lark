@@ -1,6 +1,10 @@
 ## Lexer Implementation
 
 import re
+try:
+    import regex
+except ImportError:
+    regex = None
 
 from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -230,7 +234,7 @@ class CallChain:
 
 
 
-def _create_unless(terminals, g_regex_flags):
+def _create_unless(terminals, g_regex_flags, re_):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
@@ -241,7 +245,7 @@ def _create_unless(terminals, g_regex_flags):
             if strtok.priority > retok.priority:
                 continue
             s = strtok.pattern.value
-            m = re.match(retok.pattern.to_regexp(), s, g_regex_flags)
+            m = re_.match(retok.pattern.to_regexp(), s, g_regex_flags)
             if m and m.group(0) == s:
                 unless.append(strtok)
                 if strtok.pattern.flags <= retok.pattern.flags:
@@ -294,16 +298,17 @@ class Lexer(object):
 
 class TraditionalLexer(Lexer):
 
-    def __init__(self, terminals, ignore=(), user_callbacks={}, g_regex_flags=0):
+    def __init__(self, terminals, re_, ignore=(), user_callbacks={}, g_regex_flags=0):
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
         terminals = list(terminals)
 
+        self.re = re_
         # Sanitization
         for t in terminals:
             try:
-                re.compile(t.pattern.to_regexp(), g_regex_flags)
-            except re.error:
+                self.re.compile(t.pattern.to_regexp(), g_regex_flags)
+            except self.re.error:
                 raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
             if t.pattern.min_width == 0:
@@ -321,7 +326,7 @@ class TraditionalLexer(Lexer):
         self.build(g_regex_flags)
 
     def build(self, g_regex_flags=0):
-        terminals, self.callback = _create_unless(self.terminals, g_regex_flags)
+        terminals, self.callback = _create_unless(self.terminals, g_regex_flags, re_=self.re)
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
@@ -347,7 +352,8 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
 
-    def __init__(self, terminals, states, ignore=(), always_accept=(), user_callbacks={}, g_regex_flags=0):
+    def __init__(self, terminals, states, re_, ignore=(), always_accept=(), user_callbacks={}, g_regex_flags=0):
+        self.re = re_
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
@@ -362,12 +368,12 @@ class ContextualLexer(Lexer):
             except KeyError:
                 accepts = set(accepts) | set(ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
-                lexer = TraditionalLexer(state_tokens, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
+                lexer = TraditionalLexer(state_tokens, re_=self.re, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = TraditionalLexer(terminals, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
+        self.root_lexer = TraditionalLexer(terminals, re_=self.re, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
 
     def lex(self, stream, get_parser_state):
         parser_state = get_parser_state()

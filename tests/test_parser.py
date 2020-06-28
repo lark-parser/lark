@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 import unittest
 import logging
 import os
@@ -548,8 +551,8 @@ class CustomLexer(Lexer):
     Purpose of this custom lexer is to test the integration,
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
-    def __init__(self, lexer_conf):
-        self.lexer = TraditionalLexer(lexer_conf.tokens, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, g_regex_flags=lexer_conf.g_regex_flags)
+    def __init__(self, lexer_conf, re_):
+        self.lexer = TraditionalLexer(lexer_conf.tokens, re_, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, g_regex_flags=lexer_conf.g_regex_flags)
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
 

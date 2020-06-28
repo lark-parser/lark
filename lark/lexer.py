@@ -1,5 +1,7 @@
 ## Lexer Implementation
 
+import re
+
 from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 

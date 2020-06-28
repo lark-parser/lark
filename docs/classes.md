@@ -70,6 +70,8 @@ Useful for caching and multiprocessing.
 
 **g_regex_flags** - Flags that are applied to all terminals (both regex and strings)
 
+**regex** - Use the `regex` library instead of the built-in `re` module (See below)
+
 **keep_all_tokens** - Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
 
 **cache** - Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
@@ -94,13 +96,35 @@ Useful for caching and multiprocessing.
 - "resolve": The parser will automatically choose the simplest derivation (it chooses consistently: greedy for tokens, non-greedy for rules)
 - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
 
-#### Domain Specific
+#### Misc.
 
 - **postlex** - Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
 - **priority** - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
 - **lexer_callbacks** - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
 - **edit_terminals** - A callback
 
+
+#### Using Unicode character classes with `regex`
+Python's builtin `re` module has a few persistent known bugs and also won't parse
+advanced regex features such as character classes.
+With `pip install lark-parser[regex]`, the `regex` module will be installed alongside `lark`
+and can act as a drop-in replacement to `re`.
+
+Any instance of `Lark` instantiated with `regex=True` will now use the `regex` module
+instead of `re`. For example, we can now use character classes to match PEP-3131 compliant Python identifiers.
+```python
+from lark import Lark
+>>> g = Lark(r"""
+                    ?start: NAME
+                    NAME: ID_START ID_CONTINUE*
+                    ID_START: /[\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}_]+/
+                    ID_CONTINUE: ID_START | /[\p{Mn}\p{Mc}\p{Nd}\p{Pc}·]+/
+                """, regex=True)
+
+>>> g.parse('வணக்கம்')
+'வணக்கம்'
+
+```
 ----
 
 ## Tree

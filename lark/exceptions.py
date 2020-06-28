@@ -32,7 +32,7 @@ class UnexpectedInput(LarkError):
         after = text[pos:end].split('\n', 1)[0]
         return before + after + '\n' + ' ' * len(before) + '^\n'
 
-    def match_examples(self, parse_fn, examples):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
@@ -52,8 +52,10 @@ class UnexpectedInput(LarkError):
                             if ut.token == self.token:  # Try exact match first
                                 return label
 
-                            if (ut.token.type == self.token.type) and not candidate[-1]: # Fallback to token types match
-                                candidate = label, True
+                            if token_type_match_fallback:
+                                # Fallback to token types match
+                                if (ut.token.type == self.token.type) and not candidate[-1]:
+                                    candidate = label, True
 
                         except AttributeError:
                             pass

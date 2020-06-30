@@ -247,13 +247,13 @@ def _create_unless(terminals, g_regex_flags, re_):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, match_whole=True))
+            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, re_, match_whole=True))
 
     terminals = [t for t in terminals if t not in embedded_strs]
     return terminals, callback
 
 
-def _build_mres(terminals, max_size, g_regex_flags, match_whole):
+def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_):
     # Python sets an unreasonable group limit (currently 100) in its re module
     # Worse, the only way to know we reached it is by catching an AssertionError!
     # This function recursively tries less and less groups until it's successful.
@@ -261,17 +261,17 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole):
     mres = []
     while terminals:
         try:
-            mre = re.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]), g_regex_flags)
+            mre = re_.compile(u'|'.join(u'(?P<%s>%s)'%(t.name, t.pattern.to_regexp()+postfix) for t in terminals[:max_size]), g_regex_flags)
         except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole)
+            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_)
 
         # terms_from_name = {t.name: t for t in terminals[:max_size]}
         mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
         terminals = terminals[max_size:]
     return mres
 
-def build_mres(terminals, g_regex_flags, match_whole=False):
-    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole)
+def build_mres(terminals, g_regex_flags, re_, match_whole=False):
+    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_)
 
 def _regexp_has_newline(r):
     r"""Expressions that may indicate newlines in a regexp:
@@ -332,7 +332,7 @@ class TraditionalLexer(Lexer):
             else:
                 self.callback[type_] = f
 
-        self.mres = build_mres(terminals, g_regex_flags)
+        self.mres = build_mres(terminals, g_regex_flags, self.re)
 
     def match(self, stream, pos):
         for mre, type_from_index in self.mres:

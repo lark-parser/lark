@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-try:
-    import regex as re
-except ImportError:
-    import re
+import re
 import unittest
 import logging
 import os
@@ -22,6 +19,11 @@ from io import (
     )
 
 logging.basicConfig(level=logging.INFO)
+
+try:
+    import regex
+except ImportError:
+    regex = None
 
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
@@ -1787,7 +1789,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @unittest.skipIf(sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
         def test_unicode_class(self):
             "Tests that character classes from the `regex` module work correctly."
             g = _Lark(r"""?start: NAME
@@ -1797,7 +1799,7 @@ def _make_parser_test(LEXER, PARSER):
 
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @unittest.skipIf(sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
         def test_unicode_word(self):
             "Tests that a persistent bug in the `re` module works when `regex` is enabled."
             g = _Lark(r"""?start: NAME

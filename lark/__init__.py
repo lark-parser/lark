@@ -1,3 +1,4 @@
+from .common import LOGGER
 from .tree import Tree
 from .visitors import Transformer, Visitor, v_args, Discard
 from .visitors import InlineTransformer, inline_args   # XXX Deprecated

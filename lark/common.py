@@ -1,5 +1,12 @@
+import logging
 from .utils import Serialize
 from .lexer import TerminalDef
+
+LOGGER = logging.getLogger("LARK")
+LOGGER.addHandler(logging.StreamHandler())
+# Set to highest level, since we have some warnings amongst the code
+# By default, we should not output any log messages
+LOGGER.setLevel(logging.CRITICAL)
 
 ###{standalone
 

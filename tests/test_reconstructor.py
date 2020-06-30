@@ -84,7 +84,6 @@ class TestReconstructor(TestCase):
 
         self.assert_reconstruct(g, code)
 
-    @unittest.skip('Not working yet')
     def test_expand_rule(self):
         g = """
         ?start: (NL | mult_stmt)*

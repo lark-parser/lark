@@ -148,7 +148,6 @@ class Reconstructor:
                     yield rule
                 else:
                     self.rules_for_root[sym.name].append(rule)
-            # yield rule  # Rule(sym, recons_exp, alias=MakeMatchTree(sym.name, r.expansion))
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:

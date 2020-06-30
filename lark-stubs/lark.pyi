@@ -23,6 +23,7 @@ class LarkOptions:
     transformer: Optional[Transformer]
     postlex: Optional[PostLex]
     ambiguity: str
+    regex: bool
     debug: bool
     keep_all_tokens: bool
     propagate_positions: bool
@@ -48,6 +49,7 @@ class Lark:
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
         ambiguity: Literal["explicit", "resolve"] = "resolve",
+        regex: bool = False,
         debug: bool = False,
         keep_all_tokens: bool = False,
         propagate_positions: bool = False,

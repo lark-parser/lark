@@ -8,11 +8,23 @@ This page details the important classes in Lark.
 
 The Lark class is the main interface for the library. It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
 
-#### \_\_init\_\_(self, grammar_string, **options)
-
+#### Lark.\_\_init\_\_
+```python
+def __init__(self, grammar_string, **options): ...
+```
 Creates an instance of Lark with the given grammar
 
-#### open(cls, grammar_filename, rel_to=None, **options)
+Example:
+
+```python
+    >>> Lark(r'''start: "foo" ''')
+    Lark(...)
+```
+
+#### Lark.open
+```python
+def open(cls, grammar_filename, rel_to=None, **options): ...
+```
 
 Creates an instance of Lark with the grammar given by its filename
 
@@ -25,7 +37,7 @@ Example:
     Lark(...)
 ```
 
-#### Lark.parser
+#### Lark.parse
 
 ```python
 def parse(self, text, start=None, on_error=None): ...
@@ -44,6 +56,12 @@ Parameters:
 * on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing. LALR only.
 
 (See `examples/error_puppet.py` for an example of how to use `on_error`.)
+
+Example:
+```python
+    >>> Lark(r'''start: "hello" " "+ /\w+/ ''').parse('hello kitty')
+    Tree(start, [Token(__ANON_0, 'kitty')])
+```
 
 #### Lark.save / Lark.load
 ```python

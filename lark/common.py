@@ -2,7 +2,7 @@ import logging
 from .utils import Serialize
 from .lexer import TerminalDef
 
-LOGGER = logging.getLogger("LARK")
+LOGGER = logging.getLogger("lark")
 LOGGER.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages

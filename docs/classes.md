@@ -25,7 +25,11 @@ Example:
     Lark(...)
 ```
 
-#### parse(self, text, start=None, on_error=None)
+#### Lark.parser
+
+```python
+def parse(self, text, start=None, on_error=None): ...
+```
 
 Parse the given text, according to the options provided.
 
@@ -41,7 +45,11 @@ Parameters:
 
 (See `examples/error_puppet.py` for an example of how to use `on_error`.)
 
-#### save(self, f) / load(cls, f)
+#### Lark.save / Lark.load
+```python
+def save(self, f): ...
+def load(cls, f): ...
+```
 
 Useful for caching and multiprocessing.
 
@@ -191,12 +199,6 @@ See the [visitors page](visitors.md)
 
 ## UnexpectedInput
 
-## UnexpectedToken
-
-TODO: Explain puppet mechanism (related to on_error)
-
-## UnexpectedException
-
 - `UnexpectedInput`
     - `UnexpectedToken` - The parser recieved an unexpected token
     - `UnexpectedCharacters` - The lexer encountered an unexpected string
@@ -218,3 +220,46 @@ Accepts the parse function (usually `lark_instance.parse`) and a dictionary of `
 The function will iterate the dictionary until it finds a matching error, and return the corresponding value.
 
 For an example usage, see: [examples/error_reporting_lalr.py](https://github.com/lark-parser/lark/blob/master/examples/error_reporting_lalr.py)
+
+
+### UnexpectedToken
+
+When the parser throws UnexpectedToken, it instanciates a puppet with its internal state.
+
+Users can then interactively set the puppet to the desired puppet state, and resume regular parsing.
+
+See [ParserPuppet](#ParserPuppet)
+
+### UnexpectedCharacters
+
+## ParserPuppet
+
+ParserPuppet gives you advanced control over error handling when parsing with LALR.
+
+For a simpler, more streamlined interface, see the `on_error` argument to `Lark.parse()`.
+
+#### choices(self)
+
+Returns a dictionary of token types, matched to their action in the parser.
+
+Only returns token types that are accepted by the current state.
+
+Updated by `feed_token()`
+
+#### feed_token(self, token)
+
+Feed the parser with a token, and advance it to the next state, as if it recieved it from the lexer.
+
+Note that `token` has to be an instance of `Token`.
+
+#### copy(self)
+
+Create a new puppet with a separate state. Calls to `feed_token()` won't affect the old puppet, and vice-versa.
+
+#### pretty(self)
+
+Print the output of `choices()` in a way that's easier to read.
+
+#### resume_parse(self)
+Resume parsing from the current puppet state.
+

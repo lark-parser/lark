@@ -16,6 +16,9 @@ class ParserPuppet:
         self.result = None
 
     def feed_token(self, token):
+        """Advance the parser state, as if it just recieved `token` from the lexer
+
+        """
         end_state = self.parser.parse_table.end_states[self._start]
         state_stack = self._state_stack
         value_stack = self._value_stack

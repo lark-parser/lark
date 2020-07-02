@@ -6,7 +6,7 @@ import unittest
 import logging
 import os
 import sys
-from copy import deepcopy
+from copy import copy, deepcopy
 try:
     from cStringIO import StringIO as cStringIO
 except ImportError:
@@ -553,8 +553,8 @@ class CustomLexer(Lexer):
     Purpose of this custom lexer is to test the integration,
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
-    def __init__(self, lexer_conf, re_):
-        self.lexer = TraditionalLexer(lexer_conf.tokens, re_, ignore=lexer_conf.ignore, user_callbacks=lexer_conf.callbacks, g_regex_flags=lexer_conf.g_regex_flags)
+    def __init__(self, lexer_conf):
+        self.lexer = TraditionalLexer(copy(lexer_conf))
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
 

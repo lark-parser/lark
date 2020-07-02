@@ -6,6 +6,7 @@ from .utils import Str, classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
+from copy import copy
 
 class Pattern(Serialize):
 
@@ -86,7 +87,6 @@ class TerminalDef(Serialize):
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
-
 
 
 class Token(Str):
@@ -294,35 +294,39 @@ class Lexer(object):
 
 class TraditionalLexer(Lexer):
 
-    def __init__(self, terminals, re_, ignore=(), user_callbacks={}, g_regex_flags=0):
+    def __init__(self, conf):
+        terminals = list(conf.tokens)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
-        terminals = list(terminals)
+        self.re = conf.re_module
 
-        self.re = re_
-        # Sanitization
-        for t in terminals:
-            try:
-                self.re.compile(t.pattern.to_regexp(), g_regex_flags)
-            except self.re.error:
-                raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
+        if not conf.skip_validation:
+            # Sanitization
+            for t in terminals:
+                try:
+                    self.re.compile(t.pattern.to_regexp(), conf.g_regex_flags)
+                except self.re.error:
+                    raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
-            if t.pattern.min_width == 0:
-                raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
+                if t.pattern.min_width == 0:
+                    raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
 
-        assert set(ignore) <= {t.name for t in terminals}
+            assert set(conf.ignore) <= {t.name for t in terminals}
 
         # Init
         self.newline_types = [t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())]
-        self.ignore_types = list(ignore)
+        self.ignore_types = list(conf.ignore)
 
         terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
         self.terminals = terminals
-        self.user_callbacks = user_callbacks
-        self.build(g_regex_flags)
+        self.user_callbacks = conf.callbacks
+        self.g_regex_flags = conf.g_regex_flags
 
-    def build(self, g_regex_flags=0):
-        terminals, self.callback = _create_unless(self.terminals, g_regex_flags, re_=self.re)
+        self._mres = None
+        # self.build(g_regex_flags)
+
+    def _build(self):
+        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, re_=self.re)
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
@@ -332,7 +336,13 @@ class TraditionalLexer(Lexer):
             else:
                 self.callback[type_] = f
 
-        self.mres = build_mres(terminals, g_regex_flags, self.re)
+        self._mres = build_mres(terminals, self.g_regex_flags, self.re)
+
+    @property
+    def mres(self):
+        if self._mres is None:
+            self._build()
+        return self._mres
 
     def match(self, stream, pos):
         for mre, type_from_index in self.mres:
@@ -348,12 +358,14 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
 
-    def __init__(self, terminals, states, re_, ignore=(), always_accept=(), user_callbacks={}, g_regex_flags=0):
-        self.re = re_
+    def __init__(self, conf, states, always_accept=()):
+        terminals = list(conf.tokens)
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
+
+        trad_conf = type(conf)(terminals, conf.re_module, conf.ignore, callbacks=conf.callbacks, g_regex_flags=conf.g_regex_flags, skip_validation=conf.skip_validation)
 
         lexer_by_tokens = {}
         self.lexers = {}
@@ -362,14 +374,17 @@ class ContextualLexer(Lexer):
             try:
                 lexer = lexer_by_tokens[key]
             except KeyError:
-                accepts = set(accepts) | set(ignore) | set(always_accept)
+                accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
-                lexer = TraditionalLexer(state_tokens, re_=self.re, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
+                lexer_conf = copy(trad_conf)
+                lexer_conf.tokens = state_tokens
+                lexer = TraditionalLexer(lexer_conf)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        self.root_lexer = TraditionalLexer(terminals, re_=self.re, ignore=ignore, user_callbacks=user_callbacks, g_regex_flags=g_regex_flags)
+        assert trad_conf.tokens is terminals
+        self.root_lexer = TraditionalLexer(trad_conf)
 
     def lex(self, stream, get_parser_state):
         parser_state = get_parser_state()

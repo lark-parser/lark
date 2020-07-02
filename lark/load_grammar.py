@@ -755,19 +755,19 @@ def _find_used_symbols(tree):
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
-    def __init__(self, re_):
-        self.re = re_
+    def __init__(self, re_module):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
-        lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
+        lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, ['start'])
-        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf, re_)
+        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
 
         self.canonize_tree = CanonizeTree()
+        self.re_module = re_module
 
     def load_grammar(self, grammar_text, grammar_name='<?>'):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
@@ -863,7 +863,7 @@ class GrammarLoader:
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, self.re, base_paths=base_paths)
+            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td

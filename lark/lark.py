@@ -166,11 +166,11 @@ class Lark(Serialize):
         use_regex = self.options.regex
         if use_regex:
             if regex:
-                self.re = regex
+                re_module = regex
             else:
                 raise ImportError('`regex` module must be installed if calling `Lark(regex=True)`.')
         else:
-            self.re = re
+            re_module = re
 
         # Some, but not all file-like objects have a 'name' attribute
         try:
@@ -243,7 +243,7 @@ class Lark(Serialize):
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, self.re)
+        self.grammar = load_grammar(grammar, self.source, re_module)
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
@@ -276,7 +276,7 @@ class Lark(Serialize):
                 if hasattr(t, term.name):
                     lexer_callbacks[term.name] = getattr(t, term.name)
 
-        self.lexer_conf = LexerConf(self.terminals, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags)
+        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags)
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -304,7 +304,7 @@ class Lark(Serialize):
     def _build_parser(self):
         self._prepare_callbacks()
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
-        return self.parser_class(self.lexer_conf, parser_conf, self.re, options=self.options)
+        return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
         data, m = self.memo_serialize([TerminalDef, Rule])
@@ -331,11 +331,11 @@ class Lark(Serialize):
         if postlex is not None:
             options['postlex'] = postlex
         self.options = LarkOptions.deserialize(options, memo)
-        self.re = regex if self.options.regex else re
+        re_module = regex if self.options.regex else re
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source = '<deserialized>'
         self._prepare_callbacks()
-        self.parser = self.parser_class.deserialize(data['parser'], memo, self._callbacks, self.options.postlex, self.re)
+        self.parser = self.parser_class.deserialize(data['parser'], memo, self._callbacks, self.options.postlex, re_module)
         return self
 
     @classmethod

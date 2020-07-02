@@ -83,6 +83,29 @@ Terminals also support grammar operators, such as `|`, `+`, `*` and `?`.
 
 Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
 
+### Templates
+
+Templates are expanded when preprocessing the grammar.
+
+Definition syntax:
+
+```ebnf
+  my_template{param1, param2, ...}: <EBNF EXPRESSION>
+```
+
+Use syntax:
+
+```ebnf
+some_rule: my_template{arg1, arg2, ...}
+```
+
+Example:
+```ebnf
+_seperated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
+
+num_list: "[" _seperated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
+```
+
 ### Priority
 
 Terminals can be assigned priority only when using a lexer (future versions may support Earley's dynamic lexing).
@@ -256,3 +279,4 @@ Note that `%ignore` directives cannot be imported. Imported rules will abide by 
 ### %declare
 
 Declare a terminal without defining it. Useful for plugins.
+

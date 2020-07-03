@@ -1,3 +1,4 @@
+import unicodedata
 from collections import defaultdict
 
 from .tree import Tree
@@ -166,7 +167,12 @@ class Reconstructor:
         try:
             parser = self._parser_cache[tree.data]
         except KeyError:
-            rules = self.rules + self.rules_for_root[tree.data]
+            rules = self.rules + best_from_group(
+                self.rules_for_root[tree.data], lambda r: r, lambda r: -len(r.expansion)
+            )
+
+            rules.sort(key=lambda r: len(r.expansion))
+
             callbacks = {rule: rule.alias for rule in rules}  # TODO pass callbacks through dict, instead of alias?
             parser = earley.Parser(ParserConf(rules, callbacks, [tree.data]), self._match, resolve_ambiguity=True)
             self._parser_cache[tree.data] = parser

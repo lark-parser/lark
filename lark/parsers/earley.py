@@ -14,7 +14,7 @@ from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import UnexpectedEOF, UnexpectedToken
-from ..common import LOGGER
+from ..common import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
@@ -301,7 +301,7 @@ class Parser:
             try:
                 debug_walker = ForestToPyDotVisitor()
             except ImportError:
-                LOGGER.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
+                logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
             else:
                 debug_walker.visit(solutions[0], "sppf.png")
 

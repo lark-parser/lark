@@ -30,13 +30,13 @@ Use the reference pages for more in-depth explanations. (links in the [main page
 
 ## LALR usage
 
-By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `LOGGER` beforehand. For example:
+By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `logger` beforehand. For example:
 
 ```python
 import logging
-from lark import Lark, LOGGER
+from lark import Lark, logger
 
-LOGGER.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 collision_grammar = '''
 start: as as

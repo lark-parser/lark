@@ -7,7 +7,7 @@ from io import open
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS
 from .load_grammar import load_grammar
 from .tree import Tree
-from .common import LexerConf, ParserConf, LOGGER
+from .common import LexerConf, ParserConf, logger
 
 from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
 from .parse_tree_builder import ParseTreeBuilder
@@ -205,7 +205,7 @@ class Lark(Serialize):
                 cache_fn = '.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
-                LOGGER.debug('Loading grammar from cache: %s', cache_fn)
+                logger.debug('Loading grammar from cache: %s', cache_fn)
                 with FS.open(cache_fn, 'rb') as f:
                     self._load(f, self.options.transformer, self.options.postlex)
                 return
@@ -284,7 +284,7 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            LOGGER.debug('Saving grammar to cache: %s', cache_fn)
+            logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 

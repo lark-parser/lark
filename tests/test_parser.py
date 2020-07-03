@@ -24,7 +24,7 @@ try:
 except ImportError:
     regex = None
 
-from lark import LOGGER
+from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
@@ -32,7 +32,7 @@ from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 
-LOGGER.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)
 
 
 __path__ = os.path.dirname(__file__)

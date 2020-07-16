@@ -432,6 +432,20 @@ class PrepareLiterals(Transformer_InPlace):
         return ST('pattern', [PatternRE(regexp)])
 
 
+def _make_joined_pattern(regexp, flags_set):
+    # In Python 3.6, a new syntax for flags was introduced, that allows us to restrict the scope
+    # of flags to a specific regexp group. We are already using it in `lexer.Pattern._get_flags`
+    # However, for prior Python versions, we still need to use global flags, so we have to make sure
+    # that there are no flag collisions when we merge several terminals.
+    flags = ()
+    if not Py36:
+        if len(flags_set) > 1:
+            raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
+        elif len(flags_set) == 1:
+            flags ,= flags_set
+
+    return PatternRE(regexp, flags)
+
 class TerminalTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
@@ -441,26 +455,16 @@ class TerminalTreeToPattern(Transformer):
         assert items
         if len(items) == 1:
             return items[0]
-        # In Python 3.6, a new syntax for flags was introduced. We are already using it in `lexer.Pattern._get_flags`
-        # It allows us to activate flags just in a specific part, like in this case for a specific terminal.
-        # The `to_regexp` method already does this, so we don't have to continue to pass around the flags.
-        if not Py36:
-            if len({i.flags for i in items}) > 1:
-                raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
-            return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
-        else:
-            return PatternRE(''.join(i.to_regexp() for i in items), ())
+
+        pattern = ''.join(i.to_regexp() for i in items)
+        return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        # See `expansion`
-        if not Py36:
-            if len({i.flags for i in exps}) > 1:
-                raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-            return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
-        else:
-            return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), ())
+
+        pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
+        return _make_joined_pattern(pattern, {i.flags for i in exps})
 
     def expr(self, args):
         inner, op = args[:2]

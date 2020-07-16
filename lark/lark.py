@@ -294,7 +294,7 @@ class Lark(Serialize):
     __serialize_fields__ = 'parser', 'rules', 'options'
 
     def _build_lexer(self):
-        return TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
+        return TraditionalLexer(self.lexer_conf)
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)

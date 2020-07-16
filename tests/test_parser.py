@@ -7,6 +7,9 @@ import logging
 import os
 import sys
 from copy import copy, deepcopy
+
+from lark.utils import Py36
+
 try:
     from cStringIO import StringIO as cStringIO
 except ImportError:
@@ -1062,6 +1065,31 @@ def _make_parser_test(LEXER, PARSER):
             g = _Lark(g)
             self.assertEqual( g.parse('"hello"').children, ['"hello"'])
             self.assertEqual( g.parse("'hello'").children, ["'hello'"])
+        
+        @unittest.skipIf(not Py36, "Required re syntax only exists in python3.6+")
+        def test_join_regex_flags(self):
+            g = r"""
+                start: A
+                A: B C
+                B: /./s
+                C: /./
+            """
+            g = _Lark(g)
+            self.assertEqual(g.parse("  ").children,["  "])
+            self.assertEqual(g.parse("\n ").children,["\n "])
+            self.assertRaises(UnexpectedCharacters, g.parse, "\n\n")
+            
+            g = r"""
+                start: A
+                A: B | C
+                B: "b"i
+                C: "c"
+            """
+            g = _Lark(g)
+            self.assertEqual(g.parse("b").children,["b"])
+            self.assertEqual(g.parse("B").children,["B"])
+            self.assertEqual(g.parse("c").children,["c"])
+            self.assertRaises(UnexpectedCharacters, g.parse, "C")
 
 
         def test_lexer_token_limit(self):

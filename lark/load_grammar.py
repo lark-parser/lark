@@ -5,7 +5,7 @@ import sys
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs, eval_escaping
+from .utils import bfs, eval_escaping, Py36
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -432,6 +432,20 @@ class PrepareLiterals(Transformer_InPlace):
         return ST('pattern', [PatternRE(regexp)])
 
 
+def _make_joined_pattern(regexp, flags_set):
+    # In Python 3.6, a new syntax for flags was introduced, that allows us to restrict the scope
+    # of flags to a specific regexp group. We are already using it in `lexer.Pattern._get_flags`
+    # However, for prior Python versions, we still need to use global flags, so we have to make sure
+    # that there are no flag collisions when we merge several terminals.
+    flags = ()
+    if not Py36:
+        if len(flags_set) > 1:
+            raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
+        elif len(flags_set) == 1:
+            flags ,= flags_set
+
+    return PatternRE(regexp, flags)
+
 class TerminalTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
@@ -441,16 +455,16 @@ class TerminalTreeToPattern(Transformer):
         assert items
         if len(items) == 1:
             return items[0]
-        if len({i.flags for i in items}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
+
+        pattern = ''.join(i.to_regexp() for i in items)
+        return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        if len({i.flags for i in exps}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
+
+        pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
+        return _make_joined_pattern(pattern, {i.flags for i in exps})
 
     def expr(self, args):
         inner, op = args[:2]

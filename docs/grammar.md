@@ -101,9 +101,9 @@ some_rule: my_template{arg1, arg2, ...}
 
 Example:
 ```ebnf
-_seperated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
+_separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
 
-num_list: "[" _seperated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
+num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
 ```
 
 ### Priority

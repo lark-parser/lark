@@ -1078,6 +1078,18 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(g.parse("  ").children,["  "])
             self.assertEqual(g.parse("\n ").children,["\n "])
             self.assertRaises(UnexpectedCharacters, g.parse, "\n\n")
+            
+            g = r"""
+                start: A
+                A: B | C
+                B: "b"i
+                C: "c"
+            """
+            g = _Lark(g)
+            self.assertEqual(g.parse("b").children,["b"])
+            self.assertEqual(g.parse("B").children,["B"])
+            self.assertEqual(g.parse("c").children,["c"])
+            self.assertRaises(UnexpectedCharacters, g.parse, "C")
 
 
         def test_lexer_token_limit(self):

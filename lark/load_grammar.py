@@ -451,9 +451,12 @@ class TerminalTreeToPattern(Transformer):
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        if len({i.flags for i in exps}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
+        if not Py36:
+            if len({i.flags for i in exps}) > 1:
+                raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
+            return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
+        else:
+            return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), ())
 
     def expr(self, args):
         inner, op = args[:2]

@@ -441,6 +441,9 @@ class TerminalTreeToPattern(Transformer):
         assert items
         if len(items) == 1:
             return items[0]
+        # In Python 3.6, a new syntax for flags was introduced. We are already using it in `lexer.Pattern._get_flags`
+        # It allows us to activate flags just in a specific part, like in this case for a specific terminal.
+        # The `to_regexp` method already does this, so we don't have to continue to pass around the flags.
         if not Py36:
             if len({i.flags for i in items}) > 1:
                 raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
@@ -451,6 +454,7 @@ class TerminalTreeToPattern(Transformer):
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
+        # See `expansion`
         if not Py36:
             if len({i.flags for i in exps}) > 1:
                 raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")

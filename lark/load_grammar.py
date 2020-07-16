@@ -5,7 +5,7 @@ import sys
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs, eval_escaping
+from .utils import bfs, eval_escaping, Py36
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -441,9 +441,12 @@ class TerminalTreeToPattern(Transformer):
         assert items
         if len(items) == 1:
             return items[0]
-        if len({i.flags for i in items}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
+        if not Py36:
+            if len({i.flags for i in items}) > 1:
+                raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
+            return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
+        else:
+            return PatternRE(''.join(i.to_regexp() for i in items), ())
 
     def expansions(self, exps):
         if len(exps) == 1:

@@ -1,5 +1,3 @@
-from functools import partial
-
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
@@ -20,7 +18,14 @@ def get_frontend(parser, lexer):
         elif lexer == 'contextual':
             return LALR_ContextualLexer
         elif issubclass(lexer, Lexer):
-            return partial(LALR_CustomLexer, lexer)
+            class LALR_CustomLexerWrapper(LALR_CustomLexer):
+                def __init__(self, lexer_conf, parser_conf, options=None):
+                    super(LALR_CustomLexerWrapper, self).__init__(
+                        lexer, lexer_conf, parser_conf, options=options)
+                def init_lexer(self):
+                    self.lexer = lexer(self.lexer_conf)
+
+            return LALR_CustomLexerWrapper
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':

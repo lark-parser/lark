@@ -4,6 +4,7 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark, Tree
+from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
 try:
@@ -38,6 +39,15 @@ class MockFS:
         return name in self.files
 
 
+class CustomLexer(Lexer):
+    def __init__(self, lexer_conf):
+        pass
+
+    def lex(self, data):
+        for obj in data:
+            yield Token('A', obj)
+
+
 class TestCache(TestCase):
     def setUp(self):
         pass
@@ -70,6 +80,12 @@ class TestCache(TestCase):
             parser = Lark(g, parser='lalr', cache=True)
             assert parser.parse('a') == Tree('start', [])
 
+            # Test with custom lexer
+            mock_fs.files = {}
+            parser = Lark(g, parser='lalr', lexer=CustomLexer, cache=True)
+            parser = Lark(g, parser='lalr', lexer=CustomLexer, cache=True)
+            assert len(mock_fs.files) == 1
+            assert parser.parse('a') == Tree('start', [])
         finally:
             lark_module.FS = fs
 

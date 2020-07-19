@@ -267,7 +267,7 @@ class Interpreter(_Decoratable):
     Calls its methods (provided by user via inheritance) according to tree.data
 
     Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
-    The user has to explicitly call visit_children, or use the @visit_children_decor
+    The user has to explicitly call visit, visit_children, or use the @visit_children_decor
     """
 
     def visit(self, tree):

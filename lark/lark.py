@@ -105,6 +105,7 @@ class LarkOptions(Serialize):
         'maybe_placeholders': False,
         'edit_terminals': None,
         'g_regex_flags': 0,
+        'use_bytes': False,
     }
 
     def __init__(self, options_dict):
@@ -252,7 +253,7 @@ class Lark(Serialize):
             for t in self.terminals:
                 self.options.edit_terminals(t)
 
-        self._terminals_dict = {t.name:t for t in self.terminals}
+        self._terminals_dict = {t.name: t for t in self.terminals}
 
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.
@@ -276,7 +277,7 @@ class Lark(Serialize):
                 if hasattr(t, term.name):
                     lexer_callbacks[term.name] = getattr(t, term.name)
 
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags)
+        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
 
         if self.options.parser:
             self.parser = self._build_parser()

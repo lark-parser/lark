@@ -28,9 +28,14 @@ class UnexpectedInput(LarkError):
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
-        before = text[start:pos].rsplit('\n', 1)[-1]
-        after = text[pos:end].split('\n', 1)[0]
-        return before + after + '\n' + ' ' * len(before) + '^\n'
+        if not isinstance(text, bytes):
+            before = text[start:pos].rsplit('\n', 1)[-1]
+            after = text[pos:end].split('\n', 1)[0]
+            return before + after + '\n' + ' ' * len(before) + '^\n'
+        else:
+            before = text[start:pos].rsplit(b'\n', 1)[-1]
+            after = text[pos:end].split(b'\n', 1)[0]
+            return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False):
         """ Given a parser instance and a dictionary mapping some label with
@@ -67,7 +72,11 @@ class UnexpectedInput(LarkError):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
-        message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
+        
+        if isinstance(seq, bytes):
+            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace"), line, column)
+        else:
+            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
 
         self.line = line
         self.column = column

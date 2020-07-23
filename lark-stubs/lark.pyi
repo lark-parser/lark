@@ -31,6 +31,7 @@ class LarkOptions:
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
     g_regex_flags: int
+    use_bytes: bool
 
 
 class Lark:
@@ -55,7 +56,8 @@ class Lark:
         propagate_positions: bool = False,
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
-        g_regex_flags: int = ...
+        g_regex_flags: int = ...,
+        use_bytes: bool = False,
     ):
         ...
 

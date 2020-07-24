@@ -6,19 +6,21 @@ from lark.exceptions import GrammarError, ParseError, UnexpectedToken, Unexpecte
 class TestScopedIgnore(unittest.TestCase):
     def test_parse1(self):
         # Just a simple example of the grammar, to see that it parses
-        Lark("""
+        l = Lark("""
             B: /b/
-            %ignore /aaa/
+            %ignore /c/
             %scoped {
                 %ignore B
-                %unignore /aaa/
+                %unignore /c/
                 start: "a" B "a"
             }
         """)
+        l.parse("aba")
+        l.parse("bbabbbabb")
+        self.assertRaises(UnexpectedCharacters, l.parse, "abca")
 
     def test_parse2(self):
-        # Just a simple example of the grammar, to see that it parses
-        Lark("""
+        l = Lark("""
             B: /b/
             %ignore B
             %scoped {
@@ -26,18 +28,19 @@ class TestScopedIgnore(unittest.TestCase):
                 start: "a" "a"
             }
         """)
+        l.parse("aa")
+        self.assertRaises(UnexpectedCharacters, l.parse, "aba")
 
-    def test_parse_fail_remove(self):
+    def test_parse_fail_unignore(self):
         # Can't unignore something that isn't in the ignore set
-        g = """
+        self.assertRaises(GrammarError, Lark, """
             %unignore /c/
             start: "a"
-        """
-        self.assertRaises(GrammarError, Lark, g)
+        """)
 
     def test_parse_unignore(self):
         # Unignoring works
-        Lark("""
+        l = Lark("""
             B: /b/
             %ignore B
             rule1: "a" "a"
@@ -46,11 +49,13 @@ class TestScopedIgnore(unittest.TestCase):
                 start: rule1 "c" rule1
             }
         """)
-        # Should match abbbbacaba, aacaa, but not aabcaa
+        l.parse("abbbbacaba")
+        l.parse("aacaa")
+        self.assertRaises(UnexpectedCharacters, l.parse, "aabcaa")
 
-    def test_parse_fail_remove_alias(self):
+    def test_parse_fail_unignore_alias(self):
         # Aliases don't count as the same
-        g = """
+        self.assertRaises(GrammarError, Lark, """
             B: /b/
             %ignore /b/
             %scoped
@@ -58,8 +63,7 @@ class TestScopedIgnore(unittest.TestCase):
                 %unignore B
                 start: "foo"
             }
-        """
-        self.assertRaises(GrammarError, Lark, g)
+        """)
 
 if __name__ == '__main__':
     unittest.main()

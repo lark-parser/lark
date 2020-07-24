@@ -778,7 +778,7 @@ class GrammarLoader:
     def __init__(self, re_module):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
-        rules = [options_from_rule(name, None, (), x) for name, x in  RULES.items()]
+        rules = [options_from_rule(name, None, ['WS', 'COMMENT'], x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])

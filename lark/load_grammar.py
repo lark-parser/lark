@@ -818,66 +818,7 @@ class GrammarLoader:
 
         tree = PrepareGrammar().transform(tree)
 
-        # Extract grammar items
-        defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
-        term_defs = defs.pop('term', [])
-        rule_defs = defs.pop('rule', [])
-        statements = defs.pop('statement', [])
-        assert not defs
-
-        term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
-        term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
-        rule_defs = [options_from_rule(*x) for x in rule_defs]
-
-        # Execute statements
-        ignore, imports = [], {}
-        for (stmt,) in statements:
-            if stmt.data == 'ignore':
-                t ,= stmt.children
-                ignore.append(t)
-            elif stmt.data == 'import':
-                if len(stmt.children) > 1:
-                    path_node, arg1 = stmt.children
-                else:
-                    path_node, = stmt.children
-                    arg1 = None
-
-                if isinstance(arg1, Tree):  # Multi import
-                    dotted_path = tuple(path_node.children)
-                    names = arg1.children
-                    aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
-                else:  # Single import
-                    dotted_path = tuple(path_node.children[:-1])
-                    name = path_node.children[-1]  # Get name from dotted path
-                    aliases = {name: arg1 or name}  # Aliases if exist
-
-                if path_node.data == 'import_lib':  # Import from library
-                    base_paths = []
-                else:  # Relative import
-                    if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
-                        try:
-                            base_file = os.path.abspath(sys.modules['__main__'].__file__)
-                        except AttributeError:
-                            base_file = None
-                    else:
-                        base_file = grammar_name  # Import relative to grammar file path if external grammar file
-                    if base_file:
-                        base_paths = [os.path.split(base_file)[0]]
-                    else:
-                        base_paths = [os.path.abspath(os.path.curdir)]
-
-                try:
-                    import_base_paths, import_aliases = imports[dotted_path]
-                    assert base_paths == import_base_paths, 'Inconsistent base_paths for %s.' % '.'.join(dotted_path)
-                    import_aliases.update(aliases)
-                except KeyError:
-                    imports[dotted_path] = base_paths, aliases
-
-            elif stmt.data == 'declare':
-                for t in stmt.children:
-                    term_defs.append([t.value, (None, None)])
-            else:
-                assert False, stmt
+        rule_defs, term_defs, imports, ignore = self.parse_list(tree, grammar_name=grammar_name)
 
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
@@ -960,6 +901,69 @@ class GrammarLoader:
 
         return Grammar(rules, term_defs, ignore_names)
 
+    def parse_list(self, tree, grammar_name):
+        # Extract grammar items
+        defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
+        term_defs = defs.pop('term', [])
+        rule_defs = defs.pop('rule', [])
+        statements = defs.pop('statement', [])
+        assert not defs
+
+        term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
+        term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
+        rule_defs = [options_from_rule(*x) for x in rule_defs]
+
+        # Execute statements
+        ignore, imports = [], {}
+        for (stmt,) in statements:
+            if stmt.data == 'ignore':
+                t ,= stmt.children
+                ignore.append(t)
+            elif stmt.data == 'import':
+                if len(stmt.children) > 1:
+                    path_node, arg1 = stmt.children
+                else:
+                    path_node, = stmt.children
+                    arg1 = None
+
+                if isinstance(arg1, Tree):  # Multi import
+                    dotted_path = tuple(path_node.children)
+                    names = arg1.children
+                    aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
+                else:  # Single import
+                    dotted_path = tuple(path_node.children[:-1])
+                    name = path_node.children[-1]  # Get name from dotted path
+                    aliases = {name: arg1 or name}  # Aliases if exist
+
+                if path_node.data == 'import_lib':  # Import from library
+                    base_paths = []
+                else:  # Relative import
+                    if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
+                        try:
+                            base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                        except AttributeError:
+                            base_file = None
+                    else:
+                        base_file = grammar_name  # Import relative to grammar file path if external grammar file
+                    if base_file:
+                        base_paths = [os.path.split(base_file)[0]]
+                    else:
+                        base_paths = [os.path.abspath(os.path.curdir)]
+
+                try:
+                    import_base_paths, import_aliases = imports[dotted_path]
+                    assert base_paths == import_base_paths, 'Inconsistent base_paths for %s.' % '.'.join(dotted_path)
+                    import_aliases.update(aliases)
+                except KeyError:
+                    imports[dotted_path] = base_paths, aliases
+
+            elif stmt.data == 'declare':
+                for t in stmt.children:
+                    term_defs.append([t.value, (None, None)])
+            else:
+                assert False, stmt
+
+        return rule_defs, term_defs, imports, ignore
 
 
 def load_grammar(grammar, source, re_):

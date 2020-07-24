@@ -91,8 +91,10 @@ TERMINALS = {
     'COMMENT': r'\s*//[^\n]*',
     '_TO': '->',
     '_IGNORE': r'%ignore',
+    '_UNIGNORE': r'%unignore',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
+    '_SCOPED': r'%scoped',
     'NUMBER': r'[+-]?\d+',
 }
 
@@ -146,12 +148,15 @@ RULES = {
 
     'term': ['TERMINAL _COLON expansions _NL',
              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'declare'],
+    'statement': ['ignore', 'unignore', 'import', 'declare', 'scoped'],
     'ignore': ['_IGNORE expansions _NL'],
+    'unignore': ['_UNIGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT _import_path _NL',
                '_IMPORT _import_path _LPAR name_list _RPAR _NL',
                '_IMPORT _import_path _TO name _NL'],
+    'scoped': ['_SCOPED _LBRACE _list _RBRACE _NL',
+               '_SCOPED _NL _LBRACE _list _RBRACE _NL'],
 
     '_import_path': ['import_lib', 'import_rel'],
     'import_lib': ['_import_args'],

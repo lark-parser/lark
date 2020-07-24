@@ -739,7 +739,7 @@ def resolve_term_references(term_defs):
                     raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
-def options_from_rule(name, params, *x):
+def options_from_rule(name, params, ignore, *x):
     if len(x) > 1:
         priority, expansions = x
         priority = int(priority)
@@ -754,7 +754,8 @@ def options_from_rule(name, params, *x):
     name = name.lstrip('?')
 
     return name, params, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority,
-                                                 template_source=(name if params else None))
+                                                 template_source=(name if params else None),
+                                                 ignore=ignore)
 
 
 def symbols_from_strcase(expansion):
@@ -777,7 +778,7 @@ class GrammarLoader:
     def __init__(self, re_module):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
-        rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
+        rules = [options_from_rule(name, None, (), x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])
@@ -818,13 +819,17 @@ class GrammarLoader:
 
         tree = PrepareGrammar().transform(tree)
 
-        rule_defs, term_defs, imports, ignore = self.parse_list(tree, grammar_name=grammar_name)
+        rule_defs, term_defs, imports = self.parse_list(tree, set(), grammar_name=grammar_name)
 
         # import grammars
+        included_rules = set()
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
             g = import_grammar(grammar_path, self.re_module, base_paths=base_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
+
+            for _name, _params, _x, o in new_rd:
+                included_rules.add(o)
 
             term_defs += new_td
             rule_defs += new_rd
@@ -837,21 +842,33 @@ class GrammarLoader:
         # Handle ignore tokens
         # XXX A slightly hacky solution. Recognition of %ignore TERMINAL as separate comes from the lexer's
         #     inability to handle duplicate terminals (two names, one value)
-        ignore_names = []
-        for t in ignore:
-            if t.data=='expansions' and len(t.children) == 1:
-                t2 ,= t.children
-                if t2.data=='expansion' and len(t2.children) == 1:
-                    item ,= t2.children
-                    if item.data == 'value':
-                        item ,= item.children
-                        if isinstance(item, Token) and item.type == 'TERMINAL':
-                            ignore_names.append(item.value)
-                            continue
 
-            name = '__IGNORE_%d'% len(ignore_names)
-            ignore_names.append(name)
-            term_defs.append((name, (t, 1)))
+        # We use a dict here so that the ignored terminals aren't duplicated.
+        # Otherwise we would get two or three ignore terminals per rule, which
+        # is way too many.
+        ignore_names = {}
+        for _name, _params, _x, o in rule_defs:
+            if o not in included_rules:
+                ignore = []
+                for t in o.ignore:
+                    if t not in ignore_names:
+                        for _ in [None]: # So that we can break
+                            if t.data=='expansions' and len(t.children) == 1:
+                                t2 ,= t.children
+                                if t2.data=='expansion' and len(t2.children) == 1:
+                                    item ,= t2.children
+                                    if item.data == 'value':
+                                        item ,= item.children
+                                        if isinstance(item, Token) and item.type == 'TERMINAL':
+                                            ignore_names[t] = item.value
+                                            break
+
+                            name = '__IGNORE_%d'% len(ignore_names)
+                            ignore_names[t] = name
+                            term_defs.append((name, (t, 1)))
+                    ignore.append(ignore_names[t])
+                o.ignore = ignore
+        ignore_names = list(ignore_names.values())
 
         # Verify correctness 2
         terminal_names = set()
@@ -901,7 +918,7 @@ class GrammarLoader:
 
         return Grammar(rules, term_defs, ignore_names)
 
-    def parse_list(self, tree, grammar_name):
+    def parse_list(self, tree, ignore, grammar_name):
         # Extract grammar items
         defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
         term_defs = defs.pop('term', [])
@@ -909,17 +926,30 @@ class GrammarLoader:
         statements = defs.pop('statement', [])
         assert not defs
 
+        # This instance is shared among all rules in the scope. It's mutated
+        # below. This means we must ensure not to accidentally clone the set
+        # until this function is finished. The set is replaced by an individual
+        # list later.
+        ignore = set(ignore)
+
         term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
         term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
-        rule_defs = [options_from_rule(*x) for x in rule_defs]
+        rule_defs = [options_from_rule(x[0], x[1], ignore, *x[2:]) for x in rule_defs]
 
         # Execute statements
-        ignore, imports = [], {}
+        imports = {}
+
         statements = classify(statements, lambda c: c[0].data, lambda c: c[0])
+
+        for stmt in statements.pop('unignore', []):
+            t ,= stmt.children
+            if t not in ignore:
+                raise GrammarError("%r is not ignored, cannot unignore" % t)
+            ignore.remove(t)
 
         for stmt in statements.pop('ignore', []):
             t ,= stmt.children
-            ignore.append(t)
+            ignore.add(t)
 
         for stmt in statements.pop('import', []):
             if len(stmt.children) > 1:
@@ -963,9 +993,15 @@ class GrammarLoader:
             for t in stmt.children:
                 term_defs.append([t.value, (None, None)])
 
+        for stmt in statements.pop('scoped', []):
+            rule_defs_, term_defs_, imports_ = self.parse_list(stmt, ignore, grammar_name=grammar_name)
+            rule_defs.extend(rule_defs_)
+            term_defs.extend(term_defs_)
+            imports_.update(imports_)
+
         assert not statements
 
-        return rule_defs, term_defs, imports, ignore
+        return rule_defs, term_defs, imports
 
 
 def load_grammar(grammar, source, re_):

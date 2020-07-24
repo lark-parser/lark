@@ -219,7 +219,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         assert False, op
 
     def maybe(self, rule):
-        keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
+        keep_all_tokens = self.rule_options.keep_all_tokens
 
         def will_not_get_removed(sym):
             if isinstance(sym, NonTerminal):
@@ -561,7 +561,9 @@ class Grammar:
             i += 1
             if len(params) != 0: # Dont transform templates
                 continue
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = RuleOptions()
+            ebnf_to_bnf.rule_options.keep_all_tokens = options.keep_all_tokens
+            ebnf_to_bnf.rule_options.ignore = options.ignore
             ebnf_to_bnf.prefix = name
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)

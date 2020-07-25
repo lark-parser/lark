@@ -87,9 +87,16 @@ def best_from_group(seq, group_key, cmp_key):
     return list(d.values())
 
 class Reconstructor:
-    def __init__(self, parser, term_subs={}):
+    """
+    A Reconstructor that will, given a full parse Tree, generate source code.
+    Pass `term_subs`, a dictionary of [Terminal name as str] to [output text as str]
+    to say what discarded Terminals should be written as.
+    """
+    def __init__(self, parser, term_subs=None):
         # XXX TODO calling compile twice returns different results!
         assert parser.options.maybe_placeholders == False
+        if term_subs is None:
+            term_subs = {}
         tokens, rules, _grammar_extra = parser.grammar.compile(parser.options.start)
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens}, term_subs)

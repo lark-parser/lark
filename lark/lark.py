@@ -4,7 +4,7 @@ import sys, os, pickle, hashlib, logging
 from io import open
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -115,7 +115,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name != 'cache':
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
                     value = bool(value)
             else:
                 value = default
@@ -188,6 +188,13 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
+        self.grammar_source = grammar
+        if self.options.use_bytes:
+            assert isascii(grammar), "If creating a parser for bytes, the grammar needs to be ascii only"
+            if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
+                raise NotImplementedError("The `use_bytes=True` for python2.7 is not perfect. "
+                                          "It might have weird behaviour. Use `use_bytes='force'` "
+                                          "to still use it")
 
         cache_fn = None
         if self.options.cache:

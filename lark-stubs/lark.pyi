@@ -36,6 +36,7 @@ class LarkOptions:
 
 class Lark:
     source: str
+    grammar_source: str
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]

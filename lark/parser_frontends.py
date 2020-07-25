@@ -184,6 +184,8 @@ class XEarley(_ParserFrontend):
             else:
                 if width == 0:
                     raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
+            if lexer_conf.use_bytes:
+                regexp = regexp.encode('utf-8')
 
             self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 

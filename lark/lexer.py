@@ -139,8 +139,8 @@ class Token(Str):
 
 
 class LineCounter:
-    def __init__(self):
-        self.newline_char = '\n'
+    def __init__(self, use_bytes=False):
+        self.newline_char = '\n' if not use_bytes else b'\n'
         self.char_pos = 0
         self.line = 1
         self.column = 1
@@ -169,7 +169,7 @@ class _Lex:
     def lex(self, stream, newline_types, ignore_types):
         newline_types = frozenset(newline_types)
         ignore_types = frozenset(ignore_types)
-        line_ctr = LineCounter()
+        line_ctr = LineCounter(self.lexer.use_bytes)
         last_token = None
 
         while line_ctr.char_pos < len(stream):
@@ -262,7 +262,7 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
     while terminals:
         pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
         if use_bytes:
-            pattern = pattern.encode()
+            pattern = pattern.encode('utf-8')
         try:
             mre = re_.compile(pattern, g_regex_flags)
         except AssertionError:  # Yes, this is what Python provides us.. :/

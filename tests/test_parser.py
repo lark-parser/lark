@@ -8,7 +8,9 @@ import os
 import sys
 from copy import copy, deepcopy
 
-from lark.utils import Py36
+from lark.utils import Py36, isascii
+
+from lark import Token
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -561,12 +563,82 @@ class CustomLexer(Lexer):
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
 
+def _tree_structure_check(a, b):
+    """
+    Checks that both Tree objects have the same structure, without checking their values.
+    """
+    assert a.data == b.data and len(a.children) == len(b.children)
+    for ca,cb in zip(a.children, b.children):
+        assert type(ca) == type(cb)
+        if isinstance(ca, Tree):
+            _tree_structure_check(ca, cb)
+        elif isinstance(ca, Token):
+            assert ca.type == cb.type
+        else:
+            assert ca == cb
+
+class DualLark:
+    """
+    A helper class that wraps both a normal parser, and a parser for bytes.
+    It automatically transforms `.parse` calls for both lexer, returning the value from the text lexer
+    It always checks that both produce the same output/error
+    """
+
+    def __init__(self, g, *args, **kwargs):
+        self.text_lexer = Lark(g, *args, use_bytes=False, **kwargs)
+        g = self.text_lexer.grammar_source.lower()
+        if '\\u' in g or not isascii(g):
+            # Bytes re can't deal with uniode escapes
+            self.bytes_lark = None
+        else:
+            # Everything here should work, so use `use_bytes='force'`
+            self.bytes_lark = Lark(self.text_lexer.grammar_source, *args, use_bytes='force', **kwargs)
+
+    def parse(self, text, start=None):
+        # TODO: Easy workaround, more complex checks would be beneficial
+        if not isascii(text) or self.bytes_lark is None:
+            return self.text_lexer.parse(text, start)
+        try:
+            rv = self.text_lexer.parse(text, start)
+        except Exception as e:
+            try:
+                self.bytes_lark.parse(text.encode(), start)
+            except Exception as be:
+                assert type(e) == type(be), "Parser with and without `use_bytes` raise different exceptions"
+                raise e
+            assert False, "Parser without `use_bytes` raises exception, with doesn't"
+        try:
+            bv = self.bytes_lark.parse(text.encode(), start)
+        except Exception as be:
+            assert False, "Parser without `use_bytes` doesn't raise an exception, with does"
+        _tree_structure_check(rv, bv)
+        return rv
+    
+    @classmethod
+    def open(cls, grammar_filename, rel_to=None, **options):
+        if rel_to:
+            basepath = os.path.dirname(rel_to)
+            grammar_filename = os.path.join(basepath, grammar_filename)
+        with open(grammar_filename, encoding='utf8') as f:
+            return cls(f, **options)
+
+    def save(self,f):
+        self.text_lexer.save(f)
+        if self.bytes_lark is not None:
+            self.bytes_lark.save(f)
+
+    def load(self,f):
+        self.text_lexer = self.text_lexer.load(f)
+        if self.bytes_lark is not None:
+            self.bytes_lark.load(f)
+
 def _make_parser_test(LEXER, PARSER):
     lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
     def _Lark(grammar, **kwargs):
-        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+        return DualLark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
-        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+        return DualLark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
             g = _Lark("""start: a+ b a* "b" a*
@@ -646,6 +718,28 @@ def _make_parser_test(LEXER, PARSER):
                           A: "\x01".."\x03"
                           """)
             g.parse('\x01\x02\x03')
+        
+        @unittest.skipIf(sys.version_info[:2]==(2, 7), "bytes parser isn't perfect in Python2.7, exceptions don't work correctly")
+        def test_bytes_utf8(self):
+            g = r"""
+            start: BOM? char+
+            BOM: "\xef\xbb\xbf"
+            char: CHAR1 | CHAR2 | CHAR3 | CHAR4
+            CONTINUATION_BYTE: "\x80" .. "\xbf"
+            CHAR1: "\x00" .. "\x7f"
+            CHAR2: "\xc0" .. "\xdf" CONTINUATION_BYTE
+            CHAR3: "\xe0" .. "\xef" CONTINUATION_BYTE CONTINUATION_BYTE
+            CHAR4: "\xf0" .. "\xf7" CONTINUATION_BYTE CONTINUATION_BYTE CONTINUATION_BYTE
+            """
+            g = _Lark(g)
+            s = u"🔣 地? gurīn".encode('utf-8')
+            self.assertEqual(len(g.bytes_lark.parse(s).children), 10)
+
+            for enc, j in [("sjis", u"地球の絵はグリーンでグッド?  Chikyuu no e wa guriin de guddo"),
+                           ("sjis", u"売春婦"),
+                           ("euc-jp", u"乂鵬鵠")]:
+                s = j.encode(enc)
+                self.assertRaises(UnexpectedCharacters, g.bytes_lark.parse, s)
 
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):

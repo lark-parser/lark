@@ -28,6 +28,29 @@ There are two classes that implement the visitor interface:
 
 * Visitor_Recursive - Visit every node using recursion. Slightly faster.
 
+### Interpreter
+
+The interpreter walks the tree starting at the root (top-down).
+
+For each node, it calls the method corresponding with its `data` attribute.
+
+Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
+The user has to explicitly call `visit`, `visit_children`, or use the `@visit_children_decor`.
+This allows the user to implement branching and loops.
+
+**Example:**
+```python
+class IncreaseSomeOfTheNumbers(Interpreter):
+  def number(self, tree):
+    tree.children[0] += 1
+
+  def skip(self, tree):
+      # skip this subtree. don't change any number node inside it.
+      pass
+
+IncreaseSomeOfTheNumbers().visit(parse_tree)
+```
+
 ### Transformers
 
 Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.

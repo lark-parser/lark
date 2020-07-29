@@ -57,6 +57,7 @@ class Lark:
         propagate_positions: bool = False,
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
+        cache: Union[bool, str] = False,
         g_regex_flags: int = ...,
         use_bytes: bool = False,
     ):

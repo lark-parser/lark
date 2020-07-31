@@ -31,10 +31,12 @@ class LarkOptions:
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
     g_regex_flags: int
+    use_bytes: bool
 
 
 class Lark:
     source: str
+    grammar_source: str
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
@@ -56,7 +58,8 @@ class Lark:
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
         cache: Union[bool, str] = False,
-        g_regex_flags: int = ...
+        g_regex_flags: int = ...,
+        use_bytes: bool = False,
     ):
         ...
 

@@ -4,7 +4,7 @@ import sys, os, pickle, hashlib, logging
 from io import open
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -82,6 +82,7 @@ class LarkOptions(Serialize):
                 invert (Default: auto)
     lexer_callbacks - Dictionary of callbacks for the lexer. May alter
                         tokens during lexing. Use with caution.
+    use_bytes - Accept an input of type `bytes` instead of `str` (Python 3 only).
     edit_terminals - A callback
     """
     if __doc__:
@@ -105,6 +106,7 @@ class LarkOptions(Serialize):
         'maybe_placeholders': False,
         'edit_terminals': None,
         'g_regex_flags': 0,
+        'use_bytes': False,
     }
 
     def __init__(self, options_dict):
@@ -114,7 +116,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name != 'cache':
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
                     value = bool(value)
             else:
                 value = default
@@ -187,6 +189,13 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
+        self.grammar_source = grammar
+        if self.options.use_bytes:
+            if not isascii(grammar):
+                raise ValueError("Grammar must be ascii only, when use_bytes=True")
+            if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
+                raise NotImplementedError("`use_bytes=True` may have issues on python2."
+                                          "Use `use_bytes='force'` to use it at your own risk.")
 
         cache_fn = None
         if self.options.cache:
@@ -196,7 +205,7 @@ class Lark(Serialize):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
-                    raise ValueError("cache must be bool or str")
+                    raise ValueError("cache argument must be bool or str")
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 from . import __version__
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
@@ -252,7 +261,7 @@ class Lark(Serialize):
             for t in self.terminals:
                 self.options.edit_terminals(t)
 
-        self._terminals_dict = {t.name:t for t in self.terminals}
+        self._terminals_dict = {t.name: t for t in self.terminals}
 
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.
@@ -276,7 +285,7 @@ class Lark(Serialize):
                 if hasattr(t, term.name):
                     lexer_callbacks[term.name] = getattr(t, term.name)
 
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags)
+        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
 
         if self.options.parser:
             self.parser = self._build_parser()

@@ -306,3 +306,16 @@ def combine_alternatives(lists):
 class FS:
     open = open
     exists = os.path.exists
+
+
+
+def isascii(s):
+    """ str.isascii only exists in python3.7+ """
+    try:
+        return s.isascii()
+    except AttributeError:
+        try:
+            s.encode('ascii')
+            return True
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            return False

@@ -577,11 +577,13 @@ def _tree_structure_check(a, b):
         else:
             assert ca == cb
 
-class DualLark:
+class DualBytesLark:
     """
     A helper class that wraps both a normal parser, and a parser for bytes.
     It automatically transforms `.parse` calls for both lexer, returning the value from the text lexer
     It always checks that both produce the same output/error
+
+    NOTE: Not currently used, but left here for future debugging.
     """
 
     def __init__(self, g, *args, **kwargs):
@@ -613,7 +615,7 @@ class DualLark:
             assert False, "Parser without `use_bytes` doesn't raise an exception, with does"
         _tree_structure_check(rv, bv)
         return rv
-    
+
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
         if rel_to:
@@ -635,9 +637,9 @@ class DualLark:
 def _make_parser_test(LEXER, PARSER):
     lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
     def _Lark(grammar, **kwargs):
-        return DualLark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
-        return DualLark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
 
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
@@ -718,7 +720,7 @@ def _make_parser_test(LEXER, PARSER):
                           A: "\x01".."\x03"
                           """)
             g.parse('\x01\x02\x03')
-        
+
         @unittest.skipIf(sys.version_info[:2]==(2, 7), "bytes parser isn't perfect in Python2.7, exceptions don't work correctly")
         def test_bytes_utf8(self):
             g = r"""
@@ -731,15 +733,15 @@ def _make_parser_test(LEXER, PARSER):
             CHAR3: "\xe0" .. "\xef" CONTINUATION_BYTE CONTINUATION_BYTE
             CHAR4: "\xf0" .. "\xf7" CONTINUATION_BYTE CONTINUATION_BYTE CONTINUATION_BYTE
             """
-            g = _Lark(g)
+            g = _Lark(g, use_bytes=True)
             s = u"🔣 地? gurīn".encode('utf-8')
-            self.assertEqual(len(g.bytes_lark.parse(s).children), 10)
+            self.assertEqual(len(g.parse(s).children), 10)
 
             for enc, j in [("sjis", u"地球の絵はグリーンでグッド?  Chikyuu no e wa guriin de guddo"),
                            ("sjis", u"売春婦"),
                            ("euc-jp", u"乂鵬鵠")]:
                 s = j.encode(enc)
-                self.assertRaises(UnexpectedCharacters, g.bytes_lark.parse, s)
+                self.assertRaises(UnexpectedCharacters, g.parse, s)
 
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
@@ -1159,7 +1161,7 @@ def _make_parser_test(LEXER, PARSER):
             g = _Lark(g)
             self.assertEqual( g.parse('"hello"').children, ['"hello"'])
             self.assertEqual( g.parse("'hello'").children, ["'hello'"])
-        
+
         @unittest.skipIf(not Py36, "Required re syntax only exists in python3.6+")
         def test_join_regex_flags(self):
             g = r"""
@@ -1172,7 +1174,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(g.parse("  ").children,["  "])
             self.assertEqual(g.parse("\n ").children,["\n "])
             self.assertRaises(UnexpectedCharacters, g.parse, "\n\n")
-            
+
             g = r"""
                 start: A
                 A: B | C

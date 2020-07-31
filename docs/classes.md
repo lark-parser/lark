@@ -128,6 +128,7 @@ Useful for caching and multiprocessing.
 - **priority** - How priorities should be evaluated - auto, none, normal, invert (Default: auto)
 - **lexer_callbacks** - Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
 - **edit_terminals** - A callback
+- **use_bytes** - Accept and parse an input of type `bytes` instead of `str`. Grammar should still be specified as `str`, and terminal values are assumed to be `latin-1`.
 
 
 #### Using Unicode character classes with `regex`

@@ -82,6 +82,7 @@ class LarkOptions(Serialize):
                 invert (Default: auto)
     lexer_callbacks - Dictionary of callbacks for the lexer. May alter
                         tokens during lexing. Use with caution.
+    use_bytes - Accept an input of type `bytes` instead of `str` (Python 3 only).
     edit_terminals - A callback
     """
     if __doc__:
@@ -190,11 +191,11 @@ class Lark(Serialize):
         assert isinstance(grammar, STRING_TYPE)
         self.grammar_source = grammar
         if self.options.use_bytes:
-            assert isascii(grammar), "If creating a parser for bytes, the grammar needs to be ascii only"
+            if not isascii(grammar):
+                raise ValueError("Grammar must be ascii only, when use_bytes=True")
             if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                raise NotImplementedError("The `use_bytes=True` for python2.7 is not perfect. "
-                                          "It might have weird behaviour. Use `use_bytes='force'` "
-                                          "to still use it")
+                raise NotImplementedError("`use_bytes=True` may have issues on python2."
+                                          "Use `use_bytes='force'` to use it at your own risk.")
 
         cache_fn = None
         if self.options.cache:
@@ -204,7 +205,7 @@ class Lark(Serialize):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
-                    raise ValueError("cache must be bool or str")
+                    raise ValueError("cache argument must be bool or str")
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 from . import __version__
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)

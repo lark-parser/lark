@@ -15,7 +15,8 @@ setup(
     install_requires = [],
 
     extras_require = {
-        "regex": ["regex"]
+        "regex": ["regex"],
+        "nearley": ["js2py"]
     },
 
     package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},

@@ -3,6 +3,7 @@
 import os.path
 import sys
 import codecs
+import argparse
 
 
 from lark import Lark, InlineTransformer
@@ -137,7 +138,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
     return rule_defs
 
 
-def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
+def create_code_for_nearley_grammar(g, start, builtin_path, folder_path, es6=False):
     import js2py
 
     emit_code = []
@@ -160,7 +161,10 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
     for alias, code in n2l.alias_js_code.items():
         js_code.append('%s = (%s);' % (alias, code))
 
-    emit(js2py.translate_js('\n'.join(js_code)))
+    if es6:
+        emit(js2py.translate_js6('\n'.join(js_code)))
+    else:
+        emit(js2py.translate_js('\n'.join(js_code)))
     emit('class TransformNearley(Transformer):')
     for alias in n2l.alias_js_code:
         emit("    %s = var.get('%s').to_python()" % (alias, alias))
@@ -173,18 +177,20 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path):
 
     return ''.join(emit_code)
 
-def main(fn, start, nearley_lib):
+def main(fn, start, nearley_lib, es6=False):
     with codecs.open(fn, encoding='utf8') as f:
         grammar = f.read()
-    return create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn)))
+    return create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn)), es6=es6)
 
+def get_parser():
+    parser = argparse.ArgumentParser('Reads Nearley grammar (with js functions) outputs an equivalent lark parser.')
+    parser.add_argument('nearley_grammar', help='Path to the file containing the nearley grammar')
+    parser.add_argument('start_rule', help='Rule within the nearley grammar to make the base rule')
+    parser.add_argument('nearley_lib', help='')
+    parser.add_argument('--es6', help='Enable experimental ES6 support', action='store_true')
+    return parser
 
 if __name__ == '__main__':
-    if len(sys.argv) < 4:
-        print("Reads Nearley grammar (with js functions) outputs an equivalent lark parser.")
-        print("Usage: %s <nearley_grammar_path> <start_rule> <nearley_lib_path>" % sys.argv[0])
-        sys.exit(1)
-
-    fn, start, nearley_lib = sys.argv[1:]
-
-    print(main(fn, start, nearley_lib))
+    parser = get_parser()
+    args = parser.parse_args()
+    print(main(fn=args.nearley_grammar, start=args.start_rule, nearley_lib=args.nearley_lib, es6=args.es6))

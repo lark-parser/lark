@@ -163,6 +163,11 @@ Using Lark? Send me a message and I'll add your project!
 
 Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
 
+First, ensure you have Lark installed with the `nearley` component included:
+```bash
+pip install lark-parser[nearley]
+```
+
 Here's an example:
 ```bash
 git clone https://github.com/Hardmath123/nearley
@@ -177,6 +182,12 @@ You can use the output as a regular python module:
 0.38981434460254655
 ```
 
+The Nearley converter also supports an experimental converter for newer JavaScript (ES6+), using the `--es6` flag:
+
+```bash
+git clone https://github.com/Hardmath123/nearley
+python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley --es6 > ncalc.py
+```
 
 ## License
 

@@ -49,6 +49,7 @@ $ pip install lark-parser
     * [Visitors & Transformers](visitors.md)
     * [Classes](classes.md)
     * [Cheatsheet (PDF)](lark_cheatsheet.pdf)
+    * [Importing grammars from Nearley](nearley.md)
 * Discussion
     * [Gitter](https://gitter.im/lark-parser/Lobby)
     * [Forum (Google Groups)](https://groups.google.com/forum/#!forum/lark-parser)

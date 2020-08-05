@@ -1,4 +1,4 @@
-"Converts between Lark and Nearley grammars. Work in progress!"
+"Converts Nearley grammars to Lark"
 
 import os.path
 import sys
@@ -182,7 +182,7 @@ def main(fn, start, nearley_lib, es6=False):
         grammar = f.read()
     return create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn)), es6=es6)
 
-def get_parser():
+def get_arg_parser():
     parser = argparse.ArgumentParser('Reads Nearley grammar (with js functions) outputs an equivalent lark parser.')
     parser.add_argument('nearley_grammar', help='Path to the file containing the nearley grammar')
     parser.add_argument('start_rule', help='Rule within the nearley grammar to make the base rule')
@@ -191,6 +191,6 @@ def get_parser():
     return parser
 
 if __name__ == '__main__':
-    parser = get_parser()
+    parser = get_arg_parser()
     args = parser.parse_args()
     print(main(fn=args.nearley_grammar, start=args.start_rule, nearley_lib=args.nearley_lib, es6=args.es6))

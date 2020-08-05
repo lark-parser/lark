@@ -21,7 +21,7 @@
 # Extra features
 
   - Import rules and tokens from other Lark grammars, for code reuse and modularity.
-  - Import grammars from Nearley.js
+  - Import grammars from Nearley.js ([read more](/docs/nearley.md))
   - CYK parser
 
 ### Experimental features

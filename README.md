@@ -100,7 +100,7 @@ See more [examples here](https://github.com/lark-parser/lark/tree/master/example
  - **Python 2 & 3** compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
- - Import grammars from Nearley.js
+ - Import grammars from Nearley.js ([read more](/docs/nearley.md))
  - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
  - MyPy support using type stubs
  - And much more!
@@ -158,25 +158,6 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [harmalysis](https://github.com/napulen/harmalysis) - A language for harmonic analysis and music theory
 
 Using Lark? Send me a message and I'll add your project!
-
-### How to use Nearley grammars in Lark
-
-Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
-
-Here's an example:
-```bash
-git clone https://github.com/Hardmath123/nearley
-python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley > ncalc.py
-```
-
-You can use the output as a regular python module:
-
-```python
->>> import ncalc
->>> ncalc.parse('sin(pi/4) ^ e')
-0.38981434460254655
-```
-
 
 ## License
 

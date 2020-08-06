@@ -1,4 +1,3 @@
-import unicodedata
 from collections import defaultdict
 
 from .tree import Tree
@@ -131,7 +130,7 @@ class Reconstructor:
 
         rule_names = {r.origin for r in rules}
         nonterminals = {sym for sym in rule_names
-                       if sym.name.startswith('_') or sym in expand1s or sym in aliases }
+                        if sym.name.startswith('_') or sym in expand1s or sym in aliases }
 
         seen = set()
         for r in rules:

@@ -307,6 +307,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         self.term_set = {td.name for td in self.terminals}
         self.term_reverse = {td.pattern: td for td in terminals}
         self.i = 0
+        self.rule_options = None
 
 
     @inline_args
@@ -351,7 +352,10 @@ class PrepareAnonTerminals(Transformer_InPlace):
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 
-        return Terminal(term_name, filter_out=isinstance(p, PatternStr))
+        filter_out = False if self.rule_options and self.rule_options.keep_all_tokens else isinstance(p, PatternStr)
+
+        return Terminal(term_name, filter_out=filter_out)
+
 
 class _ReplaceSymbols(Transformer_InPlace):
     " Helper for ApplyTemplates "
@@ -541,7 +545,8 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(terminals)  # Adds to terminals
+        anon_tokens_transf = PrepareAnonTerminals(terminals)
+        transformer = PrepareLiterals() * PrepareSymbols() * anon_tokens_transf  # Adds to terminals
 
         # 2. Inline Templates
 
@@ -556,8 +561,10 @@ class Grammar:
             i += 1
             if len(params) != 0: # Dont transform templates
                 continue
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
+            rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = rule_options
             ebnf_to_bnf.prefix = name
+            anon_tokens_transf.rule_options = rule_options
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))

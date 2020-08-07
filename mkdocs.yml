@@ -12,3 +12,4 @@ pages:
     - Visitors and Transformers: visitors.md
     - Classes Reference: classes.md
     - Recipes: recipes.md
+    - Import grammars from Nearley: nearley.md

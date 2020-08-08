@@ -19,8 +19,8 @@
 [Read more about the parsers](parsers.md)
 
 # Extra features
-
   - Import rules and tokens from other Lark grammars, for code reuse and modularity.
+  - Support for external regex module ([see here](/docs/classes.md#using-unicode-character-classes-with-regex))
   - Import grammars from Nearley.js ([read more](/docs/nearley.md))
   - CYK parser
 

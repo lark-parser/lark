@@ -33,7 +33,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 ### Install Lark
 
-    $ pip install lark-parser
+    $ pip install lark-parser --upgrade
 
 Lark has no dependencies.
 
@@ -77,12 +77,11 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 
 ### Fruit flies like bananas
 
-Lark is great at handling ambiguity. Let's parse the phrase "fruit flies like bananas":
+Lark is great at handling ambiguity. Here is the result of parsing the phrase "fruit flies like bananas":
 
 ![fruitflies.png](examples/fruitflies.png)
 
-See more [examples here](https://github.com/lark-parser/lark/tree/master/examples)
-
+See the code and more [examples here](https://github.com/lark-parser/lark/tree/master/examples)
 
 
 ## List of main features

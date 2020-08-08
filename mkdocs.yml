@@ -13,3 +13,4 @@ pages:
     - Classes Reference: classes.md
     - Recipes: recipes.md
     - Import grammars from Nearley: nearley.md
+    - Tutorial - JSON Parser: json_tutorial.md

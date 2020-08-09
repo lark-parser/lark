@@ -721,7 +721,8 @@ def _make_parser_test(LEXER, PARSER):
                           """)
             g.parse('\x01\x02\x03')
 
-        @unittest.skipIf(sys.version_info[:2]==(2, 7), "bytes parser isn't perfect in Python2.7, exceptions don't work correctly")
+        @unittest.skipIf(sys.version_info[0]==2 or sys.version_info[:2]==(3, 4),
+                         "bytes parser isn't perfect in Python2, exceptions don't work correctly")
         def test_bytes_utf8(self):
             g = r"""
             start: BOM? char+

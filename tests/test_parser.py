@@ -1262,6 +1262,32 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aA')
             self.assertEqual(tree.children, ['a', 'A'])
 
+        def test_token_flags_verbose(self):
+            g = _Lark(r"""start: NL | ABC
+                          ABC: / [a-z] /x
+                          NL: /\n/
+                      """)
+            x = g.parse('a')
+            self.assertEqual(x.children, ['a'])
+
+        def test_token_flags_verbose_multiline(self):
+            g = _Lark(r"""start: ABC
+                          ABC: /  a      b c
+                               d
+                                e f
+                           /x
+                       """)
+            x = g.parse('abcdef')
+            self.assertEqual(x.children, ['abcdef'])
+
+        def test_token_multiline_only_works_with_x_flag(self):
+            g = r"""start: ABC
+                    ABC: /  a      b c
+                              d
+                                e f
+                            /i
+                      """
+            self.assertRaises( GrammarError, _Lark, g)
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):

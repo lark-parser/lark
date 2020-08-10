@@ -13,7 +13,7 @@ from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress, dedup_list, Str
-from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
+from .exceptions import GrammarError, LarkError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -85,7 +85,7 @@ TERMINALS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
@@ -336,7 +336,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = None
 
         elif isinstance(p, PatternRE):
-            if p in self.term_reverse: # Kind of a wierd placement.name
+            if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
             assert False, p
@@ -408,6 +408,13 @@ def _literal_to_pattern(literal):
     assert flag_start > 0
     flags = v[flag_start:]
     assert all(f in _RE_FLAGS for f in flags), flags
+
+    if literal.type == 'STRING' and '\n' in v:
+        raise GrammarError('You cannot put newlines in string literals')
+
+    if literal.type == 'REGEXP' and '\n' in v and 'x' not in flags:
+        raise GrammarError('You can only use newlines in regular expressions '
+                           'with the `x` (verbose) flag')
 
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'

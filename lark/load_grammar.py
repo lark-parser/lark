@@ -13,7 +13,7 @@ from .parser_frontends import LALR_TraditionalLexer
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress, dedup_list, Str
-from .exceptions import GrammarError, LarkError, UnexpectedCharacters, UnexpectedToken
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -850,7 +850,7 @@ class GrammarLoader:
                 if len(stmt.children) > 1:
                     path_node, arg1 = stmt.children
                 else:
-                    path_node, = stmt.children
+                    path_node ,= stmt.children
                     arg1 = None
 
                 if isinstance(arg1, Tree):  # Multi import

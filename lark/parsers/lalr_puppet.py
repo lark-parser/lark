@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from .lalr_analysis import Shift, Reduce
 
-class ParserPuppet:
+class ParserPuppet(object):
     def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
         self.parser = parser
         self._state_stack = state_stack

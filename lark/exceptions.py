@@ -55,7 +55,7 @@ class UnexpectedInput(LarkError):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
-                    if ut.state == self.state:
+                    if ut.state == self.state and ut.accepts == self.accepts:
                         try:
                             if ut.token == self.token:  # Try exact match first
                                 if print_debug_info:

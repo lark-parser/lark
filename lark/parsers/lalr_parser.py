@@ -62,9 +62,18 @@ class _Parser:
                 expected = [s for s in states[state].keys() if s.isupper()]
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
+                    accepts = []
+                    for t in expected:
+                        new_puppet = puppet.copy()
+                        try:
+                            new_puppet.feed_token(Token(t, ''))
+                        except KeyError:
+                            pass
+                        else:
+                            accepts.append(t)
                 except NameError:
-                    puppet = None
-                raise UnexpectedToken(token, expected, state=state, puppet=puppet)
+                    puppet = accepts = None
+                raise UnexpectedToken(token, expected, state=state, puppet=puppet, accepts=accepts)
 
         def reduce(rule):
             size = len(rule.expansion)

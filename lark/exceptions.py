@@ -105,7 +105,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, accepts=None):
         self.token = token
         self.expected = expected     # XXX str shouldn't necessary
         self.line = getattr(token, 'line', '?')
@@ -114,10 +114,11 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.state = state
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
         self.puppet = puppet
+        self.accepts = accepts
 
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.expected)))
+                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
 

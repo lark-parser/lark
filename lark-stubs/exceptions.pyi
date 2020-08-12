@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple
+from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
 from .tree import Tree
 from .lexer import Token
 
@@ -25,7 +25,10 @@ T = TypeVar('T')
 
 
 class UnexpectedInput(LarkError):
+    line: int
+    column: int
     pos_in_stream: int
+    state: Any
 
     def get_context(self, text: str, span: int = ...):
         ...
@@ -41,12 +44,14 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    pass
-
+    expected: List[str]
+    considered_rules: Set[str]
+    puppet: Any
+    accepts: List[str]
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    line: int
-    column: int
+    allowed: Set[str]
+    considered_tokens: Set[Any]
 
 
 class VisitError(LarkError):

@@ -112,6 +112,19 @@ Terminals can be assigned priority only when using a lexer (future versions may 
 
 Priority can be either positive or negative. If not specified for a terminal, it defaults to 1.
 
+### Regexp Flags
+
+You can use flags on regexps and strings. For example:
+
+```perl
+SELECT: "select"i     //# Will ignore case, and match SELECT or Select, etc.
+MULTILINE_TEXT: /.+/s
+```
+
+Supported flags are one of: `imslu`. See Python's regex documentation for more details on each one.
+
+Regexps/strings of different flags can only be concatenated in Python 3.6+
+
 #### Notes for when using a lexer:
 
 When using a lexer (standard or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched according to the following precedence:

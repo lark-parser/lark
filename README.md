@@ -1,18 +1,18 @@
-# Lark - a modern parsing library for Python
+# Lark - a parsing toolkit for Python
 
-Lark is a parser built with a focus on ergonomics, performance and resilience.
+Lark is a parsing toolkit for Python, built with a focus on ergonomics, performance and modularity.
 
-Lark can parse all context-free languages. That means it is capable of parsing almost any programming language out there, and to some degree most natural languages too.
+Lark can parse all context-free languages. To put it simply, it means that it is capable of parsing almost any programming language out there, and to some degree most natural languages too.
 
 **Who is it for?**
 
-   - **Beginners**: Lark is very friendly for experimentation. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs an annotated parse-tree for you, using only the grammar, and it gives you convienient and flexible tools to process that parse-tree.
+   - **Beginners**: Lark is very friendly for experimentation. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs an annotated parse-tree for you, using only the grammar and an input, and it gives you convienient and flexible tools to process that parse-tree.
 
    - **Experts**: Lark implements both Earley(SPPF) and LALR(1), and several different lexers, so you can trade-off power and speed, according to your requirements. It also provides a variety of sophisticated features and utilities.
 
 **What can it do?**
 
- - Parse all context-free grammars, and handle any ambiguity
+ - Parse all context-free grammars, and handle any ambiguity gracefully
  - Build an annotated parse-tree automagically, no construction code required.
  - Provide first-rate performance in terms of both Big-O complexity and measured run-time (considering that this is Python ;)
  - Run on every Python interpreter (it's pure-python)
@@ -33,7 +33,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 ### Install Lark
 
-    $ pip install lark-parser
+    $ pip install lark-parser --upgrade
 
 Lark has no dependencies.
 
@@ -77,12 +77,11 @@ Notice punctuation doesn't appear in the resulting tree. It's automatically filt
 
 ### Fruit flies like bananas
 
-Lark is great at handling ambiguity. Let's parse the phrase "fruit flies like bananas":
+Lark is great at handling ambiguity. Here is the result of parsing the phrase "fruit flies like bananas":
 
 ![fruitflies.png](examples/fruitflies.png)
 
-See more [examples here](https://github.com/lark-parser/lark/tree/master/examples)
-
+See the code and more [examples here](https://github.com/lark-parser/lark/tree/master/examples)
 
 
 ## List of main features
@@ -100,7 +99,7 @@ See more [examples here](https://github.com/lark-parser/lark/tree/master/example
  - **Python 2 & 3** compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
- - Import grammars from Nearley.js
+ - Import grammars from Nearley.js ([read more](/docs/nearley.md))
  - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
  - MyPy support using type stubs
  - And much more!
@@ -158,25 +157,6 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [harmalysis](https://github.com/napulen/harmalysis) - A language for harmonic analysis and music theory
 
 Using Lark? Send me a message and I'll add your project!
-
-### How to use Nearley grammars in Lark
-
-Lark comes with a tool to convert grammars from [Nearley](https://github.com/Hardmath123/nearley), a popular Earley library for Javascript. It uses [Js2Py](https://github.com/PiotrDabkowski/Js2Py) to convert and run the Javascript postprocessing code segments.
-
-Here's an example:
-```bash
-git clone https://github.com/Hardmath123/nearley
-python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main nearley > ncalc.py
-```
-
-You can use the output as a regular python module:
-
-```python
->>> import ncalc
->>> ncalc.parse('sin(pi/4) ^ e')
-0.38981434460254655
-```
-
 
 ## License
 

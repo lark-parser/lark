@@ -85,7 +85,7 @@ TERMINALS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
@@ -307,6 +307,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         self.term_set = {td.name for td in self.terminals}
         self.term_reverse = {td.pattern: td for td in terminals}
         self.i = 0
+        self.rule_options = None
 
 
     @inline_args
@@ -335,7 +336,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = None
 
         elif isinstance(p, PatternRE):
-            if p in self.term_reverse: # Kind of a wierd placement.name
+            if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
             assert False, p
@@ -351,7 +352,10 @@ class PrepareAnonTerminals(Transformer_InPlace):
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 
-        return Terminal(term_name, filter_out=isinstance(p, PatternStr))
+        filter_out = False if self.rule_options and self.rule_options.keep_all_tokens else isinstance(p, PatternStr)
+
+        return Terminal(term_name, filter_out=filter_out)
+
 
 class _ReplaceSymbols(Transformer_InPlace):
     " Helper for ApplyTemplates "
@@ -405,6 +409,13 @@ def _literal_to_pattern(literal):
     flags = v[flag_start:]
     assert all(f in _RE_FLAGS for f in flags), flags
 
+    if literal.type == 'STRING' and '\n' in v:
+        raise GrammarError('You cannot put newlines in string literals')
+
+    if literal.type == 'REGEXP' and '\n' in v and 'x' not in flags:
+        raise GrammarError('You can only use newlines in regular expressions '
+                           'with the `x` (verbose) flag')
+
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
@@ -413,9 +424,11 @@ def _literal_to_pattern(literal):
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
-
-    return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s, flags)
+        return PatternStr(s, flags)
+    elif literal.type == 'REGEXP':
+        return PatternRE(s, flags)
+    else:
+        assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 
 
 @inline_args
@@ -541,7 +554,8 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(terminals)  # Adds to terminals
+        anon_tokens_transf = PrepareAnonTerminals(terminals)
+        transformer = PrepareLiterals() * PrepareSymbols() * anon_tokens_transf  # Adds to terminals
 
         # 2. Inline Templates
 
@@ -556,8 +570,10 @@ class Grammar:
             i += 1
             if len(params) != 0: # Dont transform templates
                 continue
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
+            rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = rule_options
             ebnf_to_bnf.prefix = name
+            anon_tokens_transf.rule_options = rule_options
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))
@@ -834,7 +850,7 @@ class GrammarLoader:
                 if len(stmt.children) > 1:
                     path_node, arg1 = stmt.children
                 else:
-                    path_node, = stmt.children
+                    path_node ,= stmt.children
                     arg1 = None
 
                 if isinstance(arg1, Tree):  # Multi import

@@ -69,6 +69,35 @@ class TestReconstructor(TestCase):
 
         self.assert_reconstruct(g, code)
 
+    def test_keep_tokens(self):
+        g = """
+        start: (NL | stmt)*
+        stmt: var op var
+        !op: ("+" | "-" | "*" | "/")
+        var: WORD
+        NL: /(\\r?\\n)+\s*/
+        """ + common
+
+        code = """
+        a+b
+        """
+
+        self.assert_reconstruct(g, code)
+
+    def test_expand_rule(self):
+        g = """
+        ?start: (NL | mult_stmt)*
+        ?mult_stmt: sum_stmt ["*" sum_stmt]
+        ?sum_stmt: var ["+" var]
+        var: WORD
+        NL: /(\\r?\\n)+\s*/
+        """ + common
+
+        code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
+
+        for c in code:
+            self.assert_reconstruct(g, c)
+
     def test_json_example(self):
         test_json = '''
             {

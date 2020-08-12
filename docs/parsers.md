@@ -13,7 +13,7 @@ It's possible to bypass the dynamic lexing, and use the regular Earley parser wi
 
 Lark implements the Shared Packed Parse Forest data-structure for the Earley parser, in order to reduce the space and computation required to handle ambiguous grammars.
 
-You can read more about SPPF [here](http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/)
+You can read more about SPPF [here](https://web.archive.org/web/20191229100607/www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest)
 
 As a result, Lark can efficiently parse and store every ambiguity in the grammar, when using Earley.
 

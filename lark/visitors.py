@@ -14,6 +14,8 @@ class Discard(Exception):
 # Transformers
 
 class _Decoratable:
+    "Provides support for decorating methods with @v_args"
+
     @classmethod
     def _apply_decorator(cls, decorator, **kwargs):
         mro = getmro(cls)

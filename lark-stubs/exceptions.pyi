@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Iterable, Callable, Union
+from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple
 from .tree import Tree
 from .lexer import Token
 
@@ -21,6 +21,9 @@ class LexError(LarkError):
     pass
 
 
+T = TypeVar('T')
+
+
 class UnexpectedInput(LarkError):
     pos_in_stream: int
 
@@ -28,10 +31,12 @@ class UnexpectedInput(LarkError):
         ...
 
     def match_examples(
-        self,
-        parse_fn: Callable[[str], Tree],
-        examples: Dict[str, Iterable[str]]
-    ):
+            self,
+            parse_fn: Callable[[str], Tree],
+            examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
+            token_type_match_fallback: bool = False,
+            print_debug_info: bool = True
+    ) -> T:
         ...
 
 

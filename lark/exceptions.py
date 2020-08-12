@@ -37,34 +37,43 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, print_debug_info=True):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
         """
         assert self.state is not None, "Not supported for this exception"
+        
+        if isinstance(examples, dict):
+            examples = examples.items()
 
         candidate = (None, False)
-        for label, example in examples.items():
+        for i, (label, example) in enumerate(examples):
             assert not isinstance(example, STRING_TYPE)
 
-            for malformed in example:
+            for j, malformed in enumerate(example):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
                         try:
                             if ut.token == self.token:  # Try exact match first
+                                if print_debug_info:
+                                    print("Exact Match at %d, with example %d" % (i, j), (ut.token, self.token, ut.state, self.state))
                                 return label
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
+                                    if print_debug_info:
+                                        print("Token Type Fallback at %d, with example %d" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
+                            if print_debug_info:
+                                print("Defaulted at %d, with example %d" % (i, j))
                             candidate = label, False
 
         return candidate[0]

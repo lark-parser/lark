@@ -16,7 +16,7 @@ class ParserPuppet:
         self.result = None
 
     def feed_token(self, token):
-        """Advance the parser state, as if it just recieved `token` from the lexer
+        """Advance the parser state, as if it just received `token` from the lexer
 
         """
         end_state = self.parser.parse_table.end_states[self._start]
@@ -66,9 +66,9 @@ class ParserPuppet:
             self._set_state,
         )
 
-    def pretty():
+    def pretty(self):
         print("Puppet choices:")
-        for k, v in self.choices.items():
+        for k, v in self.choices().items():
             print('\t-', k, '->', v)
         print('stack size:', len(self._state_stack))
 

@@ -52,7 +52,7 @@ def parse(json_text):
                                 '[1,2,]',
                                 '{"foo":1,}',
                                 '{"foo":false,"bar":true,}']
-        })
+        }, use_accepts=True)
         if not exc_class:
             raise
         raise exc_class(u.get_context(json_text), u.line, u.column)

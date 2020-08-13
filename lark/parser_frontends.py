@@ -58,9 +58,8 @@ class _ParserFrontend(Serialize):
         return self.parser.parse(input, start, *args)
 
 
-def _recreate_lexer_callbacks(memo, transformer):
+def _get_lexer_callbacks(transformer, terminals):
     result = {}
-    terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
     for terminal in terminals:
         callback = getattr(transformer, terminal.name, None)
         if callback is not None:
@@ -85,12 +84,16 @@ class WithLexer(_ParserFrontend):
     @classmethod
     def deserialize(cls, data, memo, callbacks, postlex, transformer, re_module):
         inst = super(WithLexer, cls).deserialize(data, memo)
+
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
-        inst.lexer_conf.callbacks = _recreate_lexer_callbacks(memo, transformer)
+
+        terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
+        inst.lexer_conf.callbacks = _get_lexer_callbacks(transformer, terminals)
         inst.lexer_conf.re_module = re_module
         inst.lexer_conf.skip_validation=True
         inst.init_lexer()
+
         return inst
 
     def _serialize(self, data, memo):

@@ -11,7 +11,7 @@ from .common import LexerConf, ParserConf
 
 from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend
+from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
 
 import re
@@ -278,12 +278,10 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = dict(self.options.lexer_callbacks)
-        if self.options.transformer:
-            t = self.options.transformer
-            for term in self.terminals:
-                if hasattr(t, term.name):
-                    lexer_callbacks[term.name] = getattr(t, term.name)
+        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
+                           if self.options.transformer
+                           else {})
+        lexer_callbacks.update(self.options.lexer_callbacks)
 
         self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
 

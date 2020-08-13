@@ -153,7 +153,10 @@ class ForestVisitor(object):
 
     Use this as a base when you need to walk the forest.
     """
-    __slots__ = ['result']
+    __slots__ = ['result', 'debug']
+
+    def __init__(self, debug=False):
+        self.debug = debug
 
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
@@ -244,6 +247,9 @@ class ForestSumVisitor(ForestVisitor):
     items created during parsing than there are SPPF nodes in the
     final tree.
     """
+    def __init__(self, debug=False):
+        super(ForestSumVisitor, self).__init__(debug)
+
     def visit_packed_node_in(self, node):
         return iter([node.left, node.right])
 
@@ -272,7 +278,8 @@ class ForestToTreeVisitor(ForestVisitor):
     according to some priority mechanism.
     """
     __slots__ = ['forest_sum_visitor', 'callbacks', 'output_stack']
-    def __init__(self, callbacks, forest_sum_visitor = None):
+    def __init__(self, callbacks, forest_sum_visitor = None, debug=False):
+        super(ForestToTreeVisitor, self).__init__(debug)
         assert callbacks
         self.forest_sum_visitor = forest_sum_visitor
         self.callbacks = callbacks
@@ -322,8 +329,8 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
     This is mainly used by the test framework, to make it simpler to write
     tests ensuring the SPPF contains the right results.
     """
-    def __init__(self, callbacks, forest_sum_visitor = ForestSumVisitor):
-        super(ForestToAmbiguousTreeVisitor, self).__init__(callbacks, forest_sum_visitor)
+    def __init__(self, callbacks, forest_sum_visitor = ForestSumVisitor, debug=False):
+        super(ForestToAmbiguousTreeVisitor, self).__init__(callbacks, forest_sum_visitor, debug)
 
     def visit_token_node(self, node):
         self.output_stack[-1].children.append(node)
@@ -333,7 +340,8 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
             self.forest_sum_visitor.visit(node)
         if node.is_ambiguous:
             if node.is_intermediate:
-                logging.warning("Ambiguous intermediate node in the SPPF: %s. Lark does not currently process these ambiguities: (resolving with the first derivation)", node)
+                if self.debug:
+                    logging.warning("Ambiguous intermediate node in the SPPF: %s. Lark does not currently process these ambiguities: (resolving with the first derivation)", node)
                 return next(iter(node.children))
             self.output_stack.append(Tree('_ambig', []))
         return iter(node.children)
@@ -368,7 +376,8 @@ class ForestToPyDotVisitor(ForestVisitor):
     only useful for trivial trees and learning how the SPPF
     is structured.
     """
-    def __init__(self, rankdir="TB"):
+    def __init__(self, rankdir="TB", debug=False):
+        super(ForestToPyDotVisitor, self).__init__(debug)
         self.pydot = import_module('pydot')
         self.graph = self.pydot.Dot(graph_type='digraph', rankdir=rankdir)
 

@@ -314,7 +314,7 @@ class Parser:
 
         # Perform our SPPF -> AST conversion using the right ForestVisitor.
         forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else ForestToAmbiguousTreeVisitor
-        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.debug)
 
         return forest_tree_visitor.visit(solutions[0])
 

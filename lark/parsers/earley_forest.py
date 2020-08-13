@@ -7,6 +7,7 @@ Full reference and more details is here:
 http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
+import logging
 from random import randint
 from math import isinf
 from collections import deque
@@ -330,7 +331,10 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
     def visit_symbol_node_in(self, node):
         if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
             self.forest_sum_visitor.visit(node)
-        if not node.is_intermediate and node.is_ambiguous:
+        if node.is_ambiguous:
+            if node.is_intermediate:
+                logging.warning("Ambiguous intermediate node in the SPPF: %s. Lark does not currently process these ambiguities: (resolving with the first derivation)", node)
+                return next(iter(node.children))
             self.output_stack.append(Tree('_ambig', []))
         return iter(node.children)
 

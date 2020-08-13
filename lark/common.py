@@ -17,9 +17,6 @@ class LexerConf(Serialize):
         self.skip_validation = skip_validation
         self.use_bytes = use_bytes
 
-    def _deserialize(self):
-        self.callbacks = {} # TODO
-
 ###}
 
 class ParserConf:

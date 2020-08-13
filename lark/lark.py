@@ -344,7 +344,14 @@ class Lark(Serialize):
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source = '<deserialized>'
         self._prepare_callbacks()
-        self.parser = self.parser_class.deserialize(data['parser'], memo, self._callbacks, self.options.postlex, re_module)
+        self.parser = self.parser_class.deserialize(
+            data['parser'],
+            memo,
+            self._callbacks,
+            self.options.postlex,
+            self.options.transformer,
+            re_module
+        )
         return self
 
     @classmethod

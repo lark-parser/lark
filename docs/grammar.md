@@ -112,6 +112,8 @@ Terminals can be assigned priority only when using a lexer (future versions may 
 
 Priority can be either positive or negative. If not specified for a terminal, it defaults to 1.
 
+Highest priority terminals are always matched first.
+
 ### Regexp Flags
 
 You can use flags on regexps and strings. For example:

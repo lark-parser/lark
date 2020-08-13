@@ -3,7 +3,7 @@
 from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
 from .tree import Tree
 from .lexer import Token
-
+from .parsers.lalr_puppet import ParserPuppet
 
 class LarkError(Exception):
     pass
@@ -38,16 +38,16 @@ class UnexpectedInput(LarkError):
             parse_fn: Callable[[str], Tree],
             examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
             token_type_match_fallback: bool = False,
-            print_debug_info: bool = True
+            use_accepts: bool = False,
     ) -> T:
         ...
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    expected: List[str]
+    expected: Set[str]
     considered_rules: Set[str]
-    puppet: Any
-    accepts: List[str]
+    puppet: ParserPuppet
+    accepts: Set[str]
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     allowed: Set[str]

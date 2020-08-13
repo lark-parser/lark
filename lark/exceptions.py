@@ -1,3 +1,5 @@
+import logging
+
 from .utils import STRING_TYPE
 
 ###{standalone
@@ -37,7 +39,7 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, print_debug_info=True):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
@@ -55,27 +57,26 @@ class UnexpectedInput(LarkError):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
-                    if ut.state == self.state and ut.accepts == self.accepts:
+                    if ut.state == self.state and (not use_accepts or ut.accepts == self.accepts):
                         try:
                             if ut.token == self.token:  # Try exact match first
-                                if print_debug_info:
-                                    print("Exact Match at %d, with example %d" % (i, j), (ut.token, self.token, ut.state, self.state))
+                                logging.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
-                                    if print_debug_info:
-                                        print("Token Type Fallback at %d, with example %d" % (i, j))
+                                    logging.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
-                            if print_debug_info:
-                                print("Defaulted at %d, with example %d" % (i, j))
+                            logging.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
-
+                    elif ut.state == self.state:
+                        logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                                      (self.state, self.accepts, ut.accepts, i, j))
         return candidate[0]
 
 

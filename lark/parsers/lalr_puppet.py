@@ -3,6 +3,8 @@
 from copy import deepcopy
 
 from .lalr_analysis import Shift, Reduce
+from .. import Token
+
 
 class ParserPuppet(object):
     def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
@@ -67,13 +69,26 @@ class ParserPuppet(object):
         )
 
     def pretty(self):
-        print("Puppet choices:")
+        out = ["Puppet choices:"]
         for k, v in self.choices().items():
-            print('\t-', k, '->', v)
-        print('stack size:', len(self._state_stack))
+            out.append('\t- %s -> %s' % (k, v))
+        out.append('stack size: %s' % len(self._state_stack))
+        return '\n'.join(out)
 
     def choices(self):
         return self.parser.parse_table.states[self._state_stack[-1]]
+
+    def accepts(self):
+        accepts = set()
+        for t in self.choices():
+            new_puppet = self.copy()
+            try:
+                new_puppet.feed_token(Token(t, ''))
+            except KeyError:
+                pass
+            else:
+                accepts.add(t)
+        return accepts
 
     def resume_parse(self):
         return self.parser.parse(self._stream, self._start, self._set_state, self._value_stack, self._state_stack)

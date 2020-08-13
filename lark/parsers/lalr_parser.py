@@ -59,18 +59,10 @@ class _Parser:
             try:
                 return states[state][token.type]
             except KeyError:
-                expected = [s for s in states[state].keys() if s.isupper()]
+                expected = {s for s in states[state].keys() if s.isupper()}
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
-                    accepts = []
-                    for t in expected:
-                        new_puppet = puppet.copy()
-                        try:
-                            new_puppet.feed_token(Token(t, ''))
-                        except KeyError:
-                            pass
-                        else:
-                            accepts.append(t)
+                    accepts = puppet.accepts()
                 except NameError:
                     puppet = accepts = None
                 raise UnexpectedToken(token, expected, state=state, puppet=puppet, accepts=accepts)

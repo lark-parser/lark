@@ -5,8 +5,9 @@ from lark import Token, Tree
 
 class ParserPuppet(object):
     """
-    Represents a LalrParser that can be step through.
-    Shouldn't instantiated by hand, but is accessible as `UnexpectedToken.puppet`
+    Provides an interface to interactively step through the parser (LALR(1) only for now)
+
+    Accessible via `UnexpectedToken.puppet` (raised by the parser on token error)
     """
     def feed_token(self, token: Token): ...
 

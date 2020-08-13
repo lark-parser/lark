@@ -45,7 +45,7 @@ class UnexpectedInput(LarkError):
             example that bests matches the current error.
         """
         assert self.state is not None, "Not supported for this exception"
-        
+
         if isinstance(examples, dict):
             examples = examples.items()
 
@@ -57,7 +57,11 @@ class UnexpectedInput(LarkError):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
-                    if ut.state == self.state and (not use_accepts or ut.accepts == self.accepts):
+                    if ut.state == self.state:
+                        if use_accepts and ut.accepts != self.accepts:
+                            logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                                        (self.state, self.accepts, ut.accepts, i, j))
+                            continue
                         try:
                             if ut.token == self.token:  # Try exact match first
                                 logging.debug("Exact Match at example [%s][%s]" % (i, j))
@@ -74,26 +78,24 @@ class UnexpectedInput(LarkError):
                         if not candidate[0]:
                             logging.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
-                    elif ut.state == self.state:
-                        logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
-                                      (self.state, self.accepts, ut.accepts, i, j))
+
         return candidate[0]
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+        self.line = line
+        self.column = column
+        self.pos_in_stream = lex_pos
+        self.state = state
+
+        self.allowed = allowed
+        self.considered_tokens = considered_tokens
 
         if isinstance(seq, bytes):
             message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace"), line, column)
         else:
             message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
-
-        self.line = line
-        self.column = column
-        self.allowed = allowed
-        self.considered_tokens = considered_tokens
-        self.pos_in_stream = lex_pos
-        self.state = state
 
         message += '\n\n' + self.get_context(seq)
         if allowed:
@@ -106,16 +108,20 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, accepts=None):
-        self.token = token
-        self.expected = expected     # XXX str shouldn't necessary
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
-        self.considered_rules = considered_rules
-        self.state = state
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
+        self.state = state
+
+        self.token = token
+        self.expected = expected     # XXX deprecate? `accepts` is better
+        self.considered_rules = considered_rules
         self.puppet = puppet
-        self.accepts = accepts
+
+        # TODO Only calculate `accepts()` when we need to display it to the user
+        # This will improve performance when doing automatic error handling
+        self.accepts = puppet and puppet.accepts()
 
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"

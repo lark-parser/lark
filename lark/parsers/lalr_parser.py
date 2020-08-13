@@ -62,10 +62,9 @@ class _Parser:
                 expected = {s for s in states[state].keys() if s.isupper()}
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
-                    accepts = puppet.accepts()
-                except NameError:
-                    puppet = accepts = None
-                raise UnexpectedToken(token, expected, state=state, puppet=puppet, accepts=accepts)
+                except NameError:   # For standalone parser
+                    puppet = None
+                raise UnexpectedToken(token, expected, state=state, puppet=puppet)
 
         def reduce(rule):
             size = len(rule.expansion)

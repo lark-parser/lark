@@ -85,7 +85,7 @@ TERMINALS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
@@ -336,7 +336,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = None
 
         elif isinstance(p, PatternRE):
-            if p in self.term_reverse: # Kind of a wierd placement.name
+            if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
             assert False, p
@@ -409,6 +409,13 @@ def _literal_to_pattern(literal):
     flags = v[flag_start:]
     assert all(f in _RE_FLAGS for f in flags), flags
 
+    if literal.type == 'STRING' and '\n' in v:
+        raise GrammarError('You cannot put newlines in string literals')
+
+    if literal.type == 'REGEXP' and '\n' in v and 'x' not in flags:
+        raise GrammarError('You can only use newlines in regular expressions '
+                           'with the `x` (verbose) flag')
+
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
@@ -417,9 +424,11 @@ def _literal_to_pattern(literal):
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
-
-    return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s, flags)
+        return PatternStr(s, flags)
+    elif literal.type == 'REGEXP':
+        return PatternRE(s, flags)
+    else:
+        assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 
 
 @inline_args
@@ -841,7 +850,7 @@ class GrammarLoader:
                 if len(stmt.children) > 1:
                     path_node, arg1 = stmt.children
                 else:
-                    path_node, = stmt.children
+                    path_node ,= stmt.children
                     arg1 = None
 
                 if isinstance(arg1, Tree):  # Multi import

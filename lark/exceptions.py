@@ -43,6 +43,8 @@ class UnexpectedInput(LarkError):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
+
+            It's recommended to call this with `use_accepts=True`. The default is False for backwards compatibility.
         """
         assert self.state is not None, "Not supported for this exception"
 
@@ -93,10 +95,11 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         self.considered_tokens = considered_tokens
 
         if isinstance(seq, bytes):
-            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace"), line, column)
+            _s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
         else:
-            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
+            _s = seq[lex_pos]
 
+        message = "No terminal defined for '%s' at line %d col %d" % (_s, line, column)
         message += '\n\n' + self.get_context(seq)
         if allowed:
             message += '\nExpecting: %s\n' % allowed

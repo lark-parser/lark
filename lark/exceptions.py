@@ -1,3 +1,5 @@
+import logging
+
 from .utils import STRING_TYPE
 
 ###{standalone
@@ -37,36 +39,44 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
         """
         assert self.state is not None, "Not supported for this exception"
+        
+        if isinstance(examples, dict):
+            examples = examples.items()
 
         candidate = (None, False)
-        for label, example in examples.items():
+        for i, (label, example) in enumerate(examples):
             assert not isinstance(example, STRING_TYPE)
 
-            for malformed in example:
+            for j, malformed in enumerate(example):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
-                    if ut.state == self.state:
+                    if ut.state == self.state and (not use_accepts or ut.accepts == self.accepts):
                         try:
                             if ut.token == self.token:  # Try exact match first
+                                logging.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
+                                    logging.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
+                            logging.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
-
+                    elif ut.state == self.state:
+                        logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                                      (self.state, self.accepts, ut.accepts, i, j))
         return candidate[0]
 
 
@@ -96,7 +106,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, accepts=None):
         self.token = token
         self.expected = expected     # XXX str shouldn't necessary
         self.line = getattr(token, 'line', '?')
@@ -105,10 +115,11 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.state = state
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
         self.puppet = puppet
+        self.accepts = accepts
 
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.expected)))
+                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
 

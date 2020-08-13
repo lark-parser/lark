@@ -59,12 +59,13 @@ class _Parser:
             try:
                 return states[state][token.type]
             except KeyError:
-                expected = [s for s in states[state].keys() if s.isupper()]
+                expected = {s for s in states[state].keys() if s.isupper()}
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
+                    accepts = puppet.accepts()
                 except NameError:
-                    puppet = None
-                raise UnexpectedToken(token, expected, state=state, puppet=puppet)
+                    puppet = accepts = None
+                raise UnexpectedToken(token, expected, state=state, puppet=puppet, accepts=accepts)
 
         def reduce(rule):
             size = len(rule.expansion)

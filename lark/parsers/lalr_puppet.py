@@ -3,8 +3,10 @@
 from copy import deepcopy
 
 from .lalr_analysis import Shift, Reduce
+from .. import Token
 
-class ParserPuppet:
+
+class ParserPuppet(object):
     def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
         self.parser = parser
         self._state_stack = state_stack
@@ -16,7 +18,7 @@ class ParserPuppet:
         self.result = None
 
     def feed_token(self, token):
-        """Advance the parser state, as if it just recieved `token` from the lexer
+        """Advance the parser state, as if it just received `token` from the lexer
 
         """
         end_state = self.parser.parse_table.end_states[self._start]
@@ -66,14 +68,27 @@ class ParserPuppet:
             self._set_state,
         )
 
-    def pretty():
-        print("Puppet choices:")
-        for k, v in self.choices.items():
-            print('\t-', k, '->', v)
-        print('stack size:', len(self._state_stack))
+    def pretty(self):
+        out = ["Puppet choices:"]
+        for k, v in self.choices().items():
+            out.append('\t- %s -> %s' % (k, v))
+        out.append('stack size: %s' % len(self._state_stack))
+        return '\n'.join(out)
 
     def choices(self):
         return self.parser.parse_table.states[self._state_stack[-1]]
+
+    def accepts(self):
+        accepts = set()
+        for t in self.choices():
+            new_puppet = self.copy()
+            try:
+                new_puppet.feed_token(Token(t, ''))
+            except KeyError:
+                pass
+            else:
+                accepts.add(t)
+        return accepts
 
     def resume_parse(self):
         return self.parser.parse(self._stream, self._start, self._set_state, self._value_stack, self._state_stack)

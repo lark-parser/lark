@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
-import sys, os, pickle, hashlib, logging
+import sys, os, pickle, hashlib
 from io import open
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -214,7 +214,7 @@ class Lark(Serialize):
                 cache_fn = '.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
-                logging.debug('Loading grammar from cache: %s', cache_fn)
+                logger.debug('Loading grammar from cache: %s', cache_fn)
                 with FS.open(cache_fn, 'rb') as f:
                     self._load(f, self.options.transformer, self.options.postlex)
                 return
@@ -291,7 +291,7 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logging.debug('Saving grammar to cache: %s', cache_fn)
+            logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 

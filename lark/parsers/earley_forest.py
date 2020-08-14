@@ -13,6 +13,7 @@ from collections import deque
 from operator import attrgetter
 from importlib import import_module
 
+from ..utils import logger
 from ..tree import Tree
 from ..exceptions import ParseError
 
@@ -328,10 +329,17 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
         self.output_stack[-1].children.append(node)
 
     def visit_symbol_node_in(self, node):
-        if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
-            self.forest_sum_visitor.visit(node)
-        if not node.is_intermediate and node.is_ambiguous:
-            self.output_stack.append(Tree('_ambig', []))
+        if node.is_ambiguous:
+            if self.forest_sum_visitor and isinf(node.priority):
+                self.forest_sum_visitor.visit(node)
+            if node.is_intermediate:
+                # TODO Support ambiguous intermediate nodes!
+                logger.warning("Ambiguous intermediate node in the SPPF: %s. "
+                        "Lark does not currently process these ambiguities; resolving with the first derivation.", node)
+                return next(iter(node.children))
+            else:
+                self.output_stack.append(Tree('_ambig', []))
+
         return iter(node.children)
 
     def visit_symbol_node_out(self, node):

@@ -25,6 +25,7 @@ class TestStandalone(TestCase):
         standalone.main(StringIO(grammar), 'start')
         sys.stdout = temp
         code = code_buf.getvalue()
+        open("debug_output.py", "w").write(code)
 
         context = {}
         exec(code, context)

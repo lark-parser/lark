@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys, os, pickle, hashlib, logging
 from io import open
 
-
+from .exceptions import UnexpectedInput
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
 from .load_grammar import load_grammar
 from .tree import Tree
@@ -403,7 +403,7 @@ class Lark(Serialize):
         """
         try:
             return self.parser.parse(text, start=start)
-        except UnexpectedToken as e:
+        except UnexpectedInput as e:
             if on_error is None:
                 raise
 
@@ -412,7 +412,7 @@ class Lark(Serialize):
                     raise e
                 try:
                     return e.puppet.resume_parse()
-                except UnexpectedToken as e2:
+                except UnexpectedInput as e2:
                     e = e2
 
 

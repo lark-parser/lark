@@ -1,8 +1,9 @@
-import logging
-
 from .utils import STRING_TYPE
 
 ###{standalone
+import logging
+
+
 class LarkError(Exception):
     pass
 

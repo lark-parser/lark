@@ -4,10 +4,10 @@ import sys, os, pickle, hashlib
 from io import open
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar
 from .tree import Tree
-from .common import LexerConf, ParserConf, logger
+from .common import LexerConf, ParserConf
 
 from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
 from .parse_tree_builder import ParseTreeBuilder

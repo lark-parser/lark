@@ -6,11 +6,10 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-from collections import defaultdict, deque
+from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset, Serialize, Enumerator
+from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
-from ..common import logger
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
 from ..grammar import Rule

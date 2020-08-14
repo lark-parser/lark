@@ -1,7 +1,6 @@
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, logger
 
 ###{standalone
-import logging
 
 
 class LarkError(Exception):
@@ -62,24 +61,24 @@ class UnexpectedInput(LarkError):
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
                         if use_accepts and ut.accepts != self.accepts:
-                            logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                         (self.state, self.accepts, ut.accepts, i, j))
                             continue
                         try:
                             if ut.token == self.token:  # Try exact match first
-                                logging.debug("Exact Match at example [%s][%s]" % (i, j))
+                                logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
-                                    logging.debug("Token Type Fallback at example [%s][%s]" % (i, j))
+                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
-                            logging.debug("Same State match at example [%s][%s]" % (i, j))
+                            logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 
         return candidate[0]

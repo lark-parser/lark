@@ -14,7 +14,7 @@ from collections import deque
 
 from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import UnexpectedEOF, UnexpectedToken
-from ..common import logger
+from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem

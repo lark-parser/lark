@@ -29,6 +29,7 @@ class UnexpectedInput(LarkError):
     column: int
     pos_in_stream: int
     state: Any
+    puppet: ParserPuppet
 
     def get_context(self, text: str, span: int = ...):
         ...
@@ -46,7 +47,6 @@ class UnexpectedInput(LarkError):
 class UnexpectedToken(ParseError, UnexpectedInput):
     expected: Set[str]
     considered_rules: Set[str]
-    puppet: ParserPuppet
     accepts: Set[str]
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

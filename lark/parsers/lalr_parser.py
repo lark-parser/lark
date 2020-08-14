@@ -2,7 +2,7 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-from ..exceptions import UnexpectedToken
+from ..exceptions import UnexpectedToken, UnexpectedInput
 from ..lexer import Token
 from ..utils import Enumerator, Serialize
 
@@ -104,10 +104,12 @@ class _Parser:
                 for i, s in enumerate(state_stack):
                     print('%d)' % i , s)
                 print("")
-            if isinstance(e, UnexpectedToken):
-                assert e.puppet is None
-                e.state = state_stack[-1]
-                e.puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
+            if isinstance(e, UnexpectedInput):
+                if e.puppet is None:
+                    try:
+                        e.puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
+                    except NameError:
+                        pass
             raise
 
         token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)

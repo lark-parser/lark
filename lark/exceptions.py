@@ -25,6 +25,7 @@ class UnexpectedEOF(ParseError):
 
 class UnexpectedInput(LarkError):
     pos_in_stream = None
+    puppet = None
 
     def get_context(self, text, span=40):
         pos = self.pos_in_stream
@@ -85,7 +86,7 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None, puppet=None):
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos

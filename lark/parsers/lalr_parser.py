@@ -104,7 +104,10 @@ class _Parser:
                 for i, s in enumerate(state_stack):
                     print('%d)' % i , s)
                 print("")
-
+            if isinstance(e, UnexpectedToken):
+                assert e.puppet is None
+                e.state = state_stack[-1]
+                e.puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
             raise
 
         token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)

@@ -4,6 +4,8 @@ from typing import (
     TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
     Literal, Protocol,
 )
+
+from .exceptions import UnexpectedToken
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
@@ -63,7 +65,7 @@ class Lark:
     ):
         ...
 
-    def parse(self, text: str, start: Optional[str] = None) -> Tree:
+    def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedToken], bool] = None) -> Tree:
         ...
 
     @classmethod

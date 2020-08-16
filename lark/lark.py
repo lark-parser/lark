@@ -27,63 +27,67 @@ class LarkOptions(Serialize):
 
     """
     OPTIONS_DOC = """
-# General
+    **General**
+    
+    - **start** - The start symbol. Either a string, or a list of strings for
+      multiple possible starts (Default: "start")
+    - **debug** - Display debug information, such as warnings (default: False)
+    - **transformer** - Applies the transformer to every parse tree (equivlent
+      to applying it after the parse, but faster)
+    - **propagate_positions** - Propagates (line, column, end_line, end_column)
+      attributes into all tree branches.
+    - **maybe_placeholders** - When True, the ``[]`` operator returns ``None``
+      when not matched. When ``False``,  ``[]`` behaves like the ``?``
+      operator, and returns no value at all. (default= ``False``. Recommended
+      to set to ``True``)
+    - **regex** - When True, uses the ``regex`` module instead of the
+      stdlib ``re``.
+    - **cache** - Cache the results of the Lark grammar analysis, for x2 to
+      x3 faster loading. LALR only for now.
 
-    start - The start symbol. Either a string, or a list of strings for
-            multiple possible starts (Default: "start")
-    debug - Display debug information, such as warnings (default: False)
-    transformer - Applies the transformer to every parse tree (equivlent to
-                  applying it after the parse, but faster)
-    propagate_positions - Propagates (line, column, end_line, end_column)
-                          attributes into all tree branches.
-    maybe_placeholders - When True, the `[]` operator returns `None` when not matched.
-                         When `False`,  `[]` behaves like the `?` operator,
-                             and returns no value at all.
-                         (default=`False`. Recommended to set to `True`)
-    regex - When True, uses the `regex` module instead of the stdlib `re`.
-    cache - Cache the results of the Lark grammar analysis, for x2 to x3 faster loading.
-            LALR only for now.
-        When `False`, does nothing (default)
-        When `True`, caches to a temporary file in the local directory
-        When given a string, caches to the path pointed by the string
+      - When ``False``, does nothing (default)
+      - When ``True``, caches to a temporary file in the local directory
+      - When given a string, caches to the path pointed by the string
 
-    g_regex_flags - Flags that are applied to all terminals
-                    (both regex and strings)
-    keep_all_tokens - Prevent the tree builder from automagically
-                      removing "punctuation" tokens (default: False)
+    - **g_regex_flags** - Flags that are applied to all terminals
+      (both regex and strings)
+    - **keep_all_tokens** - Prevent the tree builder from automagically
+      removing "punctuation" tokens (default: False)
 
-# Algorithm
+    **Algorithm**
+    
+    - **parser** - Decides which parser engine to use
+      Accepts "earley" or "lalr". (Default: "earley")
+      (there is also a "cyk" option for legacy)
+    - **lexer** - Decides whether or not to use a lexer stage
+      
+      - "auto" (default): Choose for me based on the parser
+      - "standard": Use a standard lexer
+      - "contextual": Stronger lexer (only works with parser="lalr")
+      - "dynamic": Flexible and powerful (only with parser="earley")
+      - "dynamic_complete": Same as dynamic, but tries *every* variation
+        of tokenizing possible.
 
-    parser - Decides which parser engine to use
-             Accepts "earley" or "lalr". (Default: "earley")
-             (there is also a "cyk" option for legacy)
+    - **ambiguity** - Decides how to handle ambiguity in the parse.
+      Only relevant if parser="earley"        
+      
+      - "resolve" - The parser will automatically choose the simplest
+        derivation (it chooses consistently: greedy for tokens,
+        non-greedy for rules)
+      - "explicit": The parser will return all derivations wrapped in
+        "_ambig" tree nodes (i.e. a forest).
 
-    lexer - Decides whether or not to use a lexer stage
-        "auto" (default): Choose for me based on the parser
-        "standard": Use a standard lexer
-        "contextual": Stronger lexer (only works with parser="lalr")
-        "dynamic": Flexible and powerful (only with parser="earley")
-        "dynamic_complete": Same as dynamic, but tries *every* variation
-                            of tokenizing possible.
+    **Domain Specific**
 
-    ambiguity - Decides how to handle ambiguity in the parse.
-                Only relevant if parser="earley"
-        "resolve": The parser will automatically choose the simplest
-                    derivation (it chooses consistently: greedy for
-                    tokens, non-greedy for rules)
-        "explicit": The parser will return all derivations wrapped
-                    in "_ambig" tree nodes (i.e. a forest).
-
-# Domain Specific
-
-    postlex - Lexer post-processing (Default: None) Only works with the
-                standard and contextual lexers.
-    priority - How priorities should be evaluated - auto, none, normal,
-                invert (Default: auto)
-    lexer_callbacks - Dictionary of callbacks for the lexer. May alter
-                        tokens during lexing. Use with caution.
-    use_bytes - Accept an input of type `bytes` instead of `str` (Python 3 only).
-    edit_terminals - A callback
+    - **postlex** - Lexer post-processing (Default: None) Only works with the
+      standard and contextual lexers.
+    - **priority** - How priorities should be evaluated - auto, none, normal,
+      invert (Default: auto)
+    - **lexer_callbacks** - Dictionary of callbacks for the lexer. May alter
+      tokens during lexing. Use with caution.
+    - **use_bytes** - Accept an input of type ``bytes`` instead of
+      ``str`` (Python 3 only).
+    -  **edit_terminals** - A callback
     """
     if __doc__:
         __doc__ += OPTIONS_DOC

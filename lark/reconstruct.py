@@ -1,3 +1,5 @@
+import unicodedata
+
 from collections import defaultdict
 
 from .tree import Tree
@@ -93,6 +95,8 @@ def make_recons_rule(origin, expansion, old_expansion):
 def make_recons_rule_to_term(origin, term):
     return make_recons_rule(origin, [Terminal(term.name)], [term])
 
+def _isalnum(x):
+    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
 
 class Reconstructor:
     """
@@ -193,12 +197,15 @@ class Reconstructor:
             else:
                 yield item
 
-    def reconstruct(self, tree):
-        x = self._reconstruct(tree)
+    def reconstruct(self, tree, postproc=None):
+        if postproc is None:
+            x = self._reconstruct(tree)
+        else:
+            x = postproc(self._reconstruct(tree))
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and prev_item[-1].isalnum() and item[0].isalnum():
+            if prev_item and item and _isalnum(prev_item[-1]) and _isalnum(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

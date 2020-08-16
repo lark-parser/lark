@@ -68,6 +68,17 @@ class ParserPuppet(object):
             self._set_state,
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, ParserPuppet):
+            return False
+
+        return (
+            self._state_stack == other._state_stack and
+            self._value_stack == other._value_stack and
+            self._stream == other._stream and
+            self._start == other._start
+        )
+
     def pretty(self):
         out = ["Puppet choices:"]
         for k, v in self.choices().items():

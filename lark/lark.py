@@ -413,6 +413,9 @@ class Lark(Serialize):
                 try:
                     return e.puppet.resume_parse()
                 except UnexpectedToken as e2:
+                    if e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
+                        # Prevent infinite loop
+                        raise e2
                     e = e2
 
 

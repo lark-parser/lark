@@ -58,6 +58,8 @@ UnexpectedInput
 
 .. autoclass:: lark.exceptions.UnexpectedCharacters
 
+.. _parserpuppet:
+
 ParserPuppet
 ------------
 

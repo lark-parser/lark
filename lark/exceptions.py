@@ -65,7 +65,7 @@ class UnexpectedInput(LarkError):
         iterate the dictionary until it finds a matching error, and
         return the corresponding value.
 
-        For an example usage, see examples/error_reporting_lalr.py
+        For an example usage, see `examples/error_reporting_lalr.py`
 
         Parameters:
             parse_fn: parse function (usually ``lark_instance.parse``)
@@ -141,7 +141,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     with its internal state. Users can then interactively set the puppet to
     the desired puppet state, and resume regular parsing.
 
-    see: ``ParserPuppet``.
+    see: :ref:`ParserPuppet`.
     """
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
         self.line = getattr(token, 'line', '?')

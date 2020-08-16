@@ -24,9 +24,24 @@ class UnexpectedEOF(ParseError):
 
 
 class UnexpectedInput(LarkError):
+    """UnexpectedInput Error.
+
+    - ``UnexpectedToken``: The parser recieved an unexpected token
+    - ``UnexpectedCharacters``: The lexer encountered an unexpected string
+
+    After catching one of these exceptions, you may call the following
+    helper methods to create a nicer error message.
+    """
     pos_in_stream = None
 
     def get_context(self, text, span=40):
+        """Returns a pretty string pinpointing the error in the text,
+        with span amount of context characters around it.
+
+        Note:
+            The parser doesn't hold a copy of the text it has to parse,
+            so you have to provide it again
+        """
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
@@ -40,11 +55,22 @@ class UnexpectedInput(LarkError):
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
-        """ Given a parser instance and a dictionary mapping some label with
-            some malformed syntax examples, it'll return the label for the
-            example that bests matches the current error.
+        """Allows you to detect what's wrong in the input text by matching
+        against example errors.
+        
+        Given a parser instance and a dictionary mapping some label with
+        some malformed syntax examples, it'll return the label for the
+        example that bests matches the current error. The function will
+        iterate the dictionary until it finds a matching error, and
+        return the corresponding value.
 
-            It's recommended to call this with `use_accepts=True`. The default is False for backwards compatibility.
+        For an example usage, see examples/error_reporting_lalr.py
+
+        Args:
+            parse_fn: parse function (usually ``lark_instance.parse``)
+            examples: dictionary of ``{'example_string': value}``.
+            use_accepts: Recommended to call this with ``use_accepts=True``.
+                The default is ``False`` for backwards compatibility.
         """
         assert self.state is not None, "Not supported for this exception"
 
@@ -109,8 +135,13 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         super(UnexpectedCharacters, self).__init__(message)
 
 
-
 class UnexpectedToken(ParseError, UnexpectedInput):
+    """When the parser throws UnexpectedToken, it instanciates a puppet
+    with its internal state. Users can then interactively set the puppet to
+    the desired puppet state, and resume regular parsing.
+
+    see: ``ParserPuppet``.
+    """
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -131,6 +162,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
                    % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
+
 
 class VisitError(LarkError):
     """VisitError is raised when visitors are interrupted by an exception

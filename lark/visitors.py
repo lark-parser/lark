@@ -263,9 +263,7 @@ class VisitorBase:
     
     Run the appropriate method on it according to the node’s data.
     They work bottom-up, starting with the leaves and ending at the root
-    of the tree.
-
-    There are two classes that implement the visitor interface:
+    of the tree. There are two classes that implement the visitor interface:
 
     - ``Visitor``: Visit every node (without recursion)
     - ``Visitor_Recursive``: Visit every node using recursion. Slightly faster.

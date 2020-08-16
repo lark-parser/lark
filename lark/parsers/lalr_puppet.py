@@ -7,6 +7,12 @@ from .. import Token
 
 
 class ParserPuppet(object):
+    """ParserPuppet gives you advanced control over error handling when
+    parsing with LALR.
+
+    For a simpler, more streamlined interface, see the ``on_error``
+    argument to ``Lark.parse()``.
+    """
     def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
         self.parser = parser
         self._state_stack = state_stack
@@ -18,8 +24,10 @@ class ParserPuppet(object):
         self.result = None
 
     def feed_token(self, token):
-        """Advance the parser state, as if it just received `token` from the lexer
+        """Feed the parser with a token, and advance it to the next state,
+        as if it recieved it from the lexer.
 
+        Note that ``token`` has to be an instance of ``Token``.
         """
         end_state = self.parser.parse_table.end_states[self._start]
         state_stack = self._state_stack
@@ -59,6 +67,10 @@ class ParserPuppet(object):
         value_stack.append(token)
 
     def copy(self):
+        """Create a new puppet with a separate state.
+
+        Calls to feed_token() won't affect the old puppet, and vice-versa.
+        """
         return type(self)(
             self.parser,
             list(self._state_stack),
@@ -69,6 +81,7 @@ class ParserPuppet(object):
         )
 
     def pretty(self):
+        """Print the output of ``choices()`` in a way that's easier to read."""
         out = ["Puppet choices:"]
         for k, v in self.choices().items():
             out.append('\t- %s -> %s' % (k, v))
@@ -76,6 +89,12 @@ class ParserPuppet(object):
         return '\n'.join(out)
 
     def choices(self):
+        """Returns a dictionary of token types, matched to their action in
+        the parser. Only returns token types that are accepted by the
+        current state.
+
+        Updated by ``feed_token()``.
+        """
         return self.parser.parse_table.states[self._state_stack[-1]]
 
     def accepts(self):
@@ -91,4 +110,8 @@ class ParserPuppet(object):
         return accepts
 
     def resume_parse(self):
-        return self.parser.parse(self._stream, self._start, self._set_state, self._value_stack, self._state_stack)
+        """Resume parsing from the current puppet state."""
+        return self.parser.parse(
+            self._stream, self._start, self._set_state,
+            self._value_stack, self._state_stack
+        )

@@ -24,33 +24,23 @@ Token
 
 .. autoclass:: lark.Token
 
-Visitor
--------
+Transformer, Vistor & Interpretor
+---------------------------------
 
-.. autoclass:: lark.visitors.VisitorBase
+See :doc:`visitors`.
 
-.. autoclass:: lark.visitors.Visitor
+UnexpectedInput
+---------------
 
-.. autoclass:: lark.visitors.Visitor_Recursive
+.. autoclass:: lark.exceptions.UnexpectedInput
+    :members: get_context, match_examples
 
-Interpreter
------------
+.. autoclass:: lark.exceptions.UnexpectedToken
 
-.. autoclass:: lark.visitors.Interpreter
+.. autoclass:: lark.exceptions.UnexpectedCharacters
 
+ParserPuppet
+------------
 
-Transformer
------------
-
-.. autoclass:: lark.visitors.Transformer
-    :members: __default__, __default_token__
-
-v_args
-------
-
-.. autofunction:: lark.visitors.v_args
-
-Discard
--------
-
-.. autoclass:: lark.visitors.Discard 
+.. autoclass:: lark.parsers.lalr_puppet.ParserPuppet
+    :members: choices, feed_token, copy, pretty, resume_parse

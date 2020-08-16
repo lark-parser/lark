@@ -156,12 +156,21 @@ class LarkOptions(Serialize):
 
 
 class Lark(Serialize):
-    def __init__(self, grammar, **options):
-        """
-            grammar : a string or file-object containing the grammar spec (using Lark's ebnf syntax)
-            options : a dictionary controlling various aspects of Lark.
-        """
+    """Main interface for the library.
 
+    It’s mostly a thin wrapper for the many different parsers, and for
+    the tree constructor.
+
+    Args:
+        grammar: a string or file-object containing the
+            grammar spec (using Lark's ebnf syntax)
+        options : a dictionary controlling various aspects of Lark.
+
+    Example:
+        >>> Lark(r'''start: "foo" ''')
+        Lark(...)
+    """
+    def __init__(self, grammar, **options):
         self.options = LarkOptions(options)
 
         # Set regex or re module
@@ -295,6 +304,7 @@ class Lark(Serialize):
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
+    # TODO: merge with above
     if __init__.__doc__:
         __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
@@ -314,11 +324,19 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
+        """Saves the instance into the given file object
+
+        Useful for caching and multiprocessing.
+        """
         data, m = self.memo_serialize([TerminalDef, Rule])
         pickle.dump({'data': data, 'memo': m}, f)
 
     @classmethod
     def load(cls, f):
+        """Loads an instance from the given file object
+
+        Useful for caching and multiprocessing.
+        """
         inst = cls.__new__(cls)
         return inst._load(f)
 
@@ -361,7 +379,8 @@ class Lark(Serialize):
     def open(cls, grammar_filename, rel_to=None, **options):
         """Create an instance of Lark with the grammar given by its filename
 
-        If rel_to is provided, the function will find the grammar filename in relation to it.
+        If ``rel_to`` is provided, the function will find the grammar
+        filename in relation to it.
 
         Example:
 
@@ -395,12 +414,20 @@ class Lark(Serialize):
     def parse(self, text, start=None, on_error=None):
         """Parse the given text, according to the options provided.
 
-        Parameters:
-            start: str - required if Lark was given multiple possible start symbols (using the start option).
-            on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing. LALR only.
+        If a transformer is supplied to ``__init__``, returns whatever is the
+        result of the transformation.
 
-        Returns a tree, unless specified otherwise.
+        Args:
+            text (str): Text to be parsed.
+            start (str, optional): Required if Lark was given multiple
+                possible start symbols (using the start option).
+            on_error (function, optional): if provided, will be called on
+                UnexpectedToken error. Return true to resume parsing.
+                LALR only. See examples/error_puppet.py for an example
+                of how to use on_error.
+
         """
+
         try:
             return self.parser.parse(text, start=start)
         except UnexpectedToken as e:

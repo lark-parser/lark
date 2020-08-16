@@ -1,4 +1,6 @@
-# Main Features
+# Features
+
+## Main Features
  - Earley parser, capable of parsing any context-free grammar
    - Implements SPPF, for efficient parsing and storing of ambiguous grammars.
  - LALR(1) parser, limited in power of expression, but very efficient in space and performance (O(n)).
@@ -18,10 +20,10 @@
 
 [Read more about the parsers](parsers.md)
 
-# Extra features
+## Extra features
 
   - Import rules and tokens from other Lark grammars, for code reuse and modularity.
-  - Import grammars from Nearley.js ([read more](/docs/nearley.md))
+  - Import grammars from Nearley.js ([read more](nearley.md))
   - CYK parser
 
 ### Experimental features

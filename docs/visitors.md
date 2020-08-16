@@ -1,4 +1,4 @@
-## Transformers & Visitors
+# Transformers & Visitors
 
 Transformers & Visitors provide a convenient interface to process the parse-trees that Lark returns.
 

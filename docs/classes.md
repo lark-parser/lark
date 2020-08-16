@@ -2,6 +2,8 @@
 
 This page details the important classes in Lark.
 
+**TODO** convert to sphinx autodoc!
+
 ----
 
 ## lark.Lark

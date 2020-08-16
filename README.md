@@ -25,7 +25,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 ### Quick links
 
 - [Documentation @readthedocs](https://lark-parser.readthedocs.io/)
-- [Cheatsheet (PDF)](/docs/lark_cheatsheet.pdf)
+- [Cheatsheet (PDF)](/docs/_static/lark_cheatsheet.pdf)
 - [Online IDE (very basic)](https://lark-parser.github.io/lark/ide/app.html)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
@@ -113,9 +113,9 @@ See the full list of [features here](https://lark-parser.readthedocs.io/en/lates
 
 Lark is the fastest and lightest (lower is better)
 
-![Run-time Comparison](docs/comparison_runtime.png)
+![Run-time Comparison](docs/_static/comparison_runtime.png)
 
-![Memory Usage Comparison](docs/comparison_memory.png)
+![Memory Usage Comparison](docs/_static/comparison_memory.png)
 
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.

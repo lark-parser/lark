@@ -5,7 +5,7 @@ import sys
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs, eval_escaping, Py36
+from .utils import bfs, eval_escaping, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -631,7 +631,9 @@ class Grammar:
                                 if isinstance(s, NonTerminal)
                                 and s != r.origin}
             used_rules |= {NonTerminal(s) for s in start}
-            compiled_rules = [r for r in compiled_rules if r.origin in used_rules]
+            compiled_rules, unused = classify_bool(compiled_rules, lambda r: r.origin in used_rules)
+            for r in unused:
+                logger.debug("Unused rule: %s", r)
             if len(compiled_rules) == c:
                 break
 
@@ -639,7 +641,9 @@ class Grammar:
         used_terms = {t.name for r in compiled_rules
                              for t in r.expansion
                              if isinstance(t, Terminal)}
-        terminals = [t for t in terminals if t.name in used_terms or t.name in self.ignore]
+        terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore)
+        if unused:
+            logger.debug("Unused terminals: %s", [t.name for t in unused])
 
         return terminals, compiled_rules, self.ignore
 

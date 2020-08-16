@@ -199,6 +199,27 @@ class Transformer_InPlaceRecursive(Transformer):
 # Visitors
 
 class VisitorBase:
+    """Visitors visit each node of the tree
+    
+    Run the appropriate method on it according to the node’s data.
+    They work bottom-up, starting with the leaves and ending at the root
+    of the tree.
+
+    There are two classes that implement the visitor interface:
+
+    - ``Visitor``: Visit every node (without recursion)
+    - ``Visitor_Recursive``: Visit every node using recursion. Slightly faster.
+
+    Example:
+        ::
+
+            class IncreaseAllNumbers(Visitor):
+            def number(self, tree):
+                assert tree.data == "number"
+                tree.children[0] += 1
+
+            IncreaseAllNumbers().visit(parse_tree)
+    """
     def _call_userfunc(self, tree):
         return getattr(self, tree.data, self.__default__)(tree)
 
@@ -211,7 +232,7 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    """Bottom-up visitor, non-recursive
+    """Bottom-up visitor, non-recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
     Calls its methods (provided by user via inheritance) according to tree.data
@@ -227,8 +248,9 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
+
 class Visitor_Recursive(VisitorBase):
-    """Bottom-up visitor, recursive
+    """Bottom-up visitor, recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
     Calls its methods (provided by user via inheritance) according to tree.data

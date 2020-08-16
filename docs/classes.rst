@@ -23,3 +23,12 @@ Token
 -----
 
 .. autoclass:: lark.Token
+
+Visitor
+-------
+
+.. autoclass:: lark.visitors.VisitorBase
+
+.. autoclass:: lark.Visitor
+
+.. autoclass:: lark.visitors.Visitor_Recursive

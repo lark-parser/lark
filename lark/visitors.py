@@ -42,12 +42,61 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable):
-    """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
+    """Transformer visit each node of the tree, and run the appropriate method
+    on it according to the node's data.
 
-    Calls its methods (provided by user via inheritance) according to tree.data
-    The returned value replaces the old one in the structure.
+    Calls its methods (provided by user via inheritance) according to
+    ``tree.data``. The returned value replaces the old one in the structure.
 
-    Can be used to implement map or reduce.
+    They work bottom-up (or depth-first), starting with the leaves and
+    ending at the root of the tree. Transformers can be used to
+    implement map & reduce patterns. Because nodes are reduced from leaf to
+    root, at any point the callbacks may assume the children have already been
+    transformed (if applicable). ``Transformer`` can do anything ``Visitor``
+    can do, but because it reconstructs the tree, it is slightly less
+    efficient.
+
+    All these classes implement the transformer interface:
+
+    - ``Transformer`` - Recursively transforms the tree. This is the one you
+      probably want.
+    - ``Transformer_InPlace`` - Non-recursive. Changes the tree in-place
+      instead of returning new instances
+    - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place
+      instead of returning new instances
+
+    Example:
+        ::
+
+            from lark import Tree, Transformer
+
+            class EvalExpressions(Transformer):
+                def expr(self, args):
+                        return eval(args[0])
+
+            t = Tree('a', [Tree('expr', ['1+2'])])
+            print(EvalExpressions().transform( t ))
+
+            # Prints: Tree(a, [3])
+
+    Args:
+        visit_tokens: By default, transformers only visit rules.
+            visit_tokens=True will tell ``Transformer`` to visit tokens
+            as well. This is a slightly slower alternative to lexer_callbacks
+            but it's easier to maintain and works for all algorithms
+            (even when there isn't a lexer).
+
+    Example:
+        ::
+
+            class T(Transformer):
+                INT = int
+                NUMBER = float
+                def NAME(self, name):
+                    return lookup_dict.get(name, name)
+
+            T(visit_tokens=True).transform(tree)
+
     """
     __visit_tokens__ = True   # For backwards compatibility
 
@@ -235,7 +284,8 @@ class Visitor(VisitorBase):
     """Bottom-up visitor, non-recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to
+    ``tree.data``
     """
 
     def visit(self, tree):
@@ -253,7 +303,8 @@ class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to
+    ``tree.data``
     """
 
     def visit(self, tree):
@@ -285,13 +336,29 @@ def visit_children_decor(func):
 
 
 class Interpreter(_Decoratable):
-    """Top-down visitor, recursive
+    """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to
+    ``tree.data``
 
-    Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
-    The user has to explicitly call visit, visit_children, or use the @visit_children_decor
+    Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't
+    automatically visit its sub-branches. The user has to explicitly call ``visit``,
+    ``visit_children``, or use the ``@visit_children_decor``. This allows the
+    user to implement branching and loops.
+
+    Example:
+        ::
+
+            class IncreaseSomeOfTheNumbers(Interpreter):
+                def number(self, tree):
+                    tree.children[0] += 1
+
+                def skip(self, tree):
+                    # skip this subtree. don't change any number node inside it.
+                    pass
+
+                IncreaseSomeOfTheNumbers().visit(parse_tree)
     """
 
     def visit(self, tree):

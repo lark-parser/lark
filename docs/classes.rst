@@ -29,6 +29,17 @@ Visitor
 
 .. autoclass:: lark.visitors.VisitorBase
 
-.. autoclass:: lark.Visitor
+.. autoclass:: lark.visitors.Visitor
 
 .. autoclass:: lark.visitors.Visitor_Recursive
+
+Interpreter
+-----------
+
+.. autoclass:: lark.visitors.Interpreter
+
+
+Transformer
+-----------
+
+.. autoclass:: lark.visitors.Transformer

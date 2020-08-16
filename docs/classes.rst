@@ -43,3 +43,14 @@ Transformer
 -----------
 
 .. autoclass:: lark.visitors.Transformer
+    :members: __default__, __default_token__
+
+v_args
+------
+
+.. autofunction:: lark.visitors.v_args
+
+Discard
+-------
+
+.. autoclass:: lark.visitors.Discard 

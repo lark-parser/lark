@@ -9,6 +9,9 @@ from .lexer import Token
 from inspect import getmembers, getmro
 
 class Discard(Exception):
+    """When raising the Discard exception in a transformer callback,
+    that node is discarded and won't appear in the parent.
+    """
     pass
 
 # Transformers
@@ -159,11 +162,19 @@ class Transformer(_Decoratable):
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
-        "Default operation on tree (for override)"
+        """Default operation on tree (for override)
+
+        Function that is called on if a function with a corresponding name has
+        not been found. Defaults to reconstruct the Tree
+        """
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
-        "Default operation on token (for override)"
+        """Default operation on token (for override)
+        
+        Function that is called on if a function with a corresponding name has
+        not been found. Defaults to just return the argument.
+        """
         return token
 
 
@@ -441,8 +452,38 @@ def _vargs_meta(f, data, children, meta):
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
+
 def v_args(inline=False, meta=False, tree=False, wrapper=None):
-    "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
+    """A convenience decorator factory for modifying the behavior of
+    user-supplied visitor methods.
+
+    By default, callback methods of transformers/visitors accept one argument -
+    a list of the node's children. ``v_args`` can modify this behavior. When
+    used on a transformer/visitor class definition, it applies to all the
+    callback methods inside it. Accepts one of three following flags.
+
+    Args:
+        inline: Children are provided as ``*args`` instead of a list
+            argument (not recommended for very long lists).
+        meta: Provides two arguments: ``children`` and ``meta`` (instead of
+            just the first)
+        tree: Provides the entire tree as the argument, instead of the
+            children.
+
+    Example:
+        ::
+
+            @v_args(inline=True)
+            class SolveArith(Transformer):
+                def add(self, left, right):
+                    return left + right
+
+
+            class ReverseNotation(Transformer_InPlace):
+                @v_args(tree=True)
+                def tree_node(self, tree):
+                    tree.children = tree.children[::-1]
+    """
     if tree and (meta or inline):
         raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
 

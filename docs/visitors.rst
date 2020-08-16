@@ -45,11 +45,51 @@ Interpreter
 
 .. autoclass:: lark.visitors.Interpreter
 
+
+Example:
+    ::
+
+        class IncreaseSomeOfTheNumbers(Interpreter):
+            def number(self, tree):
+                tree.children[0] += 1
+
+            def skip(self, tree):
+                # skip this subtree. don't change any number node inside it.
+                pass
+
+            IncreaseSomeOfTheNumbers().visit(parse_tree)
+
 Transformer
 -----------
 
 .. autoclass:: lark.visitors.Transformer
     :members: __default__, __default_token__
+
+Example:
+    ::
+
+        from lark import Tree, Transformer
+
+        class EvalExpressions(Transformer):
+            def expr(self, args):
+                    return eval(args[0])
+
+        t = Tree('a', [Tree('expr', ['1+2'])])
+        print(EvalExpressions().transform( t ))
+
+        # Prints: Tree(a, [3])
+
+Example:
+    ::
+
+        class T(Transformer):
+            INT = int
+            NUMBER = float
+            def NAME(self, name):
+                return lookup_dict.get(name, name)
+
+        T(visit_tokens=True).transform(tree)
+
 
 v_args
 ------

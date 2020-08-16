@@ -63,37 +63,12 @@ class Transformer(_Decoratable):
     - ``Transformer_InPlace`` - Non-recursive. Changes the tree in-place instead of returning new instances
     - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place instead of returning new instances
 
-    Example:
-        ::
-
-            from lark import Tree, Transformer
-
-            class EvalExpressions(Transformer):
-                def expr(self, args):
-                        return eval(args[0])
-
-            t = Tree('a', [Tree('expr', ['1+2'])])
-            print(EvalExpressions().transform( t ))
-
-            # Prints: Tree(a, [3])
-
     Parameters:
         visit_tokens: By default, transformers only visit rules.
             visit_tokens=True will tell ``Transformer`` to visit tokens
             as well. This is a slightly slower alternative to lexer_callbacks
             but it's easier to maintain and works for all algorithms
             (even when there isn't a lexer).
-
-    Example:
-        ::
-
-            class T(Transformer):
-                INT = int
-                NUMBER = float
-                def NAME(self, name):
-                    return lookup_dict.get(name, name)
-
-            T(visit_tokens=True).transform(tree)
 
     """
     __visit_tokens__ = True   # For backwards compatibility
@@ -328,19 +303,6 @@ class Interpreter(_Decoratable):
     Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
     The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
     This allows the user to implement branching and loops.
-
-    Example:
-        ::
-
-            class IncreaseSomeOfTheNumbers(Interpreter):
-                def number(self, tree):
-                    tree.children[0] += 1
-
-                def skip(self, tree):
-                    # skip this subtree. don't change any number node inside it.
-                    pass
-
-                IncreaseSomeOfTheNumbers().visit(parse_tree)
     """
 
     def visit(self, tree):

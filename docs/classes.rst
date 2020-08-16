@@ -7,10 +7,29 @@ Lark
 .. autoclass:: lark.Lark
     :members: open, parse, save, load
 
-LarkOptions
------------
+**Using Unicode character classes with regex**
 
-.. autoclass:: lark.lark.LarkOptions
+Python's builtin `re` module has a few persistent known bugs and also won't parse
+advanced regex features such as character classes.
+With `pip install lark-parser[regex]`, the `regex` module will be installed alongside `lark` and can act as a drop-in replacement to `re`.
+
+Any instance of `Lark` instantiated with `regex=True` will now use the `regex` module instead of `re`.
+
+For example, we can now use character classes to match PEP-3131 compliant Python identifiers.
+
+Example:
+    ::
+
+        from lark import Lark
+        >>> g = Lark(r"""
+                            ?start: NAME
+                            NAME: ID_START ID_CONTINUE*
+                            ID_START: /[\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}_]+/
+                            ID_CONTINUE: ID_START | /[\p{Mn}\p{Mc}\p{Nd}\p{Pc}·]+/
+                        """, regex=True)
+
+        >>> g.parse('வணக்கம்')
+        'வணக்கம்'
 
 Tree
 ----
@@ -24,7 +43,7 @@ Token
 
 .. autoclass:: lark.Token
 
-Transformer, Vistor & Interpretor
+Transformer, Visitor & Interpreter
 ---------------------------------
 
 See :doc:`visitors`.

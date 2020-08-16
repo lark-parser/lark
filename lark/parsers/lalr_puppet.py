@@ -7,11 +7,9 @@ from .. import Token
 
 
 class ParserPuppet(object):
-    """ParserPuppet gives you advanced control over error handling when
-    parsing with LALR.
+    """ParserPuppet gives you advanced control over error handling when parsing with LALR.
 
-    For a simpler, more streamlined interface, see the ``on_error``
-    argument to ``Lark.parse()``.
+    For a simpler, more streamlined interface, see the ``on_error`` argument to ``Lark.parse()``.
     """
     def __init__(self, parser, state_stack, value_stack, start, stream, set_state):
         self.parser = parser
@@ -24,8 +22,7 @@ class ParserPuppet(object):
         self.result = None
 
     def feed_token(self, token):
-        """Feed the parser with a token, and advance it to the next state,
-        as if it recieved it from the lexer.
+        """Feed the parser with a token, and advance it to the next state, as if it recieved it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
         """
@@ -89,9 +86,9 @@ class ParserPuppet(object):
         return '\n'.join(out)
 
     def choices(self):
-        """Returns a dictionary of token types, matched to their action in
-        the parser. Only returns token types that are accepted by the
-        current state.
+        """Returns a dictionary of token types, matched to their action in the parser.
+
+        Only returns token types that are accepted by the current state.
 
         Updated by ``feed_token()``.
         """

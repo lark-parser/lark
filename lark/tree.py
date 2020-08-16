@@ -18,15 +18,14 @@ class Meta:
 class Tree(object):
     """The main tree class.
 
-    Creates a new tree, and stores "data" and "children" in attributes of
-    the same name. Trees can be hashed and compared.
+    Creates a new tree, and stores "data" and "children" in attributes of the same name.
+    Trees can be hashed and compared.
 
-    Args:
+    Parameters:
         data: The name of the rule or alias
         children: List of matched sub-rules and terminals
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
-            meta attributes: line, column, start_pos, end_line,
-            end_column, end_pos
+            meta attributes: line, column, start_pos, end_line, end_column, end_pos
     """
     def __init__(self, data, children, meta=None):
         self.data = data
@@ -79,9 +78,8 @@ class Tree(object):
 
     def iter_subtrees(self):
         """Depth-first iteration.
-        
-        Iterates over all the subtrees, never returning to the
-        same node twice (Lark's parse-tree is actually a DAG).
+
+        Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
         """
         queue = [self]
         subtrees = OrderedDict()
@@ -121,8 +119,7 @@ class Tree(object):
     def iter_subtrees_topdown(self):
         """Breadth-first iteration.
 
-        Iterates over all the subtrees, return nodes in order like
-        pretty() does.
+        Iterates over all the subtrees, return nodes in order like pretty() does.
         """
         stack = [self]
         while stack:

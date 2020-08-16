@@ -26,11 +26,12 @@ class UnexpectedEOF(ParseError):
 class UnexpectedInput(LarkError):
     """UnexpectedInput Error.
 
+    Used as a base class for the following exceptions:
+
     - ``UnexpectedToken``: The parser recieved an unexpected token
     - ``UnexpectedCharacters``: The lexer encountered an unexpected string
 
-    After catching one of these exceptions, you may call the following
-    helper methods to create a nicer error message.
+    After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
     pos_in_stream = None
 
@@ -57,7 +58,7 @@ class UnexpectedInput(LarkError):
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
-        
+
         Given a parser instance and a dictionary mapping some label with
         some malformed syntax examples, it'll return the label for the
         example that bests matches the current error. The function will
@@ -66,7 +67,7 @@ class UnexpectedInput(LarkError):
 
         For an example usage, see examples/error_reporting_lalr.py
 
-        Args:
+        Parameters:
             parse_fn: parse function (usually ``lark_instance.parse``)
             examples: dictionary of ``{'example_string': value}``.
             use_accepts: Recommended to call this with ``use_accepts=True``.

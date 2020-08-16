@@ -45,28 +45,23 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable):
-    """Transformer visit each node of the tree, and run the appropriate method
-    on it according to the node's data.
+    """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
-    Calls its methods (provided by user via inheritance) according to
-    ``tree.data``. The returned value replaces the old one in the structure.
+    Calls its methods (provided by user via inheritance) according to ``tree.data``.
+    The returned value replaces the old one in the structure.
 
-    They work bottom-up (or depth-first), starting with the leaves and
-    ending at the root of the tree. Transformers can be used to
-    implement map & reduce patterns. Because nodes are reduced from leaf to
-    root, at any point the callbacks may assume the children have already been
-    transformed (if applicable). ``Transformer`` can do anything ``Visitor``
-    can do, but because it reconstructs the tree, it is slightly less
-    efficient.
+    They work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
+    Transformers can be used to implement map & reduce patterns. Because nodes are reduced from leaf to root,
+    at any point the callbacks may assume the children have already been transformed (if applicable).
+
+    ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
+    it is slightly less efficient. It can be used to implement map or reduce patterns.
 
     All these classes implement the transformer interface:
 
-    - ``Transformer`` - Recursively transforms the tree. This is the one you
-      probably want.
-    - ``Transformer_InPlace`` - Non-recursive. Changes the tree in-place
-      instead of returning new instances
-    - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place
-      instead of returning new instances
+    - ``Transformer`` - Recursively transforms the tree. This is the one you probably want.
+    - ``Transformer_InPlace`` - Non-recursive. Changes the tree in-place instead of returning new instances
+    - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place instead of returning new instances
 
     Example:
         ::
@@ -82,7 +77,7 @@ class Transformer(_Decoratable):
 
             # Prints: Tree(a, [3])
 
-    Args:
+    Parameters:
         visit_tokens: By default, transformers only visit rules.
             visit_tokens=True will tell ``Transformer`` to visit tokens
             as well. This is a slightly slower alternative to lexer_callbacks
@@ -164,16 +159,16 @@ class Transformer(_Decoratable):
     def __default__(self, data, children, meta):
         """Default operation on tree (for override)
 
-        Function that is called on if a function with a corresponding name has
-        not been found. Defaults to reconstruct the Tree
+        Function that is called on if a function with a corresponding name has not been found.
+        Defaults to reconstruct the Tree.
         """
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
         """Default operation on token (for override)
-        
-        Function that is called on if a function with a corresponding name has
-        not been found. Defaults to just return the argument.
+
+        Function that is called on if a function with a corresponding name has not been found.
+        Defaults to just return the argument.
         """
         return token
 
@@ -259,25 +254,6 @@ class Transformer_InPlaceRecursive(Transformer):
 # Visitors
 
 class VisitorBase:
-    """Visitors visit each node of the tree
-
-    Run the appropriate method on it according to the node's data.
-    They work bottom-up, starting with the leaves and ending at the root
-    of the tree. There are two classes that implement the visitor interface:
-
-    - ``Visitor``: Visit every node (without recursion)
-    - ``Visitor_Recursive``: Visit every node using recursion. Slightly faster.
-
-    Example:
-        ::
-
-            class IncreaseAllNumbers(Visitor):
-            def number(self, tree):
-                assert tree.data == "number"
-                tree.children[0] += 1
-
-            IncreaseAllNumbers().visit(parse_tree)
-    """
     def _call_userfunc(self, tree):
         return getattr(self, tree.data, self.__default__)(tree)
 
@@ -293,8 +269,7 @@ class Visitor(VisitorBase):
     """Bottom-up visitor, non-recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to
-    ``tree.data``
+    Calls its methods (provided by user via inheritance) according to ``tree.data``
     """
 
     def visit(self, tree):
@@ -312,8 +287,7 @@ class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to
-    ``tree.data``
+    Calls its methods (provided by user via inheritance) according to ``tree.data``
     """
 
     def visit(self, tree):
@@ -348,13 +322,12 @@ class Interpreter(_Decoratable):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
-    Calls its methods (provided by user via inheritance) according to
-    ``tree.data``
 
-    Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't
-    automatically visit its sub-branches. The user has to explicitly call ``visit``,
-    ``visit_children``, or use the ``@visit_children_decor``. This allows the
-    user to implement branching and loops.
+    For each tree node, it calls its methods (provided by user via inheritance) according to ``tree.data``.
+
+    Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
+    The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
+    This allows the user to implement branching and loops.
 
     Example:
         ::
@@ -452,21 +425,17 @@ def _vargs_tree(f, data, children, meta):
 
 
 def v_args(inline=False, meta=False, tree=False, wrapper=None):
-    """A convenience decorator factory for modifying the behavior of
-    user-supplied visitor methods.
+    """A convenience decorator factory for modifying the behavior of user-supplied visitor methods.
 
-    By default, callback methods of transformers/visitors accept one argument -
-    a list of the node's children. ``v_args`` can modify this behavior. When
-    used on a transformer/visitor class definition, it applies to all the
-    callback methods inside it. Accepts one of three following flags.
+    By default, callback methods of transformers/visitors accept one argument - a list of the node's children.
 
-    Args:
-        inline: Children are provided as ``*args`` instead of a list
-            argument (not recommended for very long lists).
-        meta: Provides two arguments: ``children`` and ``meta`` (instead of
-            just the first)
-        tree: Provides the entire tree as the argument, instead of the
-            children.
+    ``v_args`` can modify this behavior. When used on a transformer/visitor class definition,
+    it applies to all the callback methods inside it.
+
+    Parameters:
+        inline: Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
+        meta: Provides two arguments: ``children`` and ``meta`` (instead of just the first)
+        tree: Provides the entire tree as the argument, instead of the children.
 
     Example:
         ::

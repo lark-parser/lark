@@ -33,10 +33,10 @@ Welcome to Lark's documentation!
 
    grammar
    tree_construction
-   visitors
    classes
+   visitors
    nearley
-   
+
 
 
 Lark is a modern parsing library for Python. Lark can parse any context-free grammar.

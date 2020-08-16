@@ -27,75 +27,67 @@ class LarkOptions(Serialize):
 
     """
     OPTIONS_DOC = """
-    **General**
-    
-    start
-        The start symbol. Either a string, or a list of strings for
-        multiple possible starts (Default: "start")
-    debug
-        Display debug information, such as warnings (default: False)
-    transformer
-        Applies the transformer to every parse tree (equivlent
-        to applying it after the parse, but faster)
-    propagate_positions
-        Propagates (line, column, end_line, end_column) attributes into all tree branches.
-    maybe_placeholders
-        When True, the ``[]`` operator returns ``None``
-        when not matched. When ``False``,  ``[]`` behaves like the ``?``
-        operator, and returns no value at all. (default= ``False``. Recommended
-        to set to ``True``)
-    regex
-        When True, uses the ``regex`` module instead of the
-        stdlib ``re``.
-    cache
-        Cache the results of the Lark grammar analysis, for x2 to
-        x3 faster loading. LALR only for now.
+    **===  General  ===**
 
-        - When ``False``, does nothing (default)
-        - When ``True``, caches to a temporary file in the local directory
-        - When given a string, caches to the path pointed by the string
+    start
+            The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
+    debug
+            Display debug information, such as warnings (default: False)
+    transformer
+            Applies the transformer to every parse tree (equivlent to applying it after the parse, but faster)
+    propagate_positions
+            Propagates (line, column, end_line, end_column) attributes into all tree branches.
+    maybe_placeholders
+            When True, the ``[]`` operator returns ``None`` when not matched.
+
+            When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
+            (default= ``False``. Recommended to set to ``True``)
+    regex
+            When True, uses the ``regex`` module instead of the stdlib ``re``.
+    cache
+            Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
+
+            - When ``False``, does nothing (default)
+            - When ``True``, caches to a temporary file in the local directory
+            - When given a string, caches to the path pointed by the string
 
     g_regex_flags
-        Flags that are applied to all terminals (both regex and strings)
+            Flags that are applied to all terminals (both regex and strings)
     keep_all_tokens
-        Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
+            Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
 
-    **Algorithm**
+    **=== Algorithm ===**
 
     parser
-        Decides which parser engine to use. Accepts "earley" or "lalr".
-        (Default: "earley"). (there is also a "cyk" option for legacy)
+            Decides which parser engine to use. Accepts "earley" or "lalr". (Default: "earley").
+            (there is also a "cyk" option for legacy)
     lexer
-        Decides whether or not to use a lexer stage
+            Decides whether or not to use a lexer stage
 
-        - "auto" (default): Choose for me based on the parser
-        - "standard": Use a standard lexer
-        - "contextual": Stronger lexer (only works with parser="lalr")
-        - "dynamic": Flexible and powerful (only with parser="earley")
-        - "dynamic_complete": Same as dynamic, but tries *every* variation
-            of tokenizing possible.
+            - "auto" (default): Choose for me based on the parser
+            - "standard": Use a standard lexer
+            - "contextual": Stronger lexer (only works with parser="lalr")
+            - "dynamic": Flexible and powerful (only with parser="earley")
+            - "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible.
     ambiguity
-        Decides how to handle ambiguity in the parse. Only relevant if parser="earley"        
-      
-        - "resolve" - The parser will automatically choose the simplest
-            derivation (it chooses consistently: greedy for tokens,
-            non-greedy for rules)
-        - "explicit": The parser will return all derivations wrapped in
-            "_ambig" tree nodes (i.e. a forest).
+            Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
 
-    **Domain Specific**
+            - "resolve" - The parser will automatically choose the simplest derivation
+                        (it chooses consistently: greedy for tokens, non-greedy for rules)
+            - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+
+    **=== Misc. / Domain Specific ===**
 
     postlex
-        Lexer post-processing (Default: None) Only works with the
-        standard and contextual lexers.
+            Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
     priority
-        How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+            How priorities should be evaluated - auto, none, normal, invert (Default: auto)
     lexer_callbacks
-        Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
+            Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     use_bytes
-        Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
+            Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
-        A callback
+            A callback for editing the terminals before parse.
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -170,13 +162,11 @@ class LarkOptions(Serialize):
 class Lark(Serialize):
     """Main interface for the library.
 
-    It's mostly a thin wrapper for the many different parsers, and for
-    the tree constructor.
+    It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
 
-    Args:
-        grammar: a string or file-object containing the
-            grammar spec (using Lark's ebnf syntax)
-        options : a dictionary controlling various aspects of Lark.
+    Parameters:
+        grammar: a string or file-object containing the grammar spec (using Lark's ebnf syntax)
+        options: a dictionary controlling various aspects of Lark.
 
     Example:
         >>> Lark(r'''start: "foo" ''')
@@ -317,8 +307,7 @@ class Lark(Serialize):
                 self.save(f)
 
     # TODO: merge with above
-    if __init__.__doc__:
-        __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
+    __doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
@@ -391,8 +380,7 @@ class Lark(Serialize):
     def open(cls, grammar_filename, rel_to=None, **options):
         """Create an instance of Lark with the grammar given by its filename
 
-        If ``rel_to`` is provided, the function will find the grammar
-        filename in relation to it.
+        If ``rel_to`` is provided, the function will find the grammar filename in relation to it.
 
         Example:
 
@@ -426,17 +414,15 @@ class Lark(Serialize):
     def parse(self, text, start=None, on_error=None):
         """Parse the given text, according to the options provided.
 
-        If a transformer is supplied to ``__init__``, returns whatever is the
-        result of the transformation.
-
-        Args:
+        Parameters:
             text (str): Text to be parsed.
-            start (str, optional): Required if Lark was given multiple
-                possible start symbols (using the start option).
-            on_error (function, optional): if provided, will be called on
-                UnexpectedToken error. Return true to resume parsing.
-                LALR only. See examples/error_puppet.py for an example
-                of how to use on_error.
+            start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
+            on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
+                LALR only. See examples/error_puppet.py for an example of how to use on_error.
+
+        Returns:
+            If a transformer is supplied to ``__init__``, returns whatever is the
+            result of the transformation. Otherwise, returns a Tree instance.
 
         """
 

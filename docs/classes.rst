@@ -11,3 +11,10 @@ LarkOptions
 -----------
 
 .. autoclass:: lark.lark.LarkOptions
+
+Tree
+----
+
+.. autoclass:: lark.Tree
+    :members: pretty, find_pred, find_data, iter_subtrees,
+        iter_subtrees_topdown

@@ -14,7 +14,20 @@ class Meta:
     def __init__(self):
         self.empty = True
 
+
 class Tree(object):
+    """The main tree class.
+
+    Creates a new tree, and stores "data" and "children" in attributes of
+    the same name. Trees can be hashed and compared.
+
+    Args:
+        data: The name of the rule or alias
+        children: List of matched sub-rules and terminals
+        meta: Line & Column numbers (if ``propagate_positions`` is enabled).
+            meta attributes: line, column, start_pos, end_line,
+            end_column, end_pos
+    """
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -46,6 +59,10 @@ class Tree(object):
         return l
 
     def pretty(self, indent_str='  '):
+        """Returns an indented string representation of the tree.
+
+        Great for debugging.
+        """
         return ''.join(self._pretty(0, indent_str))
 
     def __eq__(self, other):
@@ -61,6 +78,11 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def iter_subtrees(self):
+        """Depth-first iteration.
+        
+        Iterates over all the subtrees, never returning to the
+        same node twice (Lark's parse-tree is actually a DAG).
+        """
         queue = [self]
         subtrees = OrderedDict()
         for subtree in queue:
@@ -72,11 +94,11 @@ class Tree(object):
         return reversed(list(subtrees.values()))
 
     def find_pred(self, pred):
-        "Find all nodes where pred(tree) == True"
+        """Returns all nodes of the tree that evaluate pred(node) as true."""
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
-        "Find all nodes where tree.data == data"
+        """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
 
 ###}
@@ -97,6 +119,11 @@ class Tree(object):
                     yield c
 
     def iter_subtrees_topdown(self):
+        """Breadth-first iteration.
+
+        Iterates over all the subtrees, return nodes in order like
+        pretty() does.
+        """
         stack = [self]
         while stack:
             node = stack.pop()

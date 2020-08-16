@@ -4,10 +4,12 @@ except ImportError:
     pass
 
 from copy import deepcopy
-from collections import OrderedDict
 
 
 ###{standalone
+from collections import OrderedDict
+
+
 class Meta:
     def __init__(self):
         self.empty = True

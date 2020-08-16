@@ -1,17 +1,17 @@
 from __future__ import absolute_import
 
-import sys, os, pickle, hashlib, logging
+import sys, os, pickle, hashlib
 from io import open
 
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
 from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend
+from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
 
 import re
@@ -214,7 +214,7 @@ class Lark(Serialize):
                 cache_fn = '.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
-                logging.debug('Loading grammar from cache: %s', cache_fn)
+                logger.debug('Loading grammar from cache: %s', cache_fn)
                 with FS.open(cache_fn, 'rb') as f:
                     self._load(f, self.options.transformer, self.options.postlex)
                 return
@@ -278,12 +278,10 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = dict(self.options.lexer_callbacks)
-        if self.options.transformer:
-            t = self.options.transformer
-            for term in self.terminals:
-                if hasattr(t, term.name):
-                    lexer_callbacks[term.name] = getattr(t, term.name)
+        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
+                           if self.options.transformer
+                           else {})
+        lexer_callbacks.update(self.options.lexer_callbacks)
 
         self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
 
@@ -293,7 +291,7 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logging.debug('Saving grammar to cache: %s', cache_fn)
+            logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
@@ -344,7 +342,14 @@ class Lark(Serialize):
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source = '<deserialized>'
         self._prepare_callbacks()
-        self.parser = self.parser_class.deserialize(data['parser'], memo, self._callbacks, self.options.postlex, re_module)
+        self.parser = self.parser_class.deserialize(
+            data['parser'],
+            memo,
+            self._callbacks,
+            self.options.postlex,
+            self.options.transformer,
+            re_module
+        )
         return self
 
     @classmethod

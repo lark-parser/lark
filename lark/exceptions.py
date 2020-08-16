@@ -1,6 +1,8 @@
-from .utils import STRING_TYPE
+from .utils import STRING_TYPE, logger
 
 ###{standalone
+
+
 class LarkError(Exception):
     pass
 
@@ -37,34 +39,46 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """ Given a parser instance and a dictionary mapping some label with
             some malformed syntax examples, it'll return the label for the
             example that bests matches the current error.
+
+            It's recommended to call this with `use_accepts=True`. The default is False for backwards compatibility.
         """
         assert self.state is not None, "Not supported for this exception"
 
+        if isinstance(examples, dict):
+            examples = examples.items()
+
         candidate = (None, False)
-        for label, example in examples.items():
+        for i, (label, example) in enumerate(examples):
             assert not isinstance(example, STRING_TYPE)
 
-            for malformed in example:
+            for j, malformed in enumerate(example):
                 try:
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
+                        if use_accepts and ut.accepts != self.accepts:
+                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                                        (self.state, self.accepts, ut.accepts, i, j))
+                            continue
                         try:
                             if ut.token == self.token:  # Try exact match first
+                                logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
+                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
+                            logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 
         return candidate[0]
@@ -72,19 +86,20 @@ class UnexpectedInput(LarkError):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
-        
-        if isinstance(seq, bytes):
-            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace"), line, column)
-        else:
-            message = "No terminal defined for '%s' at line %d col %d" % (seq[lex_pos], line, column)
-
         self.line = line
         self.column = column
-        self.allowed = allowed
-        self.considered_tokens = considered_tokens
         self.pos_in_stream = lex_pos
         self.state = state
 
+        self.allowed = allowed
+        self.considered_tokens = considered_tokens
+
+        if isinstance(seq, bytes):
+            _s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
+        else:
+            _s = seq[lex_pos]
+
+        message = "No terminal defined for '%s' at line %d col %d" % (_s, line, column)
         message += '\n\n' + self.get_context(seq)
         if allowed:
             message += '\nExpecting: %s\n' % allowed
@@ -97,18 +112,23 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 class UnexpectedToken(ParseError, UnexpectedInput):
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
-        self.token = token
-        self.expected = expected     # XXX str shouldn't necessary
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
-        self.considered_rules = considered_rules
-        self.state = state
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
+        self.state = state
+
+        self.token = token
+        self.expected = expected     # XXX deprecate? `accepts` is better
+        self.considered_rules = considered_rules
         self.puppet = puppet
+
+        # TODO Only calculate `accepts()` when we need to display it to the user
+        # This will improve performance when doing automatic error handling
+        self.accepts = puppet and puppet.accepts()
 
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.expected)))
+                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
 
         super(UnexpectedToken, self).__init__(message)
 

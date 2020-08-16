@@ -4,51 +4,15 @@ from functools import reduce
 from ast import literal_eval
 from collections import deque
 
-class fzset(frozenset):
-    def __repr__(self):
-        return '{%s}' % ', '.join(map(repr, self))
-
-
-def classify_bool(seq, pred):
-    true_elems = []
-    false_elems = []
-
-    for elem in seq:
-        if pred(elem):
-            true_elems.append(elem)
-        else:
-            false_elems.append(elem)
-
-    return true_elems, false_elems
-
-
-
-def bfs(initial, expand):
-    open_q = deque(list(initial))
-    visited = set(open_q)
-    while open_q:
-        node = open_q.popleft()
-        yield node
-        for next_node in expand(node):
-            if next_node not in visited:
-                visited.add(next_node)
-                open_q.append(next_node)
-
-
-
-
-def _serialize(value, memo):
-    if isinstance(value, Serialize):
-        return value.serialize(memo)
-    elif isinstance(value, list):
-        return [_serialize(elem, memo) for elem in value]
-    elif isinstance(value, frozenset):
-        return list(value)  # TODO reversible?
-    elif isinstance(value, dict):
-        return {key:_serialize(elem, memo) for key, elem in value.items()}
-    return value
-
 ###{standalone
+import logging
+logger = logging.getLogger("lark")
+logger.addHandler(logging.StreamHandler())
+# Set to highest level, since we have some warnings amongst the code
+# By default, we should not output any log messages
+logger.setLevel(logging.CRITICAL)
+
+
 def classify(seq, key=None, value=None):
     d = {}
     for item in seq:
@@ -302,11 +266,9 @@ def combine_alternatives(lists):
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
 
 
-
 class FS:
     open = open
     exists = os.path.exists
-
 
 
 def isascii(s):
@@ -319,3 +281,45 @@ def isascii(s):
             return True
         except (UnicodeDecodeError, UnicodeEncodeError):
             return False
+
+
+class fzset(frozenset):
+    def __repr__(self):
+        return '{%s}' % ', '.join(map(repr, self))
+
+
+def classify_bool(seq, pred):
+    true_elems = []
+    false_elems = []
+
+    for elem in seq:
+        if pred(elem):
+            true_elems.append(elem)
+        else:
+            false_elems.append(elem)
+
+    return true_elems, false_elems
+
+
+def bfs(initial, expand):
+    open_q = deque(list(initial))
+    visited = set(open_q)
+    while open_q:
+        node = open_q.popleft()
+        yield node
+        for next_node in expand(node):
+            if next_node not in visited:
+                visited.add(next_node)
+                open_q.append(next_node)
+
+
+def _serialize(value, memo):
+    if isinstance(value, Serialize):
+        return value.serialize(memo)
+    elif isinstance(value, list):
+        return [_serialize(elem, memo) for elem in value]
+    elif isinstance(value, frozenset):
+        return list(value)  # TODO reversible?
+    elif isinstance(value, dict):
+        return {key:_serialize(elem, memo) for key, elem in value.items()}
+    return value

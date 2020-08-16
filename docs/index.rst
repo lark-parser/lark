@@ -8,6 +8,7 @@ Welcome to Lark's documentation!
 
 .. toctree::
    :maxdepth: 2
+   :caption: Overview
    :hidden:
 
    philosophy
@@ -22,7 +23,6 @@ Welcome to Lark's documentation!
    json_tutorial
    how_to_use
    how_to_develop
-   nearley
    recipes
 
 
@@ -35,6 +35,8 @@ Welcome to Lark's documentation!
    tree_construction
    visitors
    classes
+   nearley
+   
 
 
 Lark is a modern parsing library for Python. Lark can parse any context-free grammar.
@@ -47,13 +49,15 @@ Lark provides:
 - Fast unicode lexer with regexp support, and automatic line-counting
 
 
-**Install Lark**:
+Install Lark
+--------------
 
 .. code:: bash
 
    $ pip install lark-parser
 
-**Syntax Highlighting**:
+Syntax Highlighting
+-------------------
 
 -  `Sublime Text & TextMate`_
 -  `Visual Studio Code`_ (Or install through the vscode plugin system)
@@ -62,3 +66,47 @@ Lark provides:
 .. _Sublime Text & TextMate: https://github.com/lark-parser/lark_syntax
 .. _Visual Studio Code: https://github.com/lark-parser/vscode-lark
 .. _Intellij & PyCharm: https://github.com/lark-parser/intellij-syntax-highlighting
+
+Resources
+---------
+
+-  :doc:`philosophy`
+-  :doc:`features`
+-  `Examples`_
+-  `Online IDE`_
+-  Tutorials
+
+   -  `How to write a DSL`_ - Implements a toy LOGO-like language with
+      an interpreter
+   -  :doc:`json_tutorial` - Teaches you how to use Lark
+   -  Unofficial
+
+      -  `Program Synthesis is Possible`_ - Creates a DSL for Z3
+
+-  Guides
+
+   -  :doc:`how_to_use`
+   -  :doc:`how_to_develop`
+
+-  Reference
+
+   -  :doc:`grammar`
+   -  :doc:`tree_construction`
+   -  :doc:`visitors`
+   -  :doc:`classes`
+   -  :doc:`nearley`
+   -  `Cheatsheet (PDF)`_
+
+-  Discussion
+
+   -  `Gitter`_
+   -  `Forum (Google Groups)`_
+
+
+.. _Examples: https://github.com/lark-parser/lark/tree/master/examples
+.. _Online IDE: https://lark-parser.github.io/lark/ide/app.html
+.. _How to write a DSL: http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/
+.. _Program Synthesis is Possible: https://www.cs.cornell.edu/~asampson/blog/minisynth.html
+.. _Cheatsheet (PDF): _static/lark_cheatsheet.pdf
+.. _Gitter: https://gitter.im/lark-parser/Lobby
+.. _Forum (Google Groups): https://groups.google.com/forum/#!forum/lark-parser

@@ -6,16 +6,17 @@ import logging
 import os
 import codecs
 
-logging.basicConfig(level=logging.INFO)
-
+from lark import logger
 from lark.tools.nearley import create_code_for_nearley_grammar, main as nearley_tool_main
+
+logger.setLevel(logging.INFO)
 
 TEST_PATH    = os.path.abspath(os.path.dirname(__file__))
 NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
 if not os.path.exists(NEARLEY_PATH):
-    logging.warn("Nearley not installed. Skipping Nearley tests!")
+    logger.warn("Nearley not installed. Skipping Nearley tests!")
     raise ImportError("Skipping Nearley tests!")
 
 import js2py    # Ensures that js2py exists, to avoid failing tests

@@ -1,6 +1,6 @@
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
+from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
@@ -58,6 +58,15 @@ class _ParserFrontend(Serialize):
         return self.parser.parse(input, start, *args)
 
 
+def _get_lexer_callbacks(transformer, terminals):
+    result = {}
+    for terminal in terminals:
+        callback = getattr(transformer, terminal.name, None)
+        if callback is not None:
+            result[terminal.name] = callback
+    return result
+
+
 class WithLexer(_ParserFrontend):
     lexer = None
     parser = None
@@ -73,13 +82,18 @@ class WithLexer(_ParserFrontend):
         self.postlex = lexer_conf.postlex
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, postlex, re_module):
+    def deserialize(cls, data, memo, callbacks, postlex, transformer, re_module):
         inst = super(WithLexer, cls).deserialize(data, memo)
+
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
+
+        terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
+        inst.lexer_conf.callbacks = _get_lexer_callbacks(transformer, terminals)
         inst.lexer_conf.re_module = re_module
         inst.lexer_conf.skip_validation=True
         inst.init_lexer()
+
         return inst
 
     def _serialize(self, data, memo):
@@ -229,4 +243,3 @@ class CYK(WithLexer):
 
     def _apply_callback(self, tree):
         return self.callbacks[tree.rule](tree.children)
-

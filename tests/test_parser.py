@@ -23,13 +23,13 @@ from io import (
         open,
     )
 
-logging.basicConfig(level=logging.INFO)
 
 try:
     import regex
 except ImportError:
     regex = None
 
+from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
@@ -37,6 +37,7 @@ from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 
+logger.setLevel(logging.INFO)
 
 
 __path__ = os.path.dirname(__file__)
@@ -721,7 +722,8 @@ def _make_parser_test(LEXER, PARSER):
                           """)
             g.parse('\x01\x02\x03')
 
-        @unittest.skipIf(sys.version_info[:2]==(2, 7), "bytes parser isn't perfect in Python2.7, exceptions don't work correctly")
+        @unittest.skipIf(sys.version_info[0]==2 or sys.version_info[:2]==(3, 4),
+                         "bytes parser isn't perfect in Python2, exceptions don't work correctly")
         def test_bytes_utf8(self):
             g = r"""
             start: BOM? char+
@@ -1261,6 +1263,32 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aA')
             self.assertEqual(tree.children, ['a', 'A'])
 
+        def test_token_flags_verbose(self):
+            g = _Lark(r"""start: NL | ABC
+                          ABC: / [a-z] /x
+                          NL: /\n/
+                      """)
+            x = g.parse('a')
+            self.assertEqual(x.children, ['a'])
+
+        def test_token_flags_verbose_multiline(self):
+            g = _Lark(r"""start: ABC
+                          ABC: /  a      b c
+                               d
+                                e f
+                           /x
+                       """)
+            x = g.parse('abcdef')
+            self.assertEqual(x.children, ['abcdef'])
+
+        def test_token_multiline_only_works_with_x_flag(self):
+            g = r"""start: ABC
+                    ABC: /  a      b c
+                              d
+                                e f
+                            /i
+                      """
+            self.assertRaises( GrammarError, _Lark, g)
 
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):

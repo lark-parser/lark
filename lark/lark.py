@@ -162,7 +162,7 @@ class LarkOptions(Serialize):
 class Lark(Serialize):
     """Main interface for the library.
 
-    It’s mostly a thin wrapper for the many different parsers, and for
+    It's mostly a thin wrapper for the many different parsers, and for
     the tree constructor.
 
     Args:

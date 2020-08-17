@@ -11,15 +11,14 @@ Lark
 Using Unicode character classes with ``regex``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Python’s builtin ``re`` module has a few persistent known bugs and also
-won’t parse advanced regex features such as character classes. With
-``pip install lark-parser[regex]``, the ``regex`` module will be
-installed alongside ``lark`` and can act as a drop-in replacement to
-``re``.
+Python's builtin ``re`` module has a few persistent known bugs and also won't parse
+advanced regex features such as character classes.
+With ``pip install lark-parser[regex]``, the ``regex`` module will be
+installed alongside lark and can act as a drop-in replacement to ``re``.
 
-Any instance of ``Lark`` instantiated with ``regex=True`` will now use
-the ``regex`` module instead of ``re``. For example, we can now use
-character classes to match PEP-3131 compliant Python identifiers.
+Any instance of Lark instantiated with ``regex=True`` will use the ``regex`` module instead of ``re``.
+
+For example, we can use character classes to match PEP-3131 compliant Python identifiers:
 
 ::
 

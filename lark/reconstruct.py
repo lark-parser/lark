@@ -198,10 +198,9 @@ class Reconstructor:
                 yield item
 
     def reconstruct(self, tree, postproc=None):
-        if postproc is None:
-            x = self._reconstruct(tree)
-        else:
-            x = postproc(self._reconstruct(tree))
+        x = self._reconstruct(tree)
+        if postproc:
+            x = postproc(x)
         y = []
         prev_item = ''
         for item in x:

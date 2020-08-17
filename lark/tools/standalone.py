@@ -35,6 +35,7 @@ import os
 from pprint import pprint
 from os import path
 from collections import defaultdict
+from functools import partial
 
 import lark
 from lark import Lark
@@ -127,7 +128,7 @@ def main(fobj, start):
         with open(os.path.join(_larkdir, pyfile)) as f:
             code = extract_sections(f)['standalone']
             if i:   # if not this file
-                code = strip_docstrings(iter(code.splitlines(True)).__next__)
+                code = strip_docstrings(partial(next, iter(code.splitlines(True))))
             print(code)
 
     data, m = lark_inst.memo_serialize([TerminalDef, Rule])

@@ -1,13 +1,5 @@
 # Grammar Reference
 
-Table of contents:
-
-1. [Definitions](#defs)
-1. [Terminals](#terms)
-1. [Rules](#rules)
-1. [Directives](#dirs)
-
-<a name="defs"></a>
 ## Definitions
 
 A **grammar** is a list of rules and terminals, that together define a language.
@@ -20,7 +12,7 @@ Each rule is a list of terminals and rules, whose location and nesting define th
 
 A **parsing algorithm** is an algorithm that takes a grammar definition and a sequence of symbols (members of the alphabet), and matches the entirety of the sequence by searching for a structure that is allowed by the grammar.
 
-## General Syntax and notes
+### General Syntax and notes
 
 Grammars in Lark are based on [EBNF](https://en.wikipedia.org/wiki/Extended_Backus–Naur_form) syntax, with several enhancements.
 
@@ -58,7 +50,6 @@ Lark begins the parse with the rule 'start', unless specified otherwise in the o
 Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects, for the shape of the generated parse-tree, and the automatic construction of the lexer (aka tokenizer, or scanner).
 
 
-<a name="terms"></a>
 ## Terminals
 
 Terminals are used to match text into symbols. They can be defined as a combination of literals and other terminals.
@@ -192,7 +183,6 @@ _ambig
 ```
 
 
-<a name="rules"></a>
 ## Rules
 
 **Syntax:**

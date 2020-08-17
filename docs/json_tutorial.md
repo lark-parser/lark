@@ -1,7 +1,6 @@
-# Lark Tutorial - JSON parser
+# JSON parser - Tutorial
 
 Lark is a parser - a program that accepts a grammar and text, and produces a structured tree that represents that text.
-
 In this tutorial we will write a JSON parser in Lark, and explore Lark's various features in the process.
 
 It has 5 parts.

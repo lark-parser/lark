@@ -29,7 +29,6 @@ __version__ = "0.9.0"
 import os
 from io import open
 
-import logging
 
 
 class LarkError(Exception):
@@ -53,9 +52,11 @@ class UnexpectedEOF(ParseError):
 
 
 class UnexpectedInput(LarkError):
+    #--
     pos_in_stream = None
 
     def get_context(self, text, span=40):
+        #--
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
@@ -69,12 +70,7 @@ class UnexpectedInput(LarkError):
             return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
-        """ Given a parser instance and a dictionary mapping some label with
-            some malformed syntax examples, it'll return the label for the
-            example that bests matches the current error.
-
-            It's recommended to call this with `use_accepts=True`. The default is False for backwards compatibility.
-        """
+        #--
         assert self.state is not None, "Not supported for this exception"
 
         if isinstance(examples, dict):
@@ -90,24 +86,26 @@ class UnexpectedInput(LarkError):
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
                         if use_accepts and ut.accepts != self.accepts:
-                            logging.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
+                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                         (self.state, self.accepts, ut.accepts, i, j))
                             continue
                         try:
-                            if ut.token == self.token:  # Try exact match first
-                                logging.debug("Exact Match at example [%s][%s]" % (i, j))
+                            if ut.token == self.token:  ##
+
+                                logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
                             if token_type_match_fallback:
-                                # Fallback to token types match
+                                ##
+
                                 if (ut.token.type == self.token.type) and not candidate[-1]:
-                                    logging.debug("Token Type Fallback at example [%s][%s]" % (i, j))
+                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
-                            logging.debug("Same State match at example [%s][%s]" % (i, j))
+                            logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 
         return candidate[0]
@@ -138,8 +136,8 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         super(UnexpectedCharacters, self).__init__(message)
 
 
-
 class UnexpectedToken(ParseError, UnexpectedInput):
+    #--
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -147,12 +145,15 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.state = state
 
         self.token = token
-        self.expected = expected     # XXX deprecate? `accepts` is better
+        self.expected = expected     ##
+
         self.considered_rules = considered_rules
         self.puppet = puppet
 
-        # TODO Only calculate `accepts()` when we need to display it to the user
-        # This will improve performance when doing automatic error handling
+        ##
+
+        ##
+
         self.accepts = puppet and puppet.accepts()
 
         message = ("Unexpected token %r at line %s, column %s.\n"
@@ -161,19 +162,25 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         super(UnexpectedToken, self).__init__(message)
 
-class VisitError(LarkError):
-    """VisitError is raised when visitors are interrupted by an exception
 
-    It provides the following attributes for inspection:
-    - obj: the tree node or token it was processing when the exception was raised
-    - orig_exc: the exception that cause it to fail
-    """
+class VisitError(LarkError):
+    #--
     def __init__(self, rule, obj, orig_exc):
         self.obj = obj
         self.orig_exc = orig_exc
 
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
+
+import logging
+logger = logging.getLogger("lark")
+logger.addHandler(logging.StreamHandler())
+##
+
+##
+
+logger.setLevel(logging.CRITICAL)
+
 
 def classify(seq, key=None, value=None):
     d = {}
@@ -189,7 +196,8 @@ def classify(seq, key=None, value=None):
 
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
-        if '__type__' in data: # Object
+        if '__type__' in data: ##
+
             class_ = namespace[data['__type__']]
             return class_.deserialize(data, memo)
         elif '@' in data:
@@ -260,7 +268,8 @@ class SerializeMemoizer(Serialize):
 
 try:
     STRING_TYPE = basestring
-except NameError:   # Python 3
+except NameError:   ##
+
     STRING_TYPE = str
 
 
@@ -270,9 +279,11 @@ from contextlib import contextmanager
 
 Str = type(u'')
 try:
-    classtype = types.ClassType # Python2
+    classtype = types.ClassType ##
+
 except AttributeError:
-    classtype = type    # Python3
+    classtype = type    ##
+
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
@@ -285,7 +296,8 @@ def smart_decorator(f, create_decorator):
         return wraps(f)(create_decorator(f.__func__, True))
 
     elif isinstance(f, partial):
-        # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
+        ##
+
         return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
 
     else:
@@ -304,9 +316,12 @@ import sre_constants
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
 def get_regexp_width(expr):
     if regex:
-        # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
-        # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex
-        # match here below.
+        ##
+
+        ##
+
+        ##
+
         regexp_final = re.sub(categ_pattern, 'A', expr)
     else:
         if re.search(categ_pattern, expr):
@@ -325,7 +340,9 @@ class Meta:
     def __init__(self):
         self.empty = True
 
+
 class Tree(object):
+    #--
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -357,6 +374,7 @@ class Tree(object):
         return l
 
     def pretty(self, indent_str='  '):
+        #--
         return ''.join(self._pretty(0, indent_str))
 
     def __eq__(self, other):
@@ -372,6 +390,7 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def iter_subtrees(self):
+        #--
         queue = [self]
         subtrees = OrderedDict()
         for subtree in queue:
@@ -383,23 +402,25 @@ class Tree(object):
         return reversed(list(subtrees.values()))
 
     def find_pred(self, pred):
-        "Find all nodes where pred(tree) == True"
+        #--
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
-        "Find all nodes where tree.data == data"
+        #--
         return self.find_pred(lambda t: t.data == data)
 
 
 from inspect import getmembers, getmro
 
 class Discard(Exception):
+    #--
     pass
 
-# Transformers
+##
+
 
 class _Decoratable:
-    "Provides support for decorating methods with @v_args"
+    #--
 
     @classmethod
     def _apply_decorator(cls, decorator, **kwargs):
@@ -408,13 +429,15 @@ class _Decoratable:
         libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
         for name, value in getmembers(cls):
 
-            # Make sure the function isn't inherited (unless it's overwritten)
+            ##
+
             if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
                 continue
             if not callable(value):
                 continue
 
-            # Skip if v_args already applied (at the function level)
+            ##
+
             if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
                 continue
 
@@ -427,20 +450,16 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable):
-    """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
+    #--
+    __visit_tokens__ = True   ##
 
-    Calls its methods (provided by user via inheritance) according to tree.data
-    The returned value replaces the old one in the structure.
-
-    Can be used to implement map or reduce.
-    """
-    __visit_tokens__ = True   # For backwards compatibility
 
     def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
-        # Assumes tree is already transformed
+        ##
+
         children = new_children if new_children is not None else tree.children
         try:
             f = getattr(self, tree.data)
@@ -495,18 +514,20 @@ class Transformer(_Decoratable):
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
-        "Default operation on tree (for override)"
+        #--
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
-        "Default operation on token (for override)"
+        #--
         return token
 
 
 
-class InlineTransformer(Transformer):   # XXX Deprecated
+class InlineTransformer(Transformer):   ##
+
     def _call_userfunc(self, tree, new_children=None):
-        # Assumes tree is already transformed
+        ##
+
         children = new_children if new_children is not None else tree.children
         try:
             f = getattr(self, tree.data)
@@ -530,8 +551,9 @@ class TransformerChain(object):
 
 
 class Transformer_InPlace(Transformer):
-    "Non-recursive. Changes the tree in-place instead of returning new instances"
-    def _transform_tree(self, tree):           # Cancel recursion
+    #--
+    def _transform_tree(self, tree):           ##
+
         return self._call_userfunc(tree)
 
     def transform(self, tree):
@@ -542,10 +564,11 @@ class Transformer_InPlace(Transformer):
 
 
 class Transformer_NonRecursive(Transformer):
-    "Non-recursive. Doesn't change the original tree."
+    #--
 
     def transform(self, tree):
-        # Tree to postfix
+        ##
+
         rev_postfix = []
         q = [tree]
         while q:
@@ -554,7 +577,8 @@ class Transformer_NonRecursive(Transformer):
             if isinstance(t, Tree):
                 q += t.children
 
-        # Postfix to tree
+        ##
+
         stack = []
         for x in reversed(rev_postfix):
             if isinstance(x, Tree):
@@ -568,27 +592,29 @@ class Transformer_NonRecursive(Transformer):
             else:
                 stack.append(x)
 
-        t ,= stack  # We should have only one tree remaining
+        t ,= stack  ##
+
         return t
 
 
 
 class Transformer_InPlaceRecursive(Transformer):
-    "Recursive. Changes the tree in-place instead of returning new instances"
+    #--
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree)
 
 
 
-# Visitors
+##
+
 
 class VisitorBase:
     def _call_userfunc(self, tree):
         return getattr(self, tree.data, self.__default__)(tree)
 
     def __default__(self, tree):
-        "Default operation on tree (for override)"
+        #--
         return tree
 
     def __class_getitem__(cls, _):
@@ -596,11 +622,7 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    """Bottom-up visitor, non-recursive
-
-    Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
-    """
+    #--
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
@@ -612,12 +634,9 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
-class Visitor_Recursive(VisitorBase):
-    """Bottom-up visitor, recursive
 
-    Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
-    """
+class Visitor_Recursive(VisitorBase):
+    #--
 
     def visit(self, tree):
         for child in tree.children:
@@ -639,7 +658,7 @@ class Visitor_Recursive(VisitorBase):
 
 
 def visit_children_decor(func):
-    "See Interpreter"
+    #--
     @wraps(func)
     def inner(cls, tree):
         values = cls.visit_children(tree)
@@ -648,14 +667,7 @@ def visit_children_decor(func):
 
 
 class Interpreter(_Decoratable):
-    """Top-down visitor, recursive
-
-    Visits the tree, starting with the root and finally the leaves (top-down)
-    Calls its methods (provided by user via inheritance) according to tree.data
-
-    Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
-    The user has to explicitly call visit, visit_children, or use the @visit_children_decor
-    """
+    #--
 
     def visit(self, tree):
         f = getattr(self, tree.data)
@@ -678,7 +690,8 @@ class Interpreter(_Decoratable):
 
 
 
-# Decorators
+##
+
 
 def _apply_decorator(obj, decorator, **kwargs):
     try:
@@ -704,7 +717,8 @@ def _inline_args__func(func):
     return smart_decorator(func, create_decorator)
 
 
-def inline_args(obj):   # XXX Deprecated
+def inline_args(obj):   ##
+
     return _apply_decorator(obj, _inline_args__func)
 
 
@@ -733,12 +747,14 @@ def _vargs_inline(f, data, children, meta):
 def _vargs_meta_inline(f, data, children, meta):
     return f(meta, *children)
 def _vargs_meta(f, data, children, meta):
-    return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
+    return f(children, meta)   ##
+
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
+
 def v_args(inline=False, meta=False, tree=False, wrapper=None):
-    "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
+    #--
     if tree and (meta or inline):
         raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
 
@@ -776,7 +792,8 @@ class Indenter:
 
         yield token
 
-        indent_str = token.rsplit('\n', 1)[1] # Tabs and spaces
+        indent_str = token.rsplit('\n', 1)[1] ##
+
         indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
 
         if indent > self.indent_level[-1]:
@@ -814,7 +831,8 @@ class Indenter:
         self.indent_level = [0]
         return self._process(stream)
 
-    # XXX Hack for ContextualLexer. Maybe there's a more elegant solution?
+    ##
+
     @property
     def always_accept(self):
         return (self.NL_type,)
@@ -887,11 +905,7 @@ class RuleOptions(Serialize):
 
 
 class Rule(Serialize):
-    """
-        origin : a symbol
-        expansion : a list of symbols
-        order : index of this expansion amongst all rules of the same name
-    """
+    #--
     __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
 
     __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
@@ -936,7 +950,8 @@ class Pattern(Serialize):
     def __repr__(self):
         return repr(self.to_regexp())
 
-    # Pattern Hashing assumes all subclasses have a different priority!
+    ##
+
     def __hash__(self):
         return hash((type(self), self.value, self.flags))
     def __eq__(self, other):
@@ -946,7 +961,8 @@ class Pattern(Serialize):
         raise NotImplementedError()
 
     if Py36:
-        # Python 3.6 changed syntax for flags in regular expression
+        ##
+
         def _get_flags(self, value):
             for f in self.flags:
                 value = ('(?%s:%s)' % (f, value))
@@ -1009,6 +1025,7 @@ class TerminalDef(Serialize):
 
 
 class Token(Str):
+    #--
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
@@ -1066,10 +1083,7 @@ class LineCounter:
         self.line_start_pos = 0
 
     def feed(self, token, test_newline=True):
-        """Consume a token and calculate the new line & column.
-
-        As an optional optimization, set test_newline=False is token doesn't contain a newline.
-        """
+        #--
         if test_newline:
             newlines = token.count(self.newline_char)
             if newlines:
@@ -1080,7 +1094,7 @@ class LineCounter:
         self.column = self.char_pos - self.line_start_pos + 1
 
 class _Lex:
-    "Built to serve both Lexer and ContextualLexer"
+    #--
     def __init__(self, lexer, state=None):
         self.lexer = lexer
         self.state = state
@@ -1155,7 +1169,8 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
-        unless = [] # {}
+        unless = [] ##
+
         for strtok in tokens_by_type.get(PatternStr, []):
             if strtok.priority > retok.priority:
                 continue
@@ -1173,9 +1188,12 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
 
 
 def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes):
-    # Python sets an unreasonable group limit (currently 100) in its re module
-    # Worse, the only way to know we reached it is by catching an AssertionError!
-    # This function recursively tries less and less groups until it's successful.
+    ##
+
+    ##
+
+    ##
+
     postfix = '$' if match_whole else ''
     mres = []
     while terminals:
@@ -1184,10 +1202,12 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
             pattern = pattern.encode('latin-1')
         try:
             mre = re_.compile(pattern, g_regex_flags)
-        except AssertionError:  # Yes, this is what Python provides us.. :/
+        except AssertionError:  ##
+
             return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
 
-        # terms_from_name = {t.name: t for t in terminals[:max_size]}
+        ##
+
         mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
         terminals = terminals[max_size:]
     return mres
@@ -1196,21 +1216,11 @@ def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
     return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
 
 def _regexp_has_newline(r):
-    r"""Expressions that may indicate newlines in a regexp:
-        - newlines (\n)
-        - escaped newline (\\n)
-        - anything but ([^...])
-        - any-char (.) when the flag (?s) exists
-        - spaces (\s)
-    """
+    #--
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 class Lexer(object):
-    """Lexer interface
-
-    Method Signatures:
-        lex(self, stream) -> Iterator[Token]
-    """
+    #--
     lex = NotImplemented
 
 
@@ -1223,7 +1233,8 @@ class TraditionalLexer(Lexer):
         self.re = conf.re_module
 
         if not conf.skip_validation:
-            # Sanitization
+            ##
+
             for t in terminals:
                 try:
                     self.re.compile(t.pattern.to_regexp(), conf.g_regex_flags)
@@ -1235,7 +1246,8 @@ class TraditionalLexer(Lexer):
 
             assert set(conf.ignore) <= {t.name for t in terminals}
 
-        # Init
+        ##
+
         self.newline_types = [t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = list(conf.ignore)
 
@@ -1246,7 +1258,8 @@ class TraditionalLexer(Lexer):
         self.use_bytes = conf.use_bytes
 
         self._mres = None
-        # self.build(g_regex_flags)
+        ##
+
 
     def _build(self):
         terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, re_=self.re, use_bytes=self.use_bytes)
@@ -1254,7 +1267,8 @@ class TraditionalLexer(Lexer):
 
         for type_, f in self.user_callbacks.items():
             if type_ in self.callback:
-                # Already a callback there, probably UnlessCallback
+                ##
+
                 self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
             else:
                 self.callback[type_] = f
@@ -1318,11 +1332,15 @@ class ContextualLexer(Lexer):
                 yield x
                 parser_state = get_parser_state()
                 l.lexer = self.lexers[parser_state]
-                l.state = parser_state # For debug only, no need to worry about multithreading
+                l.state = parser_state ##
+
         except UnexpectedCharacters as e:
-            # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined,
-            # but not in the current context.
-            # This tests the input against the global context, to provide a nicer error.
+            ##
+
+            ##
+
+            ##
+
             root_match = self.root_lexer.match(stream, e.pos_in_stream)
             if not root_match:
                 raise
@@ -1338,7 +1356,8 @@ class LexerConf(Serialize):
     __serialize_namespace__ = TerminalDef,
 
     def __init__(self, tokens, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
-        self.tokens = tokens    # TODO should be terminals
+        self.tokens = tokens    ##
+
         self.ignore = ignore
         self.postlex = postlex
         self.callbacks = callbacks or {}
@@ -1369,7 +1388,8 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
-        # local reference to Tree.meta reduces number of presence checks
+        ##
+
         if isinstance(res, Tree):
             res_meta = res.meta
             for c in children:
@@ -1430,7 +1450,7 @@ class ChildFilter:
         return self.node_builder(filtered)
 
 class ChildFilterLALR(ChildFilter):
-    "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+    #--
 
     def __call__(self, children):
         filtered = []
@@ -1440,7 +1460,8 @@ class ChildFilterLALR(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   # Optimize for left-recursion
+                else:   ##
+
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
@@ -1451,7 +1472,7 @@ class ChildFilterLALR(ChildFilter):
         return self.node_builder(filtered)
 
 class ChildFilterLALR_NoPlaceholders(ChildFilter):
-    "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+    #--
     def __init__(self, to_include, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
@@ -1462,7 +1483,8 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   # Optimize for left-recursion
+                else:   ##
+
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
@@ -1472,7 +1494,8 @@ def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
 
 def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
-    # Prepare empty_indices as: How many Nones to insert at each index?
+    ##
+
     if _empty_indices:
         assert _empty_indices.count(False) == len(expansion)
         s = ''.join(str(int(b)) for b in _empty_indices)
@@ -1495,14 +1518,12 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
         if _empty_indices or ambiguous:
             return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add)
         else:
-            # LALR without placeholders
+            ##
+
             return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
 
 class AmbiguousExpander:
-    """Deal with the case where we're expanding children ('_rule') into a parent but the children
-       are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
-       ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
-       into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
+    #--
     def __init__(self, to_expand, tree_class, node_builder):
         self.node_builder = node_builder
         self.tree_class = tree_class
@@ -1512,10 +1533,14 @@ class AmbiguousExpander:
         def _is_ambig_tree(child):
             return hasattr(child, 'data') and child.data == '_ambig'
 
-        #### When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
-        #    All children of an _ambig node should be a derivation of that ambig node, hence
-        #    it is safe to assume that if we see an _ambig node nested within an ambig node
-        #    it is safe to simply expand it into the parent _ambig node as an alternative derivation.
+        ##
+
+        ##
+
+        ##
+
+        ##
+
         ambiguous = []
         for i, child in enumerate(children):
             if _is_ambig_tree(child):
@@ -1546,7 +1571,8 @@ def ptb_inline_args(func):
 def inplace_transformer(func):
     @wraps(func)
     def f(children):
-        # function name in a Transformer is a rule name.
+        ##
+
         tree = Tree(func.__name__, children)
         return func(tree)
     return f
@@ -1594,7 +1620,8 @@ class ParseTreeBuilder:
             user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
-                # XXX InlineTransformer is deprecated!
+                ##
+
                 wrapper = getattr(f, 'visit_wrapper', None)
                 if wrapper is not None:
                     f = apply_visit_wrapper(f, user_callback_name, wrapper)
@@ -1669,7 +1696,8 @@ class _Parser:
                 expected = {s for s in states[state].keys() if s.isupper()}
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
-                except NameError:   # For standalone parser
+                except NameError:   ##
+
                     puppet = None
                 raise UnexpectedToken(token, expected, state=state, puppet=puppet)
 
@@ -1689,7 +1717,8 @@ class _Parser:
             state_stack.append(new_state)
             value_stack.append(value)
 
-        # Main LALR-parser loop
+        ##
+
         try:
             for token in stream:
                 while True:
@@ -1700,7 +1729,8 @@ class _Parser:
                         state_stack.append(arg)
                         value_stack.append(token)
                         if set_state: set_state(arg)
-                        break # next token
+                        break ##
+
                     else:
                         reduce(arg)
         except Exception as e:
@@ -1923,67 +1953,69 @@ class LALR_ContextualLexer(LALR_WithLexer):
 
 
 class LarkOptions(Serialize):
-    """Specifies the options for Lark
-
-    """
+    #--
     OPTIONS_DOC = """
-# General
+    **===  General  ===**
 
-    start - The start symbol. Either a string, or a list of strings for
-            multiple possible starts (Default: "start")
-    debug - Display debug information, such as warnings (default: False)
-    transformer - Applies the transformer to every parse tree (equivlent to
-                  applying it after the parse, but faster)
-    propagate_positions - Propagates (line, column, end_line, end_column)
-                          attributes into all tree branches.
-    maybe_placeholders - When True, the `[]` operator returns `None` when not matched.
-                         When `False`,  `[]` behaves like the `?` operator,
-                             and returns no value at all.
-                         (default=`False`. Recommended to set to `True`)
-    regex - When True, uses the `regex` module instead of the stdlib `re`.
-    cache - Cache the results of the Lark grammar analysis, for x2 to x3 faster loading.
-            LALR only for now.
-        When `False`, does nothing (default)
-        When `True`, caches to a temporary file in the local directory
-        When given a string, caches to the path pointed by the string
+    start
+            The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
+    debug
+            Display debug information, such as warnings (default: False)
+    transformer
+            Applies the transformer to every parse tree (equivlent to applying it after the parse, but faster)
+    propagate_positions
+            Propagates (line, column, end_line, end_column) attributes into all tree branches.
+    maybe_placeholders
+            When True, the ``[]`` operator returns ``None`` when not matched.
 
-    g_regex_flags - Flags that are applied to all terminals
-                    (both regex and strings)
-    keep_all_tokens - Prevent the tree builder from automagically
-                      removing "punctuation" tokens (default: False)
+            When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
+            (default= ``False``. Recommended to set to ``True``)
+    regex
+            When True, uses the ``regex`` module instead of the stdlib ``re``.
+    cache
+            Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
 
-# Algorithm
+            - When ``False``, does nothing (default)
+            - When ``True``, caches to a temporary file in the local directory
+            - When given a string, caches to the path pointed by the string
 
-    parser - Decides which parser engine to use
-             Accepts "earley" or "lalr". (Default: "earley")
-             (there is also a "cyk" option for legacy)
+    g_regex_flags
+            Flags that are applied to all terminals (both regex and strings)
+    keep_all_tokens
+            Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
 
-    lexer - Decides whether or not to use a lexer stage
-        "auto" (default): Choose for me based on the parser
-        "standard": Use a standard lexer
-        "contextual": Stronger lexer (only works with parser="lalr")
-        "dynamic": Flexible and powerful (only with parser="earley")
-        "dynamic_complete": Same as dynamic, but tries *every* variation
-                            of tokenizing possible.
+    **=== Algorithm ===**
 
-    ambiguity - Decides how to handle ambiguity in the parse.
-                Only relevant if parser="earley"
-        "resolve": The parser will automatically choose the simplest
-                    derivation (it chooses consistently: greedy for
-                    tokens, non-greedy for rules)
-        "explicit": The parser will return all derivations wrapped
-                    in "_ambig" tree nodes (i.e. a forest).
+    parser
+            Decides which parser engine to use. Accepts "earley" or "lalr". (Default: "earley").
+            (there is also a "cyk" option for legacy)
+    lexer
+            Decides whether or not to use a lexer stage
 
-# Domain Specific
+            - "auto" (default): Choose for me based on the parser
+            - "standard": Use a standard lexer
+            - "contextual": Stronger lexer (only works with parser="lalr")
+            - "dynamic": Flexible and powerful (only with parser="earley")
+            - "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible.
+    ambiguity
+            Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
 
-    postlex - Lexer post-processing (Default: None) Only works with the
-                standard and contextual lexers.
-    priority - How priorities should be evaluated - auto, none, normal,
-                invert (Default: auto)
-    lexer_callbacks - Dictionary of callbacks for the lexer. May alter
-                        tokens during lexing. Use with caution.
-    use_bytes - Accept an input of type `bytes` instead of `str` (Python 3 only).
-    edit_terminals - A callback
+            - "resolve" - The parser will automatically choose the simplest derivation
+                        (it chooses consistently: greedy for tokens, non-greedy for rules)
+            - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+
+    **=== Misc. / Domain Specific ===**
+
+    postlex
+            Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
+    priority
+            How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+    lexer_callbacks
+            Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
+    use_bytes
+            Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
+    edit_terminals
+            A callback for editing the terminals before parse.
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -2056,15 +2088,12 @@ class LarkOptions(Serialize):
 
 
 class Lark(Serialize):
+    #--
     def __init__(self, grammar, **options):
-        """
-            grammar : a string or file-object containing the grammar spec (using Lark's ebnf syntax)
-            options : a dictionary controlling various aspects of Lark.
-        """
-
         self.options = LarkOptions(options)
 
-        # Set regex or re module
+        ##
+
         use_regex = self.options.regex
         if use_regex:
             if regex:
@@ -2074,13 +2103,15 @@ class Lark(Serialize):
         else:
             re_module = re
 
-        # Some, but not all file-like objects have a 'name' attribute
+        ##
+
         try:
             self.source = grammar.name
         except AttributeError:
             self.source = '<string>'
 
-        # Drain file-like objects to get their contents
+        ##
+
         try:
             read = grammar.read
         except AttributeError:
@@ -2114,7 +2145,7 @@ class Lark(Serialize):
                 cache_fn = '.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
-                logging.debug('Loading grammar from cache: %s', cache_fn)
+                logger.debug('Loading grammar from cache: %s', cache_fn)
                 with FS.open(cache_fn, 'rb') as f:
                     self._load(f, self.options.transformer, self.options.postlex)
                 return
@@ -2151,10 +2182,12 @@ class Lark(Serialize):
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
 
-        # Parse the grammar file and compose the grammars (TODO)
+        ##
+
         self.grammar = load_grammar(grammar, self.source, re_module)
 
-        # Compile the EBNF grammar into BNF
+        ##
+
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
 
         if self.options.edit_terminals:
@@ -2163,21 +2196,27 @@ class Lark(Serialize):
 
         self._terminals_dict = {t.name: t for t in self.terminals}
 
-        # If the user asked to invert the priorities, negate them all here.
-        # This replaces the old 'resolve__antiscore_sum' option.
+        ##
+
+        ##
+
         if self.options.priority == 'invert':
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
-        # Else, if the user asked to disable priorities, strip them from the
-        # rules. This allows the Earley parsers to skip an extra forest walk
-        # for improved performance, if you don't need them (or didn't specify any).
+        ##
+
+        ##
+
+        ##
+
         elif self.options.priority == None:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = None
 
-        # TODO Deprecate lexer_callbacks?
+        ##
+
         lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
                            if self.options.transformer
                            else {})
@@ -2191,12 +2230,13 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logging.debug('Saving grammar to cache: %s', cache_fn)
+            logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
-    if __init__.__doc__:
-        __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
+    ##
+
+    __doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
@@ -2214,11 +2254,13 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
+        #--
         data, m = self.memo_serialize([TerminalDef, Rule])
         pickle.dump({'data': data, 'memo': m}, f)
 
     @classmethod
     def load(cls, f):
+        #--
         inst = cls.__new__(cls)
         return inst._load(f)
 
@@ -2259,16 +2301,7 @@ class Lark(Serialize):
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
-        """Create an instance of Lark with the grammar given by its filename
-
-        If rel_to is provided, the function will find the grammar filename in relation to it.
-
-        Example:
-
-            >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
-            Lark(...)
-
-        """
+        #--
         if rel_to:
             basepath = os.path.dirname(rel_to)
             grammar_filename = os.path.join(basepath, grammar_filename)
@@ -2280,7 +2313,7 @@ class Lark(Serialize):
 
 
     def lex(self, text):
-        "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"
+        #--
         if not hasattr(self, 'lexer'):
             self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
@@ -2289,18 +2322,12 @@ class Lark(Serialize):
         return stream
 
     def get_terminal(self, name):
-        "Get information about a terminal"
+        #--
         return self._terminals_dict[name]
 
     def parse(self, text, start=None, on_error=None):
-        """Parse the given text, according to the options provided.
+        #--
 
-        Parameters:
-            start: str - required if Lark was given multiple possible start symbols (using the start option).
-            on_error: function - if provided, will be called on UnexpectedToken error. Return true to resume parsing. LALR only.
-
-        Returns a tree, unless specified otherwise.
-        """
         try:
             return self.parser.parse(text, start=start)
         except UnexpectedToken as e:
@@ -2318,10 +2345,10 @@ class Lark(Serialize):
 
 
 DATA = (
-{'parser': {'parser': {'tokens': {0: 'RSQB', 1: 'COMMA', 2: '$END', 3: 'RBRACE', 4: 'ESCAPED_STRING', 5: 'string', 6: 'pair', 7: 'LSQB', 8: 'LBRACE', 9: 'SIGNED_NUMBER', 10: 'NULL', 11: 'FALSE', 12: 'value', 13: 'array', 14: 'object', 15: 'TRUE', 16: '__array_star_0', 17: 'COLON', 18: '__object_star_1', 19: 'start'}, 'states': {0: {0: (1, {'@': 12}), 1: (1, {'@': 12}), 2: (1, {'@': 12}), 3: (1, {'@': 12})}, 1: {0: (1, {'@': 13}), 1: (1, {'@': 13}), 2: (1, {'@': 13}), 3: (1, {'@': 13})}, 2: {1: (0, 25), 0: (0, 19)}, 3: {0: (1, {'@': 14}), 1: (1, {'@': 14}), 2: (1, {'@': 14}), 3: (1, {'@': 14})}, 4: {4: (0, 31), 5: (0, 13), 6: (0, 26)}, 5: {0: (1, {'@': 15}), 1: (1, {'@': 15}), 2: (1, {'@': 15}), 3: (1, {'@': 15})}, 6: {0: (1, {'@': 16}), 1: (1, {'@': 16}), 2: (1, {'@': 16}), 3: (1, {'@': 16})}, 7: {0: (1, {'@': 17}), 1: (1, {'@': 17}), 2: (1, {'@': 17}), 3: (1, {'@': 17})}, 8: {1: (0, 14), 3: (0, 28)}, 9: {0: (0, 21), 7: (0, 9), 8: (0, 18), 9: (0, 0), 10: (0, 1), 11: (0, 29), 5: (0, 5), 12: (0, 10), 13: (0, 7), 14: (0, 33), 4: (0, 31), 15: (0, 24)}, 10: {1: (0, 20), 16: (0, 2), 0: (0, 3)}, 11: {0: (1, {'@': 18}), 1: (1, {'@': 18})}, 12: {2: (1, {'@': 19})}, 13: {17: (0, 32)}, 14: {5: (0, 13), 4: (0, 31), 6: (0, 23)}, 15: {18: (0, 8), 1: (0, 4), 3: (0, 17)}, 16: {0: (1, {'@': 20}), 1: (1, {'@': 20})}, 17: {0: (1, {'@': 21}), 1: (1, {'@': 21}), 2: (1, {'@': 21}), 3: (1, {'@': 21})}, 18: {4: (0, 31), 6: (0, 15), 5: (0, 13), 3: (0, 6)}, 19: {0: (1, {'@': 22}), 1: (1, {'@': 22}), 2: (1, {'@': 22}), 3: (1, {'@': 22})}, 20: {7: (0, 9), 8: (0, 18), 12: (0, 11), 9: (0, 0), 14: (0, 33), 10: (0, 1), 4: (0, 31), 15: (0, 24), 5: (0, 5), 11: (0, 29), 13: (0, 7)}, 21: {0: (1, {'@': 23}), 1: (1, {'@': 23}), 2: (1, {'@': 23}), 3: (1, {'@': 23})}, 22: {1: (1, {'@': 24}), 3: (1, {'@': 24})}, 23: {1: (1, {'@': 25}), 3: (1, {'@': 25})}, 24: {0: (1, {'@': 26}), 1: (1, {'@': 26}), 2: (1, {'@': 26}), 3: (1, {'@': 26})}, 25: {7: (0, 9), 12: (0, 16), 8: (0, 18), 9: (0, 0), 14: (0, 33), 10: (0, 1), 4: (0, 31), 15: (0, 24), 5: (0, 5), 11: (0, 29), 13: (0, 7)}, 26: {1: (1, {'@': 27}), 3: (1, {'@': 27})}, 27: {7: (0, 9), 8: (0, 18), 12: (0, 12), 9: (0, 0), 10: (0, 1), 11: (0, 29), 5: (0, 5), 13: (0, 7), 14: (0, 33), 4: (0, 31), 15: (0, 24), 19: (0, 30)}, 28: {0: (1, {'@': 28}), 1: (1, {'@': 28}), 2: (1, {'@': 28}), 3: (1, {'@': 28})}, 29: {0: (1, {'@': 29}), 1: (1, {'@': 29}), 2: (1, {'@': 29}), 3: (1, {'@': 29})}, 30: {}, 31: {17: (1, {'@': 30}), 0: (1, {'@': 30}), 1: (1, {'@': 30}), 2: (1, {'@': 30}), 3: (1, {'@': 30})}, 32: {7: (0, 9), 8: (0, 18), 12: (0, 22), 9: (0, 0), 14: (0, 33), 10: (0, 1), 4: (0, 31), 15: (0, 24), 5: (0, 5), 11: (0, 29), 13: (0, 7)}, 33: {0: (1, {'@': 31}), 1: (1, {'@': 31}), 2: (1, {'@': 31}), 3: (1, {'@': 31})}}, 'start_states': {'start': 27}, 'end_states': {'start': 30}}, 'lexer_conf': {'tokens': [{'@': 0}, {'@': 1}, {'@': 2}, {'@': 3}, {'@': 4}, {'@': 5}, {'@': 6}, {'@': 7}, {'@': 8}, {'@': 9}, {'@': 10}, {'@': 11}], 'ignore': ['WS'], 'g_regex_flags': 0, 'use_bytes': False, '__type__': 'LexerConf'}, 'start': ['start'], '__type__': 'LALR_ContextualLexer'}, 'rules': [{'@': 19}, {'@': 31}, {'@': 17}, {'@': 15}, {'@': 12}, {'@': 26}, {'@': 29}, {'@': 13}, {'@': 22}, {'@': 14}, {'@': 23}, {'@': 28}, {'@': 21}, {'@': 16}, {'@': 24}, {'@': 30}, {'@': 18}, {'@': 20}, {'@': 27}, {'@': 25}], 'options': {'debug': False, 'keep_all_tokens': False, 'tree_class': None, 'cache': False, 'postlex': None, 'parser': 'lalr', 'lexer': 'contextual', 'transformer': None, 'start': ['start'], 'priority': None, 'ambiguity': 'auto', 'regex': False, 'propagate_positions': False, 'lexer_callbacks': {}, 'maybe_placeholders': False, 'edit_terminals': None, 'g_regex_flags': 0, 'use_bytes': False}, '__type__': 'Lark'}
+{'parser': {'parser': {'tokens': {0: 'RBRACE', 1: 'COMMA', 2: 'RSQB', 3: '$END', 4: '__object_star_1', 5: 'COLON', 6: 'LBRACE', 7: 'value', 8: 'string', 9: 'object', 10: 'TRUE', 11: 'SIGNED_NUMBER', 12: 'LSQB', 13: 'NULL', 14: 'FALSE', 15: 'array', 16: 'ESCAPED_STRING', 17: '__array_star_0', 18: 'pair', 19: 'start'}, 'states': {0: {0: (1, {'@': 12}), 1: (1, {'@': 12})}, 1: {1: (1, {'@': 13}), 2: (1, {'@': 13}), 0: (1, {'@': 13}), 3: (1, {'@': 13})}, 2: {1: (1, {'@': 14}), 2: (1, {'@': 14}), 0: (1, {'@': 14}), 3: (1, {'@': 14})}, 3: {0: (0, 25), 1: (0, 32)}, 4: {4: (0, 3), 1: (0, 27), 0: (0, 33)}, 5: {0: (1, {'@': 15}), 1: (1, {'@': 15})}, 6: {}, 7: {1: (0, 23), 2: (0, 2)}, 8: {1: (1, {'@': 16}), 2: (1, {'@': 16})}, 9: {1: (1, {'@': 17}), 2: (1, {'@': 17}), 5: (1, {'@': 17}), 0: (1, {'@': 17}), 3: (1, {'@': 17})}, 10: {1: (1, {'@': 18}), 2: (1, {'@': 18}), 0: (1, {'@': 18}), 3: (1, {'@': 18})}, 11: {1: (1, {'@': 19}), 2: (1, {'@': 19}), 0: (1, {'@': 19}), 3: (1, {'@': 19})}, 12: {1: (1, {'@': 20}), 2: (1, {'@': 20}), 0: (1, {'@': 20}), 3: (1, {'@': 20})}, 13: {5: (0, 22)}, 14: {6: (0, 21), 7: (0, 29), 8: (0, 12), 9: (0, 1), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 16: (0, 9)}, 15: {1: (1, {'@': 21}), 2: (1, {'@': 21}), 0: (1, {'@': 21}), 3: (1, {'@': 21})}, 16: {1: (1, {'@': 22}), 2: (1, {'@': 22}), 0: (1, {'@': 22}), 3: (1, {'@': 22})}, 17: {1: (1, {'@': 23}), 2: (1, {'@': 23}), 0: (1, {'@': 23}), 3: (1, {'@': 23})}, 18: {2: (0, 24), 1: (0, 14), 17: (0, 7)}, 19: {1: (1, {'@': 24}), 2: (1, {'@': 24}), 0: (1, {'@': 24}), 3: (1, {'@': 24})}, 20: {0: (1, {'@': 25}), 1: (1, {'@': 25})}, 21: {8: (0, 13), 18: (0, 4), 16: (0, 9), 0: (0, 19)}, 22: {6: (0, 21), 8: (0, 12), 9: (0, 1), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 7: (0, 20), 16: (0, 9)}, 23: {6: (0, 21), 7: (0, 8), 9: (0, 1), 8: (0, 12), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 16: (0, 9)}, 24: {1: (1, {'@': 26}), 2: (1, {'@': 26}), 0: (1, {'@': 26}), 3: (1, {'@': 26})}, 25: {1: (1, {'@': 27}), 2: (1, {'@': 27}), 0: (1, {'@': 27}), 3: (1, {'@': 27})}, 26: {6: (0, 21), 10: (0, 16), 12: (0, 26), 13: (0, 30), 14: (0, 15), 7: (0, 18), 8: (0, 12), 16: (0, 9), 9: (0, 1), 11: (0, 11), 15: (0, 10), 2: (0, 17)}, 27: {8: (0, 13), 18: (0, 0), 16: (0, 9)}, 28: {6: (0, 21), 10: (0, 16), 12: (0, 26), 13: (0, 30), 8: (0, 12), 16: (0, 9), 19: (0, 6), 9: (0, 1), 11: (0, 11), 7: (0, 31), 15: (0, 10), 14: (0, 15)}, 29: {1: (1, {'@': 28}), 2: (1, {'@': 28})}, 30: {1: (1, {'@': 29}), 2: (1, {'@': 29}), 0: (1, {'@': 29}), 3: (1, {'@': 29})}, 31: {3: (1, {'@': 30})}, 32: {18: (0, 5), 8: (0, 13), 16: (0, 9)}, 33: {1: (1, {'@': 31}), 2: (1, {'@': 31}), 0: (1, {'@': 31}), 3: (1, {'@': 31})}}, 'start_states': {'start': 28}, 'end_states': {'start': 6}}, 'lexer_conf': {'tokens': [{'@': 0}, {'@': 1}, {'@': 2}, {'@': 3}, {'@': 4}, {'@': 5}, {'@': 6}, {'@': 7}, {'@': 8}, {'@': 9}, {'@': 10}, {'@': 11}], 'ignore': ['WS'], 'g_regex_flags': 0, 'use_bytes': False, '__type__': 'LexerConf'}, 'start': ['start'], '__type__': 'LALR_ContextualLexer'}, 'rules': [{'@': 30}, {'@': 13}, {'@': 18}, {'@': 20}, {'@': 19}, {'@': 22}, {'@': 21}, {'@': 29}, {'@': 14}, {'@': 26}, {'@': 23}, {'@': 27}, {'@': 31}, {'@': 24}, {'@': 25}, {'@': 17}, {'@': 28}, {'@': 16}, {'@': 12}, {'@': 15}], 'options': {'debug': False, 'keep_all_tokens': False, 'tree_class': None, 'cache': False, 'postlex': None, 'parser': 'lalr', 'lexer': 'contextual', 'transformer': None, 'start': ['start'], 'priority': None, 'ambiguity': 'auto', 'regex': False, 'propagate_positions': False, 'lexer_callbacks': {}, 'maybe_placeholders': False, 'edit_terminals': None, 'g_regex_flags': 0, 'use_bytes': False}, '__type__': 'Lark'}
 )
 MEMO = (
-{0: {'name': 'ESCAPED_STRING', 'pattern': {'value': '".*?(?<!\\\\)(\\\\\\\\)*?"', 'flags': [], '_width': [2, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 1: {'name': 'SIGNED_NUMBER', 'pattern': {'value': '(?:(?:\\+|\\-))?(?:(?:(?:[0-9])+(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+|(?:(?:[0-9])+\\.(?:(?:[0-9])+)?|\\.(?:[0-9])+)(?:(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+)?)|(?:[0-9])+)', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 2: {'name': 'WS', 'pattern': {'value': '(?:[ \t\x0c\r\n])+', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 3: {'name': 'TRUE', 'pattern': {'value': 'true', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 4: {'name': 'FALSE', 'pattern': {'value': 'false', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 5: {'name': 'NULL', 'pattern': {'value': 'null', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 6: {'name': 'COMMA', 'pattern': {'value': ',', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 7: {'name': 'LSQB', 'pattern': {'value': '[', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 8: {'name': 'RSQB', 'pattern': {'value': ']', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 9: {'name': 'LBRACE', 'pattern': {'value': '{', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 10: {'name': 'RBRACE', 'pattern': {'value': '}', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 11: {'name': 'COLON', 'pattern': {'value': ':', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 12: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'SIGNED_NUMBER', 'filter_out': False, '__type__': 'Terminal'}], 'order': 3, 'alias': 'number', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 13: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'NULL', 'filter_out': True, '__type__': 'Terminal'}], 'order': 6, 'alias': 'null', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 14: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 15: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 16: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 17: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'array', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 18: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 19: {'origin': {'name': 'start', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 20: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 21: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 22: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 23: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 24: {'origin': {'name': 'pair', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}, {'name': 'COLON', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 25: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 26: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'TRUE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 4, 'alias': 'true', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 27: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 28: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 29: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'FALSE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 5, 'alias': 'false', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 30: {'origin': {'name': 'string', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'ESCAPED_STRING', 'filter_out': False, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 31: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'object', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}}
+{0: {'name': 'ESCAPED_STRING', 'pattern': {'value': '\\".*?(?<!\\\\)(\\\\\\\\)*?\\"', 'flags': [], '_width': [2, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 1: {'name': 'SIGNED_NUMBER', 'pattern': {'value': '(?:(?:\\+|\\-))?(?:(?:(?:[0-9])+(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+|(?:(?:[0-9])+\\.(?:(?:[0-9])+)?|\\.(?:[0-9])+)(?:(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+)?)|(?:[0-9])+)', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 2: {'name': 'WS', 'pattern': {'value': '(?:[ \t\x0c\r\n])+', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 3: {'name': 'TRUE', 'pattern': {'value': 'true', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 4: {'name': 'FALSE', 'pattern': {'value': 'false', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 5: {'name': 'NULL', 'pattern': {'value': 'null', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 6: {'name': 'COMMA', 'pattern': {'value': ',', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 7: {'name': 'LSQB', 'pattern': {'value': '[', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 8: {'name': 'RSQB', 'pattern': {'value': ']', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 9: {'name': 'LBRACE', 'pattern': {'value': '{', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 10: {'name': 'RBRACE', 'pattern': {'value': '}', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 11: {'name': 'COLON', 'pattern': {'value': ':', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 12: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 13: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'object', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 14: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 15: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 16: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 17: {'origin': {'name': 'string', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'ESCAPED_STRING', 'filter_out': False, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 18: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'array', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 19: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'SIGNED_NUMBER', 'filter_out': False, '__type__': 'Terminal'}], 'order': 3, 'alias': 'number', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 20: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 21: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'FALSE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 5, 'alias': 'false', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 22: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'TRUE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 4, 'alias': 'true', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 23: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 24: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 25: {'origin': {'name': 'pair', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}, {'name': 'COLON', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 26: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 27: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 28: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 29: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'NULL', 'filter_out': True, '__type__': 'Terminal'}], 'order': 6, 'alias': 'null', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 30: {'origin': {'name': 'start', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 31: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}}
 )
 Shift = 0
 Reduce = 1

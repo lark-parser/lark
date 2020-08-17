@@ -1,4 +1,4 @@
-# Automatic Tree Construction - Reference
+# Tree Construction Reference
 
 
 Lark builds a tree automatically based on the structure of the grammar, where each rule that is matched becomes a branch (node) in the tree, and its children are its matches, in the order of matching.
@@ -13,7 +13,7 @@ If `maybe_placeholders=False` (the default), then `[]` behaves like `()?`.
 
 If `maybe_placeholders=True`, then using `[item]` will return the item if it matched, or the value `None`, if it didn't.
 
-### Terminals
+## Terminals
 
 Terminals are always values in the tree, never branches.
 
@@ -74,7 +74,7 @@ Lark will parse "((hello world))" as:
 The brackets do not appear in the tree by design. The words appear because they are matched by a named terminal.
 
 
-# Shaping the tree
+## Shaping the tree
 
 Users can alter the automatic construction of the tree using a collection of grammar features.
 

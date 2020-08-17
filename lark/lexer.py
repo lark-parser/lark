@@ -90,6 +90,25 @@ class TerminalDef(Serialize):
 
 
 class Token(Str):
+    """Token of a lexer.
+
+    When using a lexer, the resulting tokens in the trees will be of the
+    Token class, which inherits from Python's string. So, normal string
+    comparisons and operations will work as expected. Tokens also have other
+    useful attributes.
+
+    Attributes:
+        type_: Name of the token (as specified in grammar)
+        pos_in_stream: The index of the token in the text
+        line: The line of the token in the text (starting with 1)
+        column: The column of the token in the text (starting with 1)
+        end_line: The line where the token ends
+        end_column: The next column after the end of the token. For example,
+            if the token is a single character with a column value of 4,
+            end_column will be 5.
+        end_pos: the index where the token ends (basically pos_in_stream +
+            len(token))
+    """
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
     def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):

@@ -96,6 +96,7 @@ def make_recons_rule_to_term(origin, term):
     return make_recons_rule(origin, [Terminal(term.name)], [term])
 
 def _isalnum(x):
+    # Categories defined here: https://www.python.org/dev/peps/pep-3131/
     return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
 
 class Reconstructor:

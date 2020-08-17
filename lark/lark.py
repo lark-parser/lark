@@ -27,7 +27,7 @@ class LarkOptions(Serialize):
 
     """
     OPTIONS_DOC = """
-    **General**
+    **General Options**
     
     start
         The start symbol. Either a string, or a list of strings for
@@ -60,7 +60,7 @@ class LarkOptions(Serialize):
     keep_all_tokens
         Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
 
-    **Algorithm**
+    **Algorithm Options**
 
     parser
         Decides which parser engine to use. Accepts "earley" or "lalr".
@@ -83,7 +83,7 @@ class LarkOptions(Serialize):
         - "explicit": The parser will return all derivations wrapped in
             "_ambig" tree nodes (i.e. a forest).
 
-    **Domain Specific**
+    **Domain Specific Options**
 
     postlex
         Lexer post-processing (Default: None) Only works with the
@@ -317,8 +317,8 @@ class Lark(Serialize):
                 self.save(f)
 
     # TODO: merge with above
-    if __init__.__doc__:
-        __init__.__doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
+    if __doc__:
+        __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 

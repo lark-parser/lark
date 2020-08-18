@@ -88,6 +88,8 @@ class LarkOptions(Serialize):
             Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
             A callback for editing the terminals before parse.
+
+    **=== End Options ===**
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -306,7 +308,6 @@ class Lark(Serialize):
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
-    # TODO: merge with above
     __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'

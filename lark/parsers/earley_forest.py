@@ -363,6 +363,75 @@ class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
             else:
                 self.result = result
 
+class CompleteForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
+    """
+    An augmented version of ForestToAmbiguousTreeVisitor that is designed to
+    handle ambiguous intermediate nodes as well as ambiguous symbol nodes.
+
+    On the way down:
+
+    - When an ambiguous intermediate node is encountered, an '_iambig' node
+      is inserted into the tree.
+    - Each possible derivation of an ambiguous intermediate node is represented
+      by an '_inter' node added as a child of the corresponding '_iambig' node.
+
+    On the way up, these nodes are propagated up the tree and collapsed
+    into a single '_ambig' node for the nearest symbol node ancestor.
+    This is achieved by the AmbiguousIntermediateExpander contained in
+    the callbacks.
+    """
+
+    def _collapse_ambig(self, children):
+        new_children = []
+        for child in children:
+            if child.data == '_ambig':
+                new_children += child.children
+            else:
+                new_children.append(child)
+        return new_children
+
+    def visit_token_node(self, node):
+        self.output_stack[-1].children.append(node)
+
+    def visit_symbol_node_in(self, node):
+        if node.is_ambiguous:
+            if self.forest_sum_visitor and isinf(node.priority):
+                self.forest_sum_visitor.visit(node)
+            if node.is_intermediate:
+                self.output_stack.append(Tree('_iambig', []))
+            else:
+                self.output_stack.append(Tree('_ambig', []))
+        return iter(node.children)
+
+    def visit_symbol_node_out(self, node):
+        if node.is_ambiguous:
+            result = self.output_stack.pop()
+            if not node.is_intermediate:
+                result = Tree('_ambig', self._collapse_ambig(result.children))
+            if self.output_stack:
+                self.output_stack[-1].children.append(result)
+            else:
+                self.result = result
+
+    def visit_packed_node_in(self, node):
+        if not node.parent.is_intermediate:
+            self.output_stack.append(Tree('drv', []))
+        elif node.parent.is_ambiguous:
+            self.output_stack.append(Tree('_inter', []))
+        return iter([node.left, node.right])
+
+    def visit_packed_node_out(self, node):
+        if not node.parent.is_intermediate:
+            result = self.callbacks[node.rule](self.output_stack.pop().children)
+        elif node.parent.is_ambiguous:
+            result = self.output_stack.pop()
+        else:
+            return
+        if self.output_stack:
+            self.output_stack[-1].children.append(result)
+        else:
+            self.result = result
+
 class ForestToPyDotVisitor(ForestVisitor):
     """
     A Forest visitor which writes the SPPF to a PNG.

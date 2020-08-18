@@ -460,6 +460,221 @@ def _make_full_earley_test(LEXER):
                 ])
             self.assertEqual(res, expected)
 
+        def test_ambiguous_intermediate_node(self):
+            grammar = """
+            start: ab bc d?
+            !ab: "A" "B"?
+            !bc: "B"? "C"
+            !d: "D"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCD")
+            expected = {
+                Tree('start', [Tree('ab', ['A']), Tree('bc', ['B', 'C']), Tree('d', ['D'])]),
+                Tree('start', [Tree('ab', ['A', 'B']), Tree('bc', ['C']), Tree('d', ['D'])])
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_ambiguous_symbol_and_intermediate_nodes(self):
+            grammar = """
+            start: ab bc cd
+            !ab: "A" "B"?
+            !bc: "B"? "C"?
+            !cd: "C"? "D"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCD")
+            expected = {
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', ['C']),
+                    Tree('cd', ['D'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', []),
+                    Tree('cd', ['C', 'D'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B', 'C']),
+                    Tree('cd', ['D'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B']),
+                    Tree('cd', ['C', 'D'])
+                ]),
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_nested_ambiguous_intermediate_nodes(self):
+            grammar = """
+            start: ab bc cd e?
+            !ab: "A" "B"?
+            !bc: "B"? "C"?
+            !cd: "C"? "D"
+            !e: "E"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCDE")
+            expected = {
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', ['C']),
+                    Tree('cd', ['D']),
+                    Tree('e', ['E'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B', 'C']),
+                    Tree('cd', ['D']),
+                    Tree('e', ['E'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B']),
+                    Tree('cd', ['C', 'D']),
+                    Tree('e', ['E'])
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', []),
+                    Tree('cd', ['C', 'D']),
+                    Tree('e', ['E'])
+                ]),
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_nested_ambiguous_intermediate_nodes2(self):
+            grammar = """
+            start: ab bc cd de f
+            !ab: "A" "B"?
+            !bc: "B"? "C"?
+            !cd: "C"? "D"?
+            !de: "D"? "E"
+            !f: "F"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCDEF")
+            expected = {
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', ['C']),
+                    Tree('cd', ['D']),
+                    Tree('de', ['E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B', 'C']),
+                    Tree('cd', ['D']),
+                    Tree('de', ['E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B']),
+                    Tree('cd', ['C', 'D']),
+                    Tree('de', ['E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B']),
+                    Tree('cd', ['C']),
+                    Tree('de', ['D', 'E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A', "B"]),
+                    Tree('bc', []),
+                    Tree('cd', ['C']),
+                    Tree('de', ['D', 'E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A']),
+                    Tree('bc', ['B', 'C']),
+                    Tree('cd', []),
+                    Tree('de', ['D', 'E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', []),
+                    Tree('cd', ['C', 'D']),
+                    Tree('de', ['E']),
+                    Tree('f', ['F']),
+                ]),
+                Tree('start', [
+                    Tree('ab', ['A', 'B']),
+                    Tree('bc', ['C']),
+                    Tree('cd', []),
+                    Tree('de', ['D', 'E']),
+                    Tree('f', ['F']),
+                ]),
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_ambiguous_intermediate_node_unnamed_token(self):
+            grammar = """
+            start: ab bc "D"
+            !ab: "A" "B"?
+            !bc: "B"? "C"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCD")
+            expected = {
+                Tree('start', [Tree('ab', ['A']), Tree('bc', ['B', 'C'])]),
+                Tree('start', [Tree('ab', ['A', 'B']), Tree('bc', ['C'])])
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_ambiguous_intermediate_node_inlined_rule(self):
+            grammar = """
+            start: ab _bc d?
+            !ab: "A" "B"?
+            _bc: "B"? "C"
+            !d: "D"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCD")
+            expected = {
+                Tree('start', [Tree('ab', ['A']), Tree('d', ['D'])]),
+                Tree('start', [Tree('ab', ['A', 'B']), Tree('d', ['D'])])
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
+        def test_ambiguous_intermediate_node_conditionally_inlined_rule(self):
+            grammar = """
+            start: ab bc d?
+            !ab: "A" "B"?
+            !?bc: "B"? "C"
+            !d: "D"
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("ABCD")
+            expected = {
+                Tree('start', [Tree('ab', ['A']), Tree('bc', ['B', 'C']), Tree('d', ['D'])]),
+                Tree('start', [Tree('ab', ['A', 'B']), 'C', Tree('d', ['D'])])
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
         def test_fruitflies_ambig(self):
             grammar = """
                 start: noun verb noun        -> simple

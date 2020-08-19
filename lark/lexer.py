@@ -93,12 +93,12 @@ class Token(Str):
     """A string with meta-information, that is produced by the lexer.
 
     When parsing text, the resulting chunks of the input that haven't been discarded,
-    will end up in the tree as Token instances. The Token class inherits from Python's `str`,
+    will end up in the tree as Token instances. The Token class inherits from Python's ``str``,
     so normal string comparisons and operations will work as expected.
 
     Attributes:
         type_: Name of the token (as specified in grammar)
-        value: Value of the token (redundant, as `token.value == token` will always be true)
+        value: Value of the token (redundant, as ``token.value == token`` will always be true)
         pos_in_stream: The index of the token in the text
         line: The line of the token in the text (starting with 1)
         column: The column of the token in the text (starting with 1)
@@ -106,7 +106,7 @@ class Token(Str):
         end_column: The next column after the end of the token. For example,
             if the token is a single character with a column value of 4,
             end_column will be 5.
-        end_pos: the index where the token ends (basically `pos_in_stream + len(token)`)
+        end_pos: the index where the token ends (basically ``pos_in_stream + len(token)``)
     """
     __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 

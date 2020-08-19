@@ -1,5 +1,5 @@
 """
-Example Driver Error Reporting
+Example-Driven Error Reporting
 ==============================
 
 A demonstration of example-driven error reporting with the LALR parser

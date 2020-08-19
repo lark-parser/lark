@@ -1,6 +1,6 @@
 """
-Real Python Parser
-==================
+Grammar-complete Python Parser
+==============================
 
 A fully-working Python 2 & 3 parser (but not production ready yet!)
 

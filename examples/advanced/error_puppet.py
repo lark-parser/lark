@@ -1,5 +1,5 @@
 """
-Error handling with parsing puppet
+Error handling with a puppet
 ==================================
 
 This example demonstrates error handling using a parsing puppet in LALR

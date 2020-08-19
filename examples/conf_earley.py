@@ -1,17 +1,19 @@
-#
-# This example demonstrates parsing using the dynamic-lexer earley frontend
-#
-# Using a lexer for configuration files is tricky, because values don't
-# have to be surrounded by delimiters. Using a standard lexer for this just won't work.
-#
-# In this example we use a dynamic lexer and let the Earley parser resolve the ambiguity.
-#
-# Another approach is to use the contextual lexer with LALR. It is less powerful than Earley,
-# but it can handle some ambiguity when lexing and it's much faster.
-# See examples/conf_lalr.py for an example of that approach.
-#
+"""
+Earley’s dynamic lexer
+======================
 
+Demonstrates the power of Earley’s dynamic lexer on a toy configuration language
 
+Using a lexer for configuration files is tricky, because values don't
+have to be surrounded by delimiters. Using a standard lexer for this just won't work.
+
+In this example we use a dynamic lexer and let the Earley parser resolve the ambiguity.
+
+Another approach is to use the contextual lexer with LALR. It is less powerful than Earley,
+but it can handle some ambiguity when lexing and it's much faster.
+See examples/conf_lalr.py for an example of that approach.
+
+"""
 from lark import Lark
 
 parser = Lark(r"""

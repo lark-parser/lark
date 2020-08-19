@@ -1,7 +1,11 @@
-#
-# This example demonstrates usage of the included Python grammars
-#
+"""
+Real Python Parser
+==================
 
+A fully-working Python 2 & 3 parser (but not production ready yet!)
+
+This example demonstrates usage of the included Python grammars
+"""
 import sys
 import os, os.path
 from io import open

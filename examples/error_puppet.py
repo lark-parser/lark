@@ -1,11 +1,14 @@
-#
-# This example demonstrates error handling using a parsing puppet in LALR
-#
-# When the parser encounters an UnexpectedToken exception, it creates a
-# parsing puppet with the current parse-state, and lets you control how
-# to proceed step-by-step. When you've achieved the correct parse-state,
-# you can resume the run by returning True.
-#
+"""
+Error handling with parsing puppet
+==================================
+
+This example demonstrates error handling using a parsing puppet in LALR
+
+When the parser encounters an UnexpectedToken exception, it creates a
+parsing puppet with the current parse-state, and lets you control how
+to proceed step-by-step. When you've achieved the correct parse-state,
+you can resume the run by returning True.
+"""
 
 from lark import UnexpectedToken, Token
 

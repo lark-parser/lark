@@ -3,10 +3,10 @@
 import re
 from collections import defaultdict
 
-from lark import Tree, Token
-from lark.common import ParserConf
-from lark.parsers import earley
-from lark.grammar import Rule, Terminal, NonTerminal
+from . import Tree, Token
+from .common import ParserConf
+from .parsers import earley
+from .grammar import Rule, Terminal, NonTerminal
 
 
 def is_discarded_terminal(t):

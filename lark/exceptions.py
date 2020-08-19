@@ -49,11 +49,11 @@ class UnexpectedInput(LarkError):
         if not isinstance(text, bytes):
             before = text[start:pos].rsplit('\n', 1)[-1]
             after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before) + '^\n'
+            return before + after + '\n' + ' ' * len(before.expandtabs()) + '^\n'
         else:
             before = text[start:pos].rsplit(b'\n', 1)[-1]
             after = text[pos:end].split(b'\n', 1)[0]
-            return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
+            return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """Allows you to detect what's wrong in the input text by matching

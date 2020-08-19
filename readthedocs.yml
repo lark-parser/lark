@@ -2,6 +2,11 @@ version: 2
 
 formats: all
 
+python:
+   version: 3.7
+   install:
+      - requirements: docs/requirements.txt
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/conf.py

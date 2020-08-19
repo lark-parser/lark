@@ -3,7 +3,7 @@
 Warning: Experimental feature! Use at your own risk.
 """
 
-from lark.exceptions import GrammarError
+from .exceptions import GrammarError
 from . import UnexpectedToken, Tree, Token
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal

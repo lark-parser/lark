@@ -139,9 +139,9 @@ class TreeMatcher:
     def match_tree(self, tree, rulename):
         """Match the elements of `tree` to the symbols of rule `rulename`.
 
-        Args:
+        Parameters:
             tree (Tree): the tree node to match
-            rulename ([type]): [description]
+            rulename (str): The expected full rule name (including template args)
 
         Returns:
             Tree: an unreduced tree that matches `rulename`

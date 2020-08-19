@@ -1,3 +1,9 @@
+"""
+Lark Grammar
+============
+
+A reference implementation of the Lark grammar (using LALR(1))
+"""
 from lark import Lark
 
 parser = Lark(open('examples/lark.lark'), parser="lalr")

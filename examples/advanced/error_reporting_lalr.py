@@ -1,7 +1,10 @@
-#
-# This demonstrates example-driven error reporting with the LALR parser
-#
+"""
+Example Driver Error Reporting
+==============================
 
+A demonstration of example-driven error reporting with the LALR parser
+
+"""
 from lark import Lark, UnexpectedInput
 
 from .json_parser import json_grammar   # Using the grammar from the json_parser example

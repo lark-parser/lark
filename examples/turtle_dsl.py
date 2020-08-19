@@ -1,4 +1,9 @@
-# This example implements a LOGO-like toy language for Python's turtle, with interpreter.
+"""
+Turtle DSL
+==========
+
+Implements a LOGO-like toy language for Python’s turtle, with interpreter.
+"""
 
 try:
     input = raw_input   # For Python2 compatibility

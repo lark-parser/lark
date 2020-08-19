@@ -1,4 +1,7 @@
-"""Tree validator based on Lark grammar"""
+"""Tree validator based on Lark grammar
+
+Warning: Experimental feature! Use at your own risk.
+"""
 
 from lark.exceptions import GrammarError
 from . import UnexpectedToken, Tree, Token

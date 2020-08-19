@@ -11,3 +11,4 @@ tags
 /dist
 /build
 docs/_build
+docs/examples

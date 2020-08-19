@@ -1,8 +1,7 @@
 Examples for Lark
 =================
 
-How to run the examples
-^^^^^^^^^^^^^^^^^^^^^^^
+**How to run the examples**:
 
 After cloning the repo, open the terminal into the root directory of the
 project, and run the following:

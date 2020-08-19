@@ -176,5 +176,9 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# -- Sphinx gallery config -------------------------------------------
 
-
+sphinx_gallery_conf = {
+    'examples_dirs': ['../examples'],
+    'gallery_dirs': ['examples'],
+}

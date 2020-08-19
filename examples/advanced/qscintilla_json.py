@@ -1,10 +1,14 @@
-#
-# This example shows how to write a syntax-highlighted editor with Qt and Lark
-#
-# Requirements:
-#
-#   PyQt5==5.10.1
-#   QScintilla==2.10.4
+"""
+Syntax Highlighting
+===================
+
+This example shows how to write a syntax-highlighted editor with Qt and Lark
+
+Requirements:
+
+  PyQt5==5.10.1
+  QScintilla==2.10.4
+"""
 
 import sys
 import textwrap

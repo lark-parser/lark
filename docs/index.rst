@@ -24,6 +24,7 @@ Welcome to Lark's documentation!
    how_to_use
    how_to_develop
    recipes
+   examples/index
 
 
 .. toctree::

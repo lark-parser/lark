@@ -37,6 +37,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'recommonmark',
+    'sphinx_gallery.gen_gallery'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -175,5 +176,9 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# -- Sphinx gallery config -------------------------------------------
 
-
+sphinx_gallery_conf = {
+    'examples_dirs': ['../examples'],
+    'gallery_dirs': ['examples'],
+}

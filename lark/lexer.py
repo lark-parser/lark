@@ -97,7 +97,7 @@ class Token(Str):
     so normal string comparisons and operations will work as expected.
 
     Attributes:
-        type_: Name of the token (as specified in grammar)
+        type: Name of the token (as specified in grammar)
         value: Value of the token (redundant, as ``token.value == token`` will always be true)
         pos_in_stream: The index of the token in the text
         line: The line of the token in the text (starting with 1)

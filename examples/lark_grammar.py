@@ -2,7 +2,7 @@
 Lark Grammar
 ============
 
-A reference implementation of the Lark grammar (using LALR(1) + standard lexer)
+A reference implementation of the Lark grammar (using LALR(1))
 """
 from lark import Lark
 

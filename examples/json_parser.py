@@ -2,8 +2,6 @@
 Simple JSON Parser
 ==================
 
-A simple JSON parser (comes with a tutorial, see docs)
-
 The code is short and clear, and outperforms every other parser (that's written in Python).
 For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
 """

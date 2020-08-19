@@ -8,6 +8,7 @@ from .test_trees import TestTrees
 from .test_tools import TestStandalone
 from .test_cache import TestCache
 from .test_reconstructor import TestReconstructor
+from .test_validator import TestValidator
 
 try:
     from .test_nearley.test_nearley import TestNearley

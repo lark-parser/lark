@@ -4,18 +4,22 @@ Lark Grammar
 
 A reference implementation of the Lark grammar (using LALR(1))
 """
-from lark import Lark
+import lark
+from pathlib import Path
 
-parser = Lark(open('examples/lark.lark'), parser="lalr")
+parser = lark.Lark.open('lark.lark', rel_to=__file__, parser="lalr")
+
+examples_path = Path(__file__).parent
+lark_path = Path(lark.__file__).parent
 
 grammar_files = [
-    'examples/python2.lark',
-    'examples/python3.lark',
-    'examples/lark.lark',
-    'examples/relative-imports/multiples.lark',
-    'examples/relative-imports/multiple2.lark',
-    'examples/relative-imports/multiple3.lark',
-    'lark/grammars/common.lark',
+    examples_path / 'lark.lark',
+    examples_path / 'advanced/python2.lark',
+    examples_path / 'advanced/python3.lark',
+    examples_path / 'relative-imports/multiples.lark',
+    examples_path / 'relative-imports/multiple2.lark',
+    examples_path / 'relative-imports/multiple3.lark',
+    lark_path / 'grammars/common.lark',
 ]
 
 def test():

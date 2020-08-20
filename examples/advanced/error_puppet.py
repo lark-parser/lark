@@ -10,9 +10,9 @@ to proceed step-by-step. When you've achieved the correct parse-state,
 you can resume the run by returning True.
 """
 
-from lark import UnexpectedToken, Token
+from lark import Token
 
-from .json_parser import json_parser
+from _json_parser import json_parser
 
 def ignore_errors(e):
     if e.token.type == 'COMMA':

@@ -14,7 +14,7 @@ import json
 from lark import Lark
 from lark.reconstruct import Reconstructor
 
-from .json_parser import json_grammar
+from _json_parser import json_grammar
 
 test_json = '''
     {

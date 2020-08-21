@@ -256,6 +256,57 @@ class ForestVisitor(object):
 
         return self.result
 
+class ForestTransformer(ForestVisitor):
+
+    def __init__(self):
+        self.data = dict()
+        self.node_stack = deque()
+
+    def visit(self, root):
+        super(ForestTransformer, self).visit(root)
+
+    def transform(self, root):
+        self.visit(root)
+        assert len(self.data[id(root)]) == 1
+        return self.data[id(root)][0]
+
+    def transform_symbol_node(self, node, data):
+        return node
+
+    def transform_intermediate_node(self, node, data):
+        return node
+
+    def transform_packed_node(self, node, data):
+        return node
+
+    def transform_token_node(self, node):
+        return node
+
+    def visit_symbol_node_in(self, node):
+        self.node_stack.append(id(node))
+        self.data[id(node)] = []
+        return node.children
+
+    def visit_packed_node_in(self, node):
+        self.node_stack.append(id(node))
+        self.data[id(node)] = []
+        return node.children
+
+    def visit_token_node(self, node):
+        self.data[self.node_stack[-1]].append(self.transform_token_node(node))
+    def visit_symbol_node_out(self, node):
+        self.data[self.node_stack[-1]].append(self.transform_symbol_node(node, self.data[id(node)]))
+        self.node_stack.pop()
+
+    def visit_intermediate_node_out(self, node):
+        self.data[self.node_stack[-1]].append(self.transform_intermediate_node(node, self.data[id(node)]))
+        self.node_stack.pop()
+
+    def visit_packed_node_out(self, node):
+        self.data[self.node_stack[-1]].append(self.transform_packed_node(node, self.data[id(node)]))
+        self.node_stack.pop()
+
+
 class ForestSumVisitor(ForestVisitor):
     """
     A visitor for prioritizing ambiguous parts of the Forest.

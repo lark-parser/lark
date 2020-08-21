@@ -13,6 +13,8 @@ from collections import deque
 from operator import attrgetter
 from importlib import import_module
 
+
+from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
 from ..exceptions import ParseError
@@ -162,10 +164,6 @@ class ForestVisitor(object):
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
     def visit_symbol_node_out(self, node): pass
-    # def visit_intermediate_node_in(self, node):
-        # self.visit_symbol_node_in(node)
-    # def visit_intermediate_node_out(self, node):
-        # self.visit_symbol_node_out(node)
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
 
@@ -241,6 +239,10 @@ class ForestVisitor(object):
 
                 if id(next_node) in visiting:
                     raise ParseError("Infinite recursion in grammar!")
+
+                if not isinstance(next_node, ForestNode) and \
+                        not isinstance(next_node, Token):
+                    next_node = iter(next_node)
 
                 input_stack.append(next_node)
                 continue

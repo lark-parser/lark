@@ -166,6 +166,8 @@ class ForestVisitor(object):
     def visit_symbol_node_out(self, node): pass
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
+    def on_cycle(self, node):
+        return False
 
     def visit(self, root):
         self.result = None
@@ -189,6 +191,7 @@ class ForestVisitor(object):
         vino = getattr(self, 'visit_intermediate_node_out', vsno)
         vini = getattr(self, 'visit_intermediate_node_in', vsni)
         vtn = getattr(self, 'visit_token_node')
+        oc = getattr(self, 'on_cycle')
 
         while input_stack:
             current = next(reversed(input_stack))
@@ -205,7 +208,10 @@ class ForestVisitor(object):
                     continue
 
                 if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
+                    if not oc(next_node):
+                        continue
+                        
+                    # raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
                 continue
@@ -237,12 +243,13 @@ class ForestVisitor(object):
                 if next_node is None:
                     continue
 
-                if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar!")
-
                 if not isinstance(next_node, ForestNode) and \
                         not isinstance(next_node, Token):
                     next_node = iter(next_node)
+                elif id(next_node) in visiting:
+                    if not oc(next_node):
+                        continue
+                    # raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
                 continue

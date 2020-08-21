@@ -158,6 +158,10 @@ class ForestVisitor(object):
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
     def visit_symbol_node_out(self, node): pass
+    # def visit_intermediate_node_in(self, node):
+        # self.visit_symbol_node_in(node)
+    # def visit_intermediate_node_out(self, node):
+        # self.visit_symbol_node_out(node)
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
 
@@ -180,7 +184,10 @@ class ForestVisitor(object):
         vpni = getattr(self, 'visit_packed_node_in')
         vsno = getattr(self, 'visit_symbol_node_out')
         vsni = getattr(self, 'visit_symbol_node_in')
+        vino = getattr(self, 'visit_intermediate_node_out', vsno)
+        vini = getattr(self, 'visit_intermediate_node_in', vsni)
         vtn = getattr(self, 'visit_token_node')
+
         while input_stack:
             current = next(reversed(input_stack))
             try:
@@ -208,15 +215,23 @@ class ForestVisitor(object):
 
             current_id = id(current)
             if current_id in visiting:
-                if isinstance(current, PackedNode):    vpno(current)
-                else:                                  vsno(current)
+                if isinstance(current, PackedNode):    
+                    vpno(current)
+                elif current.is_intermediate:
+                    vino(current)
+                else:
+                    vsno(current)
                 input_stack.pop()
                 visiting.remove(current_id)
                 continue
             else:
                 visiting.add(current_id)
-                if isinstance(current, PackedNode): next_node = vpni(current)
-                else:                               next_node = vsni(current)
+                if isinstance(current, PackedNode): 
+                    next_node = vpni(current)
+                elif current.is_intermediate:
+                    next_node = vini(current)
+                else:
+                    next_node = vsni(current)
                 if next_node is None:
                     continue
 

@@ -125,6 +125,10 @@ class PackedNode(ForestNode):
         """
         return self.is_empty, -self.priority, self.rule.order
 
+    @property
+    def children(self):
+        return filter(lambda x: x is not None, [self.left, self.right])
+
     def __iter__(self):
         return iter([self.left, self.right])
 

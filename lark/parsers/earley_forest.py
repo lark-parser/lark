@@ -17,6 +17,7 @@ from functools import partial, wraps
 
 
 from ..parse_tree_builder import AmbiguousIntermediateExpander
+from .. visitors import Discard
 from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
@@ -269,9 +270,9 @@ class ForestTransformer(ForestVisitor):
         self.node_stack.append('result')
         self.data['result'] = []
         self.visit(root)
-        # print(self.data[id(root)])
-        assert len(self.data['result']) == 1
-        return self.data['result'][0]
+        assert len(self.data['result']) <= 1
+        if self.data['result']:
+            return self.data['result'][0]
 
     def transform_symbol_node(self, node, data):
         return node
@@ -296,20 +297,34 @@ class ForestTransformer(ForestVisitor):
         return node.children
 
     def visit_token_node(self, node):
-        self.data[self.node_stack[-1]].append(self.transform_token_node(node))
+        try:
+            self.data[self.node_stack[-1]].append(self.transform_token_node(node))
+        except Discard:
+            pass
 
     def visit_symbol_node_out(self, node):
         self.node_stack.pop()
-        transformed = self.transform_symbol_node(node, self.data[id(node)])
-        self.data[self.node_stack[-1]].append(transformed)
+        try:
+            transformed = self.transform_symbol_node(node, self.data[id(node)])
+            self.data[self.node_stack[-1]].append(transformed)
+        except Discard:
+            pass
 
     def visit_intermediate_node_out(self, node):
         self.node_stack.pop()
-        self.data[self.node_stack[-1]].append(self.transform_intermediate_node(node, self.data[id(node)]))
+        try:
+            transformed = self.transform_intermediate_node(node, self.data[id(node)])
+            self.data[self.node_stack[-1]].append(transformed)
+        except Discard:
+            pass
 
     def visit_packed_node_out(self, node):
         self.node_stack.pop()
-        self.data[self.node_stack[-1]].append(self.transform_packed_node(node, self.data[id(node)]))
+        try:
+            transformed = self.transform_packed_node(node, self.data[id(node)])
+            self.data[self.node_stack[-1]].append(transformed)
+        except Discard:
+            pass
 
 
 class ForestSumVisitor(ForestVisitor):
@@ -540,7 +555,10 @@ class ForestToParseTree(ForestTransformer):
     def _call_ambig_func(self, node, data):
         if len(data) > 1:
             return self.tree_class('_ambig', data)
+        # elif data:
         return data[0]
+        # else:
+            # raise Discard
 
     def transform_symbol_node(self, node, data):
         data = self._collapse_ambig(data)
@@ -550,7 +568,10 @@ class ForestToParseTree(ForestTransformer):
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
             return self.tree_class('_iambig', children)
+        # elif data:
         return data[0]
+        # else:
+            # raise Discard
 
     def transform_packed_node(self, node, data):
         children = list()
@@ -611,7 +632,10 @@ class ForestToTree(ForestToParseTree):
         try:
             if len(data) > 1:
                 return self.tree_class('_ambig', data)
-            return data[0]
+            elif data:
+                return data[0]
+            else:
+                raise Discard
         except TypeError:
             return data
 

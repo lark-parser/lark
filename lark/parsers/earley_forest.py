@@ -15,6 +15,7 @@ from importlib import import_module
 from itertools import chain
 
 
+from ..parse_tree_builder import AmbiguousIntermediateExpander
 from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
@@ -516,7 +517,7 @@ class CompleteForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
 
 class ForestToParseTree(ForestTransformer):
 
-    def __init__(self, tree_class, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+    def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
         super(ForestToParseTree, self).__init__()
         self.tree_class = tree_class
         self.callbacks = callbacks
@@ -532,12 +533,12 @@ class ForestToParseTree(ForestTransformer):
                 new_children.append(child)
         return new_children
 
+    def _get_callback(self, rule):
+        return self.callbacks[rule]
+
     def transform_symbol_node(self, node, data):
-        # print(data)
         if len(data) > 1:
             return self.tree_class('_ambig', self._collapse_ambig(data))
-            assert node.is_ambiguous
-            return self.tree_class('_ambig', data)
         return data[0]
 
     def transform_intermediate_node(self, node, data):
@@ -555,7 +556,7 @@ class ForestToParseTree(ForestTransformer):
                 children.append(item)
         if node.parent.is_intermediate:
             return children
-        return self.callbacks[node.rule](children)
+        return self._get_callback(children)
 
     def visit_symbol_node_in(self, node):
         super(ForestToParseTree, self).visit_symbol_node_in(node)
@@ -564,6 +565,27 @@ class ForestToParseTree(ForestTransformer):
         if self.resolve_ambiguity:
             return node.children[0]
         return node.children
+
+class ForestToTree(ForestToParseTree):
+
+    def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+        super(ForestToTree, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
+        self.__default__ = partial(self.transform_symbol_node, None)
+
+    def __default_token__(self, node):
+        return node
+
+    def transform_token_node(self, node):
+        try:
+            return getattr(self, node.type)(node)
+        except AttributeError:
+            return self.__default_token__(node)
+
+    def _get_callback(self, rule):
+        if self.resolve_ambiguity:
+            return getattr(self, rule, self.__default__)
+        wrapper = AmbiguousIntermediateExpander(self.tree_class)
+        return wrapper(getattr(self, rule, self.__default__))
 
 
 class ForestToPyDotVisitor(ForestVisitor):

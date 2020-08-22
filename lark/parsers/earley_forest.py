@@ -12,6 +12,7 @@ from math import isinf
 from collections import deque
 from operator import attrgetter
 from importlib import import_module
+from itertools import chain
 
 
 from ..lexer import Token
@@ -262,13 +263,13 @@ class ForestTransformer(ForestVisitor):
         self.data = dict()
         self.node_stack = deque()
 
-    def visit(self, root):
-        super(ForestTransformer, self).visit(root)
-
     def transform(self, root):
+        self.node_stack.append('result')
+        self.data['result'] = []
         self.visit(root)
-        assert len(self.data[id(root)]) == 1
-        return self.data[id(root)][0]
+        # print(self.data[id(root)])
+        assert len(self.data['result']) == 1
+        return self.data['result'][0]
 
     def transform_symbol_node(self, node, data):
         return node
@@ -294,17 +295,19 @@ class ForestTransformer(ForestVisitor):
 
     def visit_token_node(self, node):
         self.data[self.node_stack[-1]].append(self.transform_token_node(node))
+
     def visit_symbol_node_out(self, node):
-        self.data[self.node_stack[-1]].append(self.transform_symbol_node(node, self.data[id(node)]))
         self.node_stack.pop()
+        transformed = self.transform_symbol_node(node, self.data[id(node)])
+        self.data[self.node_stack[-1]].append(transformed)
 
     def visit_intermediate_node_out(self, node):
-        self.data[self.node_stack[-1]].append(self.transform_intermediate_node(node, self.data[id(node)]))
         self.node_stack.pop()
+        self.data[self.node_stack[-1]].append(self.transform_intermediate_node(node, self.data[id(node)]))
 
     def visit_packed_node_out(self, node):
-        self.data[self.node_stack[-1]].append(self.transform_packed_node(node, self.data[id(node)]))
         self.node_stack.pop()
+        self.data[self.node_stack[-1]].append(self.transform_packed_node(node, self.data[id(node)]))
 
 
 class ForestSumVisitor(ForestVisitor):
@@ -510,6 +513,58 @@ class CompleteForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
             self.output_stack[-1].children.append(result)
         else:
             self.result = result
+
+class ForestToParseTree(ForestTransformer):
+
+    def __init__(self, tree_class, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+        super(ForestToParseTree, self).__init__()
+        self.tree_class = tree_class
+        self.callbacks = callbacks
+        self.prioritizer = prioritizer
+        self.resolve_ambiguity = resolve_ambiguity
+
+    def _collapse_ambig(self, children):
+        new_children = []
+        for child in children:
+            if child.data == '_ambig':
+                new_children += child.children
+            else:
+                new_children.append(child)
+        return new_children
+
+    def transform_symbol_node(self, node, data):
+        # print(data)
+        if len(data) > 1:
+            return self.tree_class('_ambig', self._collapse_ambig(data))
+            assert node.is_ambiguous
+            return self.tree_class('_ambig', data)
+        return data[0]
+
+    def transform_intermediate_node(self, node, data):
+        if len(data) > 1:
+            children = [self.tree_class('_inter', c) for c in data]
+            return self.tree_class('_iambig', children)
+        return data[0]
+
+    def transform_packed_node(self, node, data):
+        children = list()
+        for item in data:
+            if isinstance(item, list):
+                children += item
+            else:
+                children.append(item)
+        if node.parent.is_intermediate:
+            return children
+        return self.callbacks[node.rule](children)
+
+    def visit_symbol_node_in(self, node):
+        super(ForestToParseTree, self).visit_symbol_node_in(node)
+        if self.prioritizer and node.is_ambiguous and isinf(node.priority):
+            self.prioritizer.visit(node)
+        if self.resolve_ambiguity:
+            return node.children[0]
+        return node.children
+
 
 class ForestToPyDotVisitor(ForestVisitor):
     """

@@ -170,8 +170,7 @@ class ForestVisitor(object):
     def visit_symbol_node_out(self, node): pass
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
-    def on_cycle(self, node, get_path):
-        print(get_path())
+    def on_cycle(self, node, get_path): pass
 
     def visit(self, root):
         def make_get_path(node):
@@ -181,7 +180,6 @@ class ForestVisitor(object):
                     index -= 1
                 return path[index:]
             return get_path
-
 
         self.result = None
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
@@ -266,6 +264,7 @@ class ForestVisitor(object):
                     next_node = iter(next_node)
                 elif id(next_node) in visiting:
                     oc(next_node, make_get_path(next_node))
+                    continue
                     # raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
@@ -552,6 +551,22 @@ class ForestToParseTree(ForestTransformer):
         self.callbacks = callbacks
         self.prioritizer = prioritizer
         self.resolve_ambiguity = resolve_ambiguity
+        self._on_cycle_retreat = False
+        self._cycle_node = None
+
+    def on_cycle(self, node, get_path):
+        logger.warning("Cycle encountered in the SPPF at node: %s. "
+                "As infinite ambiguities cannot be represented in a tree, "
+                "this family of derivations will be discarded.", node)
+        self._cycle_node = node
+        self._on_cycle_retreat = True
+
+    def _check_cycle(self, node):
+        if self._on_cycle_retreat:
+            if id(node) == id(self._cycle_node):
+                self._on_cycle_retreat = False
+            else:
+                raise Discard
 
     def _collapse_ambig(self, children):
         new_children = []
@@ -568,25 +583,27 @@ class ForestToParseTree(ForestTransformer):
     def _call_ambig_func(self, node, data):
         if len(data) > 1:
             return self.tree_class('_ambig', data)
-        # elif data:
-        return data[0]
+        elif data:
+            return data[0]
+        # elif self.cycle_free_count > 0:
+        return self.tree_class(node.s.name, [])
         # else:
             # raise Discard
 
     def transform_symbol_node(self, node, data):
+        self._check_cycle(node)
         data = self._collapse_ambig(data)
         return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
+        self._check_cycle(node)
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
             return self.tree_class('_iambig', children)
-        # elif data:
         return data[0]
-        # else:
-            # raise Discard
 
     def transform_packed_node(self, node, data):
+        self._check_cycle(node)
         children = list()
         for item in data:
             if isinstance(item, list):
@@ -598,14 +615,21 @@ class ForestToParseTree(ForestTransformer):
         return self._call_rule_func(node, children)
 
     def visit_symbol_node_in(self, node):
+        self._on_cycle_retreat = False
         super(ForestToParseTree, self).visit_symbol_node_in(node)
-        # if node.start == node.end:
-            # return
         if self.prioritizer and node.is_ambiguous and isinf(node.priority):
             self.prioritizer.visit(node)
         if self.resolve_ambiguity:
             return node.children[0]
         return node.children
+
+    def visit_packed_node_in(self, node):
+        self._on_cycle_retreat = False
+        return super(ForestToParseTree, self).visit_packed_node_in(node)
+
+    def visit_token_node_in(self, node):
+        self._on_cycle_retreat = False
+        return super(ForestToParseTree, self).visit_token_node_in(node)
 
 
 def handles_ambiguity(func):
@@ -629,6 +653,9 @@ class ForestToTree(ForestToParseTree):
     def transform_token_node(self, node):
         return getattr(self, node.type, self.__default_token__)(node)
 
+    def on_cycle(self, node):
+        self.cycle_node = node
+
     def _call_rule_func(self, node, data):
         user_func = getattr(self, node.rule.origin.name, self.__default__) 
         if user_func == self.__default__ or hasattr(user_func, 'handles_ambiguity'):
@@ -651,7 +678,7 @@ class ForestToTree(ForestToParseTree):
             elif data:
                 return data[0]
             else:
-                raise Discard
+                return self.tree_class(node.s.name, [])
         except TypeError:
             return data
 

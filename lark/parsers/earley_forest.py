@@ -13,6 +13,7 @@ from collections import deque
 from operator import attrgetter
 from importlib import import_module
 from itertools import chain
+from functools import partial, wraps
 
 
 from ..parse_tree_builder import AmbiguousIntermediateExpander
@@ -527,19 +528,23 @@ class ForestToParseTree(ForestTransformer):
     def _collapse_ambig(self, children):
         new_children = []
         for child in children:
-            if child.data == '_ambig':
+            if hasattr(child, 'data') and child.data == '_ambig':
                 new_children += child.children
             else:
                 new_children.append(child)
         return new_children
 
-    def _get_callback(self, rule):
-        return self.callbacks[rule]
+    def _call_rule_func(self, node, data):
+        return self.callbacks[node.rule](data)
+
+    def _call_ambig_func(self, node, data):
+        if len(data) > 1:
+            return self.tree_class('_ambig', data)
+        return data[0]
 
     def transform_symbol_node(self, node, data):
-        if len(data) > 1:
-            return self.tree_class('_ambig', self._collapse_ambig(data))
-        return data[0]
+        data = self._collapse_ambig(data)
+        return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
         if len(data) > 1:
@@ -556,7 +561,7 @@ class ForestToParseTree(ForestTransformer):
                 children.append(item)
         if node.parent.is_intermediate:
             return children
-        return self._get_callback(children)
+        return self._call_rule_func(node, children)
 
     def visit_symbol_node_in(self, node):
         super(ForestToParseTree, self).visit_symbol_node_in(node)
@@ -566,26 +571,50 @@ class ForestToParseTree(ForestTransformer):
             return node.children[0]
         return node.children
 
+def handles_ambiguity(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    wrapper.handles_ambiguity = True
+    return wrapper
+
 class ForestToTree(ForestToParseTree):
 
     def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
         super(ForestToTree, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
-        self.__default__ = partial(self.transform_symbol_node, None)
 
+    def __default__(self, name, data):
+        return self.tree_class(name, data)
+ 
     def __default_token__(self, node):
         return node
 
     def transform_token_node(self, node):
-        try:
-            return getattr(self, node.type)(node)
-        except AttributeError:
-            return self.__default_token__(node)
+        return getattr(self, node.type, self.__default_token__)(node)
 
-    def _get_callback(self, rule):
-        if self.resolve_ambiguity:
-            return getattr(self, rule, self.__default__)
-        wrapper = AmbiguousIntermediateExpander(self.tree_class)
-        return wrapper(getattr(self, rule, self.__default__))
+    def _call_rule_func(self, node, data):
+        user_func = getattr(self, node.rule.origin.name, self.__default__) 
+        if user_func == self.__default__ or hasattr(user_func, 'handles_ambiguity'):
+            user_func = partial(self.__default__, node.rule.origin.name)
+        if not self.resolve_ambiguity:
+            wrapper = partial(AmbiguousIntermediateExpander, self.tree_class)
+            user_func = wrapper(user_func)
+        return user_func(data)
+
+    def _call_ambig_func(self, node, data):
+        try:
+            user_func = getattr(self, node.s.name)
+            if hasattr(user_func, 'handles_ambiguity'):
+                data = user_func(data)
+        except AttributeError:
+            pass
+        try:
+            if len(data) > 1:
+                return self.tree_class('_ambig', data)
+            return data[0]
+        except TypeError:
+            return data
+
 
 
 class ForestToPyDotVisitor(ForestVisitor):

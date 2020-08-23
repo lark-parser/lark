@@ -650,7 +650,8 @@ class ForestToTree(ForestToParseTree):
         return getattr(self, node.type, self.__default_token__)(node)
 
     def on_cycle(self, node):
-        self.cycle_node = node
+        self._cycle_node = node
+        self._on_cycle_retreat = True
 
     def _call_rule_func(self, node, data):
         user_func = getattr(self, node.rule.origin.name, self.__default__) 

@@ -642,7 +642,17 @@ class ForestToTree(ForestToParseTree):
 
     def __default__(self, name, data):
         return self.tree_class(name, data)
- 
+
+    def __default_ambig__(self, name, data):
+        try:
+            if len(data) > 1:
+                return self.tree_class('_ambig', data)
+            elif data:
+                return data[0]
+            return self.tree_class(name, [])
+        except TypeError:
+            return data
+
     def __default_token__(self, node):
         return node
 
@@ -663,23 +673,10 @@ class ForestToTree(ForestToParseTree):
         return user_func(data)
 
     def _call_ambig_func(self, node, data):
-        try:
-            user_func = getattr(self, node.s.name)
-            if hasattr(user_func, 'handles_ambiguity'):
-                data = user_func(data)
-        except AttributeError:
-            pass
-        try:
-            if len(data) > 1:
-                return self.tree_class('_ambig', data)
-            elif data:
-                return data[0]
-            else:
-                return self.tree_class(node.s.name, [])
-        except TypeError:
-            return data
-
-
+        user_func = getattr(self, node.s.name, self.__default_ambig__)
+        if user_func == self.__default_ambig__ or not hasattr(user_func, 'handles_ambiguity'):
+            user_func = partial(self.__default_ambig__, node.s.name)
+        return user_func(data)
 
 class ForestToPyDotVisitor(ForestVisitor):
     """

@@ -495,11 +495,8 @@ class ForestToParseTree(ForestTransformer):
 def handles_ambiguity(func):
     """Decorator for methods of subclasses of TreeForestTransformer.
     Denotes that the method should receive a list of trees (derivations)."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    wrapper.handles_ambiguity = True
-    return wrapper
+    func.handles_ambiguity = True
+    return func
 
 class TreeForestTransformer(ForestToParseTree):
     """A ForestTransformer with a tree-like Transformer interface.

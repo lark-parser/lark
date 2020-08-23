@@ -498,7 +498,7 @@ class ForestToParseTree(ForestTransformer):
 
 
 def handles_ambiguity(func):
-    """Decorator for methods of subclasses of ForestToTree.
+    """Decorator for methods of subclasses of TreeForestTransformer.
     Denotes that the method should receive a list of trees (derivations)."""
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -506,7 +506,7 @@ def handles_ambiguity(func):
     wrapper.handles_ambiguity = True
     return wrapper
 
-class ForestToTree(ForestToParseTree):
+class TreeForestTransformer(ForestToParseTree):
     """A ForestTransformer with a tree-like Transformer interface.
     By default, it will construct a tree.
 
@@ -529,7 +529,7 @@ class ForestToTree(ForestToParseTree):
     """
 
     def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
-        super(ForestToTree, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
+        super(TreeForestTransformer, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
 
     def __default__(self, name, data):
         """Default operation on tree (for override).

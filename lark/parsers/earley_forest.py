@@ -173,6 +173,8 @@ class ForestVisitor(object):
 
     def visit(self, root):
         def make_get_path(node):
+            """Create a function that will return a path from `node` to 
+            the current position. Used for the `on_cycle` callback."""
             def get_path():
                 index = len(path) - 1
                 while id(path[index]) != id(node):
@@ -187,8 +189,9 @@ class ForestVisitor(object):
         # to recurse into a node that's already on the stack (infinite recursion).
         visiting = set()
 
+        # a list of nodes that are currently being visited
+        # used for the `on_cycle` callback
         path = list()
-
 
         # We do not use recursion here to walk the Forest due to the limited
         # stack size in python. Therefore input_stack is essentially our stack.
@@ -223,8 +226,6 @@ class ForestVisitor(object):
                     oc(next_node, make_get_path(next_node))
                     continue
                         
-                    # raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
-
                 input_stack.append(next_node)
                 continue
 
@@ -263,15 +264,32 @@ class ForestVisitor(object):
                 elif id(next_node) in visiting:
                     oc(next_node, make_get_path(next_node))
                     continue
-                    # raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
 
                 input_stack.append(next_node)
                 continue
 
 class ForestTransformer(ForestVisitor):
+    """The base class for a bottom-up forest transformation.
+    Transformations are applied via inheritance and overriding of the
+    following methods:
+
+    transform_symbol_node
+    transform_intermediate_node
+    transform_packed_node
+    transform_token_node
+
+    `transform_token_node` receives a Token as an argument.
+    All other methods receive the node that is being transformed and
+    a list of the results of the transformations of that nodes children.
+
+    If `Discard` is raised in a transformation, no data from that node
+    will be passed to its parent's transformation.
+    """
 
     def __init__(self):
+        # results of transformations
         self.data = dict()
+        # used to track parent nodes
         self.node_stack = deque()
 
     def transform(self, root):
@@ -367,6 +385,17 @@ class ForestSumVisitor(ForestVisitor):
         node.priority = max(child.priority for child in node.children)
 
 class ForestToParseTree(ForestTransformer):
+    """Used by the earley parser when ambiguity equals 'resolve' or
+    'explicit'. Transforms an SPPF into an (ambiguous) parse tree.
+
+    tree_class: The Tree class to use for construction
+    callbacks: A dictionary of rules to functions that output a tree
+    prioritizer: A ForestVisitor that manipulates the priorities of
+        ForestNodes
+    resolve_ambiguity: If True, ambiguities will be resolved based on
+        priorities. Otherwise, `_ambig` nodes will be in the resulting
+        tree.
+    """
 
     def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
         super(ForestToParseTree, self).__init__()
@@ -401,9 +430,14 @@ class ForestToParseTree(ForestTransformer):
         return new_children
 
     def _call_rule_func(self, node, data):
+        # called when transforming children of symbol nodes
+        # data is a list of trees that are children of the symbol
         return self.callbacks[node.rule](data)
 
     def _call_ambig_func(self, node, data):
+        # called when transforming a symbol node
+        # data is a list of trees where each tree's data is 
+        # equal to the name of the symbol
         if len(data) > 1:
             return self.tree_class('_ambig', data)
         elif data:
@@ -456,6 +490,8 @@ class ForestToParseTree(ForestTransformer):
 
 
 def handles_ambiguity(func):
+    """Decorator for methods of subclasses of ForestToTree.
+    Denotes that the method should receive a list of trees (derivations)."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
@@ -463,14 +499,43 @@ def handles_ambiguity(func):
     return wrapper
 
 class ForestToTree(ForestToParseTree):
+    """A ForestTransformer with a tree-like Transformer interface.
+    By default, it will construct a tree.
+
+    Methods provided via inheritance are called based on the rule/symbol
+    names of nodes in the forest.
+
+    Methods that act on rules will receive a list of the results of the 
+    transformations of the rules children. By default, trees and tokens.
+
+    Methods that act on tokens will receive a Token.
+
+    Alternatively, methods that act on rules may be annotated with
+    `handles_ambiguity`. In this case, the function will receive a list
+    of all the transformations of all the derivations of the rule. 
+    By default, a list of trees where each tree.data is equal to the 
+    rule name.
+
+    Transformation to any object is made possible by override of 
+    `__default__`, `__default_token__`, and `__default_ambig__`.
+    """
 
     def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
         super(ForestToTree, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
 
     def __default__(self, name, data):
+        """Default operation on tree (for override).
+        
+        Returns a tree with name with data as children.
+        """
         return self.tree_class(name, data)
 
     def __default_ambig__(self, name, data):
+        """Default operation on ambiguous rule (for override).
+        
+        Wraps data in an '_ambig_ node if it contains more than
+        one element.'
+        """
         try:
             if len(data) > 1:
                 return self.tree_class('_ambig', data)
@@ -481,6 +546,10 @@ class ForestToTree(ForestToParseTree):
             return data
 
     def __default_token__(self, node):
+        """Default operation on Token (for).
+        
+        Returns node
+        """
         return node
 
     def transform_token_node(self, node):

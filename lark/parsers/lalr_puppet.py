@@ -88,6 +88,9 @@ class ParserPuppet(object):
             self._start == other._start
         )
 
+    def __hash__(self):
+        return hash((tuple(self._state_stack), self._start))
+
     def pretty(self):
         """Print the output of ``choices()`` in a way that's easier to read."""
         out = ["Puppet choices:"]

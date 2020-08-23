@@ -12,13 +12,14 @@ is better documented here:
 
 from collections import deque
 
+from ..tree import Tree
 from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, CompleteForestToAmbiguousTreeVisitor
+from .earley_forest import ForestSumVisitor, SymbolNode, ForestToParseTree
 
 class Parser:
     def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
@@ -312,12 +313,10 @@ class Parser:
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
-        # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else CompleteForestToAmbiguousTreeVisitor
-        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
-
-        return forest_tree_visitor.visit(solutions[0])
-
+        # Perform our SPPF -> AST conversion
+        # TODO: pass the correct tree class to constructor
+        transformer = ForestToParseTree(Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
+        return transformer.transform(solutions[0])
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

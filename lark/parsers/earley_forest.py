@@ -12,8 +12,7 @@ from math import isinf
 from collections import deque
 from operator import attrgetter
 from importlib import import_module
-from itertools import chain
-from functools import partial, wraps
+from functools import partial
 
 
 from ..parse_tree_builder import AmbiguousIntermediateExpander
@@ -21,7 +20,6 @@ from .. visitors import Discard
 from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
-from ..exceptions import ParseError
 
 class ForestNode(object):
     pass

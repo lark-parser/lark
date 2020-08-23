@@ -131,7 +131,7 @@ class PackedNode(ForestNode):
 
     @property
     def children(self):
-        return filter(lambda x: x is not None, [self.left, self.right])
+        return [x for x in [self.left, self.right] if x is not None]
 
     def __iter__(self):
         return iter([self.left, self.right])
@@ -171,8 +171,8 @@ class ForestVisitor(object):
 
     def visit(self, root):
         def make_get_path(node):
-            """Create a function that will return a path from `node` to 
-            the current position. Used for the `on_cycle` callback."""
+            """Create a function that will return a path from `node` to
+            the last visited node. Used for the `on_cycle` callback."""
             def get_path():
                 index = len(path) - 1
                 while id(path[index]) != id(node):
@@ -223,7 +223,7 @@ class ForestVisitor(object):
                 if id(next_node) in visiting:
                     oc(next_node, make_get_path(next_node))
                     continue
-                        
+
                 input_stack.append(next_node)
                 continue
 
@@ -234,7 +234,7 @@ class ForestVisitor(object):
 
             current_id = id(current)
             if current_id in visiting:
-                if isinstance(current, PackedNode):    
+                if isinstance(current, PackedNode):
                     vpno(current)
                 elif current.is_intermediate:
                     vino(current)
@@ -247,7 +247,7 @@ class ForestVisitor(object):
             else:
                 visiting.add(current_id)
                 path.append(current)
-                if isinstance(current, PackedNode): 
+                if isinstance(current, PackedNode):
                     next_node = vpni(current)
                 elif current.is_intermediate:
                     next_node = vini(current)
@@ -278,7 +278,8 @@ class ForestTransformer(ForestVisitor):
 
     `transform_token_node` receives a Token as an argument.
     All other methods receive the node that is being transformed and
-    a list of the results of the transformations of that nodes children.
+    a list of the results of the transformations of that node's children.
+    The return value of these methods are the resulting transformations.
 
     If `Discard` is raised in a transformation, no data from that node
     will be passed to its parent's transformation.
@@ -291,6 +292,7 @@ class ForestTransformer(ForestVisitor):
         self.node_stack = deque()
 
     def transform(self, root):
+        """Perform a transformation on a Forest."""
         self.node_stack.append('result')
         self.data['result'] = []
         self.visit(root)
@@ -434,13 +436,14 @@ class ForestToParseTree(ForestTransformer):
 
     def _call_rule_func(self, node, data):
         # called when transforming children of symbol nodes
-        # data is a list of trees that are children of the symbol
+        # data is a list of trees or tokens that correspond to the
+        # symbol's rule expansion
         return self.callbacks[node.rule](data)
 
     def _call_ambig_func(self, node, data):
         # called when transforming a symbol node
-        # data is a list of trees where each tree's data is 
-        # equal to the name of the symbol
+        # data is a list of trees where each tree's data is
+        # equal to the name of the symbol or one of its aliases.
         if len(data) > 1:
             return self.tree_class('_ambig', data)
         elif data:
@@ -496,29 +499,29 @@ class ForestToParseTree(ForestTransformer):
 
 def handles_ambiguity(func):
     """Decorator for methods of subclasses of TreeForestTransformer.
-    Denotes that the method should receive a list of trees (derivations)."""
+    Denotes that the method should receive a list of transformed derivations."""
     func.handles_ambiguity = True
     return func
 
 class TreeForestTransformer(ForestToParseTree):
-    """A ForestTransformer with a tree-like Transformer interface.
+    """A ForestTransformer with a tree-Transformer-like interface.
     By default, it will construct a tree.
 
     Methods provided via inheritance are called based on the rule/symbol
     names of nodes in the forest.
 
-    Methods that act on rules will receive a list of the results of the 
-    transformations of the rules children. By default, trees and tokens.
+    Methods that act on rules will receive a list of the results of the
+    transformations of the rule's children. By default, trees and tokens.
 
     Methods that act on tokens will receive a Token.
 
     Alternatively, methods that act on rules may be annotated with
     `handles_ambiguity`. In this case, the function will receive a list
-    of all the transformations of all the derivations of the rule. 
-    By default, a list of trees where each tree.data is equal to the 
-    rule name.
+    of all the transformations of all the derivations of the rule.
+    By default, a list of trees where each tree.data is equal to the
+    rule name or one of its aliases.
 
-    Transformation to any object is made possible by override of 
+    Non-tree transformations are made possible by override of
     `__default__`, `__default_token__`, and `__default_ambig__`.
     """
 
@@ -527,14 +530,14 @@ class TreeForestTransformer(ForestToParseTree):
 
     def __default__(self, name, data):
         """Default operation on tree (for override).
-        
+
         Returns a tree with name with data as children.
         """
         return self.tree_class(name, data)
 
     def __default_ambig__(self, name, data):
         """Default operation on ambiguous rule (for override).
-        
+
         Wraps data in an '_ambig_ node if it contains more than
         one element.'
         """
@@ -548,8 +551,8 @@ class TreeForestTransformer(ForestToParseTree):
             return data
 
     def __default_token__(self, node):
-        """Default operation on Token (for).
-        
+        """Default operation on Token (for override).
+
         Returns node
         """
         return node
@@ -559,7 +562,7 @@ class TreeForestTransformer(ForestToParseTree):
 
     def _call_rule_func(self, node, data):
         name = node.rule.alias or node.rule.options.template_source or node.rule.origin.name
-        user_func = getattr(self, name, self.__default__) 
+        user_func = getattr(self, name, self.__default__)
         if user_func == self.__default__ or hasattr(user_func, 'handles_ambiguity'):
             user_func = partial(self.__default__, name)
         if not self.resolve_ambiguity:

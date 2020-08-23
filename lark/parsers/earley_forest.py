@@ -163,7 +163,6 @@ class ForestVisitor(object):
 
     Use this as a base when you need to walk the forest.
     """
-    __slots__ = ['result']
 
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
@@ -181,7 +180,6 @@ class ForestVisitor(object):
                 return path[index:]
             return get_path
 
-        self.result = None
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
         # the stack. It serves two purposes: to detect when we 'recurse' in and out
         # of a symbol/intermediate so that we can process both up and down. Also,
@@ -269,8 +267,6 @@ class ForestVisitor(object):
 
                 input_stack.append(next_node)
                 continue
-
-        return self.result
 
 class ForestTransformer(ForestVisitor):
 

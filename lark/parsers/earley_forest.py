@@ -442,10 +442,7 @@ class ForestToParseTree(ForestTransformer):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        # elif self.cycle_free_count > 0:
         return self.tree_class(node.s.name, [])
-        # else:
-            # raise Discard
 
     def transform_symbol_node(self, node, data):
         self._check_cycle(node)
@@ -554,10 +551,6 @@ class ForestToTree(ForestToParseTree):
 
     def transform_token_node(self, node):
         return getattr(self, node.type, self.__default_token__)(node)
-
-    def on_cycle(self, node):
-        self._cycle_node = node
-        self._on_cycle_retreat = True
 
     def _call_rule_func(self, node, data):
         user_func = getattr(self, node.rule.origin.name, self.__default__) 

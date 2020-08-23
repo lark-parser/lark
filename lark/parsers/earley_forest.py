@@ -335,6 +335,8 @@ class ForestTransformer(ForestVisitor):
             self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        finally:
+            del self.data[id(node)]
 
     def visit_intermediate_node_out(self, node):
         self.node_stack.pop()
@@ -343,6 +345,8 @@ class ForestTransformer(ForestVisitor):
             self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        finally:
+            del self.data[id(node)]
 
     def visit_packed_node_out(self, node):
         self.node_stack.pop()
@@ -351,6 +355,8 @@ class ForestTransformer(ForestVisitor):
             self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        finally:
+            del self.data[id(node)]
 
 
 class ForestSumVisitor(ForestVisitor):

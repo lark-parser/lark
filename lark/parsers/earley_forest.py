@@ -558,18 +558,20 @@ class TreeForestTransformer(ForestToParseTree):
         return getattr(self, node.type, self.__default_token__)(node)
 
     def _call_rule_func(self, node, data):
-        user_func = getattr(self, node.rule.origin.name, self.__default__) 
+        name = node.rule.alias or node.rule.options.template_source or node.rule.origin.name
+        user_func = getattr(self, name, self.__default__) 
         if user_func == self.__default__ or hasattr(user_func, 'handles_ambiguity'):
-            user_func = partial(self.__default__, node.rule.origin.name)
+            user_func = partial(self.__default__, name)
         if not self.resolve_ambiguity:
             wrapper = partial(AmbiguousIntermediateExpander, self.tree_class)
             user_func = wrapper(user_func)
         return user_func(data)
 
     def _call_ambig_func(self, node, data):
-        user_func = getattr(self, node.s.name, self.__default_ambig__)
+        name = node.s.name
+        user_func = getattr(self, name, self.__default_ambig__)
         if user_func == self.__default_ambig__ or not hasattr(user_func, 'handles_ambiguity'):
-            user_func = partial(self.__default_ambig__, node.s.name)
+            user_func = partial(self.__default_ambig__, name)
         return user_func(data)
 
 class ForestToPyDotVisitor(ForestVisitor):

@@ -413,6 +413,10 @@ class ForestToParseTree(ForestTransformer):
         logger.warning("Cycle encountered in the SPPF at node: %s. "
                 "As infinite ambiguities cannot be represented in a tree, "
                 "this family of derivations will be discarded.", node)
+        if self.resolve_ambiguity:
+            # TODO: choose a different path if cycle is encountered
+            logger.warning("At this time, using ambiguity resolution for SPPFs "
+                    "with cycles may result in None being returned.")
         self._on_cycle_retreat = True
 
     def _check_cycle(self, node):

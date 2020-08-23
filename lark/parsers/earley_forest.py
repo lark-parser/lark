@@ -459,11 +459,16 @@ class ForestToParseTree(ForestTransformer):
     def transform_packed_node(self, node, data):
         self._check_cycle(node)
         children = list()
-        for item in data:
-            if isinstance(item, list):
-                children += item
+        assert len(data) <= 2
+        if node.left:
+            if node.left.is_intermediate and isinstance(data[0], list):
+                children += data[0]
             else:
-                children.append(item)
+                children.append(data[0])
+            if len(data) > 1:
+                children.append(data[1])
+        elif data:
+            children.append(data[0])
         if node.parent.is_intermediate:
             return children
         return self._call_rule_func(node, children)

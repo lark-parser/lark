@@ -160,6 +160,15 @@ class SlottedTree(Tree):
 
 
 def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
+    graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
+    graph.write_png(filename)
+
+
+def pydot__tree_to_dot(tree, filename, rankdir="LR", **kwargs):
+    graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
+    graph.write(filename)
+
+def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
@@ -197,5 +206,5 @@ def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
         return node
 
     _to_pydot(tree)
-    graph.write_png(filename)
-
+    return graph
+   

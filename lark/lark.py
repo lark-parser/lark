@@ -262,7 +262,7 @@ class Lark(Serialize):
 
         assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
-        assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
+        assert self.options.ambiguity in ('resolve', 'explicit', 'forest', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, self.source, re_module)

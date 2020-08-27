@@ -16,6 +16,7 @@ Earley's power in parsing any CFG.
 
 from collections import defaultdict
 
+from ..tree import Tree
 from ..exceptions import UnexpectedCharacters
 from ..lexer import Token
 from ..grammar import Terminal
@@ -24,8 +25,8 @@ from .earley_forest import SymbolNode
 
 
 class Parser(BaseParser):
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False):
-        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug)
+    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False, tree_class=Tree):
+        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 

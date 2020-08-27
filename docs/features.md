@@ -26,7 +26,7 @@
   - Support for external regex module ([see here](classes.md#using-unicode-character-classes-with-regex))
   - Import grammars from Nearley.js ([read more](nearley.md))
   - CYK parser
-  - Transform your parse tree to dot or png files  for better visualization ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
+  - Visualize your parse trees as dot or png files ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
 
 
 ### Experimental features

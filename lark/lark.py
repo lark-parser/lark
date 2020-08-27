@@ -75,6 +75,7 @@ class LarkOptions(Serialize):
             - "resolve" - The parser will automatically choose the simplest derivation
                         (it chooses consistently: greedy for tokens, non-greedy for rules)
             - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
+            - "forest": The parser will return the root of the shared packed parse forest.
 
     **=== Misc. / Domain Specific Options ===**
 
@@ -317,8 +318,11 @@ class Lark(Serialize):
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
-        self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
+        self._callbacks = None
+        # we don't need these callbacks if we aren't building a tree
+        if self.options.ambiguity != 'forest':
+            self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
+            self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
     def _build_parser(self):
         self._prepare_callbacks()

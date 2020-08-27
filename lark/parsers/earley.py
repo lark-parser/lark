@@ -22,11 +22,12 @@ from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestSumVisitor, SymbolNode, ForestToParseTree
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.debug = debug
+        self.tree_class = tree_class
 
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
@@ -313,10 +314,13 @@ class Parser:
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
-        # Perform our SPPF -> AST conversion
-        # TODO: pass the correct tree class to constructor
-        transformer = ForestToParseTree(Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
-        return transformer.transform(solutions[0])
+        if self.tree_class is not None:
+            # Perform our SPPF -> AST conversion
+            transformer = ForestToParseTree(self.tree_class, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
+            return transformer.transform(solutions[0])
+
+        # return the root of the SPPF
+        return solutions[0]
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

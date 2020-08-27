@@ -789,6 +789,20 @@ def _find_used_symbols(tree):
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
+    ERRORS = {
+        'Unclosed parenthesis': ['a: (\n'],
+        'Umatched closing parenthesis': ['a: )\n', 'a: [)\n', 'a: (]\n'],
+        'Expecting rule or terminal definition (missing colon)': ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n'],
+        'Illegal name for rules or terminals': ['Aa:\n'],
+        'Alias expects lowercase name': ['a: -> "a"\n'],
+        'Unexpected colon': ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n'],
+        'Misplaced operator': ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n'],
+        'Expecting option ("|") or a new rule or terminal definition': ['a:a\n()\n'],
+        'Terminal names cannot contain dots': ['A.B\n'],
+        '%import expects a name': ['%import "a"\n'],
+        '%ignore expects a value': ['%ignore %import\n'],
+    }
+
     def __init__(self, re_module):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
@@ -814,19 +828,9 @@ class GrammarLoader:
                                (e.line, e.column, grammar_name, context))
         except UnexpectedToken as e:
             context = e.get_context(grammar_text)
-            error = e.match_examples(self.parser.parse, {
-                'Unclosed parenthesis': ['a: (\n'],
-                'Umatched closing parenthesis': ['a: )\n', 'a: [)\n', 'a: (]\n'],
-                'Expecting rule or terminal definition (missing colon)': ['a\n', 'a->\n', 'A->\n', 'a A\n'],
-                'Alias expects lowercase name': ['a: -> "a"\n'],
-                'Unexpected colon': ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n'],
-                'Misplaced operator': ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n'],
-                'Expecting option ("|") or a new rule or terminal definition': ['a:a\n()\n'],
-                '%import expects a name': ['%import "a"\n'],
-                '%ignore expects a value': ['%ignore %import\n'],
-            })
+            error = e.match_examples(self.parser.parse, self.ERRORS, use_accepts=True)
             if error:
-                raise GrammarError("%s at line %s column %s\n\n%s" % (error, e.line, e.column, context))
+                raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
             elif 'STRING' in e.expected:
                 raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
             raise

@@ -7,6 +7,7 @@ from lark import logger
 from .test_trees import TestTrees
 from .test_tools import TestStandalone
 from .test_cache import TestCache
+from .test_grammar import TestGrammar
 from .test_reconstructor import TestReconstructor
 
 try:

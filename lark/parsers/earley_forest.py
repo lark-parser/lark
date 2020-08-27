@@ -324,17 +324,20 @@ class ForestTransformer(ForestVisitor):
 
     def visit_token_node(self, node):
         try:
-            self.data[self.node_stack[-1]].append(self.transform_token_node(node))
+            transformed = self.transform_token_node(node)
         except Discard:
             pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
 
     def visit_symbol_node_out(self, node):
         self.node_stack.pop()
         try:
             transformed = self.transform_symbol_node(node, self.data[id(node)])
-            self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
         finally:
             del self.data[id(node)]
 
@@ -342,9 +345,10 @@ class ForestTransformer(ForestVisitor):
         self.node_stack.pop()
         try:
             transformed = self.transform_intermediate_node(node, self.data[id(node)])
-            self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
         finally:
             del self.data[id(node)]
 
@@ -352,9 +356,10 @@ class ForestTransformer(ForestVisitor):
         self.node_stack.pop()
         try:
             transformed = self.transform_packed_node(node, self.data[id(node)])
-            self.data[self.node_stack[-1]].append(transformed)
         except Discard:
             pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
         finally:
             del self.data[id(node)]
 

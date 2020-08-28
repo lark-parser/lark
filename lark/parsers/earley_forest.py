@@ -13,6 +13,7 @@ from collections import deque
 from operator import attrgetter
 from importlib import import_module
 
+from .. visitors import Discard
 from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
@@ -261,6 +262,103 @@ class ForestVisitor(object):
 
                 input_stack.append(next_node)
                 continue
+
+class ForestTransformer(ForestVisitor):
+    """The base class for a bottom-up forest transformation.
+    Transformations are applied via inheritance and overriding of the
+    following methods:
+
+    transform_symbol_node
+    transform_intermediate_node
+    transform_packed_node
+    transform_token_node
+
+    `transform_token_node` receives a Token as an argument.
+    All other methods receive the node that is being transformed and
+    a list of the results of the transformations of that node's children.
+    The return value of these methods are the resulting transformations.
+
+    If `Discard` is raised in a transformation, no data from that node
+    will be passed to its parent's transformation.
+    """
+
+    def __init__(self):
+        # results of transformations
+        self.data = dict()
+        # used to track parent nodes
+        self.node_stack = deque()
+
+    def transform(self, root):
+        """Perform a transformation on a Forest."""
+        self.node_stack.append('result')
+        self.data['result'] = []
+        self.visit(root)
+        assert len(self.data['result']) <= 1
+        if self.data['result']:
+            return self.data['result'][0]
+
+    def transform_symbol_node(self, node, data):
+        return node
+
+    def transform_intermediate_node(self, node, data):
+        return node
+
+    def transform_packed_node(self, node, data):
+        return node
+
+    def transform_token_node(self, node):
+        return node
+
+    def visit_symbol_node_in(self, node):
+        self.node_stack.append(id(node))
+        self.data[id(node)] = []
+        return node.children
+
+    def visit_packed_node_in(self, node):
+        self.node_stack.append(id(node))
+        self.data[id(node)] = []
+        return node.children
+
+    def visit_token_node(self, node):
+        try:
+            transformed = self.transform_token_node(node)
+        except Discard:
+            pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
+
+    def visit_symbol_node_out(self, node):
+        self.node_stack.pop()
+        try:
+            transformed = self.transform_symbol_node(node, self.data[id(node)])
+        except Discard:
+            pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
+        finally:
+            del self.data[id(node)]
+
+    def visit_intermediate_node_out(self, node):
+        self.node_stack.pop()
+        try:
+            transformed = self.transform_intermediate_node(node, self.data[id(node)])
+        except Discard:
+            pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
+        finally:
+            del self.data[id(node)]
+
+    def visit_packed_node_out(self, node):
+        self.node_stack.pop()
+        try:
+            transformed = self.transform_packed_node(node, self.data[id(node)])
+        except Discard:
+            pass
+        else:
+            self.data[self.node_stack[-1]].append(transformed)
+        finally:
+            del self.data[id(node)]
 
 class ForestSumVisitor(ForestVisitor):
     """

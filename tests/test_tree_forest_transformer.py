@@ -9,40 +9,26 @@ from lark.parsers.earley_forest import TreeForestTransformer, handles_ambiguity
 
 class TestTreeForestTransformer(unittest.TestCase):
 
+    grammar = """
+    start: ab bc cd
+    !ab: "A" "B"?
+    !bc: "B"? "C"?
+    !cd: "C"? "D"
+    """
+
+    parser = Lark(grammar, parser='earley', ambiguity='forest')
+    forest = parser.parse("ABCD")
+        
     def test_identity_resolve_ambiguity(self):
-
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l1 = Lark(grammar, parser='earley', ambiguity='resolve')
-        l2 = Lark(grammar, parser='earley', ambiguity='forest')
-
-        tree1 = l1.parse("ABCD")
-        forest = l2.parse("ABCD")
-        tree2 = TreeForestTransformer(resolve_ambiguity=True).transform(forest)
-
+        l = Lark(self.grammar, parser='earley', ambiguity='resolve')
+        tree1 = l.parse("ABCD")
+        tree2 = TreeForestTransformer(resolve_ambiguity=True).transform(self.forest)
         self.assertEqual(tree1, tree2)
 
     def test_identity_explicit_ambiguity(self):
-
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l1 = Lark(grammar, parser='earley', ambiguity='explicit')
-        l2 = Lark(grammar, parser='earley', ambiguity='forest')
-
-        tree1 = l1.parse("ABCD")
-        forest = l2.parse("ABCD")
-        tree2 = TreeForestTransformer(resolve_ambiguity=False).transform(forest)
-
+        l = Lark(self.grammar, parser='earley', ambiguity='explicit')
+        tree1 = l.parse("ABCD")
+        tree2 = TreeForestTransformer(resolve_ambiguity=False).transform(self.forest)
         self.assertEqual(tree1, tree2)
 
     def test_tree_class(self):
@@ -54,17 +40,7 @@ class TestTreeForestTransformer(unittest.TestCase):
             def __default__(self, tree):
                 assert isinstance(tree, CustomTree)
 
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l = Lark(grammar, parser='earley', ambiguity='forest')
-
-        forest = l.parse("ABCD")
-        tree = TreeForestTransformer(resolve_ambiguity=False, tree_class=CustomTree).transform(forest)
+        tree = TreeForestTransformer(resolve_ambiguity=False, tree_class=CustomTree).transform(self.forest)
         TreeChecker().visit(tree)
 
     def test_token_calls(self):
@@ -92,17 +68,7 @@ class TestTreeForestTransformer(unittest.TestCase):
                 nonlocal visited_D
                 visited_D = True
 
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l = Lark(grammar, parser='earley', ambiguity='forest')
-
-        forest = l.parse("ABCD")
-        tree = CustomTransformer(resolve_ambiguity=False).transform(forest)
+        tree = CustomTransformer(resolve_ambiguity=False).transform(self.forest)
         self.assertTrue(visited_A)
         self.assertTrue(visited_B)
         self.assertTrue(visited_C)
@@ -117,17 +83,7 @@ class TestTreeForestTransformer(unittest.TestCase):
                 nonlocal token_count
                 token_count += 1
 
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l = Lark(grammar, parser='earley', ambiguity='forest')
-
-        forest = l.parse("ABCD")
-        tree = CustomTransformer(resolve_ambiguity=True).transform(forest)
+        tree = CustomTransformer(resolve_ambiguity=True).transform(self.forest)
         self.assertEqual(token_count, 4)
 
     def test_rule_call(self):
@@ -138,30 +94,20 @@ class TestTreeForestTransformer(unittest.TestCase):
         visited_cd = False
 
         class CustomTransformer(TreeForestTransformer):
-            def start(self, node, data):
+            def start(self, data):
                 nonlocal visited_start
                 visited_start = True
-            def ab(self, node, data):
+            def ab(self, data):
                 nonlocal visited_ab
                 visited_ab = True
-            def bc(self, node, data):
+            def bc(self, data):
                 nonlocal visited_bc
                 visited_bc = True
-            def cd(self, node, data):
+            def cd(self, data):
                 nonlocal visited_cd
                 visited_cd = True
 
-        grammar = """
-        start: ab bc cd
-        !ab: "A" "B"?
-        !bc: "B"? "C"?
-        !cd: "C"? "D"
-        """
-
-        l = Lark(grammar, parser='earley', ambiguity='forest')
-
-        forest = l.parse("ABCD")
-        tree = CustomTransformer(resolve_ambiguity=False).transform(forest)
+        tree = CustomTransformer(resolve_ambiguity=False).transform(self.forest)
         self.assertTrue(visited_start)
         self.assertTrue(visited_ab)
         self.assertTrue(visited_bc)

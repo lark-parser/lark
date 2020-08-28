@@ -13,9 +13,9 @@ from collections import deque
 from operator import attrgetter
 from importlib import import_module
 
+from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
-from ..exceptions import ParseError
 
 class ForestNode(object):
     pass
@@ -125,6 +125,10 @@ class PackedNode(ForestNode):
         """
         return self.is_empty, -self.priority, self.rule.order
 
+    @property
+    def children(self):
+        return [x for x in [self.left, self.right] if x is not None]
+
     def __iter__(self):
         return iter([self.left, self.right])
 
@@ -153,22 +157,35 @@ class ForestVisitor(object):
 
     Use this as a base when you need to walk the forest.
     """
-    __slots__ = ['result']
 
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
     def visit_symbol_node_out(self, node): pass
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
+    def on_cycle(self, node, get_path): pass
 
     def visit(self, root):
-        self.result = None
+        def make_get_path(node):
+            """Create a function that will return a path from `node` to
+            the last visited node. Used for the `on_cycle` callback."""
+            def get_path():
+                index = len(path) - 1
+                while id(path[index]) != id(node):
+                    index -= 1
+                return path[index:]
+            return get_path
+
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
         # the stack. It serves two purposes: to detect when we 'recurse' in and out
         # of a symbol/intermediate so that we can process both up and down. Also,
         # since the SPPF can have cycles it allows us to detect if we're trying
         # to recurse into a node that's already on the stack (infinite recursion).
         visiting = set()
+
+        # a list of nodes that are currently being visited
+        # used for the `on_cycle` callback
+        path = list()
 
         # We do not use recursion here to walk the Forest due to the limited
         # stack size in python. Therefore input_stack is essentially our stack.
@@ -180,7 +197,11 @@ class ForestVisitor(object):
         vpni = getattr(self, 'visit_packed_node_in')
         vsno = getattr(self, 'visit_symbol_node_out')
         vsni = getattr(self, 'visit_symbol_node_in')
+        vino = getattr(self, 'visit_intermediate_node_out', vsno)
+        vini = getattr(self, 'visit_intermediate_node_in', vsni)
         vtn = getattr(self, 'visit_token_node')
+        oc = getattr(self, 'on_cycle')
+
         while input_stack:
             current = next(reversed(input_stack))
             try:
@@ -196,7 +217,8 @@ class ForestVisitor(object):
                     continue
 
                 if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar, in rule '%s'!" % next_node.s.name)
+                    oc(next_node, make_get_path(next_node))
+                    continue
 
                 input_stack.append(next_node)
                 continue
@@ -208,25 +230,37 @@ class ForestVisitor(object):
 
             current_id = id(current)
             if current_id in visiting:
-                if isinstance(current, PackedNode):    vpno(current)
-                else:                                  vsno(current)
+                if isinstance(current, PackedNode):
+                    vpno(current)
+                elif current.is_intermediate:
+                    vino(current)
+                else:
+                    vsno(current)
                 input_stack.pop()
+                path.pop()
                 visiting.remove(current_id)
                 continue
             else:
                 visiting.add(current_id)
-                if isinstance(current, PackedNode): next_node = vpni(current)
-                else:                               next_node = vsni(current)
+                path.append(current)
+                if isinstance(current, PackedNode):
+                    next_node = vpni(current)
+                elif current.is_intermediate:
+                    next_node = vini(current)
+                else:
+                    next_node = vsni(current)
                 if next_node is None:
                     continue
 
-                if id(next_node) in visiting:
-                    raise ParseError("Infinite recursion in grammar!")
+                if not isinstance(next_node, ForestNode) and \
+                        not isinstance(next_node, Token):
+                    next_node = iter(next_node)
+                elif id(next_node) in visiting:
+                    oc(next_node, make_get_path(next_node))
+                    continue
 
                 input_stack.append(next_node)
                 continue
-
-        return self.result
 
 class ForestSumVisitor(ForestVisitor):
     """

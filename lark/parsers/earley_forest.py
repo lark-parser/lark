@@ -391,178 +391,111 @@ class ForestSumVisitor(ForestVisitor):
     def visit_symbol_node_out(self, node):
         node.priority = max(child.priority for child in node.children)
 
-class ForestToTreeVisitor(ForestVisitor):
-    """
-    A Forest visitor which converts an SPPF forest to an unambiguous AST.
+class ForestToParseTree(ForestTransformer):
+    """Used by the earley parser when ambiguity equals 'resolve' or
+    'explicit'. Transforms an SPPF into an (ambiguous) parse tree.
 
-    The implementation in this visitor walks only the first ambiguous child
-    of each symbol node. When it finds an ambiguous symbol node it first
-    calls the forest_sum_visitor implementation to sort the children
-    into preference order using the algorithms defined there; so the first
-    child should always be the highest preference. The forest_sum_visitor
-    implementation should be another ForestVisitor which sorts the children
-    according to some priority mechanism.
+    tree_class: The Tree class to use for construction
+    callbacks: A dictionary of rules to functions that output a tree
+    prioritizer: A ForestVisitor that manipulates the priorities of
+        ForestNodes
+    resolve_ambiguity: If True, ambiguities will be resolved based on
+        priorities. Otherwise, `_ambig` nodes will be in the resulting
+        tree.
     """
-    __slots__ = ['forest_sum_visitor', 'callbacks', 'output_stack']
-    def __init__(self, callbacks, forest_sum_visitor = None):
-        assert callbacks
-        self.forest_sum_visitor = forest_sum_visitor
+
+    def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+        super(ForestToParseTree, self).__init__()
+        self.tree_class = tree_class
         self.callbacks = callbacks
+        self.prioritizer = prioritizer
+        self.resolve_ambiguity = resolve_ambiguity
+        self._on_cycle_retreat = False
 
-    def visit(self, root):
-        self.output_stack = deque()
-        return super(ForestToTreeVisitor, self).visit(root)
+    def on_cycle(self, node, get_path):
+        logger.warning("Cycle encountered in the SPPF at node: %s. "
+                "As infinite ambiguities cannot be represented in a tree, "
+                "this family of derivations will be discarded.", node)
+        if self.resolve_ambiguity:
+            # TODO: choose a different path if cycle is encountered
+            logger.warning("At this time, using ambiguity resolution for SPPFs "
+                    "with cycles may result in None being returned.")
+        self._on_cycle_retreat = True
 
-    def visit_token_node(self, node):
-        self.output_stack[-1].append(node)
-
-    def visit_symbol_node_in(self, node):
-        if self.forest_sum_visitor and node.is_ambiguous and isinf(node.priority):
-            self.forest_sum_visitor.visit(node)
-        return next(iter(node.children))
-
-    def visit_packed_node_in(self, node):
-        if not node.parent.is_intermediate:
-            self.output_stack.append([])
-        return iter([node.left, node.right])
-
-    def visit_packed_node_out(self, node):
-        if not node.parent.is_intermediate:
-            result = self.callbacks[node.rule](self.output_stack.pop())
-            if self.output_stack:
-                self.output_stack[-1].append(result)
-            else:
-                self.result = result
-
-class ForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
-    """
-    A Forest visitor which converts an SPPF forest to an ambiguous AST.
-
-    Because of the fundamental disparity between what can be stored in
-    an SPPF and what can be stored in a Tree; this implementation is not
-    complete. It correctly deals with ambiguities that occur on symbol nodes only,
-    and cannot deal with ambiguities that occur on intermediate nodes.
-
-    Usually, most parsers can be rewritten to avoid intermediate node
-    ambiguities. Also, this implementation could be fixed, however
-    the code to handle intermediate node ambiguities is messy and
-    would not be performant. It is much better not to use this and
-    instead to correctly disambiguate the forest and only store unambiguous
-    parses in Trees. It is here just to provide some parity with the
-    old ambiguity='explicit'.
-
-    This is mainly used by the test framework, to make it simpler to write
-    tests ensuring the SPPF contains the right results.
-    """
-    def __init__(self, callbacks, forest_sum_visitor = ForestSumVisitor):
-        super(ForestToAmbiguousTreeVisitor, self).__init__(callbacks, forest_sum_visitor)
-
-    def visit_token_node(self, node):
-        self.output_stack[-1].children.append(node)
-
-    def visit_symbol_node_in(self, node):
-        if node.is_ambiguous:
-            if self.forest_sum_visitor and isinf(node.priority):
-                self.forest_sum_visitor.visit(node)
-            if node.is_intermediate:
-                # TODO Support ambiguous intermediate nodes!
-                logger.warning("Ambiguous intermediate node in the SPPF: %s. "
-                        "Lark does not currently process these ambiguities; resolving with the first derivation.", node)
-                return next(iter(node.children))
-            else:
-                self.output_stack.append(Tree('_ambig', []))
-
-        return iter(node.children)
-
-    def visit_symbol_node_out(self, node):
-        if not node.is_intermediate and node.is_ambiguous:
-            result = self.output_stack.pop()
-            if self.output_stack:
-                self.output_stack[-1].children.append(result)
-            else:
-                self.result = result
-
-    def visit_packed_node_in(self, node):
-        if not node.parent.is_intermediate:
-            self.output_stack.append(Tree('drv', []))
-        return iter([node.left, node.right])
-
-    def visit_packed_node_out(self, node):
-        if not node.parent.is_intermediate:
-            result = self.callbacks[node.rule](self.output_stack.pop().children)
-            if self.output_stack:
-                self.output_stack[-1].children.append(result)
-            else:
-                self.result = result
-
-class CompleteForestToAmbiguousTreeVisitor(ForestToTreeVisitor):
-    """
-    An augmented version of ForestToAmbiguousTreeVisitor that is designed to
-    handle ambiguous intermediate nodes as well as ambiguous symbol nodes.
-
-    On the way down:
-
-    - When an ambiguous intermediate node is encountered, an '_iambig' node
-      is inserted into the tree.
-    - Each possible derivation of an ambiguous intermediate node is represented
-      by an '_inter' node added as a child of the corresponding '_iambig' node.
-
-    On the way up, these nodes are propagated up the tree and collapsed
-    into a single '_ambig' node for the nearest symbol node ancestor.
-    This is achieved by the AmbiguousIntermediateExpander contained in
-    the callbacks.
-    """
+    def _check_cycle(self, node):
+        if self._on_cycle_retreat:
+            raise Discard
 
     def _collapse_ambig(self, children):
         new_children = []
         for child in children:
-            if child.data == '_ambig':
+            if hasattr(child, 'data') and child.data == '_ambig':
                 new_children += child.children
             else:
                 new_children.append(child)
         return new_children
 
-    def visit_token_node(self, node):
-        self.output_stack[-1].children.append(node)
+    def _call_rule_func(self, node, data):
+        # called when transforming children of symbol nodes
+        # data is a list of trees or tokens that correspond to the
+        # symbol's rule expansion
+        return self.callbacks[node.rule](data)
+
+    def _call_ambig_func(self, node, data):
+        # called when transforming a symbol node
+        # data is a list of trees where each tree's data is
+        # equal to the name of the symbol or one of its aliases.
+        if len(data) > 1:
+            return self.tree_class('_ambig', data)
+        elif data:
+            return data[0]
+        raise Discard
+
+    def transform_symbol_node(self, node, data):
+        self._check_cycle(node)
+        data = self._collapse_ambig(data)
+        return self._call_ambig_func(node, data)
+
+    def transform_intermediate_node(self, node, data):
+        self._check_cycle(node)
+        if len(data) > 1:
+            children = [self.tree_class('_inter', c) for c in data]
+            return self.tree_class('_iambig', children)
+        return data[0]
+
+    def transform_packed_node(self, node, data):
+        self._check_cycle(node)
+        children = list()
+        assert len(data) <= 2
+        if node.left:
+            if node.left.is_intermediate and isinstance(data[0], list):
+                children += data[0]
+            else:
+                children.append(data[0])
+            if len(data) > 1:
+                children.append(data[1])
+        elif data:
+            children.append(data[0])
+        if node.parent.is_intermediate:
+            return children
+        return self._call_rule_func(node, children)
 
     def visit_symbol_node_in(self, node):
-        if node.is_ambiguous:
-            if self.forest_sum_visitor and isinf(node.priority):
-                self.forest_sum_visitor.visit(node)
-            if node.is_intermediate:
-                self.output_stack.append(Tree('_iambig', []))
-            else:
-                self.output_stack.append(Tree('_ambig', []))
-        return iter(node.children)
-
-    def visit_symbol_node_out(self, node):
-        if node.is_ambiguous:
-            result = self.output_stack.pop()
-            if not node.is_intermediate:
-                result = Tree('_ambig', self._collapse_ambig(result.children))
-            if self.output_stack:
-                self.output_stack[-1].children.append(result)
-            else:
-                self.result = result
+        self._on_cycle_retreat = False
+        super(ForestToParseTree, self).visit_symbol_node_in(node)
+        if self.prioritizer and node.is_ambiguous and isinf(node.priority):
+            self.prioritizer.visit(node)
+        if self.resolve_ambiguity:
+            return node.children[0]
+        return node.children
 
     def visit_packed_node_in(self, node):
-        if not node.parent.is_intermediate:
-            self.output_stack.append(Tree('drv', []))
-        elif node.parent.is_ambiguous:
-            self.output_stack.append(Tree('_inter', []))
-        return iter([node.left, node.right])
+        self._on_cycle_retreat = False
+        return super(ForestToParseTree, self).visit_packed_node_in(node)
 
-    def visit_packed_node_out(self, node):
-        if not node.parent.is_intermediate:
-            result = self.callbacks[node.rule](self.output_stack.pop().children)
-        elif node.parent.is_ambiguous:
-            result = self.output_stack.pop()
-        else:
-            return
-        if self.output_stack:
-            self.output_stack[-1].children.append(result)
-        else:
-            self.result = result
+    def visit_token_node(self, node):
+        self._on_cycle_retreat = False
+        return super(ForestToParseTree, self).visit_token_node(node)
 
 class ForestToPyDotVisitor(ForestVisitor):
     """

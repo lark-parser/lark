@@ -25,7 +25,7 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%s, %s)' % (self.data, self.children)
+        return 'Tree(%r, %r)' % (self.data, self.children)
 
     def _pretty_label(self):
         return self.data
@@ -172,4 +172,3 @@ def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
 
     _to_pydot(tree)
     graph.write_png(filename)
-

@@ -1,10 +1,12 @@
 version: 2
 
-mkdocs:
-  configuration: mkdocs.yml
-  fail_on_warning: false
-
 formats: all
 
 python:
-  version: 3.5
+   version: 3.7
+   install:
+      - requirements: docs/requirements.txt
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+  configuration: docs/conf.py

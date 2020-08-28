@@ -1,9 +1,6 @@
-import re
-from functools import partial
-
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token
+from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
@@ -21,7 +18,14 @@ def get_frontend(parser, lexer):
         elif lexer == 'contextual':
             return LALR_ContextualLexer
         elif issubclass(lexer, Lexer):
-            return partial(LALR_CustomLexer, lexer)
+            class LALR_CustomLexerWrapper(LALR_CustomLexer):
+                def __init__(self, lexer_conf, parser_conf, options=None):
+                    super(LALR_CustomLexerWrapper, self).__init__(
+                        lexer, lexer_conf, parser_conf, options=options)
+                def init_lexer(self):
+                    self.lexer = lexer(self.lexer_conf)
+
+            return LALR_CustomLexerWrapper
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':
@@ -54,6 +58,15 @@ class _ParserFrontend(Serialize):
         return self.parser.parse(input, start, *args)
 
 
+def _get_lexer_callbacks(transformer, terminals):
+    result = {}
+    for terminal in terminals:
+        callback = getattr(transformer, terminal.name, None)
+        if callback is not None:
+            result[terminal.name] = callback
+    return result
+
+
 class WithLexer(_ParserFrontend):
     lexer = None
     parser = None
@@ -69,11 +82,18 @@ class WithLexer(_ParserFrontend):
         self.postlex = lexer_conf.postlex
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, postlex):
+    def deserialize(cls, data, memo, callbacks, postlex, transformer, re_module):
         inst = super(WithLexer, cls).deserialize(data, memo)
+
         inst.postlex = postlex
         inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
+
+        terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
+        inst.lexer_conf.callbacks = _get_lexer_callbacks(transformer, terminals)
+        inst.lexer_conf.re_module = re_module
+        inst.lexer_conf.skip_validation=True
         inst.init_lexer()
+
         return inst
 
     def _serialize(self, data, memo):
@@ -88,7 +108,7 @@ class WithLexer(_ParserFrontend):
         return self._parse(token_stream, start)
 
     def init_traditional_lexer(self):
-        self.lexer = TraditionalLexer(self.lexer_conf.tokens, ignore=self.lexer_conf.ignore, user_callbacks=self.lexer_conf.callbacks, g_regex_flags=self.lexer_conf.g_regex_flags)
+        self.lexer = TraditionalLexer(self.lexer_conf)
 
 class LALR_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
@@ -98,7 +118,7 @@ class LALR_WithLexer(WithLexer):
 
         self.init_lexer()
 
-    def init_lexer(self):
+    def init_lexer(self, **kw):
         raise NotImplementedError()
 
 class LALR_TraditionalLexer(LALR_WithLexer):
@@ -109,11 +129,7 @@ class LALR_ContextualLexer(LALR_WithLexer):
     def init_lexer(self):
         states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = self.postlex.always_accept if self.postlex else ()
-        self.lexer = ContextualLexer(self.lexer_conf.tokens, states,
-                                     ignore=self.lexer_conf.ignore,
-                                     always_accept=always_accept,
-                                     user_callbacks=self.lexer_conf.callbacks,
-                                     g_regex_flags=self.lexer_conf.g_regex_flags)
+        self.lexer = ContextualLexer(self.lexer_conf, states, always_accept=always_accept)
 
 
     def parse(self, text, start=None):
@@ -187,8 +203,10 @@ class XEarley(_ParserFrontend):
             else:
                 if width == 0:
                     raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
+            if lexer_conf.use_bytes:
+                regexp = regexp.encode('utf-8')
 
-            self.regexps[t.name] = re.compile(regexp, lexer_conf.g_regex_flags)
+            self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
         return self._parse(text, start)
@@ -225,4 +243,3 @@ class CYK(WithLexer):
 
     def _apply_callback(self, tree):
         return self.callbacks[tree.rule](tree.children)
-

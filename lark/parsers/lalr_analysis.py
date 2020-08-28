@@ -6,10 +6,9 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
-import logging
-from collections import defaultdict, deque
+from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset, Serialize, Enumerator
+from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
@@ -256,8 +255,8 @@ class LALR_Analyzer(GrammarAnalyzer):
                     raise GrammarError('Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t\t- ' + str(r) for r in rules ])))
                 if la in actions:
                     if self.debug:
-                        logging.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
-                        logging.warning(' * %s', list(rules)[0])
+                        logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
+                        logger.warning(' * %s', list(rules)[0])
                 else:
                     actions[la] = (Reduce, list(rules)[0])
             m[state] = { k.name: v for k, v in actions.items() }

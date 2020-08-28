@@ -30,7 +30,7 @@ class MakeMatchTree:
 
 class Reconstructor:
 
-    def __init__(self, parser: Lark):
+    def __init__(self, parser: Lark, term_subs: Dict[str, str] = ...):
         ...
 
     def reconstruct(self, tree: Tree) -> str:

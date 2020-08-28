@@ -5,7 +5,7 @@ import sys
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs, eval_escaping
+from .utils import bfs, eval_escaping, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -85,7 +85,7 @@ TERMINALS = {
     'RULE': '!?[_?]?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/\n])*?/[%s]*' % _RE_FLAGS,
+    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
@@ -307,6 +307,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         self.term_set = {td.name for td in self.terminals}
         self.term_reverse = {td.pattern: td for td in terminals}
         self.i = 0
+        self.rule_options = None
 
 
     @inline_args
@@ -335,7 +336,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = None
 
         elif isinstance(p, PatternRE):
-            if p in self.term_reverse: # Kind of a wierd placement.name
+            if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
             assert False, p
@@ -351,7 +352,10 @@ class PrepareAnonTerminals(Transformer_InPlace):
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 
-        return Terminal(term_name, filter_out=isinstance(p, PatternStr))
+        filter_out = False if self.rule_options and self.rule_options.keep_all_tokens else isinstance(p, PatternStr)
+
+        return Terminal(term_name, filter_out=filter_out)
+
 
 class _ReplaceSymbols(Transformer_InPlace):
     " Helper for ApplyTemplates "
@@ -405,6 +409,13 @@ def _literal_to_pattern(literal):
     flags = v[flag_start:]
     assert all(f in _RE_FLAGS for f in flags), flags
 
+    if literal.type == 'STRING' and '\n' in v:
+        raise GrammarError('You cannot put newlines in string literals')
+
+    if literal.type == 'REGEXP' and '\n' in v and 'x' not in flags:
+        raise GrammarError('You can only use newlines in regular expressions '
+                           'with the `x` (verbose) flag')
+
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
@@ -413,9 +424,11 @@ def _literal_to_pattern(literal):
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
-
-    return { 'STRING': PatternStr,
-             'REGEXP': PatternRE }[literal.type](s, flags)
+        return PatternStr(s, flags)
+    elif literal.type == 'REGEXP':
+        return PatternRE(s, flags)
+    else:
+        assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 
 
 @inline_args
@@ -432,6 +445,20 @@ class PrepareLiterals(Transformer_InPlace):
         return ST('pattern', [PatternRE(regexp)])
 
 
+def _make_joined_pattern(regexp, flags_set):
+    # In Python 3.6, a new syntax for flags was introduced, that allows us to restrict the scope
+    # of flags to a specific regexp group. We are already using it in `lexer.Pattern._get_flags`
+    # However, for prior Python versions, we still need to use global flags, so we have to make sure
+    # that there are no flag collisions when we merge several terminals.
+    flags = ()
+    if not Py36:
+        if len(flags_set) > 1:
+            raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
+        elif len(flags_set) == 1:
+            flags ,= flags_set
+
+    return PatternRE(regexp, flags)
+
 class TerminalTreeToPattern(Transformer):
     def pattern(self, ps):
         p ,= ps
@@ -441,16 +468,16 @@ class TerminalTreeToPattern(Transformer):
         assert items
         if len(items) == 1:
             return items[0]
-        if len({i.flags for i in items}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE(''.join(i.to_regexp() for i in items), items[0].flags if items else ())
+
+        pattern = ''.join(i.to_regexp() for i in items)
+        return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
-        if len({i.flags for i in exps}) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags!")
-        return PatternRE('(?:%s)' % ('|'.join(i.to_regexp() for i in exps)), exps[0].flags)
+
+        pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
+        return _make_joined_pattern(pattern, {i.flags for i in exps})
 
     def expr(self, args):
         inner, op = args[:2]
@@ -527,7 +554,8 @@ class Grammar:
         # =================
 
         # 1. Pre-process terminals
-        transformer = PrepareLiterals() * PrepareSymbols() * PrepareAnonTerminals(terminals)  # Adds to terminals
+        anon_tokens_transf = PrepareAnonTerminals(terminals)
+        transformer = PrepareLiterals() * PrepareSymbols() * anon_tokens_transf  # Adds to terminals
 
         # 2. Inline Templates
 
@@ -542,8 +570,10 @@ class Grammar:
             i += 1
             if len(params) != 0: # Dont transform templates
                 continue
-            ebnf_to_bnf.rule_options = RuleOptions(keep_all_tokens=True) if options.keep_all_tokens else None
+            rule_options = RuleOptions(keep_all_tokens=True) if options and options.keep_all_tokens else None
+            ebnf_to_bnf.rule_options = rule_options
             ebnf_to_bnf.prefix = name
+            anon_tokens_transf.rule_options = rule_options
             tree = transformer.transform(rule_tree)
             res = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))
@@ -601,7 +631,9 @@ class Grammar:
                                 if isinstance(s, NonTerminal)
                                 and s != r.origin}
             used_rules |= {NonTerminal(s) for s in start}
-            compiled_rules = [r for r in compiled_rules if r.origin in used_rules]
+            compiled_rules, unused = classify_bool(compiled_rules, lambda r: r.origin in used_rules)
+            for r in unused:
+                logger.debug("Unused rule: %s", r)
             if len(compiled_rules) == c:
                 break
 
@@ -609,14 +641,16 @@ class Grammar:
         used_terms = {t.name for r in compiled_rules
                              for t in r.expansion
                              if isinstance(t, Terminal)}
-        terminals = [t for t in terminals if t.name in used_terms or t.name in self.ignore]
+        terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore)
+        if unused:
+            logger.debug("Unused terminals: %s", [t.name for t in unused])
 
         return terminals, compiled_rules, self.ignore
 
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path, base_paths=[]):
+def import_grammar(grammar_path, re_, base_paths=[]):
     if grammar_path not in _imported_grammars:
         import_paths = base_paths + IMPORT_PATHS
         for import_path in import_paths:
@@ -624,7 +658,7 @@ def import_grammar(grammar_path, base_paths=[]):
                 joined_path = os.path.join(import_path, grammar_path)
                 with open(joined_path, encoding='utf8') as f:
                     text = f.read()
-                grammar = load_grammar(text, joined_path)
+                grammar = load_grammar(text, joined_path, re_)
                 _imported_grammars[grammar_path] = grammar
                 break
         else:
@@ -755,18 +789,33 @@ def _find_used_symbols(tree):
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
 class GrammarLoader:
-    def __init__(self):
+    ERRORS = {
+        'Unclosed parenthesis': ['a: (\n'],
+        'Umatched closing parenthesis': ['a: )\n', 'a: [)\n', 'a: (]\n'],
+        'Expecting rule or terminal definition (missing colon)': ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n'],
+        'Illegal name for rules or terminals': ['Aa:\n'],
+        'Alias expects lowercase name': ['a: -> "a"\n'],
+        'Unexpected colon': ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n'],
+        'Misplaced operator': ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n'],
+        'Expecting option ("|") or a new rule or terminal definition': ['a:a\n()\n'],
+        'Terminal names cannot contain dots': ['A.B\n'],
+        '%import expects a name': ['%import "a"\n'],
+        '%ignore expects a value': ['%ignore %import\n'],
+    }
+
+    def __init__(self, re_module):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
-        lexer_conf = LexerConf(terminals, ['WS', 'COMMENT'])
+        lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, ['start'])
         self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
 
         self.canonize_tree = CanonizeTree()
+        self.re_module = re_module
 
     def load_grammar(self, grammar_text, grammar_name='<?>'):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
@@ -779,19 +828,9 @@ class GrammarLoader:
                                (e.line, e.column, grammar_name, context))
         except UnexpectedToken as e:
             context = e.get_context(grammar_text)
-            error = e.match_examples(self.parser.parse, {
-                'Unclosed parenthesis': ['a: (\n'],
-                'Umatched closing parenthesis': ['a: )\n', 'a: [)\n', 'a: (]\n'],
-                'Expecting rule or terminal definition (missing colon)': ['a\n', 'a->\n', 'A->\n', 'a A\n'],
-                'Alias expects lowercase name': ['a: -> "a"\n'],
-                'Unexpected colon': ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n'],
-                'Misplaced operator': ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n'],
-                'Expecting option ("|") or a new rule or terminal definition': ['a:a\n()\n'],
-                '%import expects a name': ['%import "a"\n'],
-                '%ignore expects a value': ['%ignore %import\n'],
-            })
+            error = e.match_examples(self.parser.parse, self.ERRORS, use_accepts=True)
             if error:
-                raise GrammarError("%s at line %s column %s\n\n%s" % (error, e.line, e.column, context))
+                raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
             elif 'STRING' in e.expected:
                 raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
             raise
@@ -819,7 +858,7 @@ class GrammarLoader:
                 if len(stmt.children) > 1:
                     path_node, arg1 = stmt.children
                 else:
-                    path_node, = stmt.children
+                    path_node ,= stmt.children
                     arg1 = None
 
                 if isinstance(arg1, Tree):  # Multi import
@@ -862,7 +901,7 @@ class GrammarLoader:
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, base_paths=base_paths)
+            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -942,4 +981,5 @@ class GrammarLoader:
 
 
 
-load_grammar = GrammarLoader().load_grammar
+def load_grammar(grammar, source, re_):
+    return GrammarLoader(re_).load_grammar(grammar, source)

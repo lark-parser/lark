@@ -1,7 +1,7 @@
-
+# Parsers
 Lark implements the following parsing algorithms: Earley, LALR(1), and CYK
 
-# Earley
+## Earley
 
 An [Earley Parser](https://www.wikiwand.com/en/Earley_parser) is a chart parser capable of parsing any context-free grammar at O(n^3), and O(n^2) when the grammar is unambiguous. It can parse most LR grammars at O(n). Most programming languages are LR, and can be parsed at a linear time.
 
@@ -13,7 +13,7 @@ It's possible to bypass the dynamic lexing, and use the regular Earley parser wi
 
 Lark implements the Shared Packed Parse Forest data-structure for the Earley parser, in order to reduce the space and computation required to handle ambiguous grammars.
 
-You can read more about SPPF [here](http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/)
+You can read more about SPPF [here](https://web.archive.org/web/20191229100607/www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest)
 
 As a result, Lark can efficiently parse and store every ambiguity in the grammar, when using Earley.
 
@@ -30,7 +30,7 @@ Lark provides the following options to combat ambiguity:
 
 **TODO: Add documentation on dynamic_complete**
 
-# LALR(1)
+## LALR(1)
 
 [LALR(1)](https://www.wikiwand.com/en/LALR_parser) is a very efficient, true-and-tested parsing algorithm. It's incredibly fast and requires very little memory. It can parse most programming languages (For example: Python and Java).
 
@@ -42,7 +42,7 @@ The contextual lexer communicates with the parser, and uses the parser's lookahe
 
 This is an improvement to LALR(1) that is unique to Lark.
 
-# CYK Parser
+## CYK Parser
 
 A [CYK parser](https://www.wikiwand.com/en/CYK_algorithm) can parse any context-free grammar at O(n^3*|G|).
 

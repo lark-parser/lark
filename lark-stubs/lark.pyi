@@ -23,6 +23,7 @@ class LarkOptions:
     transformer: Optional[Transformer]
     postlex: Optional[PostLex]
     ambiguity: str
+    regex: bool
     debug: bool
     keep_all_tokens: bool
     propagate_positions: bool
@@ -30,10 +31,12 @@ class LarkOptions:
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
     g_regex_flags: int
+    use_bytes: bool
 
 
 class Lark:
     source: str
+    grammar_source: str
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
@@ -48,12 +51,15 @@ class Lark:
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
         ambiguity: Literal["explicit", "resolve"] = "resolve",
+        regex: bool = False,
         debug: bool = False,
         keep_all_tokens: bool = False,
         propagate_positions: bool = False,
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
-        g_regex_flags: int = ...
+        cache: Union[bool, str] = False,
+        g_regex_flags: int = ...,
+        use_bytes: bool = False,
     ):
         ...
 

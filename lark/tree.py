@@ -4,15 +4,29 @@ except ImportError:
     pass
 
 from copy import deepcopy
-from collections import OrderedDict
 
 
 ###{standalone
+from collections import OrderedDict
+
+
 class Meta:
     def __init__(self):
         self.empty = True
 
+
 class Tree(object):
+    """The main tree class.
+
+    Creates a new tree, and stores "data" and "children" in attributes of the same name.
+    Trees can be hashed and compared.
+
+    Parameters:
+        data: The name of the rule or alias
+        children: List of matched sub-rules and terminals
+        meta: Line & Column numbers (if ``propagate_positions`` is enabled).
+            meta attributes: line, column, start_pos, end_line, end_column, end_pos
+    """
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -44,6 +58,10 @@ class Tree(object):
         return l
 
     def pretty(self, indent_str='  '):
+        """Returns an indented string representation of the tree.
+
+        Great for debugging.
+        """
         return ''.join(self._pretty(0, indent_str))
 
     def __eq__(self, other):
@@ -59,6 +77,10 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def iter_subtrees(self):
+        """Depth-first iteration.
+
+        Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
+        """
         queue = [self]
         subtrees = OrderedDict()
         for subtree in queue:
@@ -70,11 +92,11 @@ class Tree(object):
         return reversed(list(subtrees.values()))
 
     def find_pred(self, pred):
-        "Find all nodes where pred(tree) == True"
+        """Returns all nodes of the tree that evaluate pred(node) as true."""
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
-        "Find all nodes where tree.data == data"
+        """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
 
 ###}
@@ -95,6 +117,10 @@ class Tree(object):
                     yield c
 
     def iter_subtrees_topdown(self):
+        """Breadth-first iteration.
+
+        Iterates over all the subtrees, return nodes in order like pretty() does.
+        """
         stack = [self]
         while stack:
             node = stack.pop()
@@ -105,7 +131,7 @@ class Tree(object):
                 stack.append(n)
 
     def __deepcopy__(self, memo):
-        return type(self)(self.data, deepcopy(self.children, memo))
+        return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
 
     def copy(self):
         return type(self)(self.data, self.children)
@@ -134,6 +160,15 @@ class SlottedTree(Tree):
 
 
 def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
+    graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
+    graph.write_png(filename)
+
+
+def pydot__tree_to_dot(tree, filename, rankdir="LR", **kwargs):
+    graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
+    graph.write(filename)
+
+def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to
@@ -171,4 +206,5 @@ def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
         return node
 
     _to_pydot(tree)
-    graph.write_png(filename)
+    return graph
+

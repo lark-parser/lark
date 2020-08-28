@@ -1,10 +1,10 @@
-#
-# This example shows how to write a basic JSON parser
-#
-# The code is short and clear, and outperforms every other parser (that's written in Python).
-# For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
-#
+"""
+Simple JSON Parser
+==================
 
+The code is short and clear, and outperforms every other parser (that's written in Python).
+For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
+"""
 import sys
 
 from lark import Lark, Transformer, v_args

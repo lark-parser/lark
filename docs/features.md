@@ -1,4 +1,6 @@
-# Main Features
+# Features
+
+## Main Features
  - Earley parser, capable of parsing any context-free grammar
    - Implements SPPF, for efficient parsing and storing of ambiguous grammars.
  - LALR(1) parser, limited in power of expression, but very efficient in space and performance (O(n)).
@@ -6,6 +8,7 @@
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
  - Stand-alone parser generator - create a small independent parser to embed in your project.
+ - Flexible error handling by using a "puppet parser" mechanism (LALR only)
  - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
  - Standard library of terminals (strings, numbers, names, etc.)
@@ -17,11 +20,14 @@
 
 [Read more about the parsers](parsers.md)
 
-# Extra features
+## Extra features
 
   - Import rules and tokens from other Lark grammars, for code reuse and modularity.
-  - Import grammars from Nearley.js
+  - Support for external regex module ([see here](classes.md#using-unicode-character-classes-with-regex))
+  - Import grammars from Nearley.js ([read more](nearley.md))
   - CYK parser
+  - Visualize your parse trees as dot or png files ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
+
 
 ### Experimental features
   - Automatic reconstruction of input from parse-tree (see examples)

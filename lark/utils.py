@@ -4,51 +4,15 @@ from functools import reduce
 from ast import literal_eval
 from collections import deque
 
-class fzset(frozenset):
-    def __repr__(self):
-        return '{%s}' % ', '.join(map(repr, self))
-
-
-def classify_bool(seq, pred):
-    true_elems = []
-    false_elems = []
-
-    for elem in seq:
-        if pred(elem):
-            true_elems.append(elem)
-        else:
-            false_elems.append(elem)
-
-    return true_elems, false_elems
-
-
-
-def bfs(initial, expand):
-    open_q = deque(list(initial))
-    visited = set(open_q)
-    while open_q:
-        node = open_q.popleft()
-        yield node
-        for next_node in expand(node):
-            if next_node not in visited:
-                visited.add(next_node)
-                open_q.append(next_node)
-
-
-
-
-def _serialize(value, memo):
-    if isinstance(value, Serialize):
-        return value.serialize(memo)
-    elif isinstance(value, list):
-        return [_serialize(elem, memo) for elem in value]
-    elif isinstance(value, frozenset):
-        return list(value)  # TODO reversible?
-    elif isinstance(value, dict):
-        return {key:_serialize(elem, memo) for key, elem in value.items()}
-    return value
-
 ###{standalone
+import logging
+logger = logging.getLogger("lark")
+logger.addHandler(logging.StreamHandler())
+# Set to highest level, since we have some warnings amongst the code
+# By default, we should not output any log messages
+logger.setLevel(logging.CRITICAL)
+
+
 def classify(seq, key=None, value=None):
     d = {}
     for item in seq:
@@ -165,16 +129,31 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+try:
+    import regex
+except ImportError:
+    regex = None
+
 import sys, re
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 import sre_parse
 import sre_constants
-def get_regexp_width(regexp):
+categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
+def get_regexp_width(expr):
+    if regex:
+        # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
+        # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex
+        # match here below.
+        regexp_final = re.sub(categ_pattern, 'A', expr)
+    else:
+        if re.search(categ_pattern, expr):
+            raise ImportError('`regex` module must be installed in order to use Unicode categories.', expr)
+        regexp_final = expr
     try:
-        return [int(x) for x in sre_parse.parse(regexp).getwidth()]
+        return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
-        raise ValueError(regexp)
+        raise ValueError(expr)
 
 ###}
 
@@ -182,7 +161,7 @@ def get_regexp_width(regexp):
 def dedup_list(l):
     """Given a list (l) will removing duplicates from the list,
        preserving the original order of the list. Assumes that
-       the list entrie are hashable."""
+       the list entries are hashable."""
     dedup = set()
     return [ x for x in l if not (x in dedup or dedup.add(x))]
 
@@ -287,7 +266,60 @@ def combine_alternatives(lists):
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
 
 
-
 class FS:
     open = open
     exists = os.path.exists
+
+
+def isascii(s):
+    """ str.isascii only exists in python3.7+ """
+    try:
+        return s.isascii()
+    except AttributeError:
+        try:
+            s.encode('ascii')
+            return True
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            return False
+
+
+class fzset(frozenset):
+    def __repr__(self):
+        return '{%s}' % ', '.join(map(repr, self))
+
+
+def classify_bool(seq, pred):
+    true_elems = []
+    false_elems = []
+
+    for elem in seq:
+        if pred(elem):
+            true_elems.append(elem)
+        else:
+            false_elems.append(elem)
+
+    return true_elems, false_elems
+
+
+def bfs(initial, expand):
+    open_q = deque(list(initial))
+    visited = set(open_q)
+    while open_q:
+        node = open_q.popleft()
+        yield node
+        for next_node in expand(node):
+            if next_node not in visited:
+                visited.add(next_node)
+                open_q.append(next_node)
+
+
+def _serialize(value, memo):
+    if isinstance(value, Serialize):
+        return value.serialize(memo)
+    elif isinstance(value, list):
+        return [_serialize(elem, memo) for elem in value]
+    elif isinstance(value, frozenset):
+        return list(value)  # TODO reversible?
+    elif isinstance(value, dict):
+        return {key:_serialize(elem, memo) for key, elem in value.items()}
+    return value

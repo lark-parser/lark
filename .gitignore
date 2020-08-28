@@ -10,3 +10,5 @@ tags
 .mypy_cache
 /dist
 /build
+docs/_build
+docs/examples

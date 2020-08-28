@@ -9,11 +9,16 @@ from .lexer import Token
 from inspect import getmembers, getmro
 
 class Discard(Exception):
+    """When raising the Discard exception in a transformer callback,
+    that node is discarded and won't appear in the parent.
+    """
     pass
 
 # Transformers
 
 class _Decoratable:
+    "Provides support for decorating methods with @v_args"
+
     @classmethod
     def _apply_decorator(cls, decorator, **kwargs):
         mro = getmro(cls)
@@ -40,12 +45,31 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable):
-    """Visits the tree recursively, starting with the leaves and finally the root (bottom-up)
+    """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to ``tree.data``.
     The returned value replaces the old one in the structure.
 
-    Can be used to implement map or reduce.
+    They work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
+    Transformers can be used to implement map & reduce patterns. Because nodes are reduced from leaf to root,
+    at any point the callbacks may assume the children have already been transformed (if applicable).
+
+    ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
+    it is slightly less efficient. It can be used to implement map or reduce patterns.
+
+    All these classes implement the transformer interface:
+
+    - ``Transformer`` - Recursively transforms the tree. This is the one you probably want.
+    - ``Transformer_InPlace`` - Non-recursive. Changes the tree in-place instead of returning new instances
+    - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place instead of returning new instances
+
+    Parameters:
+        visit_tokens: By default, transformers only visit rules.
+            visit_tokens=True will tell ``Transformer`` to visit tokens
+            as well. This is a slightly slower alternative to lexer_callbacks
+            but it's easier to maintain and works for all algorithms
+            (even when there isn't a lexer).
+
     """
     __visit_tokens__ = True   # For backwards compatibility
 
@@ -108,11 +132,19 @@ class Transformer(_Decoratable):
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
-        "Default operation on tree (for override)"
+        """Default operation on tree (for override)
+
+        Function that is called on if a function with a corresponding name has not been found.
+        Defaults to reconstruct the Tree.
+        """
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
-        "Default operation on token (for override)"
+        """Default operation on token (for override)
+
+        Function that is called on if a function with a corresponding name has not been found.
+        Defaults to just return the argument.
+        """
         return token
 
 
@@ -209,10 +241,10 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    """Bottom-up visitor, non-recursive
+    """Bottom-up visitor, non-recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to ``tree.data``
     """
 
     def visit(self, tree):
@@ -225,11 +257,12 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
+
 class Visitor_Recursive(VisitorBase):
-    """Bottom-up visitor, recursive
+    """Bottom-up visitor, recursive.
 
     Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to tree.data
+    Calls its methods (provided by user via inheritance) according to ``tree.data``
     """
 
     def visit(self, tree):
@@ -261,13 +294,15 @@ def visit_children_decor(func):
 
 
 class Interpreter(_Decoratable):
-    """Top-down visitor, recursive
+    """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
-    Calls its methods (provided by user via inheritance) according to tree.data
 
-    Unlike Transformer and Visitor, the Interpreter doesn't automatically visit its sub-branches.
-    The user has to explicitly call visit_children, or use the @visit_children_decor
+    For each tree node, it calls its methods (provided by user via inheritance) according to ``tree.data``.
+
+    Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
+    The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
+    This allows the user to implement branching and loops.
     """
 
     def visit(self, tree):
@@ -350,8 +385,34 @@ def _vargs_meta(f, data, children, meta):
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
+
 def v_args(inline=False, meta=False, tree=False, wrapper=None):
-    "A convenience decorator factory, for modifying the behavior of user-supplied visitor methods"
+    """A convenience decorator factory for modifying the behavior of user-supplied visitor methods.
+
+    By default, callback methods of transformers/visitors accept one argument - a list of the node's children.
+
+    ``v_args`` can modify this behavior. When used on a transformer/visitor class definition,
+    it applies to all the callback methods inside it.
+
+    Parameters:
+        inline: Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
+        meta: Provides two arguments: ``children`` and ``meta`` (instead of just the first)
+        tree: Provides the entire tree as the argument, instead of the children.
+
+    Example:
+        ::
+
+            @v_args(inline=True)
+            class SolveArith(Transformer):
+                def add(self, left, right):
+                    return left + right
+
+
+            class ReverseNotation(Transformer_InPlace):
+                @v_args(tree=True)
+                def tree_node(self, tree):
+                    tree.children = tree.children[::-1]
+    """
     if tree and (meta or inline):
         raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
 

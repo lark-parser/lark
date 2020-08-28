@@ -453,7 +453,7 @@ class ForestToParseTree(ForestTransformer):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        return self.tree_class(node.s.name, [])
+        raise Discard
 
     def transform_symbol_node(self, node, data):
         self._check_cycle(node)
@@ -546,14 +546,11 @@ class TreeForestTransformer(ForestToParseTree):
         Wraps data in an '_ambig_ node if it contains more than
         one element.'
         """
-        try:
-            if len(data) > 1:
-                return self.tree_class('_ambig', data)
-            elif data:
-                return data[0]
-            return self.tree_class(name, [])
-        except TypeError:
-            return data
+        if len(data) > 1:
+            return self.tree_class('_ambig', data)
+        elif data:
+            return data[0]
+        raise Discard
 
     def __default_token__(self, node):
         """Default operation on Token (for override).

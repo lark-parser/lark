@@ -23,8 +23,7 @@ Lark provides the following options to combat ambiguity:
 
 2) Users may choose to receive the set of all possible parse-trees (using ambiguity='explicit'), and choose the best derivation themselves. While simple and flexible, it comes at the cost of space and performance, and so it isn't recommended for highly ambiguous grammars, or very long inputs.
 
-3) As an advanced feature, users may use specialized visitors to iterate the SPPF themselves. Future versions of Lark intend to improve and simplify this interface.
-
+3) As an advanced feature, users may use specialized visitors to iterate the SPPF themselves.
 
 **dynamic_complete**
 

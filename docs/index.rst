@@ -36,6 +36,7 @@ Welcome to Lark's documentation!
    tree_construction
    classes
    visitors
+   forest
    nearley
 
 
@@ -96,6 +97,7 @@ Resources
    -  :doc:`grammar`
    -  :doc:`tree_construction`
    -  :doc:`visitors`
+   -  :doc:`forest`
    -  :doc:`classes`
    -  :doc:`nearley`
    -  `Cheatsheet (PDF)`_

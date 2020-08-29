@@ -51,6 +51,11 @@ Transformer, Visitor & Interpreter
 
 See :doc:`visitors`.
 
+ForestVisitor, ForestTransformer, & TreeForestTransformer
+-----------------------------------------------------------
+
+See :doc:`forest`.
+
 UnexpectedInput
 ---------------
 

@@ -12,7 +12,7 @@ class TestGrammar(TestCase):
         pass
 
     def test_errors(self):
-        for msg, examples in GrammarLoader.ERRORS.items():
+        for msg, examples in GrammarLoader.ERRORS:
             for example in examples:
                 try:
                     p = Lark(example)

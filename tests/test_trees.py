@@ -7,6 +7,7 @@ import pickle
 import functools
 
 from lark.tree import Tree
+from lark.lexer import Token
 from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard
 
 
@@ -21,6 +22,9 @@ class TestTrees(TestCase):
         s = copy.deepcopy(self.tree1)
         data = pickle.dumps(s)
         assert pickle.loads(data) == s
+
+    def test_repr_runnable(self):
+        assert self.tree1 == eval(repr(self.tree1))
 
     def test_iter_subtrees(self):
         expected = [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z'),
@@ -232,4 +236,3 @@ class TestTrees(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -207,4 +207,3 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
 
     _to_pydot(tree)
     return graph
-

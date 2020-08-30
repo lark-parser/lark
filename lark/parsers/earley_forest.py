@@ -393,6 +393,22 @@ class ForestSumVisitor(ForestVisitor):
     def visit_symbol_node_out(self, node):
         node.priority = max(child.priority for child in node.children)
 
+class PackedData():
+    """Used in transformationss of packed nodes to distinguish the data
+    that comes from the left child and the right child.
+    """
+
+    def __init__(self, node, data):
+        self.left = None
+        self.right = None
+        if data:
+            if node.left:
+                self.left = data[0]
+                if len(data) > 1 and node.right:
+                    self.right = data[1]
+            elif node.right:
+                self.right = data[0]
+
 class ForestToParseTree(ForestTransformer):
     """Used by the earley parser when ambiguity equals 'resolve' or
     'explicit'. Transforms an SPPF into an (ambiguous) parse tree.
@@ -469,15 +485,14 @@ class ForestToParseTree(ForestTransformer):
         self._check_cycle(node)
         children = list()
         assert len(data) <= 2
-        if node.left:
-            if node.left.is_intermediate and isinstance(data[0], list):
-                children += data[0]
+        data = PackedData(node, data)
+        if data.left is not None:
+            if node.left.is_intermediate and isinstance(data.left, list):
+                children += data.left
             else:
-                children.append(data[0])
-            if len(data) > 1:
-                children.append(data[1])
-        elif data:
-            children.append(data[0])
+                children.append(data.left)
+        if data.right is not None:
+            children.append(data.right)
         if node.parent.is_intermediate:
             return children
         return self._call_rule_func(node, children)

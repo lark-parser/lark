@@ -1,12 +1,16 @@
-#
-# This is a toy example that compiles Python directly to bytecode, without generating an AST.
-# It currently only works for very very simple Python code.
-#
-# It requires the 'bytecode' library. You can get it using
-#
-#     $ pip install bytecode
-#
+"""
+Compile Python to Bytecode
+==========================
+ 
+A toy example that compiles Python directly to bytecode, without generating an AST.
+It currently only works for very very simple Python code.
 
+It requires the 'bytecode' library. You can get it using
+::
+
+    $ pip install bytecode
+
+"""
 from lark import Lark, Transformer, v_args
 from lark.indenter import Indenter
 

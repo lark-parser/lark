@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from types import ModuleType
 from typing import (
     TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional,
     Pattern as REPattern,
@@ -107,10 +107,12 @@ class TraditionalLexer(Lexer):
     user_callbacks: Dict[str, _Callback]
     callback: Dict[str, _Callback]
     mres: List[Tuple[REPattern, Dict[int, str]]]
+    re: ModuleType
 
     def __init__(
         self,
         terminals: Collection[TerminalDef],
+        re_: ModuleType,
         ignore: Collection[str] = ...,
         user_callbacks: Dict[str, _Callback] = ...,
         g_regex_flags: int = ...
@@ -135,6 +137,7 @@ class ContextualLexer(Lexer):
         self,
         terminals: Collection[TerminalDef],
         states: Dict[str, Collection[str]],
+        re_: ModuleType,
         ignore: Collection[str] = ...,
         always_accept: Collection[str] = ...,
         user_callbacks: Dict[str, _Callback] = ...,

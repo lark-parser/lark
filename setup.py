@@ -1,4 +1,7 @@
-import re
+try:
+    import regex as re
+except ImportError:
+    import re
 from setuptools import find_packages, setup
 
 __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read())
@@ -6,10 +9,15 @@ __version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read(
 setup(
     name = "lark-parser",
     version = __version__,
-    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark-stubs'],
+    packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark.__pyinstaller', 'lark-stubs'],
 
     requires = [],
     install_requires = [],
+
+    extras_require = {
+        "regex": ["regex"],
+        "nearley": ["js2py"]
+    },
 
     package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},
 

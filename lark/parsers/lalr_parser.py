@@ -7,9 +7,10 @@ from ..lexer import Token
 from ..utils import Enumerator, Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
-
+from .lalr_puppet import ParserPuppet
 
 ###{standalone
+
 class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
         assert all(r.options.priority is None for r in parser_conf.rules), "LALR doesn't yet support prioritization"
@@ -37,22 +38,19 @@ class LALR_Parser(object):
 
 class _Parser:
     def __init__(self, parse_table, callbacks, debug=False):
-        self.states = parse_table.states
-        self.start_states = parse_table.start_states
-        self.end_states = parse_table.end_states
+        self.parse_table = parse_table
         self.callbacks = callbacks
         self.debug = debug
 
-    def parse(self, seq, start, set_state=None):
+    def parse(self, seq, start, set_state=None, value_stack=None, state_stack=None):
         token = None
         stream = iter(seq)
-        states = self.states
+        states = self.parse_table.states
+        start_state = self.parse_table.start_states[start]
+        end_state = self.parse_table.end_states[start]
 
-        start_state = self.start_states[start]
-        end_state = self.end_states[start]
-
-        state_stack = [start_state]
-        value_stack = []
+        state_stack = state_stack or [start_state]
+        value_stack = value_stack or []
 
         if set_state: set_state(start_state)
 
@@ -61,8 +59,12 @@ class _Parser:
             try:
                 return states[state][token.type]
             except KeyError:
-                expected = [s for s in states[state].keys() if s.isupper()]
-                raise UnexpectedToken(token, expected, state=state)
+                expected = {s for s in states[state].keys() if s.isupper()}
+                try:
+                    puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
+                except NameError:   # For standalone parser
+                    puppet = None
+                raise UnexpectedToken(token, expected, state=state, puppet=puppet)
 
         def reduce(rule):
             size = len(rule.expansion)
@@ -114,3 +116,4 @@ class _Parser:
                 return value_stack[-1]
 
 ###}
+

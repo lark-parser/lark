@@ -138,7 +138,7 @@ class GrammarAnalyzer(object):
         for r in rules:
             for sym in r.expansion:
                 if not (sym.is_term or sym in self.rules_by_origin):
-                    raise GrammarError("Using an undefined rule: %s" % sym) # TODO test validation
+                    raise GrammarError("Using an undefined rule: %s" % sym)
 
         self.start_states = {start: self.expand_rule(root_rule.origin)
                              for start, root_rule in root_rules.items()}

@@ -1,7 +1,11 @@
-#
-# This example demonstrates usage of the included Python grammars
-#
+"""
+Grammar-complete Python Parser
+==============================
 
+A fully-working Python 2 & 3 parser (but not production ready yet!)
+
+This example demonstrates usage of the included Python grammars
+"""
 import sys
 import os, os.path
 from io import open
@@ -26,6 +30,13 @@ python_parser2 = Lark.open('python2.lark', parser='lalr', **kwargs)
 python_parser3 = Lark.open('python3.lark',parser='lalr', **kwargs)
 python_parser2_earley = Lark.open('python2.lark', parser='earley', lexer='standard', **kwargs)
 
+try:
+    xrange
+except NameError:
+    chosen_parser = python_parser3
+else:
+    chosen_parser = python_parser2
+
 
 def _read(fn, *args):
     kwargs = {'encoding': 'iso-8859-1'}
@@ -42,24 +53,13 @@ def _get_lib_path():
         return [x for x in sys.path if x.endswith('%s.%s' % sys.version_info[:2])][0]
 
 def test_python_lib():
-
     path = _get_lib_path()
 
     start = time.time()
     files = glob.glob(path+'/*.py')
     for f in files:
         print( f )
-        try:
-            # print list(python_parser.lex(_read(os.path.join(path, f)) + '\n'))
-            try:
-                xrange
-            except NameError:
-                python_parser3.parse(_read(os.path.join(path, f)) + '\n')
-            else:
-                python_parser2.parse(_read(os.path.join(path, f)) + '\n')
-        except:
-            print ('At %s' % f)
-            raise
+        chosen_parser.parse(_read(os.path.join(path, f)) + '\n')
 
     end = time.time()
     print( "test_python_lib (%d files), time: %s secs"%(len(files), end-start) )

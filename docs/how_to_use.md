@@ -22,20 +22,21 @@ Of course, some specific use-cases may deviate from this process. Feel free to s
 
 Browse the [Examples](https://github.com/lark-parser/lark/tree/master/examples) to find a template that suits your purposes.
 
-Read the tutorials to get a better understanding of how everything works. (links in the [main page](/))
+Read the tutorials to get a better understanding of how everything works. (links in the [main page](/index))
 
-Use the [Cheatsheet (PDF)](lark_cheatsheet.pdf) for quick reference.
+Use the [Cheatsheet (PDF)](/_static/lark_cheatsheet.pdf) for quick reference.
 
-Use the reference pages for more in-depth explanations. (links in the [main page](/)]
+Use the reference pages for more in-depth explanations. (links in the [main page](/index)]
 
 ## LALR usage
 
-By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure `logging` framework beforehand. For example:
+By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `logger` beforehand. For example:
 
 ```python
-from lark import Lark
 import logging
-logging.basicConfig(level=logging.DEBUG)
+from lark import Lark, logger
+
+logger.setLevel(logging.DEBUG)
 
 collision_grammar = '''
 start: as as

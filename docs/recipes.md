@@ -139,7 +139,7 @@ If your tree nodes aren't unique (if there is a shared Tree instance), the asser
 
 ```python
 class Parent(Visitor):
-    def visit(self, tree):
+    def __default__(self, tree):
         for subtree in tree.children:
             if isinstance(subtree, Tree):
                 assert not hasattr(subtree, 'parent')

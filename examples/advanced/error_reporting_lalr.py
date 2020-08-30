@@ -1,10 +1,13 @@
-#
-# This demonstrates example-driven error reporting with the LALR parser
-#
+"""
+Example-Driven Error Reporting
+==============================
 
+A demonstration of example-driven error reporting with the LALR parser
+
+"""
 from lark import Lark, UnexpectedInput
 
-from .json_parser import json_grammar   # Using the grammar from the json_parser example
+from _json_parser import json_grammar   # Using the grammar from the json_parser example
 
 json_parser = Lark(json_grammar, parser='lalr')
 
@@ -52,7 +55,7 @@ def parse(json_text):
                                 '[1,2,]',
                                 '{"foo":1,}',
                                 '{"foo":false,"bar":true,}']
-        })
+        }, use_accepts=True)
         if not exc_class:
             raise
         raise exc_class(u.get_context(json_text), u.line, u.column)

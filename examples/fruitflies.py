@@ -1,7 +1,12 @@
-#
-# This example shows how to use get explicit ambiguity from Lark's Earley parser.
-#
+"""
+Handling Ambiguity
+==================
 
+A demonstration of ambiguity
+
+This example shows how to use get explicit ambiguity from Lark's Earley parser.
+
+"""
 import sys
 from lark import Lark, tree
 
@@ -28,9 +33,13 @@ sentence = 'fruit flies like bananas'
 def make_png(filename):
     tree.pydot__tree_to_png( parser.parse(sentence), filename)
 
+def make_dot(filename):
+    tree.pydot__tree_to_dot( parser.parse(sentence), filename)
+
 if __name__ == '__main__':
     print(parser.parse(sentence).pretty())
     # make_png(sys.argv[1])
+    # make_dot(sys.argv[1])
 
 # Output:
 #

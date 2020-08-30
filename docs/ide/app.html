@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+
+    <!-- flip comment below to use local pyodide -->
+    <script src="https://pyodide-cdn2.iodide.io/v0.15.0/full/pyodide.js"></script>
+    <!-- <script src="./pyodide/pyodide.js"></script> -->
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/base-min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@500&display=swap" rel="stylesheet">
+
+    <script src="app.js"></script>
+    <style>
+        .is-loading:after {
+            background-image: url(is-loading.gif);
+            background-position: center 35%;
+            background-repeat: no-repeat;
+            background-color: hsla(0, 0%, 100%, .6);
+            position: absolute;
+            z-index: 700;
+            content: " ";
+            width: 100%;
+            height: 100%;
+            display: block;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        textarea, select, body > div > ul {
+            /* display: block;
+            margin: 15px auto;
+            width: 90%;
+            font-weight: bold;
+            color: #052569; */
+            font-family: 'Inconsolata', monospace;
+        }
+
+        textarea {
+            margin: 10px;
+            width: 90%;
+            padding: 10px;
+            font-size: 1.4em;
+        }
+
+        #grammar {
+            min-height: 300px;
+        }
+        #input {
+            min-height: 100px;
+        }
+
+        ul ul {
+            border-left: 1px dotted silver;
+            margin-left: -16px;
+        }
+
+        li {
+            list-style: circle;
+            margin-left: 10px;
+        }
+
+        select {
+            padding: 5px;
+        }
+
+        #inputs {
+            text-align: center;
+        }
+
+        #result {
+            display: flex;
+            justify-content: center;
+        }
+
+        #result > ul {
+            margin: 10px;
+            width: 90%;
+            padding: 10px;
+            font-size: 1.2em;
+        }
+
+        menu {
+            display: flex;
+        }
+
+        main {
+            margin: auto;
+        }
+
+    </style>
+</head>
+<body class="is-loading">
+</body>
+</html>

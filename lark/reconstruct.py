@@ -1,16 +1,13 @@
-from collections import defaultdict
+"""Reconstruct text from a tree, based on Lark grammar"""
+
+import unicodedata
 
 from .tree import Tree
 from .visitors import Transformer_InPlace
-from .common import ParserConf
 from .lexer import Token, PatternStr
-from .parsers import earley
-from .grammar import Rule, Terminal, NonTerminal
+from .grammar import Terminal, NonTerminal
 
-
-
-def is_discarded_terminal(t):
-    return t.is_term and t.filter_out
+from .tree_matcher import TreeMatcher, is_discarded_terminal
 
 def is_iter_empty(i):
     try:
@@ -59,105 +56,48 @@ class WriteTokensTransformer(Transformer_InPlace):
         return to_write
 
 
-class MatchTree(Tree):
-    pass
+def _isalnum(x):
+    # Categories defined here: https://www.python.org/dev/peps/pep-3131/
+    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
 
-class MakeMatchTree:
-    def __init__(self, name, expansion):
-        self.name = name
-        self.expansion = expansion
+class Reconstructor(TreeMatcher):
+    """
+    A Reconstructor that will, given a full parse Tree, generate source code.
 
-    def __call__(self, args):
-        t = MatchTree(self.name, args)
-        t.meta.match_tree = True
-        t.meta.orig_expansion = self.expansion
-        return t
+    Note:
+        The reconstructor cannot generate values from regexps. If you need to produce discarded
+        regexes, such as newlines, use `term_subs` and provide default values for them.
 
-def best_from_group(seq, group_key, cmp_key):
-    d = {}
-    for item in seq:
-        key = group_key(item)
-        if key in d:
-            v1 = cmp_key(item)
-            v2 = cmp_key(d[key])
-            if v2 > v1:
-                d[key] = item
-        else:
-            d[key] = item
-    return list(d.values())
+    Paramters:
+        parser: a Lark instance
+        term_subs: a dictionary of [Terminal name as str] to [output text as str]
+    """
 
-class Reconstructor:
-    def __init__(self, parser, term_subs={}):
-        # XXX TODO calling compile twice returns different results!
-        assert parser.options.maybe_placeholders == False
-        tokens, rules, _grammar_extra = parser.grammar.compile(parser.options.start)
+    def __init__(self, parser, term_subs=None):
+        TreeMatcher.__init__(self, parser)
 
-        self.write_tokens = WriteTokensTransformer({t.name:t for t in tokens}, term_subs)
-        self.rules = list(self._build_recons_rules(rules))
-        self.rules.reverse()
-
-        # Choose the best rule from each group of {rule => [rule.alias]}, since we only really need one derivation.
-        self.rules = best_from_group(self.rules, lambda r: r, lambda r: -len(r.expansion))
-
-        self.rules.sort(key=lambda r: len(r.expansion))
-        callbacks = {rule: rule.alias for rule in self.rules}   # TODO pass callbacks through dict, instead of alias?
-        self.parser = earley.Parser(ParserConf(self.rules, callbacks, parser.options.start),
-                                    self._match, resolve_ambiguity=True)
-
-    def _build_recons_rules(self, rules):
-        expand1s = {r.origin for r in rules if r.options.expand1}
-
-        aliases = defaultdict(list)
-        for r in rules:
-            if r.alias:
-                aliases[r.origin].append( r.alias )
-
-        rule_names = {r.origin for r in rules}
-        nonterminals = {sym for sym in rule_names
-                       if sym.name.startswith('_') or sym in expand1s or sym in aliases }
-
-        for r in rules:
-            recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
-                          for sym in r.expansion if not is_discarded_terminal(sym)]
-
-            # Skip self-recursive constructs
-            if recons_exp == [r.origin]:
-                continue
-
-            sym = NonTerminal(r.alias) if r.alias else r.origin
-
-            yield Rule(sym, recons_exp, alias=MakeMatchTree(sym.name, r.expansion))
-
-        for origin, rule_aliases in aliases.items():
-            for alias in rule_aliases:
-                yield Rule(origin, [Terminal(alias)], alias=MakeMatchTree(origin.name, [NonTerminal(alias)]))
-            yield Rule(origin, [Terminal(origin.name)], alias=MakeMatchTree(origin.name, [origin]))
-
-    def _match(self, term, token):
-        if isinstance(token, Tree):
-            return Terminal(token.data) == term
-        elif isinstance(token, Token):
-            return term == Terminal(token.type)
-        assert False
+        self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
 
     def _reconstruct(self, tree):
-        # TODO: ambiguity?
-        unreduced_tree = self.parser.parse(tree.children, tree.data)   # find a full derivation
-        assert unreduced_tree.data == tree.data
+        unreduced_tree = self.match_tree(tree, tree.data)
+
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:
             if isinstance(item, Tree):
+                # TODO use orig_expansion.rulename to support templates
                 for x in self._reconstruct(item):
                     yield x
             else:
                 yield item
 
-    def reconstruct(self, tree):
+    def reconstruct(self, tree, postproc=None):
         x = self._reconstruct(tree)
+        if postproc:
+            x = postproc(x)
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and prev_item[-1].isalnum() and item[0].isalnum():
+            if prev_item and item and _isalnum(prev_item[-1]) and _isalnum(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

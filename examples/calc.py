@@ -1,7 +1,11 @@
-#
-# This example shows how to write a basic calculator with variables.
-#
+"""
+Basic calculator
+================
 
+A simple example of a REPL calculator
+
+This example shows how to write a basic calculator with variables.
+"""
 from lark import Lark, Transformer, v_args
 
 

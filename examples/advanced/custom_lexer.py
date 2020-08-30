@@ -1,13 +1,14 @@
-#
-# This example demonstrates using Lark with a custom lexer.
-#
-# You can use a custom lexer to tokenize text when the lexers offered by Lark
-# are too slow, or not flexible enough.
-#
-# You can also use it (as shown in this example) to tokenize streams of objects.
-#
+"""
+Custom lexer
+============
 
+Demonstrates using a custom lexer to parse a non-textual stream of data
 
+You can use a custom lexer to tokenize text when the lexers offered by Lark
+are too slow, or not flexible enough.
+
+You can also use it (as shown in this example) to tokenize streams of objects.
+"""
 from lark import Lark, Transformer, v_args
 from lark.lexer import Lexer, Token
 

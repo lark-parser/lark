@@ -39,7 +39,7 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%s, %s)' % (self.data, self.children)
+        return 'Tree(%r, %r)' % (self.data, self.children)
 
     def _pretty_label(self):
         return self.data
@@ -207,4 +207,3 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
 
     _to_pydot(tree)
     return graph
-   

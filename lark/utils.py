@@ -39,6 +39,14 @@ def _deserialize(data, namespace, memo):
 
 
 class Serialize(object):
+    """Safe-ish serialization interface that doesn't rely on Pickle
+
+    Attributes:
+        __serialize_fields__ (List[str]): Fields (aka attributes) to serialize.
+        __serialize_namespace__ (list): List of classes that deserialization is allowed to instanciate.
+                                        Should include all field types that aren't builtin types.
+    """
+
     def memo_serialize(self, types_to_memoize):
         memo = SerializeMemoizer(types_to_memoize)
         return self.serialize(memo), memo.serialize()
@@ -78,6 +86,8 @@ class Serialize(object):
 
 
 class SerializeMemoizer(Serialize):
+    "A version of serialize that memoizes objects to reduce space"
+
     __serialize_fields__ = 'memoized',
 
     def __init__(self, types_to_memoize):

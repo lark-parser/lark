@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from .lalr_analysis import Shift, Reduce
 from .. import Token
+from ..exceptions import ParseError
 
 
 class ParserPuppet(object):
@@ -32,7 +33,8 @@ class ParserPuppet(object):
 
         state = state_stack[-1]
         action, arg = self.parser.parse_table.states[state][token.type]
-        assert arg != end_state
+        if arg == end_state:
+            raise ParseError(arg)
 
         while action is Reduce:
             rule = arg
@@ -56,7 +58,10 @@ class ParserPuppet(object):
                 return self.result
 
             state = state_stack[-1]
-            action, arg = self.parser.parse_table.states[state][token.type]
+            try:
+                action, arg = self.parser.parse_table.states[state][token.type]
+            except KeyError as e:
+                raise ParseError(e)
             assert arg != end_state
 
         assert action is Shift
@@ -111,13 +116,14 @@ class ParserPuppet(object):
     def accepts(self):
         accepts = set()
         for t in self.choices():
-            new_puppet = self.copy()
-            try:
-                new_puppet.feed_token(Token(t, ''))
-            except KeyError:
-                pass
-            else:
-                accepts.add(t)
+            if t.isupper(): # is terminal?
+                new_puppet = self.copy()
+                try:
+                    new_puppet.feed_token(Token(t, ''))
+                except ParseError:
+                    pass
+                else:
+                    accepts.add(t)
         return accepts
 
     def resume_parse(self):

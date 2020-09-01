@@ -53,7 +53,10 @@ class CalculateTree(Transformer):
         return value
 
     def var(self, name):
-        return self.vars[name]
+        try:
+            return self.vars[name]
+        except KeyError:
+            raise Exception("Variable not found: %s" % name)
 
 
 calc_parser = Lark(calc_grammar, parser='lalr', transformer=CalculateTree())

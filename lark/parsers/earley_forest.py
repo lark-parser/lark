@@ -161,23 +161,29 @@ class ForestVisitor(object):
     Use this as a base when you need to walk the forest.
     """
 
+    def get_cycle_in_path(self, node, path):
+        index = len(path) - 1
+        while id(path[index]) != id(node):
+            index -= 1
+        return path[index:]
+
     def visit_token_node(self, node): pass
     def visit_symbol_node_in(self, node): pass
     def visit_symbol_node_out(self, node): pass
     def visit_packed_node_in(self, node): pass
     def visit_packed_node_out(self, node): pass
-    def on_cycle(self, node, get_path): pass
+
+    def on_cycle(self, node, path):
+        """Called when a cycle is encountered. `node` is the node that causes
+        the cycle. `path` the list of nodes being visited: nodes that have been
+        entered but not exited. The first element is the root in a forest
+        visit, and the last element is the node visited most recently.
+        `path` should be treated as read-only. The utility function
+        `get_cycle_in_path` may be used to obtain a slice of `path` that only
+        contains the nodes that make up the cycle."""
+        pass
 
     def visit(self, root):
-        def make_get_path(node):
-            """Create a function that will return a path from `node` to
-            the last visited node. Used for the `on_cycle` callback."""
-            def get_path():
-                index = len(path) - 1
-                while id(path[index]) != id(node):
-                    index -= 1
-                return path[index:]
-            return get_path
 
         # Visiting is a list of IDs of all symbol/intermediate nodes currently in
         # the stack. It serves two purposes: to detect when we 'recurse' in and out
@@ -220,7 +226,7 @@ class ForestVisitor(object):
                     continue
 
                 if id(next_node) in visiting:
-                    oc(next_node, make_get_path(next_node))
+                    oc(next_node, path)
                     continue
 
                 input_stack.append(next_node)
@@ -259,7 +265,7 @@ class ForestVisitor(object):
                         not isinstance(next_node, Token):
                     next_node = iter(next_node)
                 elif id(next_node) in visiting:
-                    oc(next_node, make_get_path(next_node))
+                    oc(next_node, path)
                     continue
 
                 input_stack.append(next_node)
@@ -430,7 +436,7 @@ class ForestToParseTree(ForestTransformer):
         self.resolve_ambiguity = resolve_ambiguity
         self._on_cycle_retreat = False
 
-    def on_cycle(self, node, get_path):
+    def on_cycle(self, node, path):
         logger.warning("Cycle encountered in the SPPF at node: %s. "
                 "As infinite ambiguities cannot be represented in a tree, "
                 "this family of derivations will be discarded.", node)

@@ -133,7 +133,8 @@ class PackedNode(ForestNode):
         return [x for x in [self.left, self.right] if x is not None]
 
     def __iter__(self):
-        return iter([self.left, self.right])
+        yield self.left
+        yield self.right
 
     def __eq__(self, other):
         if not isinstance(other, PackedNode):
@@ -194,7 +195,7 @@ class ForestVisitor(object):
 
         # a list of nodes that are currently being visited
         # used for the `on_cycle` callback
-        path = list()
+        path = []
 
         # We do not use recursion here to walk the Forest due to the limited
         # stack size in python. Therefore input_stack is essentially our stack.
@@ -385,7 +386,8 @@ class ForestSumVisitor(ForestVisitor):
     final tree.
     """
     def visit_packed_node_in(self, node):
-        return iter([node.left, node.right])
+        yield node.left
+        yield node.right
 
     def visit_symbol_node_in(self, node):
         return iter(node.children)
@@ -448,7 +450,7 @@ class ForestToParseTree(ForestTransformer):
 
     def _check_cycle(self, node):
         if self._on_cycle_retreat:
-            raise Discard
+            raise Discard()
 
     def _collapse_ambig(self, children):
         new_children = []
@@ -473,7 +475,7 @@ class ForestToParseTree(ForestTransformer):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard
+        raise Discard()
 
     def transform_symbol_node(self, node, data):
         self._check_cycle(node)
@@ -489,7 +491,7 @@ class ForestToParseTree(ForestTransformer):
 
     def transform_packed_node(self, node, data):
         self._check_cycle(node)
-        children = list()
+        children = []
         assert len(data) <= 2
         data = PackedData(node, data)
         if data.left is not None:
@@ -568,7 +570,7 @@ class TreeForestTransformer(ForestToParseTree):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard
+        raise Discard()
 
     def __default_token__(self, node):
         """Default operation on Token (for override).
@@ -631,7 +633,8 @@ class ForestToPyDotVisitor(ForestVisitor):
         graph_node_shape = "diamond"
         graph_node = self.pydot.Node(graph_node_id, style=graph_node_style, fillcolor="#{:06x}".format(graph_node_color), shape=graph_node_shape, label=graph_node_label)
         self.graph.add_node(graph_node)
-        return iter([node.left, node.right])
+        yield node.left
+        yield node.right
 
     def visit_packed_node_out(self, node):
         graph_node_id = str(id(node))

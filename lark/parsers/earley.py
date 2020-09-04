@@ -12,20 +12,22 @@ is better documented here:
 
 from collections import deque
 
+from ..tree import Tree
 from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestToTreeVisitor, ForestSumVisitor, SymbolNode, CompleteForestToAmbiguousTreeVisitor
+from .earley_forest import ForestSumVisitor, SymbolNode, ForestToParseTree
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False):
+    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.debug = debug
+        self.tree_class = tree_class
 
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
@@ -312,12 +314,13 @@ class Parser:
         elif len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
-        # Perform our SPPF -> AST conversion using the right ForestVisitor.
-        forest_tree_visitor_cls = ForestToTreeVisitor if self.resolve_ambiguity else CompleteForestToAmbiguousTreeVisitor
-        forest_tree_visitor = forest_tree_visitor_cls(self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor())
+        if self.tree_class is not None:
+            # Perform our SPPF -> AST conversion
+            transformer = ForestToParseTree(self.tree_class, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
+            return transformer.transform(solutions[0])
 
-        return forest_tree_visitor.visit(solutions[0])
-
+        # return the root of the SPPF
+        return solutions[0]
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

@@ -42,19 +42,20 @@ class LarkOptions(Serialize):
 
             When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
             (default= ``False``. Recommended to set to ``True``)
-    regex
-            When True, uses the ``regex`` module instead of the stdlib ``re``.
     cache
             Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
 
             - When ``False``, does nothing (default)
             - When ``True``, caches to a temporary file in the local directory
             - When given a string, caches to the path pointed by the string
-
+    regex
+            When True, uses the ``regex`` module instead of the stdlib ``re``.
     g_regex_flags
             Flags that are applied to all terminals (both regex and strings)
     keep_all_tokens
             Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
+    tree_class
+            Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
 
     **=== Algorithm Options ===**
 

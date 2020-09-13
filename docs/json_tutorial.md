@@ -442,7 +442,7 @@ Once again, shout-out to PyPy for being so effective.
 
 This is the end of the tutorial. I hoped you liked it and learned a little about Lark.
 
-To see what else you can do with Lark, check out the [examples](/examples).
+To see what else you can do with Lark, check out the [examples](examples).
 
 For questions or any other subject, feel free to email me at erezshin at gmail dot com.
 

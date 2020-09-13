@@ -1,2 +1,3 @@
 # https://docs.readthedocs.io/en/stable/guides/specifying-dependencies.html#specifying-a-requirements-file
 sphinx-gallery
+sphinx_markdown_tables

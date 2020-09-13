@@ -37,6 +37,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'recommonmark',
+    'sphinx_markdown_tables',
     'sphinx_gallery.gen_gallery'
 ]
 

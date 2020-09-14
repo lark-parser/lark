@@ -23,6 +23,8 @@ class LexError(LarkError):
 
 T = TypeVar('T')
 
+class UnexpectedEOF(ParseError):
+    expected: List[Token]
 
 class UnexpectedInput(LarkError):
     line: int

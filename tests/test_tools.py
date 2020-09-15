@@ -1,8 +1,9 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import sys
 from unittest import TestCase, main
 
+from functools import partial
 from lark.tree import Tree
 from lark.tools import standalone
 
@@ -20,10 +21,8 @@ class TestStandalone(TestCase):
 
     def _create_standalone(self, grammar):
         code_buf = StringIO()
-        temp = sys.stdout
-        sys.stdout = code_buf
-        standalone.main(StringIO(grammar), 'start')
-        sys.stdout = temp
+        pr = partial(print, file=code_buf)
+        standalone.main(StringIO(grammar), 'start', print=pr)
         code = code_buf.getvalue()
 
         context = {}
@@ -137,5 +136,3 @@ class TestStandalone(TestCase):
 
 if __name__ == '__main__':
     main()
-
-

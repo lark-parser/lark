@@ -375,6 +375,8 @@ class Lark(Serialize):
             self.options.transformer,
             re_module
         )
+        self.terminals = self.parser.lexer_conf.tokens
+        self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 
     @classmethod

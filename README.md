@@ -46,6 +46,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 - [Sublime Text & TextMate](https://github.com/lark-parser/lark_syntax)
 - [vscode](https://github.com/lark-parser/vscode-lark)
 - [Intellij & PyCharm](https://github.com/lark-parser/intellij-syntax-highlighting)
+- [Vim](https://github.com/lark-parser/vim-lark-syntax)
 
 ### Clones
 

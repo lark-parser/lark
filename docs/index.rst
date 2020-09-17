@@ -63,10 +63,12 @@ Syntax Highlighting
 -  `Sublime Text & TextMate`_
 -  `Visual Studio Code`_ (Or install through the vscode plugin system)
 -  `Intellij & PyCharm`_
+-  `Vim`_
 
 .. _Sublime Text & TextMate: https://github.com/lark-parser/lark_syntax
 .. _Visual Studio Code: https://github.com/lark-parser/vscode-lark
 .. _Intellij & PyCharm: https://github.com/lark-parser/intellij-syntax-highlighting
+.. _Vim: https://github.com/lark-parser/vim-lark-syntax
 
 Resources
 ---------

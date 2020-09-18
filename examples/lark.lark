@@ -1,20 +1,20 @@
-start: (_item | _NL)*
+start: (_item? _NL)* _item?
 
 _item: rule
      | token
      | statement
 
-rule: RULE rule_params priority? ":" expansions _NL
-token: TOKEN token_params priority? ":" expansions _NL
+rule: RULE rule_params priority? ":" expansions
+token: TOKEN token_params priority? ":" expansions
 
 rule_params: ["{" RULE ("," RULE)* "}"]
 token_params: ["{" TOKEN ("," TOKEN)* "}"]
 
 priority: "." NUMBER
 
-statement: "%ignore" expansions _NL                -> ignore
-         | "%import" import_path ["->" name] _NL   -> import
-         | "%import" import_path name_list _NL     -> multi_import
+statement: "%ignore" expansions                    -> ignore
+         | "%import" import_path ["->" name]       -> import
+         | "%import" import_path name_list         -> multi_import
          | "%declare" name+                        -> declare
 
 !import_path: "."? name ("." name)*

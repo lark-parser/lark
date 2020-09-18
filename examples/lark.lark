@@ -49,7 +49,7 @@ REGEXP: /\/(?!\/)(\\\/|\\\\|[^\/\n])*?\/[imslux]*/
 _NL: /(\r?\n)+\s*/
 
 %import common.ESCAPED_STRING -> _STRING
-%import common.INT -> NUMBER
+%import common.SIGNED_INT -> NUMBER
 %import common.WS_INLINE
 
 COMMENT: /\s*/ "//" /[^\n]/*

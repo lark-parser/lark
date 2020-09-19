@@ -62,4 +62,4 @@ TreeForestTransformer
 handles_ambiguity
 -----------------
 
-.. autodecorator:: lark.parsers.earley_forest.handles_ambiguity
+.. autofunction:: lark.parsers.earley_forest.handles_ambiguity

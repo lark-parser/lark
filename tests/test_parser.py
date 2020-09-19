@@ -1276,6 +1276,39 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('aaaab')
             x = g.parse('b')
 
+        @unittest.skipUnless(PARSER == "lalr",
+                             "Conflict resolution hints are only generated "
+                             "with LALR")
+        def test_conflict_resolution_hints(self):
+            try:
+                _Lark("""
+                start: rule1
+                     | rule2
+
+                rule1: rule11
+                     | rule12
+
+                rule2: rule21
+                     | rule22
+
+                rule11: A
+                rule12: B
+                rule21: B
+                rule22: B
+
+                A: "A"
+                B: "B"
+                """)
+            except Exception as error:
+                self.assertEqual(type(error), GrammarError)
+                msg = str(error)
+                self.assertIn("\n\t\t- <rule12 : B>", msg)
+                self.assertIn("\n\t\t- <rule21 : B>", msg)
+                self.assertIn("\n\t\t- <rule22 : B>", msg)
+                self.assertIn("\n\t\t- <rule21> and <rule22>: <rule2>", msg)
+                self.assertIn("\n\t\t- <rule12> and <rule21>: <start>", msg)
+                self.assertIn("\n\t\t- <rule12> and <rule22>: <start>", msg)
+
         def test_token_not_anon(self):
             """Tests that "a" is matched as an anonymous token, and not A.
             """

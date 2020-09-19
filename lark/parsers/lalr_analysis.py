@@ -6,13 +6,16 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 
+from __future__ import division
 from collections import defaultdict
+from itertools import combinations
+from math import factorial
 
 from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
-from ..grammar import Rule
+from ..grammar import Rule, NonTerminal
 
 ###{standalone
 
@@ -252,7 +255,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 actions[la] = (Shift, next_state.closure)
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
-                    raise GrammarError('Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t\t- ' + str(r) for r in rules ])))
+                    raise self.__build_reduce_reduce_error(la, rules)
                 if la in actions:
                     if self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
@@ -278,6 +281,94 @@ class LALR_Analyzer(GrammarAnalyzer):
             self.parse_table = _parse_table
         else:
             self.parse_table = IntParseTable.from_ParseTable(_parse_table)
+
+    # Generation of conflict resolution hints
+    def __build_reduce_reduce_error(self, la, rules):
+        """Build a GrammarError with conflict resolution hints."""
+        msg = "Reduce/Reduce collision in %s between the following rules:" % la
+        msg += "".join("\n\t\t- %s" % rule for rule in rules)
+
+        common_ancestors = self.__find_closest_common_ancestors(rules)
+        msg += "\n\nThe conflict may come from"
+
+        for rules, ancestors in common_ancestors.items():
+            a = ' or '.join("<%s>" % ancestor.name for ancestor in ancestors)
+            rule1, rule2 = sorted(rule.name for rule in rules)
+            msg += "\n\t\t- <%s> and <%s>: %s" % (rule1, rule2, a)
+
+        return GrammarError(msg)
+
+    def __find_closest_common_ancestors(self, conflicting_rules):
+        """
+        Find the closest common ancestor of pairs of rules.
+
+        :param conflicting_rules set: Set of Rule
+        :returns dict: 2-frozenset of NonTerminal rule names as keys, set of
+        NonTerminal ancestor names as values
+        """
+        parents = self.__rules_parents()
+        ancestors = {rule.origin: {rule.origin} for rule in conflicting_rules}
+        oldest_ancestors = {rule.origin: {rule.origin}
+                            for rule in conflicting_rules}
+        common_ancestors = dict()
+        intersections_found = set()
+
+        n = len(conflicting_rules)
+        pairs_number = (n * (n - 1)) // 2
+        while len(common_ancestors) < pairs_number:
+            for rule in conflicting_rules:
+                new_oldest_ancestors = set()
+                for ancestor in oldest_ancestors[rule.origin]:
+                    new_oldest_ancestors.update(parents[ancestor])
+
+                ancestors[rule.origin].update(new_oldest_ancestors)
+                oldest_ancestors[rule.origin] = new_oldest_ancestors
+
+            new_common_ancestors = self.__ancestors_intersections(
+                ancestors, intersections_found
+            )
+            intersections_found |= set(new_common_ancestors.keys())
+            common_ancestors.update(new_common_ancestors)
+
+        return common_ancestors
+
+    def __rules_parents(self):
+        """
+        Build a dictionary containing, for each rule of the grammar, the set
+        of the rules that use it. Rules are represented by their NonTerminal
+        identifier.
+        """
+        parents = defaultdict(set)
+        for name, rules in self.rules_by_origin.items():
+            for term in filter(lambda term: isinstance(term, NonTerminal),
+                               sum((rule.expansion for rule in rules), [])):
+                parents[term].add(name)
+
+        return parents
+
+    @staticmethod
+    def __ancestors_intersections(ancestors, excluded_couples):
+        """
+        Find the intersection between the ancestors of different couple of
+        rules, excluding some of them.
+
+        :param ancestors dict: NonTerminal name of the rules as keys,sets of
+        NonTerminal names of the ancestors as values.
+        :param excluded_couples set: contains 2-frozensets of NonTerminal names
+        to exclude
+        :returns dict: Using 2-frozenset of NonTerminal as keys, set of
+        NonTerminal as values
+        """
+
+        intersections = dict()
+        couples = set(map(frozenset, combinations(ancestors.keys(), 2)))
+        for rule1, rule2 in couples - excluded_couples:
+            common_ancestors = ancestors[rule1] & ancestors[rule2]
+            if len(common_ancestors) > 0:
+                key = frozenset({rule1, rule2})
+                intersections[key] = common_ancestors
+
+        return intersections
 
     def compute_lalr(self):
         self.compute_lr0_states()

@@ -2217,6 +2217,42 @@ def _make_parser_test(LEXER, PARSER):
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
+
+        @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
+        def test_error_with_puppet(self):
+            def ignore_errors(e):
+                if isinstance(e, UnexpectedCharacters):
+                    # Skip bad character
+                    return True
+
+                # Must be UnexpectedToken
+                if e.token.type == 'COMMA':
+                    # Skip comma
+                    return True
+                elif e.token.type == 'SIGNED_NUMBER':
+                    # Try to feed a comma and retry the number
+                    e.puppet.feed_token(Token('COMMA', ','))
+                    e.puppet.feed_token(e.token)
+                    return True
+
+                # Unhandled error. Will stop parse and raise exception
+                return False
+
+            g = _Lark(r'''
+                start: "[" num ("," num)* "]"
+                ?num: SIGNED_NUMBER
+                %import common.SIGNED_NUMBER
+                %ignore " "
+            ''')
+            s = "[0 1, 2,, 3,,, 4, 5 6 ]"
+            tree = g.parse(s, on_error=ignore_errors)
+            res = [int(x) for x in tree.children]
+            assert res == list(range(7))
+
+            s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
+            tree = g.parse(s, on_error=ignore_errors)
+
+
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME
     _TestParser.__qualname__ = "tests.test_parser." + _NAME

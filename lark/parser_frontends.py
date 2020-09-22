@@ -1,6 +1,6 @@
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
+from .lexer import LexerThread, TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
@@ -49,7 +49,7 @@ def get_frontend(parser, lexer):
 
 
 class _ParserFrontend(Serialize):
-    def _parse(self, input, start, *args):
+    def _parse(self, start, input, *args):
         if start is None:
             start = self.start
             if len(start) > 1:
@@ -65,6 +65,18 @@ def _get_lexer_callbacks(transformer, terminals):
         if callback is not None:
             result[terminal.name] = callback
     return result
+
+class PostLexConnector:
+    def __init__(self, lexer, postlexer):
+        self.lexer = lexer
+        self.postlexer = postlexer
+
+    def make_lexer_state(self, text):
+        return self.lexer.make_lexer_state(text)
+
+    def lex(self, lexer_state, parser_state):
+        i = self.lexer.lex(lexer_state, parser_state)
+        return self.postlexer.process(i)
 
 
 class WithLexer(_ParserFrontend):
@@ -99,13 +111,14 @@ class WithLexer(_ParserFrontend):
     def _serialize(self, data, memo):
         data['parser'] = data['parser'].serialize(memo)
 
-    def lex(self, *args):
-        stream = self.lexer.lex(*args)
-        return self.postlex.process(stream) if self.postlex else stream
+    def make_lexer(self, text):
+        lexer = self.lexer
+        if self.postlex:
+            lexer = PostLexConnector(self.lexer, self.postlex)
+        return LexerThread(lexer, text)
 
     def parse(self, text, start=None):
-        token_stream = self.lex(text)
-        return self._parse(token_stream, start)
+        return self._parse(start, self.make_lexer(text))
 
     def init_traditional_lexer(self):
         self.lexer = TraditionalLexer(self.lexer_conf)
@@ -131,14 +144,6 @@ class LALR_ContextualLexer(LALR_WithLexer):
         always_accept = self.postlex.always_accept if self.postlex else ()
         self.lexer = ContextualLexer(self.lexer_conf, states, always_accept=always_accept)
 
-
-    def parse(self, text, start=None):
-        parser_state = [None]
-        def set_parser_state(s):
-            parser_state[0] = s
-
-        token_stream = self.lex(text, lambda: parser_state[0])
-        return self._parse(token_stream, start, set_parser_state)
 ###}
 
 class LALR_CustomLexer(LALR_WithLexer):
@@ -167,6 +172,9 @@ class Earley(WithLexer):
         debug = options.debug if options else False
         tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
         self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class)
+
+    def make_lexer(self, text):
+        return WithLexer.make_lexer(self, text).lex(None)
 
     def match(self, term, token):
         return term.name == token.type
@@ -212,7 +220,7 @@ class XEarley(_ParserFrontend):
             self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
-        return self._parse(text, start)
+        return self._parse(start, text)
 
 class XEarley_CompleteLex(XEarley):
     def __init__(self, *args, **kw):
@@ -232,8 +240,8 @@ class CYK(WithLexer):
         self.callbacks = parser_conf.callbacks
 
     def parse(self, text, start):
-        tokens = list(self.lex(text))
-        parse = self._parse(tokens, start)
+        tokens = list(self.make_lexer(text).lex(None))
+        parse = self._parse(start, tokens)
         parse = self._transform(parse)
         return parse
 

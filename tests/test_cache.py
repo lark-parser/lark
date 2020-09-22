@@ -43,8 +43,8 @@ class CustomLexer(Lexer):
     def __init__(self, lexer_conf):
         pass
 
-    def lex(self, data):
-        for obj in data:
+    def lex(self, lexer_state, parser_state):
+        for obj in lexer_state.text:
             yield Token('A', obj)
 
 

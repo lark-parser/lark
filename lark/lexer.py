@@ -157,6 +157,8 @@ class Token(Str):
 
 
 class LineCounter:
+    __slots__ = 'char_pos', 'line', 'column', 'line_start_pos', 'newline_char'
+
     def __init__(self, newline_char):
         self.newline_char = newline_char
         self.char_pos = 0
@@ -167,7 +169,7 @@ class LineCounter:
     def feed(self, token, test_newline=True):
         """Consume a token and calculate the new line & column.
 
-        As an optional optimization, set test_newline=False is token doesn't contain a newline.
+        As an optional optimization, set test_newline=False if token doesn't contain a newline.
         """
         if test_newline:
             newlines = token.count(self.newline_char)
@@ -243,7 +245,6 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
         except AssertionError:  # Yes, this is what Python provides us.. :/
             return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
 
-        # terms_from_name = {t.name: t for t in terminals[:max_size]}
         mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
         terminals = terminals[max_size:]
     return mres
@@ -268,6 +269,10 @@ class Lexer(object):
         lex(self, text) -> Iterator[Token]
     """
     lex = NotImplemented
+
+    def make_lexer_state(self, text):
+        line_ctr = LineCounter('\n')
+        return LexerState(text, line_ctr)
 
 
 class TraditionalLexer(Lexer):
@@ -328,26 +333,20 @@ class TraditionalLexer(Lexer):
             if m:
                 return m.group(0), type_from_index[m.lastindex]
 
-    def make_lexer_state(self, text):
-        line_ctr = LineCounter('\n' if not self.use_bytes else b'\n')
-        return LexerState(text, line_ctr)
-
-    def lex(self, text):
-        state = self.make_lexer_state(text)
+    def lex(self, state, parser_state):
         with suppress(EOFError):
             while True:
                 yield self.next_token(state)
 
     def next_token(self, lex_state):
-        text = lex_state.text
         line_ctr = lex_state.line_ctr
-        while line_ctr.char_pos < len(text):
-            res = self.match(text, line_ctr.char_pos)
+        while line_ctr.char_pos < len(lex_state.text):
+            res = self.match(lex_state.text, line_ctr.char_pos)
             if not res:
                 allowed = {v for m, tfi in self.mres for v in tfi.values()} - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
-                raise UnexpectedCharacters(text, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
+                raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
 
             value, type_ = res
 
@@ -373,11 +372,15 @@ class TraditionalLexer(Lexer):
         raise EOFError(self)
 
 class LexerState:
+    __slots__ = 'text', 'line_ctr', 'last_token'
+
     def __init__(self, text, line_ctr, last_token=None):
         self.text = text
         self.line_ctr = line_ctr
         self.last_token = last_token
 
+    def __copy__(self):
+        return type(self)(self.text, copy(self.line_ctr), self.last_token)
 
 class ContextualLexer(Lexer):
 
@@ -410,24 +413,35 @@ class ContextualLexer(Lexer):
         assert trad_conf.tokens is terminals
         self.root_lexer = TraditionalLexer(trad_conf)
 
-    def lex(self, text, get_parser_state):
-        state = self.root_lexer.make_lexer_state(text)
+    def make_lexer_state(self, text):
+        return self.root_lexer.make_lexer_state(text)
+
+    def lex(self, lexer_state, parser_state):
         try:
             while True:
-                lexer = self.lexers[get_parser_state()]
-                yield lexer.next_token(state)
+                lexer = self.lexers[parser_state.position]
+                yield lexer.next_token(lexer_state)
         except EOFError:
             pass
         except UnexpectedCharacters as e:
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined,
             # but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
-            root_match = self.root_lexer.match(text, e.pos_in_stream)
+            root_match = self.root_lexer.match(lexer_state.text, e.pos_in_stream)
             if not root_match:
                 raise
 
             value, type_ = root_match
             t = Token(type_, value, e.pos_in_stream, e.line, e.column)
-            raise UnexpectedToken(t, e.allowed, state=get_parser_state())
+            raise UnexpectedToken(t, e.allowed, state=parser_state.position)
 
+class LexerThread:
+    "A thread that ties a lexer instance and a lexer state, to be used by the parser"
+
+    def __init__(self, lexer, text):
+        self.lexer = lexer
+        self.state = lexer.make_lexer_state(text)
+
+    def lex(self, parser_state):
+        return self.lexer.lex(self.state, parser_state)
 ###}

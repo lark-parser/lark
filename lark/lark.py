@@ -374,7 +374,8 @@ class Lark(Serialize):
             self._callbacks,
             self.options.postlex,
             self.options.transformer,
-            re_module
+            re_module,
+            self.options.debug
         )
         self.terminals = self.parser.lexer_conf.tokens
         self._terminals_dict = {t.name: t for t in self.terminals}

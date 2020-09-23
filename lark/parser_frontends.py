@@ -154,15 +154,6 @@ class LALR_CustomLexer(LALR_WithLexer):
         WithLexer.__init__(self, lexer_conf, parser_conf, options)
 
 
-def tokenize_text(text):
-    line = 1
-    col_start_pos = 0
-    for i, ch in enumerate(text):
-        if '\n' in ch:
-            line += ch.count('\n')
-            col_start_pos = i + ch.rindex('\n')
-        yield Token('CHAR', ch, line=line, column=i - col_start_pos)
-
 class Earley(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf, parser_conf, options)

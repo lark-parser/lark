@@ -2,9 +2,9 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
+from copy import deepcopy
 from ..exceptions import UnexpectedToken
 from ..lexer import Token
-from ..utils import Enumerator, Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_puppet import ParserPuppet
@@ -55,6 +55,16 @@ class ParserState:
     @property
     def position(self):
         return self.state_stack[-1]
+
+    def __copy__(self):
+        return type(self)(
+            self.parse_table,
+            self.lexer, # XXX copy
+            self.callbacks,
+            self.start,
+            list(self.state_stack),
+            deepcopy(self.value_stack),
+        )
 
     def feed_token(self, token, is_end=False):
         state_stack = self.state_stack
@@ -117,6 +127,12 @@ class _Parser:
 
             token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
             return state.feed_token(token, True)
+        except UnexpectedToken as e:
+            try:
+                puppet = ParserPuppet(self, state, state.lexer)
+            except NameError:
+                puppet = None
+            raise UnexpectedToken(e.token, e.expected, e.considered_rules, e.state, puppet)
         except Exception as e:
             if self.debug:
                 print("")

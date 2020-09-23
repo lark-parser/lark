@@ -424,16 +424,10 @@ class ContextualLexer(Lexer):
         except EOFError:
             pass
         except UnexpectedCharacters as e:
-            # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined,
-            # but not in the current context.
+            # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
-            root_match = self.root_lexer.match(lexer_state.text, e.pos_in_stream)
-            if not root_match:
-                raise
-
-            value, type_ = root_match
-            t = Token(type_, value, e.pos_in_stream, e.line, e.column)
-            raise UnexpectedToken(t, e.allowed, state=parser_state.position)
+            token = self.root_lexer.next_token(lexer_state)
+            raise UnexpectedToken(token, e.allowed, state=parser_state.position)
 
 class LexerThread:
     "A thread that ties a lexer instance and a lexer state, to be used by the parser"

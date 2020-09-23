@@ -2178,6 +2178,11 @@ def _make_parser_test(LEXER, PARSER):
         @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
         def test_error_with_puppet(self):
             def ignore_errors(e):
+                if isinstance(e, UnexpectedCharacters):
+                    # Skip bad character
+                    return True
+
+                # Must be UnexpectedToken
                 if e.token.type == 'COMMA':
                     # Skip comma
                     return True
@@ -2200,6 +2205,9 @@ def _make_parser_test(LEXER, PARSER):
             tree = g.parse(s, on_error=ignore_errors)
             res = [int(x) for x in tree.children]
             assert res == list(range(7))
+
+            s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
+            tree = g.parse(s, on_error=ignore_errors)
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

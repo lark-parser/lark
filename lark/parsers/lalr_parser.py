@@ -3,7 +3,7 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy
-from ..exceptions import UnexpectedToken
+from ..exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 from ..lexer import Token
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
@@ -127,12 +127,16 @@ class _Parser:
 
             token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
             return state.feed_token(token, True)
-        except UnexpectedToken as e:
+        except UnexpectedInput as e:
             try:
-                puppet = ParserPuppet(self, state, state.lexer)
+                e.puppet = ParserPuppet(self, state, state.lexer)
             except NameError:
-                puppet = None
-            raise UnexpectedToken(e.token, e.expected, e.considered_rules, e.state, puppet)
+                pass
+            if isinstance(e, UnexpectedCharacters):
+                s = state.lexer.state
+                p = s.line_ctr.char_pos
+                s.line_ctr.feed(s.text[p:p+1])
+            raise e
         except Exception as e:
             if self.debug:
                 print("")

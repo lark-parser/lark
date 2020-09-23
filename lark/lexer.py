@@ -271,7 +271,7 @@ class Lexer(object):
     lex = NotImplemented
 
     def make_lexer_state(self, text):
-        line_ctr = LineCounter('\n')
+        line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')
         return LexerState(text, line_ctr)
 
 
@@ -346,7 +346,8 @@ class TraditionalLexer(Lexer):
                 allowed = {v for m, tfi in self.mres for v in tfi.values()} - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
-                raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
+                raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
 
             value, type_ = res
 

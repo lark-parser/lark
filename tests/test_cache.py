@@ -86,6 +86,12 @@ class TestCache(TestCase):
             parser = Lark(g, parser='lalr', lexer=CustomLexer, cache=True)
             assert len(mock_fs.files) == 1
             assert parser.parse('a') == Tree('start', [])
+
+            # Test options persistence
+            mock_fs.files = {}
+            Lark(g, parser="lalr", debug=True, cache=True)
+            parser = Lark(g, parser="lalr", debug=True, cache=True)
+            assert parser.options.options['debug']
         finally:
             lark_module.FS = fs
 

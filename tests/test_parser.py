@@ -1782,6 +1782,24 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(IOError, _Lark, grammar)
 
+        def test_import_custom_sources(self):
+            def custom_loader(base_paths, grammar_path):
+                import pkgutil
+                text = pkgutil.get_data('tests', 'grammars/' + grammar_path)
+                if text is None:
+                    raise FileNotFoundError()
+                return '<tests.grammars:' + grammar_path + '>', text.decode()
+
+            grammar = """
+            start: startab
+
+            %import ab.startab
+            """
+
+            p = _Lark(grammar, import_sources=[custom_loader])
+            self.assertEqual(p.parse('ab'),
+                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
+
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization(self):
             "Tests effect of priority on result"

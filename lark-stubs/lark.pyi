@@ -2,7 +2,7 @@
 
 from typing import (
     TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
-    Literal, Protocol,
+    Literal, Protocol, Tuple,
 )
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
@@ -32,6 +32,7 @@ class LarkOptions:
     cache: Union[bool, str]
     g_regex_flags: int
     use_bytes: bool
+    import_sources: List[Union[str, Callable[[str, str], str]]]
 
 
 class Lark:
@@ -60,6 +61,7 @@ class Lark:
         cache: Union[bool, str] = False,
         g_regex_flags: int = ...,
         use_bytes: bool = False,
+        import_sources: List[Union[str, Callable[[List[str], str], Tuple[str, str]]]] = ...,
     ):
         ...
 

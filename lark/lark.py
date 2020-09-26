@@ -90,6 +90,8 @@ class LarkOptions(Serialize):
             Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
             A callback for editing the terminals before parse.
+    import_sources
+            A List of either paths or loader functions to specify from where grammars are imported 
 
     **=== End Options ===**
     """
@@ -115,6 +117,7 @@ class LarkOptions(Serialize):
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
+        'import_sources': [],
     }
 
     def __init__(self, options_dict):
@@ -267,7 +270,7 @@ class Lark(Serialize):
         assert self.options.ambiguity in ('resolve', 'explicit', 'forest', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, re_module)
+        self.grammar = load_grammar(grammar, self.source, re_module, self.options.import_sources)
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)

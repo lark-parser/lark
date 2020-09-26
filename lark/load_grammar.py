@@ -20,7 +20,7 @@ from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transfo
 inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
-IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
+IMPORT_PATHS = ['grammars']
 
 EXT = '.lark'
 
@@ -648,19 +648,35 @@ class Grammar:
         return terminals, compiled_rules, self.ignore
 
 
+def stdlib_loader(base_paths, grammar_path):
+    import pkgutil
+    for path in IMPORT_PATHS:
+        text = pkgutil.get_data('lark', path + '/' + grammar_path)
+        if text is None:
+            continue
+        return '<stdlib:' + grammar_path + '>', text.decode()
+    raise FileNotFoundError()
+
 
 _imported_grammars = {}
-def import_grammar(grammar_path, re_, base_paths=[]):
+def import_grammar(grammar_path, re_, base_paths=(), import_sources=()):
     if grammar_path not in _imported_grammars:
-        import_paths = base_paths + IMPORT_PATHS
-        for import_path in import_paths:
-            with suppress(IOError):
-                joined_path = os.path.join(import_path, grammar_path)
-                with open(joined_path, encoding='utf8') as f:
-                    text = f.read()
-                grammar = load_grammar(text, joined_path, re_)
-                _imported_grammars[grammar_path] = grammar
-                break
+        import_paths = import_sources + base_paths + [stdlib_loader]
+        for source in import_paths:
+            if isinstance(source, str):
+                with suppress(IOError):
+                    joined_path = os.path.join(source, grammar_path)
+                    with open(joined_path, encoding='utf8') as f:
+                        text = f.read()
+                    grammar = load_grammar(text, joined_path, re_, import_sources)
+                    _imported_grammars[grammar_path] = grammar
+                    break
+            else:
+                with suppress(IOError):
+                    joined_path, text = source(base_paths, grammar_path)
+                    grammar = load_grammar(text, joined_path, re_, import_sources)
+                    _imported_grammars[grammar_path] = grammar
+                    break
         else:
             open(grammar_path, encoding='utf8')
             assert False
@@ -817,7 +833,7 @@ class GrammarLoader:
         self.canonize_tree = CanonizeTree()
         self.re_module = re_module
 
-    def load_grammar(self, grammar_text, grammar_name='<?>'):
+    def load_grammar(self, grammar_text, grammar_name='<?>', import_sources=[]):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
 
         try:
@@ -901,7 +917,7 @@ class GrammarLoader:
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths)
+            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths, import_sources=import_sources)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -981,5 +997,5 @@ class GrammarLoader:
 
 
 
-def load_grammar(grammar, source, re_):
-    return GrammarLoader(re_).load_grammar(grammar, source)
+def load_grammar(grammar, source, re_, import_sources):
+    return GrammarLoader(re_).load_grammar(grammar, source, import_sources)

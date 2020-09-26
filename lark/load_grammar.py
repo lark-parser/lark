@@ -663,17 +663,17 @@ def import_grammar(grammar_path, re_, base_paths=(), import_sources=()):
     if grammar_path not in _imported_grammars:
         import_paths = import_sources + base_paths + [stdlib_loader]
         for source in import_paths:
-            if isinstance(source, str):
+            if callable(source):
                 with suppress(IOError):
-                    joined_path = os.path.join(source, grammar_path)
-                    with open(joined_path, encoding='utf8') as f:
-                        text = f.read()
+                    joined_path, text = source(base_paths, grammar_path)
                     grammar = load_grammar(text, joined_path, re_, import_sources)
                     _imported_grammars[grammar_path] = grammar
                     break
             else:
                 with suppress(IOError):
-                    joined_path, text = source(base_paths, grammar_path)
+                    joined_path = os.path.join(source, grammar_path)
+                    with open(joined_path, encoding='utf8') as f:
+                        text = f.read()
                     grammar = load_grammar(text, joined_path, re_, import_sources)
                     _imported_grammars[grammar_path] = grammar
                     break

@@ -11,6 +11,7 @@ from copy import copy, deepcopy
 from lark.utils import Py36, isascii
 
 from lark import Token
+from lark.load_grammar import FromPackageLoader
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -1783,12 +1784,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises(IOError, _Lark, grammar)
 
         def test_import_custom_sources(self):
-            def custom_loader(base_paths, grammar_path):
-                import pkgutil
-                text = pkgutil.get_data('tests', 'grammars/' + grammar_path)
-                if text is None:
-                    raise FileNotFoundError()
-                return '<tests.grammars:' + grammar_path + '>', text.decode()
+            custom_loader = FromPackageLoader('tests', ('grammars', ))
 
             grammar = """
             start: startab
@@ -1799,6 +1795,24 @@ def _make_parser_test(LEXER, PARSER):
             p = _Lark(grammar, import_sources=[custom_loader])
             self.assertEqual(p.parse('ab'),
                              Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
+
+            grammar = """
+            start: rule_to_import
+
+            %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
+            """
+            p = _Lark(grammar, import_sources=[custom_loader])
+            x = p.parse('N')
+            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
+            
+            custom_loader2 = FromPackageLoader('tests')
+            grammar = """
+            %import .test_relative_import (start, WS)
+            %ignore WS
+            """
+            p = _Lark(grammar, import_sources=[custom_loader2])
+            x = p.parse('12 capybaras')
+            self.assertEqual(x.children, ['12', 'capybaras'])
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization(self):

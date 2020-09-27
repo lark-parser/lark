@@ -4,6 +4,7 @@ import os.path
 import sys
 from copy import copy, deepcopy
 from io import open
+import pkgutil
 
 from .utils import bfs, eval_escaping, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -648,35 +649,69 @@ class Grammar:
         return terminals, compiled_rules, self.ignore
 
 
-def stdlib_loader(base_paths, grammar_path):
-    import pkgutil
-    for path in IMPORT_PATHS:
-        text = pkgutil.get_data('lark', path + '/' + grammar_path)
-        if text is None:
-            continue
-        return '<stdlib:' + grammar_path + '>', text.decode()
-    raise FileNotFoundError()
+class FromPackageLoader(object):
+    """
+    Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
+    This allows them to be compatible even from within zip files.
+    
+    Relative imports are handled, so you can just freely use them.
+    
+    pkg_name: The name of the package. You can probably provide `__name__` most of the time
+    search_paths: All the path that will be search on absolute imports.
+    """
+    def __init__(self, pkg_name, search_paths=("", )):
+        self.pkg_name = pkg_name
+        self.search_paths = search_paths
+        
+    def __repr__(self):
+        return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
+
+    def __call__(self, base_paths, grammar_path):
+        if len(base_paths) == 0:
+            to_try = self.search_paths
+        else:
+            assert len(base_paths) == 1
+            if not base_paths[0].startswith('<%s:' % (self.pkg_name,)):
+                # Technically false, but FileNotFound doesn't exist in python2.7, and this message should never reach the end user anyway
+                raise IOError()
+            base_path = base_paths[0].partition(':')[2]
+            if base_path and base_path[0] == '/':
+                base_path = base_path[1:]
+            to_try = [base_path]
+        for path in to_try:
+            full_path = os.path.join(path, grammar_path)
+            text = None
+            with suppress(IOError):
+                text = pkgutil.get_data(self.pkg_name, full_path)
+            if text is None:
+                continue
+            return '<%s:/%s>' % (self.pkg_name, full_path), text.decode()
+        raise IOError()
+
+stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path, re_, base_paths=(), import_sources=()):
+def import_grammar(grammar_path, re_, base_paths=[], import_sources=[]):
     if grammar_path not in _imported_grammars:
-        import_paths = import_sources + base_paths + [stdlib_loader]
+        # import_sources take priority over base_paths since they should handle relative imports and ignore everthing else.
+        # Question: should the stdlib_loader really be pushed to the end?
+        import_paths = import_sources + base_paths + [stdlib_loader] 
         for source in import_paths:
-            if callable(source):
-                with suppress(IOError):
+            text = None
+            with suppress(IOError):
+                if callable(source):
                     joined_path, text = source(base_paths, grammar_path)
-                    grammar = load_grammar(text, joined_path, re_, import_sources)
-                    _imported_grammars[grammar_path] = grammar
-                    break
-            else:
-                with suppress(IOError):
+                else:
                     joined_path = os.path.join(source, grammar_path)
                     with open(joined_path, encoding='utf8') as f:
                         text = f.read()
-                    grammar = load_grammar(text, joined_path, re_, import_sources)
-                    _imported_grammars[grammar_path] = grammar
-                    break
+            if text is not None:
+                # Don't load the grammar from within the suppress statement. Otherwise the underlying error message will be swallowed 
+                # and the wrong file will be reported as missing
+                grammar = load_grammar(text, joined_path, re_, import_sources) 
+                _imported_grammars[grammar_path] = grammar
+                break
         else:
             open(grammar_path, encoding='utf8')
             assert False

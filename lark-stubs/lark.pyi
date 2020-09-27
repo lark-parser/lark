@@ -33,6 +33,13 @@ class LarkOptions:
     g_regex_flags: int
     use_bytes: bool
     import_sources: List[Union[str, Callable[[str, str], str]]]
+    source: Optional[str]
+
+
+class FromPackageLoader:
+    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
+    
+    def __call__(self, base_paths: List[str], grammar_path: str) -> Tuple[str, str]: ...
 
 
 class Lark:
@@ -62,6 +69,7 @@ class Lark:
         g_regex_flags: int = ...,
         use_bytes: bool = False,
         import_sources: List[Union[str, Callable[[List[str], str], Tuple[str, str]]]] = ...,
+        source: Optional[str],
     ):
         ...
 
@@ -70,6 +78,10 @@ class Lark:
 
     @classmethod
     def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options) -> _T:
+        ...
+    
+    @classmethod
+    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...] = ..., **options) -> _T:
         ...
 
     def lex(self, text: str) -> Iterator[Token]:

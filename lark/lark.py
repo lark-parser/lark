@@ -5,7 +5,7 @@ from io import open
 
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar
+from .load_grammar import load_grammar, FromPackageLoader
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -92,6 +92,8 @@ class LarkOptions(Serialize):
             A callback for editing the terminals before parse.
     import_sources
             A List of either paths or loader functions to specify from where grammars are imported 
+    source
+            Override the source of from where the grammar was loaded. Usefull for relative imports and unconventional grammar loading
 
     **=== End Options ===**
     """
@@ -118,6 +120,7 @@ class LarkOptions(Serialize):
         'g_regex_flags': 0,
         'use_bytes': False,
         'import_sources': [],
+        'source': None,
     }
 
     def __init__(self, options_dict):
@@ -193,10 +196,13 @@ class Lark(Serialize):
             re_module = re
 
         # Some, but not all file-like objects have a 'name' attribute
-        try:
-            self.source = grammar.name
-        except AttributeError:
-            self.source = '<string>'
+        if self.options.source is None:
+            try:
+                self.source = grammar.name
+            except AttributeError:
+                self.source = '<string>'
+        else:
+            self.source = self.options.source
 
         # Drain file-like objects to get their contents
         try:
@@ -404,6 +410,28 @@ class Lark(Serialize):
             grammar_filename = os.path.join(basepath, grammar_filename)
         with open(grammar_filename, encoding='utf8') as f:
             return cls(f, **options)
+    
+    @classmethod
+    def open_from_package(cls, package, grammar_path, search_paths=("",), **options):
+        """Create an instance of Lark with the grammar loaded from within the package `package`.
+        This allows grammar loading from zipapps.
+        
+        Will also create a `FromPackageLoader` instance and add it to the `import_sources` to simplify importing
+        
+        ``search_paths`` is passed to `FromPackageLoader`
+        
+        Example:
+            
+            Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
+        """
+        package = FromPackageLoader(package, search_paths)
+        full_path, text = package([], grammar_path)
+        options.setdefault('source', full_path)
+        if 'import_sources' in options:
+            options['import_sources'].append(package)
+        else:
+            options['import_sources'] = [package]
+        return cls(text, **options)
 
     def __repr__(self):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)

@@ -73,8 +73,8 @@ class LarkOptions(Serialize):
     ambiguity
             Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
 
-            - "resolve" - The parser will automatically choose the simplest derivation
-                        (it chooses consistently: greedy for tokens, non-greedy for rules)
+            - "resolve": The parser will automatically choose the simplest derivation
+              (it chooses consistently: greedy for tokens, non-greedy for rules)
             - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
             - "forest": The parser will return the root of the shared packed parse forest.
 
@@ -336,8 +336,7 @@ class Lark(Serialize):
         Useful for caching and multiprocessing.
         """
         data, m = self.memo_serialize([TerminalDef, Rule])
-        pickle.dump({'data': data, 'memo': m}, f,
-                    protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def load(cls, f):

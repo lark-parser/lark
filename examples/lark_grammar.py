@@ -19,6 +19,8 @@ grammar_files = [
     examples_path / 'relative-imports/multiples.lark',
     examples_path / 'relative-imports/multiple2.lark',
     examples_path / 'relative-imports/multiple3.lark',
+    examples_path / 'tests/no_newline_at_end.lark',
+    examples_path / 'tests/negative_priority.lark',
     lark_path / 'grammars/common.lark',
 ]
 

@@ -82,11 +82,13 @@ class WithLexer(_ParserFrontend):
         self.postlex = lexer_conf.postlex
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, postlex, transformer, re_module):
+    def deserialize(cls, data, memo, callbacks, postlex, transformer, re_module,
+                    debug):
         inst = super(WithLexer, cls).deserialize(data, memo)
 
         inst.postlex = postlex
-        inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks)
+        inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks,
+                                              debug)
 
         terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
         inst.lexer_conf.callbacks = _get_lexer_callbacks(transformer, terminals)

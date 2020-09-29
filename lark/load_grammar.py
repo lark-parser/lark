@@ -649,6 +649,20 @@ class Grammar:
         return terminals, compiled_rules, self.ignore
 
 
+class PackageResource(object):
+    """
+    Represents a path inside a Package. Used by `FromPackageLoader`
+    """
+    def __init__(self, pkg_name, path):
+        self.pkg_name = pkg_name
+        self.path = path
+    
+    def __str__(self):
+        return "<%s: %s>" % (self.pkg_name, self.path)
+    
+    def __repr__(self):
+        return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.path)
+
 class FromPackageLoader(object):
     """
     Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
@@ -671,12 +685,10 @@ class FromPackageLoader(object):
             to_try = self.search_paths
         else:
             # Check whether or not the importing grammar was loaded by this module.
-            if not base_path.startswith('<%s:' % (self.pkg_name,)): 
+            if not isinstance(base_path, PackageResource) or base_path.pkg_name != self.pkg_name:
                 # Technically false, but FileNotFound doesn't exist in python2.7, and this message should never reach the end user anyway
                 raise IOError()
-            # Separate the path and the pkg_name and throw away the slash. `pkgutil.get_data` doesn't like it. (see below)
-            base_path = base_path.partition(':')[2].lstrip('/')
-            to_try = [base_path]
+            to_try = [base_path.path]
         for path in to_try:
             full_path = os.path.join(path, grammar_path)
             try:
@@ -684,18 +696,7 @@ class FromPackageLoader(object):
             except IOError:
                 continue
             else:
-                # Custom format `<{pkg_name}:/{full_path}>`
-                # These are the arguments to `pkgutil.get_data(pkg_name, full_path)`
-                # Required since we can not easily provided a actual file path for all package data (e.g. from inside a zip)
-                
-                # The additional slash after the `:` is to allow `os.path.split` to work on this without accidentally
-                # throwing away the `pkg_name`. (As it would inside of `GrammarLoader.load_grammar` otherwise when relative imports
-                # are resolved.
-                # Without the slash `"<lark:common.lark>"` would turn into `""`, losing the pacakge information
-                # With the slash `"<lark:/common.lark>"` turns into `"<lark:"` without the slash, but
-                # `"<lark:/grammars/common.lark>"` into `"<lark:/grammars"`, so we have to strip it away when we look at the path (see above)
-
-                return '<%s:/%s>' % (self.pkg_name, full_path), text.decode()
+                return PackageResource(self.pkg_name, full_path), text.decode()
         raise IOError()
 
 stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
@@ -943,7 +944,10 @@ class GrammarLoader:
                     else:
                         base_file = grammar_name  # Import relative to grammar file path if external grammar file
                     if base_file:
-                        base_path = os.path.split(base_file)[0]
+                        if isinstance(base_file, PackageResource):
+                            base_path = PackageResource(base_file.pkg_name, os.path.split(base_file.path)[0])
+                        else:
+                            base_path = os.path.split(base_file)[0]
                     else:
                         base_path = os.path.abspath(os.path.curdir)
 

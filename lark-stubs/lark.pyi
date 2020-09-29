@@ -32,14 +32,20 @@ class LarkOptions:
     cache: Union[bool, str]
     g_regex_flags: int
     use_bytes: bool
-    import_paths: List[Union[str, Callable[[Optional[str], str], Tuple[str, str]]]]
+    import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]
     source_path: Optional[str]
 
+
+class PackageResource(object):
+    pkg_name: str
+    path: str
+    
+    def __init__(self, pkg_name: str, path: str):
 
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
     
-    def __call__(self, base_paths: str, grammar_path: str) -> Tuple[str, str]: ...
+    def __call__(self, base_paths: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]: ...
 
 
 class Lark:
@@ -68,7 +74,7 @@ class Lark:
         cache: Union[bool, str] = False,
         g_regex_flags: int = ...,
         use_bytes: bool = False,
-        import_paths: List[Union[str, Callable[[Optional[str], str], Tuple[str, str]]]] = ...,
+        import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]] = ...,
         source_path: Optional[str],
     ):
         ...

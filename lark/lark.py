@@ -336,8 +336,7 @@ class Lark(Serialize):
         Useful for caching and multiprocessing.
         """
         data, m = self.memo_serialize([TerminalDef, Rule])
-        pickle.dump({'data': data, 'memo': m}, f,
-                    protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def load(cls, f):

@@ -1792,7 +1792,7 @@ def _make_parser_test(LEXER, PARSER):
             %import ab.startab
             """
 
-            p = _Lark(grammar, import_sources=[custom_loader])
+            p = _Lark(grammar, import_paths=[custom_loader])
             self.assertEqual(p.parse('ab'),
                              Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
 
@@ -1801,7 +1801,7 @@ def _make_parser_test(LEXER, PARSER):
 
             %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
             """
-            p = _Lark(grammar, import_sources=[custom_loader])
+            p = _Lark(grammar, import_paths=[custom_loader])
             x = p.parse('N')
             self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
             
@@ -1810,7 +1810,7 @@ def _make_parser_test(LEXER, PARSER):
             %import .test_relative_import (start, WS)
             %ignore WS
             """
-            p = _Lark(grammar, import_sources=[custom_loader2])
+            p = _Lark(grammar, import_paths=[custom_loader2])
             x = p.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 

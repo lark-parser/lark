@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import sys, os, pickle, hashlib
 from io import open
-
+from warnings import warn
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader
@@ -90,10 +90,10 @@ class LarkOptions(Serialize):
             Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
             A callback for editing the terminals before parse.
-    import_sources
+    import_paths
             A List of either paths or loader functions to specify from where grammars are imported 
-    source
-            Override the source of from where the grammar was loaded. Usefull for relative imports and unconventional grammar loading
+    source_path
+            Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
 
     **=== End Options ===**
     """
@@ -119,8 +119,8 @@ class LarkOptions(Serialize):
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
-        'import_sources': [],
-        'source': None,
+        'import_paths': [],
+        'source_path': None,
     }
 
     def __init__(self, options_dict):
@@ -196,13 +196,13 @@ class Lark(Serialize):
             re_module = re
 
         # Some, but not all file-like objects have a 'name' attribute
-        if self.options.source is None:
+        if self.options.source_path is None:
             try:
-                self.source = grammar.name
+                self.source_path = grammar.name
             except AttributeError:
-                self.source = '<string>'
+                self.source_path = '<string>'
         else:
-            self.source = self.options.source
+            self.source_path = self.options.source_path
 
         # Drain file-like objects to get their contents
         try:
@@ -213,7 +213,7 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
-        self.grammar_source = grammar
+        self.source_code = grammar
         if self.options.use_bytes:
             if not isascii(grammar):
                 raise ValueError("Grammar must be ascii only, when use_bytes=True")
@@ -276,7 +276,7 @@ class Lark(Serialize):
         assert self.options.ambiguity in ('resolve', 'explicit', 'forest', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, re_module, self.options.import_sources)
+        self.grammar = load_grammar(grammar, self.source_path, re_module, self.options.import_paths)
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
@@ -374,7 +374,7 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         re_module = regex if self.options.regex else re
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source = '<deserialized>'
+        self.source_path = '<deserialized>'
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
             data['parser'],
@@ -416,9 +416,7 @@ class Lark(Serialize):
         """Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
         
-        Will also create a `FromPackageLoader` instance and add it to the `import_sources` to simplify importing
-        
-        ``search_paths`` is passed to `FromPackageLoader`
+        Imports in the grammar will use the `package` and `search_paths` provided, through `FromPackageLoader`
         
         Example:
             
@@ -426,15 +424,15 @@ class Lark(Serialize):
         """
         package = FromPackageLoader(package, search_paths)
         full_path, text = package([], grammar_path)
-        options.setdefault('source', full_path)
-        if 'import_sources' in options:
-            options['import_sources'].append(package)
+        options.setdefault('source_path', full_path)
+        if 'import_paths' in options:
+            options['import_paths'].append(package)
         else:
-            options['import_sources'] = [package]
+            options['import_paths'] = [package]
         return cls(text, **options)
 
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
+        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
 
     def lex(self, text):
@@ -481,6 +479,15 @@ class Lark(Serialize):
                         # Prevent infinite loop
                         raise e2
                     e = e2
+    
+    @property
+    def source(self):
+        warn("Lark.source attribute has been renamed to Lark.source_path", DeprecationWarning)
+        return self.source_path
+    
+    @source.setter
+    def source(self, value):
+        self.source_path = value
 
 
 ###}

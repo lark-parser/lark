@@ -666,50 +666,61 @@ class FromPackageLoader(object):
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_paths, grammar_path):
-        if len(base_paths) == 0:
+    def __call__(self, base_path, grammar_path):
+        if base_path is None:
             to_try = self.search_paths
         else:
-            assert len(base_paths) == 1
-            if not base_paths[0].startswith('<%s:' % (self.pkg_name,)):
+            # Check whether or not the importing grammar was loaded by this module.
+            if not base_path.startswith('<%s:' % (self.pkg_name,)): 
                 # Technically false, but FileNotFound doesn't exist in python2.7, and this message should never reach the end user anyway
                 raise IOError()
-            base_path = base_paths[0].partition(':')[2]
-            if base_path and base_path[0] == '/':
-                base_path = base_path[1:]
+            # Separate the path and the pkg_name and throw away the slash. `pkgutil.get_data` doesn't like it. (see below)
+            base_path = base_path.partition(':')[2].lstrip('/')
             to_try = [base_path]
         for path in to_try:
             full_path = os.path.join(path, grammar_path)
-            text = None
-            with suppress(IOError):
+            try:
                 text = pkgutil.get_data(self.pkg_name, full_path)
-            if text is None:
+            except IOError:
                 continue
-            return '<%s:/%s>' % (self.pkg_name, full_path), text.decode()
+            else:
+                # Custom format `<{pkg_name}:/{full_path}>`
+                # These are the arguments to `pkgutil.get_data(pkg_name, full_path)`
+                # Required since we can not easily provided a actual file path for all package data (e.g. from inside a zip)
+                
+                # The additional slash after the `:` is to allow `os.path.split` to work on this without accidentally
+                # throwing away the `pkg_name`. (As it would inside of `GrammarLoader.load_grammar` otherwise when relative imports
+                # are resolved.
+                # Without the slash `"<lark:common.lark>"` would turn into `""`, losing the pacakge information
+                # With the slash `"<lark:/common.lark>"` turns into `"<lark:"` without the slash, but
+                # `"<lark:/grammars/common.lark>"` into `"<lark:/grammars"`, so we have to strip it away when we look at the path (see above)
+
+                return '<%s:/%s>' % (self.pkg_name, full_path), text.decode()
         raise IOError()
 
 stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path, re_, base_paths=[], import_sources=[]):
+def import_grammar(grammar_path, re_, base_path=None, import_paths=[]):
     if grammar_path not in _imported_grammars:
-        # import_sources take priority over base_paths since they should handle relative imports and ignore everthing else.
+        # import_paths take priority over base_path since they should handle relative imports and ignore everything else.
         # Question: should the stdlib_loader really be pushed to the end?
-        import_paths = import_sources + base_paths + [stdlib_loader] 
-        for source in import_paths:
-            text = None
-            with suppress(IOError):
+        to_try = import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader] 
+        for source in to_try:
+            try:
                 if callable(source):
-                    joined_path, text = source(base_paths, grammar_path)
+                    joined_path, text = source(base_path, grammar_path)
                 else:
                     joined_path = os.path.join(source, grammar_path)
                     with open(joined_path, encoding='utf8') as f:
                         text = f.read()
-            if text is not None:
-                # Don't load the grammar from within the suppress statement. Otherwise the underlying error message will be swallowed 
+            except IOError:
+                continue
+            else:
+                # Don't load the grammar from within the try statement. Otherwise the underlying error message will be swallowed 
                 # and the wrong file will be reported as missing
-                grammar = load_grammar(text, joined_path, re_, import_sources) 
+                grammar = load_grammar(text, joined_path, re_, import_paths) 
                 _imported_grammars[grammar_path] = grammar
                 break
         else:
@@ -868,7 +879,7 @@ class GrammarLoader:
         self.canonize_tree = CanonizeTree()
         self.re_module = re_module
 
-    def load_grammar(self, grammar_text, grammar_name='<?>', import_sources=[]):
+    def load_grammar(self, grammar_text, grammar_name='<?>', import_paths=[]):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
 
         try:
@@ -922,7 +933,7 @@ class GrammarLoader:
                     aliases = {name: arg1 or name}  # Aliases if exist
 
                 if path_node.data == 'import_lib':  # Import from library
-                    base_paths = []
+                    base_path = None
                 else:  # Relative import
                     if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
                         try:
@@ -932,16 +943,16 @@ class GrammarLoader:
                     else:
                         base_file = grammar_name  # Import relative to grammar file path if external grammar file
                     if base_file:
-                        base_paths = [os.path.split(base_file)[0]]
+                        base_path = os.path.split(base_file)[0]
                     else:
-                        base_paths = [os.path.abspath(os.path.curdir)]
+                        base_path = os.path.abspath(os.path.curdir)
 
                 try:
-                    import_base_paths, import_aliases = imports[dotted_path]
-                    assert base_paths == import_base_paths, 'Inconsistent base_paths for %s.' % '.'.join(dotted_path)
+                    import_base_path, import_aliases = imports[dotted_path]
+                    assert base_path == import_base_path, 'Inconsistent base_path for %s.' % '.'.join(dotted_path)
                     import_aliases.update(aliases)
                 except KeyError:
-                    imports[dotted_path] = base_paths, aliases
+                    imports[dotted_path] = base_path, aliases
 
             elif stmt.data == 'declare':
                 for t in stmt.children:
@@ -950,9 +961,9 @@ class GrammarLoader:
                 assert False, stmt
 
         # import grammars
-        for dotted_path, (base_paths, aliases) in imports.items():
+        for dotted_path, (base_path, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths, import_sources=import_sources)
+            g = import_grammar(grammar_path, self.re_module, base_path=base_path, import_paths=import_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -1032,5 +1043,5 @@ class GrammarLoader:
 
 
 
-def load_grammar(grammar, source, re_, import_sources):
-    return GrammarLoader(re_).load_grammar(grammar, source, import_sources)
+def load_grammar(grammar, source, re_, import_paths):
+    return GrammarLoader(re_).load_grammar(grammar, source, import_paths)

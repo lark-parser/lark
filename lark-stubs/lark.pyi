@@ -50,7 +50,7 @@ class FromPackageLoader:
 
 class Lark:
     source_path: str
-    source_code: str
+    source_grammar: str
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
@@ -75,7 +75,7 @@ class Lark:
         g_regex_flags: int = ...,
         use_bytes: bool = False,
         import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]] = ...,
-        source_path: Optional[str],
+        source_path: Optional[str]=None,
     ):
         ...
 

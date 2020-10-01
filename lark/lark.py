@@ -213,7 +213,7 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
-        self.source_code = grammar
+        self.source_grammar = grammar
         if self.options.use_bytes:
             if not isascii(grammar):
                 raise ValueError("Grammar must be ascii only, when use_bytes=True")

@@ -267,7 +267,7 @@ class Lark(Serialize):
         assert self.options.ambiguity in ('resolve', 'explicit', 'forest', 'auto', )
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, re_module)
+        self.grammar = load_grammar(grammar, self.source, re_module, self.options.keep_all_tokens)
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
@@ -322,7 +322,7 @@ class Lark(Serialize):
         self._callbacks = None
         # we don't need these callbacks if we aren't building a tree
         if self.options.ambiguity != 'forest':
-            self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
+            self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
     def _build_parser(self):

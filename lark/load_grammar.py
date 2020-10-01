@@ -650,7 +650,7 @@ class Grammar:
 
 
 _imported_grammars = {}
-def import_grammar(grammar_path, re_, base_paths=[]):
+def import_grammar(grammar_path, loader, base_paths=[]):
     if grammar_path not in _imported_grammars:
         import_paths = base_paths + IMPORT_PATHS
         for import_path in import_paths:
@@ -658,7 +658,7 @@ def import_grammar(grammar_path, re_, base_paths=[]):
                 joined_path = os.path.join(import_path, grammar_path)
                 with open(joined_path, encoding='utf8') as f:
                     text = f.read()
-                grammar = load_grammar(text, joined_path, re_)
+                grammar = loader.load_grammar(text, joined_path)
                 _imported_grammars[grammar_path] = grammar
                 break
         else:
@@ -803,7 +803,7 @@ class GrammarLoader:
         ('%ignore expects a value', ['%ignore %import\n']),
     ]
 
-    def __init__(self, re_module):
+    def __init__(self, re_module, always_keep_all_tokens):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
@@ -816,6 +816,7 @@ class GrammarLoader:
 
         self.canonize_tree = CanonizeTree()
         self.re_module = re_module
+        self.always_keep_all_tokens = always_keep_all_tokens
 
     def load_grammar(self, grammar_text, grammar_name='<?>'):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
@@ -901,7 +902,7 @@ class GrammarLoader:
         # import grammars
         for dotted_path, (base_paths, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = import_grammar(grammar_path, self.re_module, base_paths=base_paths)
+            g = import_grammar(grammar_path, self, base_paths=base_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -946,7 +947,10 @@ class GrammarLoader:
         rules = rule_defs
 
         rule_names = {}
-        for name, params, _x, _o in rules:
+        for name, params, _x, option in rules:
+            if self.always_keep_all_tokens: # We need to do this somewhere. Might as well prevent an additional loop
+                option.keep_all_tokens = True
+            
             if name.startswith('__'):
                 raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
             if name in rule_names:
@@ -981,5 +985,5 @@ class GrammarLoader:
 
 
 
-def load_grammar(grammar, source, re_):
-    return GrammarLoader(re_).load_grammar(grammar, source)
+def load_grammar(grammar, source, re_, always_keep_all_tokens):
+    return GrammarLoader(re_, always_keep_all_tokens).load_grammar(grammar, source)

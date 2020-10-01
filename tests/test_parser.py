@@ -2041,6 +2041,10 @@ def _make_parser_test(LEXER, PARSER):
             # Anonymous tokens shouldn't count
             p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [])
+            
+            # Unless keep_all_tokens=True
+            p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True, keep_all_tokens=True)
+            self.assertEqual(p.parse("").children, [None, None, None])
 
             # All invisible constructs shouldn't count
             p = _Lark("""start: [A] ["b"] [_c] ["e" "f" _c]

@@ -269,8 +269,13 @@ class Lark(Serialize):
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, self.source, re_module)
 
+        if self.options.postlex is not None:
+            terminals_to_keep = set(self.options.postlex.always_accept)
+        else:
+            terminals_to_keep = set()
+
         # Compile the EBNF grammar into BNF
-        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
+        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
 
         if self.options.edit_terminals:
             for t in self.terminals:

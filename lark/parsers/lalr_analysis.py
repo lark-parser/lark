@@ -255,7 +255,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 actions[la] = (Shift, next_state.closure)
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
-                    raise self.__build_reduce_reduce_error(la, rules)
+                    raise self.build_reduce_reduce_error(la, rules)
                 if la in actions:
                     if self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
@@ -283,12 +283,12 @@ class LALR_Analyzer(GrammarAnalyzer):
             self.parse_table = IntParseTable.from_ParseTable(_parse_table)
 
     # Generation of conflict resolution hints
-    def __build_reduce_reduce_error(self, la, rules):
+    def build_reduce_reduce_error(self, la, rules):
         """Build a GrammarError with conflict resolution hints."""
         msg = "Reduce/Reduce collision in %s between the following rules:" % la
         msg += "".join("\n\t\t- %s" % rule for rule in rules)
 
-        common_ancestors = self.__find_closest_common_ancestors(rules)
+        common_ancestors = self.find_closest_common_ancestors(rules)
         msg += "\n\nThe conflict may come from"
 
         for rules, ancestors in common_ancestors.items():
@@ -298,7 +298,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
         return GrammarError(msg)
 
-    def __find_closest_common_ancestors(self, conflicting_rules):
+    def find_closest_common_ancestors(self, conflicting_rules):
         """
         Find the closest common ancestor of pairs of rules.
 
@@ -306,7 +306,7 @@ class LALR_Analyzer(GrammarAnalyzer):
         :returns dict: 2-frozenset of NonTerminal rule names as keys, set of
         NonTerminal ancestor names as values
         """
-        parents = self.__rules_parents()
+        parents = self.rules_parents()
         ancestors = {rule.origin: {rule.origin} for rule in conflicting_rules}
         oldest_ancestors = {rule.origin: {rule.origin}
                             for rule in conflicting_rules}
@@ -324,7 +324,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 ancestors[rule.origin].update(new_oldest_ancestors)
                 oldest_ancestors[rule.origin] = new_oldest_ancestors
 
-            new_common_ancestors = self.__ancestors_intersections(
+            new_common_ancestors = self.ancestors_intersections(
                 ancestors, intersections_found
             )
             intersections_found |= set(new_common_ancestors.keys())
@@ -332,7 +332,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
         return common_ancestors
 
-    def __rules_parents(self):
+    def rules_parents(self):
         """
         Build a dictionary containing, for each rule of the grammar, the set
         of the rules that use it. Rules are represented by their NonTerminal
@@ -347,7 +347,7 @@ class LALR_Analyzer(GrammarAnalyzer):
         return parents
 
     @staticmethod
-    def __ancestors_intersections(ancestors, excluded_couples):
+    def ancestors_intersections(ancestors, excluded_couples):
         """
         Find the intersection between the ancestors of different couple of
         rules, excluding some of them.

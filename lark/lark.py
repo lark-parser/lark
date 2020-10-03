@@ -236,7 +236,7 @@ class Lark(Serialize):
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)
                 with FS.open(cache_fn, 'rb') as f:
-                    self._load(f, self.options.transformer, self.options.postlex)
+                    self._load(f, self.options)
                 return
 
         if self.options.lexer == 'auto':
@@ -352,7 +352,7 @@ class Lark(Serialize):
         inst = cls.__new__(cls)
         return inst._load(f)
 
-    def _load(self, f, **kwargs):
+    def _load(self, f, temp_options=None, **kwargs):
         if isinstance(f, dict):
             d = f
         else:
@@ -367,6 +367,9 @@ class Lark(Serialize):
             raise ValueError("Some options are not allowed when loading a Parser: {}"
                              .format(_LOAD_BLOCKED_OPTIONS.intersection(kwargs.keys())))
         options.update(kwargs)
+        if temp_options is not None:
+            for o in _LOAD_ALLOWED_OPTIONS:
+                options[o] = temp_options.options[o]
         self.options = LarkOptions.deserialize(options, memo)
         re_module = regex if self.options.regex else re
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]

@@ -310,7 +310,8 @@ class Lark(Serialize):
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
-    __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
+    if __doc__:
+        __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 

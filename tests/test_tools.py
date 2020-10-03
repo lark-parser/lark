@@ -25,7 +25,7 @@ class TestStandalone(TestCase):
         standalone.main(StringIO(grammar), 'start', print=pr)
         code = code_buf.getvalue()
 
-        context = {}
+        context = {'__doc__': None}
         exec(code, context)
         return context
 

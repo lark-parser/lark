@@ -6,6 +6,11 @@ from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
 from .tree import Tree
 from .common import LexerConf
+try:
+    import regex
+except ImportError:
+    regex = None
+import re
 
 ###{standalone
 
@@ -82,7 +87,7 @@ class WithLexer(_ParserFrontend):
         self.postlex = lexer_conf.postlex
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, re_module, options):
+    def deserialize(cls, data, memo, callbacks, options):
         inst = super(WithLexer, cls).deserialize(data, memo)
 
         inst.postlex = options.postlex
@@ -90,7 +95,7 @@ class WithLexer(_ParserFrontend):
 
         terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
         inst.lexer_conf.callbacks = _get_lexer_callbacks(options.transformer, terminals)
-        inst.lexer_conf.re_module = re_module
+        inst.lexer_conf.re_module = regex if options.regex else re
         inst.lexer_conf.skip_validation = True
         inst.lexer_conf.use_bytes = options.use_bytes
         inst.lexer_conf.g_regex_flags = options.g_regex_flags

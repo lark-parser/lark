@@ -165,7 +165,6 @@ class LarkOptions(Serialize):
 
 _LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'keep_all_tokens',
                          'tree_class'}
-_LOAD_BLOCKED_OPTIONS = set(LarkOptions._defaults.keys()) - _LOAD_ALLOWED_OPTIONS
 
 
 class Lark(Serialize):
@@ -235,8 +234,10 @@ class Lark(Serialize):
 
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)
+                for name in (set(LarkOptions._defaults) - _LOAD_ALLOWED_OPTIONS):
+                    options.pop(name, None)
                 with FS.open(cache_fn, 'rb') as f:
-                    self._load(f, self.options)
+                    self._load(f, **options)
                 return
 
         if self.options.lexer == 'auto':
@@ -352,7 +353,7 @@ class Lark(Serialize):
         inst = cls.__new__(cls)
         return inst._load(f)
 
-    def _load(self, f, temp_options=None, **kwargs):
+    def _load(self, f, **kwargs):
         if isinstance(f, dict):
             d = f
         else:
@@ -363,15 +364,11 @@ class Lark(Serialize):
         assert memo
         memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         options = dict(data['options'])
-        if _LOAD_BLOCKED_OPTIONS.intersection(kwargs.keys()):
+        if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ValueError("Some options are not allowed when loading a Parser: {}"
-                             .format(_LOAD_BLOCKED_OPTIONS.intersection(kwargs.keys())))
+                             .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
         options.update(kwargs)
-        if temp_options is not None:
-            for o in _LOAD_ALLOWED_OPTIONS:
-                options[o] = temp_options.options[o]
         self.options = LarkOptions.deserialize(options, memo)
-        re_module = regex if self.options.regex else re
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source = '<deserialized>'
         self._prepare_callbacks()
@@ -379,7 +376,6 @@ class Lark(Serialize):
             data['parser'],
             memo,
             self._callbacks,
-            re_module,
             self.options, # Not all, but multiple attributes are used
         )
         self.terminals = self.parser.lexer_conf.tokens

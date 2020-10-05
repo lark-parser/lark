@@ -95,7 +95,16 @@ class LarkOptions(Serialize):
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
-
+    
+    
+    # Adding a new option needs to be done in multiple places:
+    # - In the dictionary below. This is the primary truth which options `Lark.__init__` takes
+    # - In the doc string above. It is used both for the docstring of `LarkOptions` and `Lark`
+    # - In `lark-stubs/lark.pyi`:
+    #   - As attribute to `LarkOptions`
+    #   - As parameter to `Lark.__init__`
+    # - potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
+    # - potentially in `lark.tools.__init__`, when it can easily be passed as a cmd argument and makes sense
     _defaults = {
         'debug': False,
         'keep_all_tokens': False,
@@ -163,8 +172,9 @@ class LarkOptions(Serialize):
         return cls(data)
 
 
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags',
-                         'regex', 'propagate_positions', 'keep_all_tokens', 'tree_class'}
+# Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
+# These option are only used outside of `load_grammar`.
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
 
 
 class Lark(Serialize):

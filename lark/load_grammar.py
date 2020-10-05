@@ -526,7 +526,7 @@ class Grammar:
         self.rule_defs = rule_defs
         self.ignore = ignore
 
-    def compile(self, start):
+    def compile(self, start, terminals_to_keep):
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
         term_defs = deepcopy(list(self.term_defs))
@@ -641,7 +641,7 @@ class Grammar:
         used_terms = {t.name for r in compiled_rules
                              for t in r.expansion
                              if isinstance(t, Terminal)}
-        terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore)
+        terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore or t.name in terminals_to_keep)
         if unused:
             logger.debug("Unused terminals: %s", [t.name for t in unused])
 

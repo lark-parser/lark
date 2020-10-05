@@ -2,7 +2,7 @@
 
 from typing import (
     TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
-    Literal, Protocol,
+    Literal, Protocol, Iterable,
 )
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
@@ -14,6 +14,8 @@ class PostLex(Protocol):
 
     def process(self, stream: Iterator[Token]) -> Iterator[Token]:
         ...
+    
+    always_accept: Iterable[str]
 
 
 class LarkOptions:

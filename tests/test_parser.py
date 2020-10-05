@@ -1781,6 +1781,29 @@ def _make_parser_test(LEXER, PARSER):
             %import bad_test.NUMBER
             """
             self.assertRaises(IOError, _Lark, grammar)
+        
+        @unittest.skipIf(LEXER=='dynamic', "%declare/postlex doesn't work with dynamic")
+        def test_postlex_declare(self): # Note: this test does a lot. maybe split it up?
+            class TestPostLexer:
+                def process(self, stream):
+                    for t in stream:
+                        if t.type == 'A':
+                            t.type = 'B'
+                            yield t
+                        else:
+                            yield t
+
+                always_accept = ('A',)
+
+            parser = _Lark("""
+            start: B
+            A: "A"
+            %declare B
+            """, postlex=TestPostLexer())
+
+            test_file = "A"
+            tree = parser.parse(test_file)
+            self.assertEqual(tree.children, [Token('B', 'A')])
 
         @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
         def test_earley_prioritization(self):

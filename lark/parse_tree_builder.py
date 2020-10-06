@@ -299,10 +299,9 @@ def apply_visit_wrapper(func, name, wrapper):
 
 
 class ParseTreeBuilder:
-    def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
+    def __init__(self, rules, tree_class, propagate_positions=False, ambiguous=False, maybe_placeholders=False):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions
-        self.always_keep_all_tokens = keep_all_tokens
         self.ambiguous = ambiguous
         self.maybe_placeholders = maybe_placeholders
 
@@ -311,7 +310,7 @@ class ParseTreeBuilder:
     def _init_builders(self, rules):
         for rule in rules:
             options = rule.options
-            keep_all_tokens = self.always_keep_all_tokens or options.keep_all_tokens
+            keep_all_tokens = options.keep_all_tokens
             expand_single_child = options.expand1
 
             wrapper_chain = list(filter(None, [

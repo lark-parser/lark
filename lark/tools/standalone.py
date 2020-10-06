@@ -145,8 +145,8 @@ def main(fobj, start, print=print):
 
     print('Shift = 0')
     print('Reduce = 1')
-    print("def Lark_StandAlone(transformer=None, postlex=None):")
-    print("  return Lark._load_from_dict(DATA, MEMO, transformer=transformer, postlex=postlex)")
+    print("def Lark_StandAlone(**kwargs):")
+    print("  return Lark._load_from_dict(DATA, MEMO, **kwargs)")
 
 
 

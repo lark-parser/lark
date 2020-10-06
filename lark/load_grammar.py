@@ -948,7 +948,8 @@ class GrammarLoader:
 
         rule_names = {}
         for name, params, _x, option in rules:
-            if self.always_keep_all_tokens: # We need to do this somewhere. Might as well prevent an additional loop
+            # We can't just simply not throw away the tokens later, we need option.keep_all_tokens to correctly generate maybe_placeholders
+            if self.always_keep_all_tokens: 
                 option.keep_all_tokens = True
             
             if name.startswith('__'):

@@ -169,6 +169,10 @@ class LarkOptions(Serialize):
         return cls(data)
 
 
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags',
+                         'regex', 'propagate_positions', 'keep_all_tokens', 'tree_class'}
+
+
 class Lark(Serialize):
     """Main interface for the library.
 
@@ -239,8 +243,11 @@ class Lark(Serialize):
 
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)
+                # Remove options that aren't relevant for loading from cache
+                for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
+                    del options[name]
                 with FS.open(cache_fn, 'rb') as f:
-                    self._load(f, self.options.transformer, self.options.postlex)
+                    self._load(f, **options)
                 return
 
         if self.options.lexer == 'auto':
@@ -278,8 +285,13 @@ class Lark(Serialize):
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, self.source_path, re_module, self.options.import_paths)
 
+        if self.options.postlex is not None:
+            terminals_to_keep = set(self.options.postlex.always_accept)
+        else:
+            terminals_to_keep = set()
+
         # Compile the EBNF grammar into BNF
-        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start)
+        self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
 
         if self.options.edit_terminals:
             for t in self.terminals:
@@ -319,7 +331,8 @@ class Lark(Serialize):
             with FS.open(cache_fn, 'wb') as f:
                 self.save(f)
 
-    __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
+    if __doc__:
+        __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
@@ -345,7 +358,7 @@ class Lark(Serialize):
         Useful for caching and multiprocessing.
         """
         data, m = self.memo_serialize([TerminalDef, Rule])
-        pickle.dump({'data': data, 'memo': m}, f)
+        pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def load(cls, f):
@@ -356,7 +369,7 @@ class Lark(Serialize):
         inst = cls.__new__(cls)
         return inst._load(f)
 
-    def _load(self, f, transformer=None, postlex=None):
+    def _load(self, f, **kwargs):
         if isinstance(f, dict):
             d = f
         else:
@@ -367,12 +380,11 @@ class Lark(Serialize):
         assert memo
         memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         options = dict(data['options'])
-        if transformer is not None:
-            options['transformer'] = transformer
-        if postlex is not None:
-            options['postlex'] = postlex
+        if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
+            raise ValueError("Some options are not allowed when loading a Parser: {}"
+                             .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
+        options.update(kwargs)
         self.options = LarkOptions.deserialize(options, memo)
-        re_module = regex if self.options.regex else re
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
         self._prepare_callbacks()
@@ -380,18 +392,16 @@ class Lark(Serialize):
             data['parser'],
             memo,
             self._callbacks,
-            self.options.postlex,
-            self.options.transformer,
-            re_module
+            self.options, # Not all, but multiple attributes are used
         )
         self.terminals = self.parser.lexer_conf.tokens
         self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 
     @classmethod
-    def _load_from_dict(cls, data, memo, transformer=None, postlex=None):
+    def _load_from_dict(cls, data, memo, **kwargs):
         inst = cls.__new__(cls)
-        return inst._load({'data': data, 'memo': memo}, transformer, postlex)
+        return inst._load({'data': data, 'memo': memo}, **kwargs)
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):

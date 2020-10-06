@@ -20,7 +20,7 @@ class TestTrees(TestCase):
 
     def test_pickle(self):
         s = copy.deepcopy(self.tree1)
-        data = pickle.dumps(s)
+        data = pickle.dumps(s, protocol=pickle.HIGHEST_PROTOCOL)
         assert pickle.loads(data) == s
 
     def test_repr_runnable(self):

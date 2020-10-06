@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 import sys
 from unittest import TestCase, main
 
-from functools import partial
+from lark import Lark
 from lark.tree import Tree
 from lark.tools import standalone
 
@@ -19,10 +19,9 @@ class TestStandalone(TestCase):
     def setUp(self):
         pass
 
-    def _create_standalone(self, grammar):
+    def _create_standalone(self, grammar, compress=False):
         code_buf = StringIO()
-        pr = partial(print, file=code_buf)
-        standalone.main(StringIO(grammar), 'start', print=pr)
+        standalone.gen_standalone(Lark(grammar, parser='lalr'), out=code_buf, compress=compress)
         code = code_buf.getvalue()
 
         context = {'__doc__': None}
@@ -52,6 +51,11 @@ class TestStandalone(TestCase):
         self.assertRaises(context['UnexpectedToken'], l.parse, 'twelve monkeys')
         self.assertRaises(context['UnexpectedToken'], l.parse, 'twelve')
         self.assertRaises(context['UnexpectedCharacters'], l.parse, '$ talks')
+
+        context = self._create_standalone(grammar, compress=True)
+        _Lark = context['Lark_StandAlone']
+        l = _Lark()
+        x = l.parse('12 elephants')
 
     def test_contextual(self):
         grammar = """

@@ -40,7 +40,7 @@ from warnings import warn
 
 import lark
 from lark import Lark
-from lark.tools import base_argparser, build_lalr
+from lark.tools import lalr_argparser, build_lalr, make_warnings_comments
 
 
 from lark.grammar import RuleOptions, Rule
@@ -157,8 +157,9 @@ def gen_standalone(lark_inst, output=None, out=sys.stdout):
 
 
 if __name__ == '__main__':
+    make_warnings_comments()
     parser = ArgumentParser(prog="prog='python -m lark.tools.standalone'", description="Lark Stand-alone Generator Tool",
-                            parents=[base_argparser], epilog='Look at the Lark documentation for more info on the options')
+                            parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
     parser.add_argument("old_start", nargs='?', help=SUPPRESS)
     ns = parser.parse_args()
     if ns.old_start is not None:

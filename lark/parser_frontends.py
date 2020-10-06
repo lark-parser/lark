@@ -96,9 +96,9 @@ class WithLexer(_ParserFrontend):
         terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
         inst.lexer_conf.callbacks = _get_lexer_callbacks(options.transformer, terminals)
         inst.lexer_conf.re_module = regex if options.regex else re
-        inst.lexer_conf.skip_validation = True
         inst.lexer_conf.use_bytes = options.use_bytes
         inst.lexer_conf.g_regex_flags = options.g_regex_flags
+        inst.lexer_conf.skip_validation = True
         inst.init_lexer()
 
         return inst

@@ -163,8 +163,8 @@ class LarkOptions(Serialize):
         return cls(data)
 
 
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'keep_all_tokens',
-                         'tree_class'}
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags',
+                         'regex', 'propagate_positions', 'keep_all_tokens', 'tree_class'}
 
 
 class Lark(Serialize):
@@ -234,8 +234,9 @@ class Lark(Serialize):
 
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)
-                for name in (set(LarkOptions._defaults) - _LOAD_ALLOWED_OPTIONS):
-                    options.pop(name, None)
+                # Remove options that aren't relevant for loading from cache
+                for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
+                    del options[name]
                 with FS.open(cache_fn, 'rb') as f:
                     self._load(f, **options)
                 return

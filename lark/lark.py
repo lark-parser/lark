@@ -95,16 +95,16 @@ class LarkOptions(Serialize):
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
-    
-    
+
+
     # Adding a new option needs to be done in multiple places:
-    # - In the dictionary below. This is the primary truth which options `Lark.__init__` takes
-    # - In the doc string above. It is used both for the docstring of `LarkOptions` and `Lark`
+    # - In the dictionary below. This is the primary truth of which options `Lark.__init__` accepts
+    # - In the docstring above. It is used both for the docstring of `LarkOptions` and `Lark`, and in readthedocs
     # - In `lark-stubs/lark.pyi`:
     #   - As attribute to `LarkOptions`
     #   - As parameter to `Lark.__init__`
-    # - potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
-    # - potentially in `lark.tools.__init__`, when it can easily be passed as a cmd argument and makes sense
+    # - Potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
+    # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
     _defaults = {
         'debug': False,
         'keep_all_tokens': False,

@@ -253,7 +253,14 @@ class LALR_Analyzer(GrammarAnalyzer):
                 actions[la] = (Shift, next_state.closure)
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
-                    reduce_reduce.append((la, rules))
+                    # Try to resolve conflict based on priority
+                    p = [(r.options.priority or 0, r) for r in rules]
+                    p.sort(key=lambda r: r[0], reverse=True)
+                    best, second_best = p[:2]
+                    if best[0] > second_best[0]:
+                        rules = [best[1]]
+                    else:
+                        reduce_reduce.append((state, la, rules))
                 if la in actions:
                     if self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
@@ -263,9 +270,12 @@ class LALR_Analyzer(GrammarAnalyzer):
             m[state] = { k.name: v for k, v in actions.items() }
 
         if reduce_reduce:
-            msgs = [ 'Reduce/Reduce collision in %s between the following rules: %s'
-                     % (la, ''.join([ '\n\t\t- ' + str(r) for r in rules ]))
-                for la, rules in reduce_reduce]
+            msgs = []
+            for state, la, rules in reduce_reduce:
+                msg = 'Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t- ' + str(r) for r in rules ]))
+                if self.debug:
+                    msg += '\n    collision occured in state: {%s\n    }' % ''.join(['\n\t' + str(x) for x in state.closure])
+                msgs.append(msg)
             raise GrammarError('\n\n'.join(msgs))
 
         states = { k.closure: v for k, v in m.items() }

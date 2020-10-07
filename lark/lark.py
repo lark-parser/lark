@@ -272,12 +272,7 @@ class Lark(Serialize):
                 'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
 
         if self.options.priority == 'auto':
-            if self.options.parser in ('earley', 'cyk', ):
-                self.options.priority = 'normal'
-            elif self.options.parser in ('lalr', ):
-                self.options.priority = None
-        elif self.options.priority in ('invert', 'normal'):
-            assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
+            self.options.priority = 'normal'
 
         assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'

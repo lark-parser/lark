@@ -24,6 +24,11 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 from copy import copy
 
 
+try:
+    interegular
+except NameError:
+    interegular = None
+
 class Pattern(Serialize, ABC):
 
     value: str

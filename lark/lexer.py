@@ -14,6 +14,11 @@ from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 ###{standalone
 from copy import copy
 
+try:
+    interegular
+except NameError:
+    interegular = None
+
 class Pattern(Serialize):
 
     def __init__(self, value, flags=()):

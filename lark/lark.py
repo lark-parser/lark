@@ -176,6 +176,9 @@ class LarkOptions(Serialize):
 # These option are only used outside of `load_grammar`.
 _LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
 
+_VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
+_VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
+
 
 class Lark(Serialize):
     """Main interface for the library.
@@ -272,16 +275,13 @@ class Lark(Serialize):
                 'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
 
         if self.options.priority == 'auto':
-            if self.options.parser in ('earley', 'cyk', ):
-                self.options.priority = 'normal'
-            elif self.options.parser in ('lalr', ):
-                self.options.priority = None
-        elif self.options.priority in ('invert', 'normal'):
-            assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
+            self.options.priority = 'normal'
 
-        assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
+        if self.options.priority not in _VALID_PRIORITY_OPTIONS:
+            raise ValueError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
-        assert self.options.ambiguity in ('resolve', 'explicit', 'forest', 'auto', )
+        if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
+            raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         # Parse the grammar file and compose the grammars (TODO)
         self.grammar = load_grammar(grammar, self.source, re_module, self.options.keep_all_tokens)

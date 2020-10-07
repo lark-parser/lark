@@ -1781,7 +1781,7 @@ def _make_parser_test(LEXER, PARSER):
             %import bad_test.NUMBER
             """
             self.assertRaises(IOError, _Lark, grammar)
-        
+
         @unittest.skipIf(LEXER=='dynamic', "%declare/postlex doesn't work with dynamic")
         def test_postlex_declare(self): # Note: this test does a lot. maybe split it up?
             class TestPostLexer:
@@ -1805,8 +1805,8 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse(test_file)
             self.assertEqual(tree.children, [Token('B', 'A')])
 
-        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
-        def test_earley_prioritization(self):
+        @unittest.skipIf(PARSER == 'cyk', "Doesn't work for CYK")
+        def test_prioritization(self):
             "Tests effect of priority on result"
 
             grammar = """
@@ -1815,7 +1815,6 @@ def _make_parser_test(LEXER, PARSER):
             b.2: "a"
             """
 
-            # l = Lark(grammar, parser='earley', lexer='standard')
             l = _Lark(grammar)
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'b')
@@ -1827,14 +1826,31 @@ def _make_parser_test(LEXER, PARSER):
             """
 
             l = _Lark(grammar)
-            # l = Lark(grammar, parser='earley', lexer='standard')
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'a')
 
+            grammar = """
+            start: a | b
+            a.2: "A"+
+            b.1: "A"+ "B"?
+            """
+
+            l = _Lark(grammar)
+            res = l.parse("AAAA")
+            self.assertEqual(res.children[0].data, 'a')
+
+            l = _Lark(grammar)
+            res = l.parse("AAAB")
+            self.assertEqual(res.children[0].data, 'b')
+
+            l = _Lark(grammar, priority="invert")
+            res = l.parse("AAAA")
+            self.assertEqual(res.children[0].data, 'b')
 
 
-        @unittest.skipIf(PARSER != 'earley', "Currently only Earley supports priority in rules")
-        def test_earley_prioritization_sum(self):
+
+        @unittest.skipIf(PARSER != 'earley' or LEXER == 'standard', "Currently only Earley supports priority sum in rules")
+        def test_prioritization_sum(self):
             "Tests effect of priority on result"
 
             grammar = """
@@ -1846,7 +1862,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.1: "bb"
             """
 
-            l = Lark(grammar, priority="invert")
+            l = _Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 
@@ -1859,7 +1875,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_: "bb"
             """
 
-            l = Lark(grammar, priority="invert")
+            l = _Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 
@@ -1872,7 +1888,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.3: "bb"
             """
 
-            l = Lark(grammar, priority="invert")
+            l = _Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'ab_b_a_')
 
@@ -1885,7 +1901,7 @@ def _make_parser_test(LEXER, PARSER):
             bb_.3: "bb"
             """
 
-            l = Lark(grammar, priority="invert")
+            l = _Lark(grammar, priority="invert")
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 
@@ -2064,7 +2080,7 @@ def _make_parser_test(LEXER, PARSER):
             # Anonymous tokens shouldn't count
             p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("").children, [])
-            
+
             # Unless keep_all_tokens=True
             p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True, keep_all_tokens=True)
             self.assertEqual(p.parse("").children, [None, None, None])

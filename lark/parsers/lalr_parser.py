@@ -13,7 +13,6 @@ from .lalr_puppet import ParserPuppet
 
 class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
-        assert all(r.options.priority is None for r in parser_conf.rules), "LALR doesn't yet support prioritization"
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lalr()
         callbacks = parser_conf.callbacks

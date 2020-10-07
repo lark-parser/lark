@@ -793,7 +793,7 @@ class GrammarLoader:
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
-        lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])
+        lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'], skip_validation=True)
 
         parser_conf = ParserConf(rules, callback, ['start'])
         self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)

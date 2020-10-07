@@ -1,8 +1,14 @@
 ## Lexer Implementation
 
 import re
+# from time import time
 
-from .utils import Str, classify, get_regexp_width, Py36, Serialize
+try:
+    import interegular
+except ImportError:
+    interegular = None
+
+from .utils import Str, classify, get_regexp_width, Py36, Serialize, logger
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
@@ -315,7 +321,7 @@ class Lexer(object):
 
 class TraditionalLexer(Lexer):
 
-    def __init__(self, conf):
+    def __init__(self, conf, comparator=None):
         terminals = list(conf.tokens)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -323,15 +329,28 @@ class TraditionalLexer(Lexer):
 
         if not conf.skip_validation:
             # Sanitization
+            terminal_to_regex = {}
             for t in terminals:
+                regexp = t.pattern.to_regexp()
                 try:
-                    self.re.compile(t.pattern.to_regexp(), conf.g_regex_flags)
+                    self.re.compile(regexp, conf.g_regex_flags)
                 except self.re.error:
-                    raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
+                    raise LexError("Cannot compile terminal %s: %s" % (t.name, t.pattern))
 
                 if t.pattern.min_width == 0:
                     raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
-
+                
+                if t.pattern.type == 're':
+                    terminal_to_regex[t] = regexp
+            
+            if interegular:
+                if not comparator:
+                    comparator = interegular.Comparator.from_regexes(terminal_to_regex)
+                for a, b in comparator.check(terminal_to_regex):
+                    if a.priority == b.priority and not comparator.is_marked(a, b):
+                        comparator.mark(a, b)
+                        # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
+                        logger.warning("Collision between Terminals %s and %s" % (a.name, b.name)) # leave it as a warning for the moment
             assert set(conf.ignore) <= {t.name for t in terminals}
 
         # Init
@@ -381,11 +400,17 @@ class TraditionalLexer(Lexer):
 class ContextualLexer(Lexer):
 
     def __init__(self, conf, states, always_accept=()):
+        # start_time = time()
         terminals = list(conf.tokens)
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
+        
+        if interegular:
+            comparator = interegular.Comparator.from_regexes({t: t.pattern.to_regexp() for t in terminals})
+        else:
+            comparator = None
 
         trad_conf = copy(conf)
         trad_conf.tokens = terminals
@@ -401,13 +426,15 @@ class ContextualLexer(Lexer):
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
                 lexer_conf = copy(trad_conf)
                 lexer_conf.tokens = state_tokens
-                lexer = TraditionalLexer(lexer_conf)
+                lexer = TraditionalLexer(lexer_conf, comparator)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
         assert trad_conf.tokens is terminals
-        self.root_lexer = TraditionalLexer(trad_conf)
+        self.root_lexer = TraditionalLexer(trad_conf, comparator)
+        # end_time = time()
+        # logger.debug("ContextualLexer init time: %s" % (end_time - start_time,))
 
     def lex(self, stream, get_parser_state):
         parser_state = get_parser_state()

@@ -16,7 +16,8 @@ setup(
 
     extras_require = {
         "regex": ["regex"],
-        "nearley": ["js2py"]
+        "nearley": ["js2py"],
+        "interegular": ["interegular"],
     },
 
     package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},

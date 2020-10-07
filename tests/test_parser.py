@@ -1829,6 +1829,20 @@ def _make_parser_test(LEXER, PARSER):
             res = l.parse("a")
             self.assertEqual(res.children[0].data, 'a')
 
+            grammar = """
+            start: a | b
+            a.2: "A"+
+            b.1: "A"+ "B"?
+            """
+
+            l = _Lark(grammar)
+            res = l.parse("AAAA")
+            self.assertEqual(res.children[0].data, 'a')
+
+            l = _Lark(grammar, priority="invert")
+            res = l.parse("AAAA")
+            self.assertEqual(res.children[0].data, 'b')
+
 
 
         @unittest.skipIf(PARSER != 'earley' or LEXER == 'standard', "Currently only Earley supports priority sum in rules")

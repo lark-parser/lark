@@ -1839,6 +1839,10 @@ def _make_parser_test(LEXER, PARSER):
             res = l.parse("AAAA")
             self.assertEqual(res.children[0].data, 'a')
 
+            l = _Lark(grammar)
+            res = l.parse("AAAB")
+            self.assertEqual(res.children[0].data, 'b')
+
             l = _Lark(grammar, priority="invert")
             res = l.parse("AAAA")
             self.assertEqual(res.children[0].data, 'b')

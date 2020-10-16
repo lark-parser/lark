@@ -65,7 +65,7 @@ Syntax Highlighting
 -  `Visual Studio Code`_ (Or install through the vscode plugin system)
 -  `Intellij & PyCharm`_
 -  `Vim`_
--  `Atom`
+-  `Atom`_
 
 .. _Sublime Text & TextMate: https://github.com/lark-parser/lark_syntax
 .. _Visual Studio Code: https://github.com/lark-parser/vscode-lark

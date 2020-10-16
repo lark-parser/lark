@@ -7,7 +7,7 @@ parse-trees that Lark returns.
 They are used by inheriting from the correct class (visitor or transformer),
 and implementing methods corresponding to the rule you wish to process. Each
 method accepts the children as an argument. That can be modified using the
-``v_args`` decorator, which allows to inline the arguments (akin to ``*args``),
+``v_args`` decorator, which allows one to inline the arguments (akin to ``*args``),
 or add the tree ``meta`` property as an argument.
 
 See: `visitors.py`_

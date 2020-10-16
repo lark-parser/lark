@@ -268,7 +268,7 @@ If the module path is absolute, Lark will attempt to load it from the built-in d
 
 If the module path is relative, such as `.path.to.file`, Lark will attempt to load it from the current working directory. Grammars must have the `.lark` extension.
 
-The rule or terminal can be imported under an other name with the `->` syntax.
+The rule or terminal can be imported under another name with the `->` syntax.
 
 **Example:**
 ```perl

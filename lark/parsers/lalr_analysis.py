@@ -274,7 +274,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             for state, la, rules in reduce_reduce:
                 msg = 'Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t- ' + str(r) for r in rules ]))
                 if self.debug:
-                    msg += '\n    collision occured in state: {%s\n    }' % ''.join(['\n\t' + str(x) for x in state.closure])
+                    msg += '\n    collision occurred in state: {%s\n    }' % ''.join(['\n\t' + str(x) for x in state.closure])
                 msgs.append(msg)
             raise GrammarError('\n\n'.join(msgs))
 

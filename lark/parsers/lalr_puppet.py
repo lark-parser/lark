@@ -23,7 +23,7 @@ class ParserPuppet(object):
         self.result = None
 
     def feed_token(self, token):
-        """Feed the parser with a token, and advance it to the next state, as if it recieved it from the lexer.
+        """Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
         """

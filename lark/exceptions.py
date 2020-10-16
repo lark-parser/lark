@@ -28,7 +28,7 @@ class UnexpectedInput(LarkError):
 
     Used as a base class for the following exceptions:
 
-    - ``UnexpectedToken``: The parser recieved an unexpected token
+    - ``UnexpectedToken``: The parser received an unexpected token
     - ``UnexpectedCharacters``: The lexer encountered an unexpected string
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
@@ -137,7 +137,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    """When the parser throws UnexpectedToken, it instanciates a puppet
+    """When the parser throws UnexpectedToken, it instantiates a puppet
     with its internal state. Users can then interactively set the puppet to
     the desired puppet state, and resume regular parsing.
 

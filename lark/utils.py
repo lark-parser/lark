@@ -43,7 +43,7 @@ class Serialize(object):
 
     Attributes:
         __serialize_fields__ (List[str]): Fields (aka attributes) to serialize.
-        __serialize_namespace__ (list): List of classes that deserialization is allowed to instanciate.
+        __serialize_namespace__ (list): List of classes that deserialization is allowed to instantiate.
                                         Should include all field types that aren't builtin types.
     """
 

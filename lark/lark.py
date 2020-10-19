@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 import sys, os, pickle, hashlib
 from io import open
@@ -9,7 +10,7 @@ from .load_grammar import load_grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer, TraditionalLexer, TerminalDef, UnexpectedToken
+from .lexer import Lexer, TraditionalLexer, TerminalDef
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
@@ -462,19 +463,31 @@ class Lark(Serialize):
 
         try:
             return self.parser.parse(text, start=start)
-        except UnexpectedToken as e:
+        except UnexpectedInput as e:
             if on_error is None:
                 raise
 
             while True:
+                if isinstance(e, UnexpectedCharacters):
+                    s = e.puppet.lexer_state.state
+                    p = s.line_ctr.char_pos
+
                 if not on_error(e):
                     raise e
+
+                if isinstance(e, UnexpectedCharacters):
+                    # If user didn't change the character position, then we should
+                    if p == s.line_ctr.char_pos:
+                        s.line_ctr.feed(s.text[p:p+1])
+
                 try:
                     return e.puppet.resume_parse()
                 except UnexpectedToken as e2:
-                    if e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
+                    if isinstance(e, UnexpectedToken) and e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
                         # Prevent infinite loop
                         raise e2
+                    e = e2
+                except UnexpectedCharacters as e2:
                     e = e2
 
 

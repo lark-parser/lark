@@ -41,8 +41,9 @@ class ParserPuppet(object):
 
         return self.parser_state == other.parser_state and self.lexer_state == other.lexer_state
 
-    def __hash__(self):
-        return hash((self.parser_state, self.lexer_state))
+    # TODO Provide with an immutable puppet instance
+    # def __hash__(self):
+    #     return hash((self.parser_state, self.lexer_state))
 
     def pretty(self):
         """Print the output of ``choices()`` in a way that's easier to read."""

@@ -2,7 +2,7 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-from copy import deepcopy
+from copy import deepcopy, copy
 from ..exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 from ..lexer import Token
 
@@ -61,9 +61,12 @@ class ParserState:
             self.lexer, # XXX copy
             self.callbacks,
             self.start,
-            list(self.state_stack),
+            copy(self.state_stack),
             deepcopy(self.value_stack),
         )
+
+    def copy(self):
+        return copy(self)
 
     def feed_token(self, token, is_end=False):
         state_stack = self.state_stack

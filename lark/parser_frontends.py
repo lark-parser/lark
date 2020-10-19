@@ -34,7 +34,11 @@ def get_frontend(parser, lexer):
                     super(LALR_CustomLexerWrapper, self).__init__(
                         lexer, lexer_conf, parser_conf, options=options)
                 def init_lexer(self):
-                    self.lexer = CustomLexerWrapper(self.lexer_conf)
+                    future_interface = getattr(lexer, '__future_interface__', False)
+                    if future_interface:
+                        self.lexer = lexer(self.lexer_conf)
+                    else:
+                        self.lexer = CustomLexerWrapper(self.lexer_conf)
 
             return LALR_CustomLexerWrapper
         else:

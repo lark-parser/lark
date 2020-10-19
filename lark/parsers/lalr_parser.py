@@ -134,10 +134,6 @@ class _Parser:
                 e.puppet = ParserPuppet(self, state, state.lexer)
             except NameError:
                 pass
-            if isinstance(e, UnexpectedCharacters):
-                s = state.lexer.state
-                p = s.line_ctr.char_pos
-                s.line_ctr.feed(s.text[p:p+1])
             raise e
         except Exception as e:
             if self.debug:

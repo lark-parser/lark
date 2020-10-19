@@ -468,8 +468,18 @@ class Lark(Serialize):
                 raise
 
             while True:
+                if isinstance(e, UnexpectedCharacters):
+                    s = e.puppet.lexer_state.state
+                    p = s.line_ctr.char_pos
+
                 if not on_error(e):
                     raise e
+
+                if isinstance(e, UnexpectedCharacters):
+                    # If user didn't change the character position, then we should
+                    if p == s.line_ctr.char_pos:
+                        s.line_ctr.feed(s.text[p:p+1])
+
                 try:
                     return e.puppet.resume_parse()
                 except UnexpectedToken as e2:

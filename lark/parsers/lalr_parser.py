@@ -35,20 +35,27 @@ class LALR_Parser(object):
         return self.parser.parse(*args)
 
 
-class ParserState:
-    __slots__ = 'parse_table', 'lexer', 'callbacks', 'start', 'state_stack', 'value_stack', 'start_state', 'end_state', 'states'
+class ParseConf:
+    __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
 
-    def __init__(self, parse_table, lexer, callbacks, start, state_stack=None, value_stack=None):
+    def __init__(self, parse_table, callbacks, start):
         self.parse_table = parse_table
 
         self.start_state = self.parse_table.start_states[start]
         self.end_state = self.parse_table.end_states[start]
         self.states = self.parse_table.states
 
-        self.lexer = lexer
         self.callbacks = callbacks
         self.start = start
-        self.state_stack = state_stack or [self.start_state]
+
+
+class ParserState:
+    __slots__ = 'parse_conf', 'lexer', 'state_stack', 'value_stack'
+
+    def __init__(self, parse_conf, lexer, state_stack=None, value_stack=None):
+        self.parse_conf = parse_conf
+        self.lexer = lexer
+        self.state_stack = state_stack or [self.parse_conf.start_state]
         self.value_stack = value_stack or []
 
     @property
@@ -57,10 +64,8 @@ class ParserState:
 
     def __copy__(self):
         return type(self)(
-            self.parse_table,
+            self.parse_conf,
             self.lexer, # XXX copy
-            self.callbacks,
-            self.start,
             copy(self.state_stack),
             deepcopy(self.value_stack),
         )
@@ -71,7 +76,9 @@ class ParserState:
     def feed_token(self, token, is_end=False):
         state_stack = self.state_stack
         value_stack = self.value_stack
-        states = self.states
+        states = self.parse_conf.states
+        end_state = self.parse_conf.end_state
+        callbacks = self.parse_conf.callbacks
 
         while True:
             state = state_stack[-1]
@@ -81,7 +88,7 @@ class ParserState:
                 expected = {s for s in states[state].keys() if s.isupper()}
                 raise UnexpectedToken(token, expected, state=state, puppet=None)
 
-            assert arg != self.end_state
+            assert arg != end_state
 
             if action is Shift:
                 # shift once and return
@@ -100,14 +107,14 @@ class ParserState:
                 else:
                     s = []
 
-                value = self.callbacks[rule](s)
+                value = callbacks[rule](s)
 
                 _action, new_state = states[state_stack[-1]][rule.origin.name]
                 assert _action is Shift
                 state_stack.append(new_state)
                 value_stack.append(value)
 
-                if is_end and state_stack[-1] == self.end_state:
+                if is_end and state_stack[-1] == end_state:
                     return value_stack[-1]
 
 class _Parser:
@@ -117,7 +124,8 @@ class _Parser:
         self.debug = debug
 
     def parse(self, lexer, start, value_stack=None, state_stack=None):
-        parser_state = ParserState(self.parse_table, lexer, self.callbacks, start, state_stack, value_stack)
+        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
+        parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         return self.parse_from_state(parser_state)
 
     def parse_from_state(self, state):

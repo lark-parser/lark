@@ -95,7 +95,7 @@ class ParserState:
                 assert not is_end
                 state_stack.append(arg)
                 value_stack.append(token)
-                return arg
+                return
             else:
                 # reduce+shift as many times as necessary
                 rule = arg

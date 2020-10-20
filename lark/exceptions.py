@@ -34,6 +34,7 @@ class UnexpectedInput(LarkError):
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
     pos_in_stream = None
+    _all_terminals = None
 
     def get_context(self, text, span=40):
         """Returns a pretty string pinpointing the error in the text,
@@ -109,32 +110,54 @@ class UnexpectedInput(LarkError):
                             candidate = label, False
 
         return candidate[0]
+    
+    def _format_terminals(self, names):
+        if self._all_terminals:
+            t = []
+            for name in names:
+                try:
+                    t.append(next(t.nice_print for t in self._all_terminals if t.name == name))
+                except StopIteration:
+                    # If we don't find the corresponding Terminal (which *should* never happen), don't error.
+                    # Broken __str__ for Exception are some of the worst bugs
+                    t.append(t.display_name)
+        else:
+            t = names
+        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(t)
+
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None, _all_terminals=None):
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
         self.state = state
+        self._all_terminals = _all_terminals
 
         self.allowed = allowed
         self.considered_tokens = considered_tokens
+        self.token_history = token_history
 
         if isinstance(seq, bytes):
-            _s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
+            self._s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
         else:
-            _s = seq[lex_pos]
+            self._s = seq[lex_pos]
+        self._context = self.get_context(seq)
+        
+        super(UnexpectedCharacters, self).__init__()
 
-        message = "No terminal defined for '%s' at line %d col %d" % (_s, line, column)
-        message += '\n\n' + self.get_context(seq)
-        if allowed:
-            message += '\nExpecting: %s\n' % allowed
-        if token_history:
-            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in token_history)
-
-        super(UnexpectedCharacters, self).__init__(message)
-
+    def __str__(self):
+        # Be aware: Broken __str__ for Exceptions are terrible to debug. Make sure there is as little room as possible for errors
+        # You will get just `UnexpectedCharacters: <str() failed>` or something like that
+        # If you run into this, add an `except Exception as e: print(e); raise e` or similar.
+        message = "No terminal defined for '%s' at line %d col %d" % (self._s, self.line, self.column)
+        message += '\n\n' + self._context
+        if self.allowed:
+            message += self._format_terminals(self.allowed)
+        if self.token_history:
+            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
+        return message
 
 class UnexpectedToken(ParseError, UnexpectedInput):
     """When the parser throws UnexpectedToken, it instantiates a puppet
@@ -143,7 +166,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     see: :ref:`ParserPuppet`.
     """
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, all_terminals=None):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
@@ -153,16 +176,20 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.expected = expected     # XXX deprecate? `accepts` is better
         self.considered_rules = considered_rules
         self.puppet = puppet
+        self._all_terminals = all_terminals
 
-        # TODO Only calculate `accepts()` when we need to display it to the user
-        # This will improve performance when doing automatic error handling
-        self.accepts = puppet and puppet.accepts()
 
-        message = ("Unexpected token %r at line %s, column %s.\n"
-                   "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
-
-        super(UnexpectedToken, self).__init__(message)
+        super(UnexpectedToken, self).__init__()
+    
+    @property
+    def accepts(self):
+        return self.puppet and self.puppet.accepts()
+    
+    def __str__(self):
+        # Be aware: Broken __str__ for Exceptions are terrible to debug. Make sure there is as little room as possible for errors
+        message = ("Unexpected token %r at line %s, column %s.\n%s"
+                   % (self.token, self.line, self.column, self._format_terminals(self.accepts or self.expected)))
+        return message
 
 
 class VisitError(LarkError):

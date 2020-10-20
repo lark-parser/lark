@@ -6,6 +6,7 @@ from .parsers.lalr_parser import LALR_Parser
 from .grammar import Rule
 from .tree import Tree
 from .common import LexerConf
+from .exceptions import UnexpectedInput
 try:
     import regex
 except ImportError:
@@ -135,7 +136,12 @@ class WithLexer(_ParserFrontend):
         return LexerThread(lexer, text)
 
     def parse(self, text, start=None):
-        return self._parse(start, self.make_lexer(text))
+        try:
+            return self._parse(start, self.make_lexer(text))
+        except UnexpectedInput as e:
+            if e._all_terminals is None:
+                e._all_terminals = self.lexer_conf.terminals
+            raise e
 
     def init_traditional_lexer(self):
         self.lexer = TraditionalLexer(self.lexer_conf)
@@ -190,7 +196,7 @@ class Earley(WithLexer):
 
 class XEarley(_ParserFrontend):
     def __init__(self, lexer_conf, parser_conf, options=None, **kw):
-        self.token_by_name = {t.name:t for t in lexer_conf.tokens}
+        self.token_by_name = {t.name:t for t in lexer_conf.terminals}
         self.start = parser_conf.start
 
         self._prepare_match(lexer_conf)
@@ -211,7 +217,7 @@ class XEarley(_ParserFrontend):
 
     def _prepare_match(self, lexer_conf):
         self.regexps = {}
-        for t in lexer_conf.tokens:
+        for t in lexer_conf.terminals:
             if t.priority != 1:
                 raise ValueError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
@@ -228,7 +234,12 @@ class XEarley(_ParserFrontend):
             self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
-        return self._parse(start, text)
+        try:
+            return self._parse(start, text)
+        except UnexpectedInput as e:
+            if e._all_terminals is None:
+                e._all_terminals = self.token_by_name.values()
+            raise e
 
 class XEarley_CompleteLex(XEarley):
     def __init__(self, *args, **kw):

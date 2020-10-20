@@ -76,14 +76,15 @@ class PatternRE(Pattern):
 
 
 class TerminalDef(Serialize):
-    __serialize_fields__ = 'name', 'pattern', 'priority'
+    __serialize_fields__ = 'name', 'pattern', 'priority', 'nice_print'
     __serialize_namespace__ = PatternStr, PatternRE
 
-    def __init__(self, name, pattern, priority=1):
+    def __init__(self, name, pattern, priority=1, nice_print=None):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
         self.priority = priority
+        self.nice_print = nice_print or name
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
@@ -278,7 +279,7 @@ class Lexer(object):
 class TraditionalLexer(Lexer):
 
     def __init__(self, conf):
-        terminals = list(conf.tokens)
+        terminals = list(conf.terminals)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
         self.re = conf.re_module
@@ -347,7 +348,8 @@ class TraditionalLexer(Lexer):
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
-                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
+                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
+                                           _all_terminals=self.terminals)
 
             value, type_ = res
 
@@ -386,14 +388,14 @@ class LexerState:
 class ContextualLexer(Lexer):
 
     def __init__(self, conf, states, always_accept=()):
-        terminals = list(conf.tokens)
+        terminals = list(conf.terminals)
         tokens_by_name = {}
         for t in terminals:
             assert t.name not in tokens_by_name, t
             tokens_by_name[t.name] = t
 
         trad_conf = copy(conf)
-        trad_conf.tokens = terminals
+        trad_conf.terminals = terminals
 
         lexer_by_tokens = {}
         self.lexers = {}
@@ -405,13 +407,13 @@ class ContextualLexer(Lexer):
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
                 lexer_conf = copy(trad_conf)
-                lexer_conf.tokens = state_tokens
+                lexer_conf.terminals = state_tokens
                 lexer = TraditionalLexer(lexer_conf)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
-        assert trad_conf.tokens is terminals
+        assert trad_conf.terminals is terminals
         self.root_lexer = TraditionalLexer(trad_conf)
 
     def make_lexer_state(self, text):
@@ -428,7 +430,7 @@ class ContextualLexer(Lexer):
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
             token = self.root_lexer.next_token(lexer_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state.position)
+            raise UnexpectedToken(token, e.allowed, state=parser_state.position, all_terminals=self.root_lexer.terminals)
 
 class LexerThread:
     "A thread that ties a lexer instance and a lexer state, to be used by the parser"

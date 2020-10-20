@@ -1,14 +1,16 @@
+from warnings import warn
+
 from .utils import Serialize
 from .lexer import TerminalDef
 
 ###{standalone
 
 class LexerConf(Serialize):
-    __serialize_fields__ = 'tokens', 'ignore', 'g_regex_flags', 'use_bytes'
+    __serialize_fields__ = 'terminals', 'ignore', 'g_regex_flags', 'use_bytes'
     __serialize_namespace__ = TerminalDef,
 
-    def __init__(self, tokens, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
-        self.tokens = tokens    # TODO should be terminals
+    def __init__(self, terminals, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
+        self.terminals = terminals
         self.ignore = ignore
         self.postlex = postlex
         self.callbacks = callbacks or {}
@@ -16,6 +18,11 @@ class LexerConf(Serialize):
         self.re_module = re_module
         self.skip_validation = skip_validation
         self.use_bytes = use_bytes
+    
+    @property
+    def tokens(self):
+        warn("LexerConf.tokens is deprecated. Use LexerConf.terminals instead", DeprecationWarning)
+        return self.terminals
 
 ###}
 

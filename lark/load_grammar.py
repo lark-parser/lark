@@ -5,7 +5,7 @@ import sys
 from copy import copy, deepcopy
 from io import open
 
-from .utils import bfs, eval_escaping, Py36, logger, classify_bool
+from .utils import bfs, eval_escaping, Py36, logger, classify_bool, isascii
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -317,8 +317,11 @@ class PrepareAnonTerminals(Transformer_InPlace):
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
 
         term_name = None
+        nice_print = None
 
         if isinstance(p, PatternStr):
+            nice_print = repr(value) # This will always be ok, independent of what term_name we end up using
+            # TODO: potentially try to get the actual source code, and not the repr
             try:
                 # If already defined, use the user-defined terminal name
                 term_name = self.term_reverse[p].name
@@ -327,15 +330,14 @@ class PrepareAnonTerminals(Transformer_InPlace):
                 try:
                     term_name = _TERMINAL_NAMES[value]
                 except KeyError:
-                    if value.isalnum() and value[0].isalpha() and value.upper() not in self.term_set:
-                        with suppress(UnicodeEncodeError):
-                            value.upper().encode('ascii') # Make sure we don't have unicode in our terminal names
-                            term_name = value.upper()
+                    if value.isalnum() and value[0].isalpha() and value.upper() not in self.term_set and isascii(value):
+                        term_name = value.upper()
 
                 if term_name in self.term_set:
                     term_name = None
 
         elif isinstance(p, PatternRE):
+            #TODO: generate nice_print
             if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
@@ -348,7 +350,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         if term_name not in self.term_set:
             assert p not in self.term_reverse
             self.term_set.add(term_name)
-            termdef = TerminalDef(term_name, p)
+            termdef = TerminalDef(term_name, p, nice_print=nice_print)
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 

@@ -60,7 +60,7 @@ class ParserPuppet(object):
 
         Updated by ``feed_token()``.
         """
-        return self.parser_state.parse_table.states[self.parser_state.position]
+        return self.parser_state.parse_conf.parse_table.states[self.parser_state.position]
 
     def accepts(self):
         accepts = set()

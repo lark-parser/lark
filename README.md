@@ -32,9 +32,9 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 - [Gitter chat](https://gitter.im/lark-parser/Lobby)
 
 ### Install Lark
-
-    $ pip install lark-parser --upgrade
-
+```bash
+$ pip install lark-parser --upgrade
+```
 Lark has no dependencies.
 
 [![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)

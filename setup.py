@@ -2,9 +2,13 @@ try:
     import regex as re
 except ImportError:
     import re
-from setuptools import find_packages, setup
+from setuptools import setup  # , find_packages  # unused
 
-__version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read())
+from lark import __version__
+
+#__version__ ,= re.findall('__version__ = "(.*)"', open('lark/__init__.py').read())
+with open("README.md") as f:
+    README = f.read()
 
 setup(
     name = "lark-parser",
@@ -19,7 +23,7 @@ setup(
         "nearley": ["js2py"]
     },
 
-    package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},
+    package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},  # Maybe a MANIFEST.ini would be used here
 
     test_suite = 'tests.__main__',
 
@@ -31,30 +35,8 @@ setup(
     keywords = "Earley LALR parser parsing ast",
     url = "https://github.com/erezsh/lark",
     download_url = "https://github.com/erezsh/lark/tarball/master",
-    long_description='''
-Lark is a modern general-purpose parsing library for Python.
-
-With Lark, you can parse any context-free grammar, efficiently, with very little code.
-
-Main Features:
- - Builds a parse-tree (AST) automagically, based on the structure of the grammar
- - Earley parser
-    - Can parse all context-free grammars
-    - Full support for ambiguous grammars
- - LALR(1) parser
-    - Fast and light, competitive with PLY
-    - Can generate a stand-alone parser
- - CYK parser, for highly ambiguous grammars
- - EBNF grammar
- - Unicode fully supported
- - Python 2 & 3 compatible
- - Automatic line & column tracking
- - Standard library of terminals (strings, numbers, names, etc.)
- - Import grammars from Nearley.js
- - Extensive test suite
- - And much more!
-''',
-
+    long_description=README,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",

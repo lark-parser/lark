@@ -317,11 +317,9 @@ class PrepareAnonTerminals(Transformer_InPlace):
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
 
         term_name = None
-        nice_print = None
+        user_repr = p.raw # This will always be ok, independent of what term_name we end up using
 
         if isinstance(p, PatternStr):
-            nice_print = repr(value) # This will always be ok, independent of what term_name we end up using
-            # TODO: potentially try to get the actual source code, and not the repr
             try:
                 # If already defined, use the user-defined terminal name
                 term_name = self.term_reverse[p].name
@@ -337,7 +335,6 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = None
 
         elif isinstance(p, PatternRE):
-            #TODO: generate nice_print
             if p in self.term_reverse: # Kind of a weird placement.name
                 term_name = self.term_reverse[p].name
         else:
@@ -350,7 +347,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         if term_name not in self.term_set:
             assert p not in self.term_reverse
             self.term_set.add(term_name)
-            termdef = TerminalDef(term_name, p, nice_print=nice_print)
+            termdef = TerminalDef(term_name, p, user_repr=user_repr)
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 
@@ -426,9 +423,9 @@ def _literal_to_pattern(literal):
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
-        return PatternStr(s, flags)
+        return PatternStr(s, flags, raw=literal.value)
     elif literal.type == 'REGEXP':
-        return PatternRE(s, flags)
+        return PatternRE(s, flags, raw=literal.value)
     else:
         assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 

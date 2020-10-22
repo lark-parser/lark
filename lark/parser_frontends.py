@@ -196,7 +196,7 @@ class Earley(WithLexer):
 
 class XEarley(_ParserFrontend):
     def __init__(self, lexer_conf, parser_conf, options=None, **kw):
-        self.token_by_name = {t.name:t for t in lexer_conf.terminals}
+        self.terminals_by_name = {t.name:t for t in lexer_conf.terminals}
         self.start = parser_conf.start
 
         self._prepare_match(lexer_conf)
@@ -238,7 +238,7 @@ class XEarley(_ParserFrontend):
             return self._parse(start, text)
         except UnexpectedInput as e:
             if e._all_terminals is None:
-                e._all_terminals = self.token_by_name.values()
+                e._all_terminals = self.terminals_by_name
             raise e
 
 class XEarley_CompleteLex(XEarley):

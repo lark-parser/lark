@@ -113,17 +113,19 @@ class UnexpectedInput(LarkError):
     
     def _format_terminals(self, names):
         if self._all_terminals:
-            t = []
+            if isinstance(self._all_terminals, list):
+                self._all_terminals = {t.name: t for t in self._all_terminals}
+            ts = []
             for name in names:
                 try:
-                    t.append(next(t.nice_print for t in self._all_terminals if t.name == name))
+                    ts.append(self._all_terminals[name].user_repr)
                 except StopIteration:
                     # If we don't find the corresponding Terminal (which *should* never happen), don't error.
                     # Broken __str__ for Exception are some of the worst bugs
-                    t.append(t.display_name)
+                    ts.append(name)
         else:
-            t = names
-        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(t)
+            ts = names
+        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(ts)
 
 
 

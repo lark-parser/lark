@@ -10,9 +10,10 @@ from copy import copy
 
 class Pattern(Serialize):
 
-    def __init__(self, value, flags=()):
+    def __init__(self, value, flags=(), raw=None):
         self.value = value
         self.flags = frozenset(flags)
+        self.raw = raw
 
     def __repr__(self):
         return repr(self.to_regexp())
@@ -76,15 +77,15 @@ class PatternRE(Pattern):
 
 
 class TerminalDef(Serialize):
-    __serialize_fields__ = 'name', 'pattern', 'priority', 'nice_print'
+    __serialize_fields__ = 'name', 'pattern', 'priority', 'user_repr'
     __serialize_namespace__ = PatternStr, PatternRE
 
-    def __init__(self, name, pattern, priority=1, nice_print=None):
+    def __init__(self, name, pattern, priority=1, user_repr=None):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
         self.priority = priority
-        self.nice_print = nice_print or name
+        self.user_repr = user_repr or name
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)

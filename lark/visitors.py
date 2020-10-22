@@ -47,7 +47,7 @@ class _Decoratable:
 class Transformer(_Decoratable):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
-    Calls its methods (provided by user via inheritance) according to ``tree.data``.
+    Calls its methods (provided by the user via inheritance) according to ``tree.data``.
     The returned value replaces the old one in the structure.
 
     They work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
@@ -64,12 +64,11 @@ class Transformer(_Decoratable):
     - ``Transformer_InPlaceRecursive`` - Recursive. Changes the tree in-place instead of returning new instances
 
     Parameters:
-        visit_tokens: By default, transformers only visit rules.
-            visit_tokens=True will tell ``Transformer`` to visit tokens
-            as well. This is a slightly slower alternative to lexer_callbacks
-            but it's easier to maintain and works for all algorithms
-            (even when there isn't a lexer).
+        visit_tokens (bool, optional): Should the transformer visit tokens in addition to rules.
+                                       Setting this to ``False`` is slightly faster. Defaults to ``True``.
+                                       (For processing ignored tokens, use the ``lexer_callbacks`` options)
 
+    NOTE: A transformer without methods essentially performs a non-memoized deepcopy.
     """
     __visit_tokens__ = True   # For backwards compatibility
 
@@ -126,24 +125,25 @@ class Transformer(_Decoratable):
         return self._call_userfunc(tree, children)
 
     def transform(self, tree):
+        "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
     def __mul__(self, other):
+        """Chain two transformers together, returning a new transformer.
+        """
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
-        """Default operation on tree (for override)
+        """Default function that is called if there is no attribute matching ``data``
 
-        Function that is called on if a function with a corresponding name has not been found.
-        Defaults to reconstruct the Tree.
+        Can be overridden. Defaults to creating a new copy of the tree node (i.e. ``return Tree(data, children, meta)``)
         """
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
-        """Default operation on token (for override)
+        """Default function that is called if there is no attribute matching ``token.type``
 
-        Function that is called on if a function with a corresponding name has not been found.
-        Defaults to just return the argument.
+        Can be overridden. Defaults to returning the token as-is.
         """
         return token
 
@@ -175,7 +175,10 @@ class TransformerChain(object):
 
 
 class Transformer_InPlace(Transformer):
-    "Non-recursive. Changes the tree in-place instead of returning new instances"
+    """Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
+
+    Useful for huge trees. Conservative in memory.
+    """
     def _transform_tree(self, tree):           # Cancel recursion
         return self._call_userfunc(tree)
 
@@ -187,7 +190,12 @@ class Transformer_InPlace(Transformer):
 
 
 class Transformer_NonRecursive(Transformer):
-    "Non-recursive. Doesn't change the original tree."
+    """Same as Transformer but non-recursive.
+
+    Like Transformer, it doesn't change the original tree.
+
+    Useful for huge trees.
+    """
 
     def transform(self, tree):
         # Tree to postfix
@@ -219,11 +227,10 @@ class Transformer_NonRecursive(Transformer):
 
 
 class Transformer_InPlaceRecursive(Transformer):
-    "Recursive. Changes the tree in-place instead of returning new instances"
+    "Same as Transformer, recursive, but changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree)
-
 
 
 # Visitors
@@ -233,7 +240,10 @@ class VisitorBase:
         return getattr(self, tree.data, self.__default__)(tree)
 
     def __default__(self, tree):
-        "Default operation on tree (for override)"
+        """Default function that is called if there is no attribute matching ``tree.data``
+
+        Can be overridden. Defaults to doing nothing.
+        """
         return tree
 
     def __class_getitem__(cls, _):
@@ -241,18 +251,19 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    """Bottom-up visitor, non-recursive.
+    """Tree visitor, non-recursive (can handle huge trees).
 
-    Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to ``tree.data``
+    Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
     """
 
     def visit(self, tree):
+        "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
 
     def visit_topdown(self,tree):
+        "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
         return tree
@@ -261,11 +272,13 @@ class Visitor(VisitorBase):
 class Visitor_Recursive(VisitorBase):
     """Bottom-up visitor, recursive.
 
-    Visits the tree, starting with the leaves and finally the root (bottom-up)
-    Calls its methods (provided by user via inheritance) according to ``tree.data``
+    Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
+
+    Slightly faster than the non-recursive version.
     """
 
     def visit(self, tree):
+        "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for child in tree.children:
             if isinstance(child, Tree):
                 self.visit(child)
@@ -274,6 +287,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
     def visit_topdown(self,tree):
+        "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         self._call_userfunc(tree)
 
         for child in tree.children:
@@ -394,10 +408,13 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
     ``v_args`` can modify this behavior. When used on a transformer/visitor class definition,
     it applies to all the callback methods inside it.
 
+    ``v_args`` can be applied to a single method, or to an entire class. When applied to both,
+    the options given to the method take precedence.
+
     Parameters:
-        inline: Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
-        meta: Provides two arguments: ``children`` and ``meta`` (instead of just the first)
-        tree: Provides the entire tree as the argument, instead of the children.
+        inline (bool, optional): Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
+        meta (bool, optional): Provides two arguments: ``children`` and ``meta`` (instead of just the first)
+        tree (bool, optional): Provides the entire tree as the argument, instead of the children.
 
     Example:
         ::

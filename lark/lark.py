@@ -3,6 +3,7 @@ from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedTok
 
 import sys, os, pickle, hashlib
 from io import open
+import tempfile
 
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
@@ -244,7 +245,7 @@ class Lark(Serialize):
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 s = grammar + options_str + __version__
                 md5 = hashlib.md5(s.encode()).hexdigest()
-                cache_fn = '.lark_cache_%s.tmp' % md5
+                cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)

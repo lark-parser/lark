@@ -1,4 +1,4 @@
-"""This module implements an scanerless Earley parser.
+"""This module implements an Earley parser.
 
 The core Earley algorithm used here is based on Elizabeth Scott's implementation, here:
     https://www.sciencedirect.com/science/article/pii/S1571066108001497

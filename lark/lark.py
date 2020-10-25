@@ -4,10 +4,10 @@ from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedTok
 import sys, os, pickle, hashlib
 from io import open
 import tempfile
-
+from warnings import warn
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar
+from .load_grammar import load_grammar, FromPackageLoader
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -92,6 +92,10 @@ class LarkOptions(Serialize):
             Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
             A callback for editing the terminals before parse.
+    import_paths
+            A List of either paths or loader functions to specify from where grammars are imported
+    source_path
+            Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
 
     **=== End Options ===**
     """
@@ -126,6 +130,8 @@ class LarkOptions(Serialize):
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
+        'import_paths': [],
+        'source_path': None,
     }
 
     def __init__(self, options_dict):
@@ -209,10 +215,13 @@ class Lark(Serialize):
             re_module = re
 
         # Some, but not all file-like objects have a 'name' attribute
-        try:
-            self.source = grammar.name
-        except AttributeError:
-            self.source = '<string>'
+        if self.options.source_path is None:
+            try:
+                self.source_path = grammar.name
+            except AttributeError:
+                self.source_path = '<string>'
+        else:
+            self.source_path = self.options.source_path
 
         # Drain file-like objects to get their contents
         try:
@@ -223,7 +232,7 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
-        self.grammar_source = grammar
+        self.source_grammar = grammar
         if self.options.use_bytes:
             if not isascii(grammar):
                 raise ValueError("Grammar must be ascii only, when use_bytes=True")
@@ -286,7 +295,7 @@ class Lark(Serialize):
             raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, re_module, self.options.keep_all_tokens)
+        self.grammar = load_grammar(grammar, self.source, self.options.import_paths, self.options.keep_all_tokens)
 
         if self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
@@ -395,7 +404,7 @@ class Lark(Serialize):
         options.update(kwargs)
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source = '<deserialized>'
+        self.source_path = '<deserialized>'
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
             data['parser'],
@@ -430,8 +439,26 @@ class Lark(Serialize):
         with open(grammar_filename, encoding='utf8') as f:
             return cls(f, **options)
 
+    @classmethod
+    def open_from_package(cls, package, grammar_path, search_paths=("",), **options):
+        """Create an instance of Lark with the grammar loaded from within the package `package`.
+        This allows grammar loading from zipapps.
+
+        Imports in the grammar will use the `package` and `search_paths` provided, through `FromPackageLoader`
+
+        Example:
+
+            Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
+        """
+        package = FromPackageLoader(package, search_paths)
+        full_path, text = package(None, grammar_path)
+        options.setdefault('source_path', full_path)
+        options.setdefault('import_paths', [])
+        options['import_paths'].append(package)
+        return cls(text, **options)
+
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
+        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
 
     def lex(self, text):
@@ -490,6 +517,24 @@ class Lark(Serialize):
                     e = e2
                 except UnexpectedCharacters as e2:
                     e = e2
+
+    @property
+    def source(self):
+        warn("Lark.source attribute has been renamed to Lark.source_path", DeprecationWarning)
+        return self.source_path
+
+    @source.setter
+    def source(self, value):
+        self.source_path = value
+
+    @property
+    def grammar_source(self):
+        warn("Lark.grammar_source attribute has been renamed to Lark.source_grammar", DeprecationWarning)
+        return self.source_grammar
+
+    @grammar_source.setter
+    def grammar_source(self, value):
+        self.source_grammar = value
 
 
 ###}

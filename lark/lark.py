@@ -294,8 +294,8 @@ class Lark(Serialize):
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
             raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
-        # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, self.options.import_paths, self.options.keep_all_tokens)
+        # Parse the grammar file and compose the grammars
+        self.grammar = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
 
         if self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)

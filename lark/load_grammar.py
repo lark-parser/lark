@@ -4,6 +4,7 @@ import os.path
 import sys
 from copy import copy, deepcopy
 from io import open
+import pkgutil
 
 from .utils import bfs, eval_escaping, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -20,7 +21,7 @@ from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transfo
 inline_args = v_args(inline=True)
 
 __path__ = os.path.dirname(__file__)
-IMPORT_PATHS = [os.path.join(__path__, 'grammars')]
+IMPORT_PATHS = ['grammars']
 
 EXT = '.lark'
 
@@ -648,6 +649,58 @@ class Grammar:
         return terminals, compiled_rules, self.ignore
 
 
+class PackageResource(object):
+    """
+    Represents a path inside a Package. Used by `FromPackageLoader`
+    """
+    def __init__(self, pkg_name, path):
+        self.pkg_name = pkg_name
+        self.path = path
+
+    def __str__(self):
+        return "<%s: %s>" % (self.pkg_name, self.path)
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.path)
+
+class FromPackageLoader(object):
+    """
+    Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
+    This allows them to be compatible even from within zip files.
+
+    Relative imports are handled, so you can just freely use them.
+
+    pkg_name: The name of the package. You can probably provide `__name__` most of the time
+    search_paths: All the path that will be search on absolute imports.
+    """
+    def __init__(self, pkg_name, search_paths=("", )):
+        self.pkg_name = pkg_name
+        self.search_paths = search_paths
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
+
+    def __call__(self, base_path, grammar_path):
+        if base_path is None:
+            to_try = self.search_paths
+        else:
+            # Check whether or not the importing grammar was loaded by this module.
+            if not isinstance(base_path, PackageResource) or base_path.pkg_name != self.pkg_name:
+                # Technically false, but FileNotFound doesn't exist in python2.7, and this message should never reach the end user anyway
+                raise IOError()
+            to_try = [base_path.path]
+        for path in to_try:
+            full_path = os.path.join(path, grammar_path)
+            try:
+                text = pkgutil.get_data(self.pkg_name, full_path)
+            except IOError:
+                continue
+            else:
+                return PackageResource(self.pkg_name, full_path), text.decode()
+        raise IOError()
+
+stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
+
 
 _imported_grammars = {}
 
@@ -787,39 +840,47 @@ class GrammarLoader:
         ('%ignore expects a value', ['%ignore %import\n']),
     ]
 
-    def __init__(self, re_module, global_keep_all_tokens):
+    def __init__(self, global_keep_all_tokens):
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
         rules = [options_from_rule(name, None, x) for name, x in  RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o) for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
-        lexer_conf = LexerConf(terminals, re_module, ['WS', 'COMMENT'])
+        import re
+        lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
 
         parser_conf = ParserConf(rules, callback, ['start'])
         self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
 
         self.canonize_tree = CanonizeTree()
-        self.re_module = re_module
         self.global_keep_all_tokens = global_keep_all_tokens
 
-    def import_grammar(self, grammar_path, base_paths=[]):
+    def import_grammar(self, grammar_path, base_path=None, import_paths=[]):
         if grammar_path not in _imported_grammars:
-            import_paths = base_paths + IMPORT_PATHS
-            for import_path in import_paths:
-                with suppress(IOError):
-                    joined_path = os.path.join(import_path, grammar_path)
-                    with open(joined_path, encoding='utf8') as f:
-                        text = f.read()
-                    grammar = self.load_grammar(text, joined_path)
+            # import_paths take priority over base_path since they should handle relative imports and ignore everything else.
+            to_try = import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
+            for source in to_try:
+                try:
+                    if callable(source):
+                        joined_path, text = source(base_path, grammar_path)
+                    else:
+                        joined_path = os.path.join(source, grammar_path)
+                        with open(joined_path, encoding='utf8') as f:
+                            text = f.read()
+                except IOError:
+                    continue
+                else:
+                    grammar = self.load_grammar(text, joined_path, import_paths)
                     _imported_grammars[grammar_path] = grammar
                     break
             else:
-                open(grammar_path, encoding='utf8') # Force a file not found error
+                # Search failed. Make Python throw a nice error.
+                open(grammar_path, encoding='utf8')
                 assert False
 
         return _imported_grammars[grammar_path]
 
-    def load_grammar(self, grammar_text, grammar_name='<?>'):
+    def load_grammar(self, grammar_text, grammar_name='<?>', import_paths=[]):
         "Parse grammar_text, verify, and create Grammar object. Display nice messages on error."
 
         try:
@@ -873,7 +934,7 @@ class GrammarLoader:
                     aliases = {name: arg1 or name}  # Aliases if exist
 
                 if path_node.data == 'import_lib':  # Import from library
-                    base_paths = []
+                    base_path = None
                 else:  # Relative import
                     if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
                         try:
@@ -883,16 +944,19 @@ class GrammarLoader:
                     else:
                         base_file = grammar_name  # Import relative to grammar file path if external grammar file
                     if base_file:
-                        base_paths = [os.path.split(base_file)[0]]
+                        if isinstance(base_file, PackageResource):
+                            base_path = PackageResource(base_file.pkg_name, os.path.split(base_file.path)[0])
+                        else:
+                            base_path = os.path.split(base_file)[0]
                     else:
-                        base_paths = [os.path.abspath(os.path.curdir)]
+                        base_path = os.path.abspath(os.path.curdir)
 
                 try:
-                    import_base_paths, import_aliases = imports[dotted_path]
-                    assert base_paths == import_base_paths, 'Inconsistent base_paths for %s.' % '.'.join(dotted_path)
+                    import_base_path, import_aliases = imports[dotted_path]
+                    assert base_path == import_base_path, 'Inconsistent base_path for %s.' % '.'.join(dotted_path)
                     import_aliases.update(aliases)
                 except KeyError:
-                    imports[dotted_path] = base_paths, aliases
+                    imports[dotted_path] = base_path, aliases
 
             elif stmt.data == 'declare':
                 for t in stmt.children:
@@ -901,9 +965,9 @@ class GrammarLoader:
                 assert False, stmt
 
         # import grammars
-        for dotted_path, (base_paths, aliases) in imports.items():
+        for dotted_path, (base_path, aliases) in imports.items():
             grammar_path = os.path.join(*dotted_path) + EXT
-            g = self.import_grammar(grammar_path, base_paths=base_paths)
+            g = self.import_grammar(grammar_path, base_path=base_path, import_paths=import_paths)
             new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
 
             term_defs += new_td
@@ -987,5 +1051,5 @@ class GrammarLoader:
 
 
 
-def load_grammar(grammar, source, re_, global_keep_all_tokens):
-    return GrammarLoader(re_, global_keep_all_tokens).load_grammar(grammar, source)
+def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
+    return GrammarLoader(global_keep_all_tokens).load_grammar(grammar, source, import_paths)

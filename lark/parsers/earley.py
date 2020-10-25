@@ -6,8 +6,7 @@ The core Earley algorithm used here is based on Elizabeth Scott's implementation
 That is probably the best reference for understanding the algorithm here.
 
 The Earley parser outputs an SPPF-tree as per that document. The SPPF tree format
-is better documented here:
-    http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
+is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/sppf.html
 """
 
 from collections import deque

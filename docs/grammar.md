@@ -112,9 +112,13 @@ You can use flags on regexps and strings. For example:
 ```perl
 SELECT: "select"i     //# Will ignore case, and match SELECT or Select, etc.
 MULTILINE_TEXT: /.+/s
+SIGNED_INTEGER: /
+    [+-]?  # the sign
+    (0|[1-9][0-9]*)  # the digits
+ /x
 ```
 
-Supported flags are one of: `imslu`. See Python's regex documentation for more details on each one.
+Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
 
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 

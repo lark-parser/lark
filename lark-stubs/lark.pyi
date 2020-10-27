@@ -81,7 +81,7 @@ class Lark:
     ):
         ...
 
-    def parse(self, text: str, start: Optional[str] = None) -> Tree:
+    def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[Any], bool] = None) -> Tree:
         ...
 
     @classmethod

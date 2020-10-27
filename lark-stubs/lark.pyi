@@ -42,7 +42,7 @@ class PackageResource(object):
     pkg_name: str
     path: str
     
-    def __init__(self, pkg_name: str, path: str):
+    def __init__(self, pkg_name: str, path: str): ...
 
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...

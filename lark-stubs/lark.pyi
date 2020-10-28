@@ -7,6 +7,7 @@ from typing import (
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
+from .exceptions import UnexpectedInput
 
 _T = TypeVar('_T')
 
@@ -81,7 +82,7 @@ class Lark:
     ):
         ...
 
-    def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[Any], bool] = None) -> Tree:
+    def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
         ...
 
     @classmethod

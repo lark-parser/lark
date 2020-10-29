@@ -255,7 +255,7 @@ COMMENT: "#" /[^\n]/*
 ```
 ### %import
 
-Allows to import terminals and rules from lark grammars.
+Allows one to import terminals and rules from lark grammars.
 
 When importing rules, all their dependencies will be imported into a namespace, to avoid collisions. It's not possible to override their dependencies (e.g. like you would when inheriting a class).
 

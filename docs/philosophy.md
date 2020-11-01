@@ -16,7 +16,7 @@ Lark's mission is to make the process of writing them as simple and abstract as 
 
 5. Performance is still very important
 
-6. Follow the Zen Of Python, whenever possible and applicable
+6. Follow the Zen of Python, whenever possible and applicable
 
 
 In accordance with these principles, I arrived at the following design choices:

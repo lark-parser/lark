@@ -160,7 +160,7 @@ class AmbiguousExpander:
     """Deal with the case where we're expanding children ('_rule') into a parent but the children
        are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
        ambiguous with as many copies as their are ambiguous children, and then copy the ambiguous children
-       into the right parents in the right places, essentially shifting the ambiguiuty up the tree."""
+       into the right parents in the right places, essentially shifting the ambiguity up the tree."""
     def __init__(self, to_expand, tree_class, node_builder):
         self.node_builder = node_builder
         self.tree_class = tree_class

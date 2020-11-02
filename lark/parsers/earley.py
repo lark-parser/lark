@@ -297,6 +297,10 @@ class Parser:
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        if not solutions:
+            expected_tokens = [t.expect for t in to_scan]
+            raise UnexpectedEOF(expected_tokens)
+
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
             try:
@@ -307,10 +311,7 @@ class Parser:
                 debug_walker.visit(solutions[0], "sppf.png")
 
 
-        if not solutions:
-            expected_tokens = [t.expect for t in to_scan]
-            raise UnexpectedEOF(expected_tokens)
-        elif len(solutions) > 1:
+        if len(solutions) > 1:
             assert False, 'Earley should not generate multiple start symbol items!'
 
         if self.tree_class is not None:

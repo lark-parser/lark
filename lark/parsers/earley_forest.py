@@ -679,7 +679,10 @@ class ForestToPyDotVisitor(ForestVisitor):
 
     def visit(self, root, filename):
         super(ForestToPyDotVisitor, self).visit(root)
-        self.graph.write_png(filename)
+        try:
+            self.graph.write_png(filename)
+        except FileNotFoundError as e:
+            logger.error("Could not write png: ", e)
 
     def visit_token_node(self, node):
         graph_node_id = str(id(node))

@@ -746,6 +746,76 @@ def _make_full_earley_test(LEXER):
             tree = parser.parse(text)
             self.assertEqual(tree.children, ['foo', 'bar'])
 
+        def test_cycle(self):
+            grammar = """
+            start: start?
+            """
+
+            l = Lark(grammar, ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('')
+            self.assertEqual(tree, Tree('start', []))
+
+            l = Lark(grammar, ambiguity='explicit', lexer=LEXER)
+            tree = l.parse('')
+            self.assertEqual(tree, Tree('start', []))
+
+        def test_cycles(self):
+            grammar = """
+            a: b
+            b: c*
+            c: a
+            """
+
+            l = Lark(grammar, start='a', ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('')
+            self.assertEqual(tree, Tree('a', [Tree('b', [])]))
+
+            l = Lark(grammar, start='a', ambiguity='explicit', lexer=LEXER)
+            tree = l.parse('')
+            self.assertEqual(tree, Tree('a', [Tree('b', [])]))
+
+        def test_many_cycles(self):
+            grammar = """
+            start: a? | start start
+            !a: "a"
+            """
+
+            l = Lark(grammar, ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('a')
+            self.assertEqual(tree, Tree('start', [Tree('a', ['a'])]))
+
+            l = Lark(grammar, ambiguity='explicit', lexer=LEXER)
+            tree = l.parse('a')
+            self.assertEqual(tree, Tree('start', [Tree('a', ['a'])]))
+
+        def test_cycles_with_child_filter(self):
+            grammar = """
+            a: _x
+            _x: _x? b
+            b:
+            """
+
+            grammar2 = """
+            a: x
+            x: x? b
+            b:
+            """
+
+            l = Lark(grammar, start='a', ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('')
+            self.assertEqual(tree, Tree('a', [Tree('b', [])]))
+
+            l = Lark(grammar, start='a', ambiguity='explicit', lexer=LEXER)
+            tree = l.parse('');
+            self.assertEqual(tree, Tree('a', [Tree('b', [])]))
+
+            l = Lark(grammar2, start='a', ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('');
+            self.assertEqual(tree, Tree('a', [Tree('x', [Tree('b', [])])]))
+
+            l = Lark(grammar2, start='a', ambiguity='explicit', lexer=LEXER)
+            tree = l.parse('');
+            self.assertEqual(tree, Tree('a', [Tree('x', [Tree('b', [])])]))
 
 
 

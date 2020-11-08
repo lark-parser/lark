@@ -483,20 +483,22 @@ class ForestToParseTree(ForestTransformer):
         tree.
     """
 
-    def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+    def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True, debug=False):
         super(ForestToParseTree, self).__init__()
         self.tree_class = tree_class
         self.callbacks = callbacks
         self.prioritizer = prioritizer
         self.resolve_ambiguity = resolve_ambiguity
+        self.debug = debug
         self._on_cycle_retreat = False
         self._cycle_node = None
         self._successful_visits = set()
 
     def on_cycle(self, node, path):
-        logger.warning("Cycle encountered in the SPPF at node: %s. "
-                "As infinite ambiguities cannot be represented in a tree, "
-                "this family of derivations will be discarded.", node)
+        if self.debug:
+            logger.warning("Cycle encountered in the SPPF at node: %s. "
+                    "As infinite ambiguities cannot be represented in a tree, "
+                    "this family of derivations will be discarded.", node)
         self._cycle_node = node
         self._on_cycle_retreat = True
 

@@ -490,19 +490,22 @@ class ForestToParseTree(ForestTransformer):
         self.prioritizer = prioritizer
         self.resolve_ambiguity = resolve_ambiguity
         self._on_cycle_retreat = False
+        self._cycle_node = None
+        self._successful_visits = set()
 
     def on_cycle(self, node, path):
-        logger.warning("Cycle encountered in the SPPF at node: %s. "
+        logger.debug("Cycle encountered in the SPPF at node: %s. "
                 "As infinite ambiguities cannot be represented in a tree, "
                 "this family of derivations will be discarded.", node)
-        if self.resolve_ambiguity:
-            # TODO: choose a different path if cycle is encountered
-            logger.warning("At this time, using ambiguity resolution for SPPFs "
-                    "with cycles may result in None being returned.")
+        self._cycle_node = node
         self._on_cycle_retreat = True
 
     def _check_cycle(self, node):
         if self._on_cycle_retreat:
+            if id(node) == id(self._cycle_node):
+                self._cycle_node = None
+                self._on_cycle_retreat = False
+                return
             raise Discard()
 
     def _collapse_ambig(self, children):
@@ -531,11 +534,17 @@ class ForestToParseTree(ForestTransformer):
         raise Discard()
 
     def transform_symbol_node(self, node, data):
+        if id(node) not in self._successful_visits:
+            raise Discard()
+        self._successful_visits.remove(id(node))
         self._check_cycle(node)
         data = self._collapse_ambig(data)
         return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
+        if id(node) not in self._successful_visits:
+            raise Discard()
+        self._successful_visits.remove(id(node))
         self._check_cycle(node)
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
@@ -544,6 +553,8 @@ class ForestToParseTree(ForestTransformer):
 
     def transform_packed_node(self, node, data):
         self._check_cycle(node)
+        if self.resolve_ambiguity and id(node.parent) in self._successful_visits:
+            raise Discard()
         children = []
         assert len(data) <= 2
         data = PackedData(node, data)
@@ -559,21 +570,23 @@ class ForestToParseTree(ForestTransformer):
         return self._call_rule_func(node, children)
 
     def visit_symbol_node_in(self, node):
-        self._on_cycle_retreat = False
         super(ForestToParseTree, self).visit_symbol_node_in(node)
+        if self._on_cycle_retreat:
+            return
         if self.prioritizer and node.is_ambiguous and isinf(node.priority):
             self.prioritizer.visit(node)
-        if self.resolve_ambiguity:
-            return node.children[0]
         return node.children
 
     def visit_packed_node_in(self, node):
         self._on_cycle_retreat = False
-        return super(ForestToParseTree, self).visit_packed_node_in(node)
+        to_visit = super(ForestToParseTree, self).visit_packed_node_in(node)
+        if not self.resolve_ambiguity or id(node.parent) not in self._successful_visits:
+            return to_visit
 
-    def visit_token_node(self, node):
-        self._on_cycle_retreat = False
-        return super(ForestToParseTree, self).visit_token_node(node)
+    def visit_packed_node_out(self, node):
+        super(ForestToParseTree, self).visit_packed_node_out(node)
+        if not self._on_cycle_retreat:
+            self._successful_visits.add(id(node.parent))
 
 def handles_ambiguity(func):
     """Decorator for methods of subclasses of ``TreeForestTransformer``.

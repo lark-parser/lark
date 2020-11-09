@@ -316,7 +316,7 @@ class Parser:
 
         if self.tree_class is not None:
             # Perform our SPPF -> AST conversion
-            transformer = ForestToParseTree(self.tree_class, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
+            transformer = ForestToParseTree(self.tree_class, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, self.debug)
             return transformer.transform(solutions[0])
 
         # return the root of the SPPF

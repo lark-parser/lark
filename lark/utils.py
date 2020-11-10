@@ -20,14 +20,17 @@ def is_id_continue(x):
     """
     if len(x) != 1:
         return all(is_id_continue(y) for y in x)
-    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
+    return x == '_' or unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
 
 
-def isalpha(x):
-    """See PEP 3131 for details."""
+def is_id_start(x):
+    """
+    Checks if all characters in `x` are alphabetic characters (Unicode standard, so diactrics, Indian vowels, non-latin
+    numbers, etc. all pass). Synonymous with a Python `ID_START` identifier. See PEP 3131 for details.
+    """
     if len(x) != 1:
-        return all(isalpha(y) for y in x)
-    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc']
+        return all(is_id_start(y) for y in x)
+    return x == '_' or unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc']
 
 
 def classify(seq, key=None, value=None):

@@ -8,7 +8,7 @@ from .lexer import Token, PatternStr
 from .grammar import Terminal, NonTerminal
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal
-from .utils import isalnum
+from .utils import is_id_continue
 
 def is_iter_empty(i):
     try:
@@ -94,7 +94,7 @@ class Reconstructor(TreeMatcher):
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and isalnum(prev_item[-1]) and isalnum(item[0]):
+            if prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

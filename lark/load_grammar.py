@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from io import open
 import pkgutil
 
-from .utils import bfs, eval_escaping, Py36, logger, classify_bool, isalnum, isalpha
+from .utils import bfs, eval_escaping, Py36, logger, classify_bool, is_id_continue, isalpha
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -328,10 +328,8 @@ class PrepareAnonTerminals(Transformer_InPlace):
                 try:
                     term_name = _TERMINAL_NAMES[value]
                 except KeyError:
-                    if isalnum(value) and isalpha(value[0]) and value.upper() not in self.term_set:
-                        with suppress(UnicodeEncodeError):
-                            value.upper().encode('utf8')  # Why shouldn't we have unicode in our terminal names?
-                            term_name = value.upper()
+                    if is_id_continue(value) and isalpha(value[0]) and value.upper() not in self.term_set:
+                        term_name = value.upper()
 
                 if term_name in self.term_set:
                     term_name = None

@@ -13,9 +13,13 @@ logger.addHandler(logging.StreamHandler())
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
 
-def isalnum(x):
+def is_id_continue(x):
+    """
+    Checks if all characters in `x` are alphanumeric characters (Unicode standard, so diactrics, Indian vowels, non-latin
+    numbers, etc. all pass). Synonymous with a Python `ID_CONTINUE` identifier.
+    """
     if len(x) != 1:
-        return all(isalnum(y) for y in x)
+        return all(is_id_continue(y) for y in x)
     return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
 
 

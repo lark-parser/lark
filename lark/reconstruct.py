@@ -6,7 +6,7 @@ from .common import ParserConf
 from .lexer import Token, PatternStr
 from .parsers import earley
 from .grammar import Rule, Terminal, NonTerminal
-
+from .utils import isalnum
 
 
 def is_discarded_terminal(t):
@@ -198,7 +198,7 @@ class Reconstructor:
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and prev_item[-1].isalnum() and item[0].isalnum():
+            if prev_item and item and isalnum(prev_item[-1]) and isalnum(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

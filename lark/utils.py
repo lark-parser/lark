@@ -1,4 +1,5 @@
 import sys
+import unicodedata
 import os
 from functools import reduce
 from ast import literal_eval
@@ -11,6 +12,17 @@ logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
+
+def isalnum(x):
+    if len(x) != 1:
+        return all(isalnum(y) for y in x)
+    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
+
+
+def isalpha(x):
+    if len(x) != 1:
+        return all(isalpha(y) for y in x)
+    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc']
 
 
 def classify(seq, key=None, value=None):

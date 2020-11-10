@@ -8,6 +8,7 @@ from .lexer import Token, PatternStr
 from .grammar import Terminal, NonTerminal
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal
+from .utils import isalnum
 
 def is_iter_empty(i):
     try:
@@ -56,10 +57,6 @@ class WriteTokensTransformer(Transformer_InPlace):
         return to_write
 
 
-def _isalnum(x):
-    # Categories defined here: https://www.python.org/dev/peps/pep-3131/
-    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
-
 class Reconstructor(TreeMatcher):
     """
     A Reconstructor that will, given a full parse Tree, generate source code.
@@ -97,7 +94,7 @@ class Reconstructor(TreeMatcher):
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and _isalnum(prev_item[-1]) and _isalnum(item[0]):
+            if prev_item and item and isalnum(prev_item[-1]) and isalnum(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

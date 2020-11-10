@@ -16,7 +16,7 @@ logger.setLevel(logging.CRITICAL)
 def is_id_continue(x):
     """
     Checks if all characters in `x` are alphanumeric characters (Unicode standard, so diactrics, Indian vowels, non-latin
-    numbers, etc. all pass). Synonymous with a Python `ID_CONTINUE` identifier.
+    numbers, etc. all pass). Synonymous with a Python `ID_CONTINUE` identifier. See PEP 3131 for details.
     """
     if len(x) != 1:
         return all(is_id_continue(y) for y in x)
@@ -24,6 +24,7 @@ def is_id_continue(x):
 
 
 def isalpha(x):
+    """See PEP 3131 for details."""
     if len(x) != 1:
         return all(isalpha(y) for y in x)
     return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc']

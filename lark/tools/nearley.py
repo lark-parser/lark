@@ -35,7 +35,9 @@ nearley_grammar = r"""
     COMMENT: /#[^\n]*/
     REGEXP: /\[.*?\]/
 
-    %import common.ESCAPED_STRING -> STRING
+    STRING: _STRING "i"?
+
+    %import common.ESCAPED_STRING -> _STRING
     %import common.WS
     %ignore WS
     %ignore COMMENT
@@ -183,7 +185,7 @@ def main(fn, start, nearley_lib, es6=False):
     return create_code_for_nearley_grammar(grammar, start, os.path.join(nearley_lib, 'builtin'), os.path.abspath(os.path.dirname(fn)), es6=es6)
 
 def get_arg_parser():
-    parser = argparse.ArgumentParser('Reads Nearley grammar (with js functions) outputs an equivalent lark parser.')
+    parser = argparse.ArgumentParser(description='Reads a Nearley grammar (with js functions), and outputs an equivalent lark parser.')
     parser.add_argument('nearley_grammar', help='Path to the file containing the nearley grammar')
     parser.add_argument('start_rule', help='Rule within the nearley grammar to make the base rule')
     parser.add_argument('nearley_lib', help='Path to root directory of nearley codebase (used for including builtins)')

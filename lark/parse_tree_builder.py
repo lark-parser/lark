@@ -1,7 +1,7 @@
 from .exceptions import GrammarError
 from .lexer import Token
 from .tree import Tree
-from .visitors import InlineTransformer # XXX Deprecated
+from .visitors import InlineTransformer  # XXX Deprecated
 from .visitors import Transformer_InPlace
 from .visitors import _vargs_meta, _vargs_meta_inline
 
@@ -19,6 +19,7 @@ class ExpandSingleChild:
             return children[0]
         else:
             return self.node_builder(children)
+
 
 class PropagatePositions:
     def __init__(self, node_builder):
@@ -87,8 +88,9 @@ class ChildFilter:
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR(ChildFilter):
-    "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
+    """Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"""
 
     def __call__(self, children):
         filtered = []
@@ -108,6 +110,7 @@ class ChildFilterLALR(ChildFilter):
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR_NoPlaceholders(ChildFilter):
     "Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"
     def __init__(self, to_include, node_builder):
@@ -126,8 +129,10 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
                 filtered.append(children[i])
         return self.node_builder(filtered)
 
+
 def _should_expand(sym):
     return not sym.is_term and sym.name.startswith('_')
+
 
 def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
     # Prepare empty_indices as: How many Nones to insert at each index?
@@ -156,6 +161,7 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
             # LALR without placeholders
             return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
 
+
 class AmbiguousExpander:
     """Deal with the case where we're expanding children ('_rule') into a parent but the children
        are ambiguous. i.e. (parent->_ambig->_expand_this_rule). In this case, make the parent itself
@@ -167,10 +173,10 @@ class AmbiguousExpander:
         self.to_expand = to_expand
 
     def __call__(self, children):
-        def _is_ambig_tree(child):
-            return hasattr(child, 'data') and child.data == '_ambig'
+        def _is_ambig_tree(t):
+            return hasattr(t, 'data') and t.data == '_ambig'
 
-        #### When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
+        # -- When we're repeatedly expanding ambiguities we can end up with nested ambiguities.
         #    All children of an _ambig node should be a derivation of that ambig node, hence
         #    it is safe to assume that if we see an _ambig node nested within an ambig node
         #    it is safe to simply expand it into the parent _ambig node as an alternative derivation.
@@ -186,14 +192,16 @@ class AmbiguousExpander:
         if not ambiguous:
             return self.node_builder(children)
 
-        expand = [ iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children) ]
+        expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
         return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     to_expand = [i for i, sym in enumerate(expansion)
                  if keep_all_tokens or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))]
     if to_expand:
         return partial(AmbiguousExpander, to_expand, tree_class)
+
 
 class AmbiguousIntermediateExpander:
     """
@@ -275,11 +283,13 @@ class AmbiguousIntermediateExpander:
 
         return self.node_builder(children)
 
+
 def ptb_inline_args(func):
     @wraps(func)
     def f(children):
         return func(*children)
     return f
+
 
 def inplace_transformer(func):
     @wraps(func)
@@ -289,9 +299,11 @@ def inplace_transformer(func):
         return func(tree)
     return f
 
+
 def apply_visit_wrapper(func, name, wrapper):
     if wrapper is _vargs_meta or wrapper is _vargs_meta_inline:
         raise NotImplementedError("Meta args not supported for internal transformer")
+
     @wraps(func)
     def f(children):
         return wrapper(func, name, children, None)
@@ -322,7 +334,6 @@ class ParseTreeBuilder:
             ]))
 
             yield rule, wrapper_chain
-
 
     def create_callback(self, transformer=None):
         callbacks = {}

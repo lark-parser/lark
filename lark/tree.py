@@ -46,14 +46,14 @@ class Tree(object):
 
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
+            return [indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
 
-        l = [ indent_str*level, self._pretty_label(), '\n' ]
+        l = [indent_str*level, self._pretty_label(), '\n']
         for n in self.children:
             if isinstance(n, Tree):
                 l += n._pretty(level+1, indent_str)
             else:
-                l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
+                l += [indent_str*(level+1), '%s' % (n,), '\n']
 
         return l
 
@@ -102,8 +102,8 @@ class Tree(object):
 ###}
 
     def expand_kids_by_index(self, *indices):
-        "Expand (inline) children at the given indices"
-        for i in sorted(indices, reverse=True): # reverse so that changing tail won't affect indices
+        """Expand (inline) children at the given indices"""
+        for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
             kid = self.children[i]
             self.children[i:i+1] = kid.children
 
@@ -144,12 +144,15 @@ class Tree(object):
     @property
     def line(self):
         return self.meta.line
+
     @property
     def column(self):
         return self.meta.column
+
     @property
     def end_line(self):
         return self.meta.end_line
+
     @property
     def end_column(self):
         return self.meta.end_column
@@ -167,6 +170,7 @@ def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
 def pydot__tree_to_dot(tree, filename, rankdir="LR", **kwargs):
     graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
     graph.write(filename)
+
 
 def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
@@ -196,7 +200,7 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
 
         subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
                     for child in subtree.children]
-        node = pydot.Node(i[0], style="filled", fillcolor="#%x"%color, label=subtree.data)
+        node = pydot.Node(i[0], style="filled", fillcolor="#%x" % color, label=subtree.data)
         i[0] += 1
         graph.add_node(node)
 

@@ -8,6 +8,7 @@ from .lexer import Token
 ###{standalone
 from inspect import getmembers, getmro
 
+
 class Discard(Exception):
     """When raising the Discard exception in a transformer callback,
     that node is discarded and won't appear in the parent.
@@ -15,6 +16,7 @@ class Discard(Exception):
     pass
 
 # Transformers
+
 
 class _Decoratable:
     "Provides support for decorating methods with @v_args"
@@ -107,7 +109,6 @@ class Transformer(_Decoratable):
             except Exception as e:
                 raise VisitError(token.type, token, e)
 
-
     def _transform_children(self, children):
         for c in children:
             try:
@@ -146,7 +147,6 @@ class Transformer(_Decoratable):
         Can be overridden. Defaults to returning the token as-is.
         """
         return token
-
 
 
 class InlineTransformer(Transformer):   # XXX Deprecated
@@ -203,7 +203,7 @@ class Transformer_NonRecursive(Transformer):
         q = [tree]
         while q:
             t = q.pop()
-            rev_postfix.append( t )
+            rev_postfix.append(t)
             if isinstance(t, Tree):
                 q += t.children
 
@@ -223,7 +223,6 @@ class Transformer_NonRecursive(Transformer):
 
         t ,= stack  # We should have only one tree remaining
         return t
-
 
 
 class Transformer_InPlaceRecursive(Transformer):
@@ -297,7 +296,6 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-
 def visit_children_decor(func):
     "See Interpreter"
     @wraps(func)
@@ -338,8 +336,6 @@ class Interpreter(_Decoratable):
         return self.visit_children(tree)
 
 
-
-
 # Decorators
 
 def _apply_decorator(obj, decorator, **kwargs):
@@ -349,7 +345,6 @@ def _apply_decorator(obj, decorator, **kwargs):
         return decorator(obj, **kwargs)
     else:
         return _apply(decorator, **kwargs)
-
 
 
 def _inline_args__func(func):
@@ -368,7 +363,6 @@ def _inline_args__func(func):
 
 def inline_args(obj):   # XXX Deprecated
     return _apply_decorator(obj, _inline_args__func)
-
 
 
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
@@ -390,11 +384,11 @@ def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     return f
 
 
-def _vargs_inline(f, data, children, meta):
+def _vargs_inline(f, _data, children, _meta):
     return f(*children)
-def _vargs_meta_inline(f, data, children, meta):
+def _vargs_meta_inline(f, _data, children, meta):
     return f(meta, *children)
-def _vargs_meta(f, data, children, meta):
+def _vargs_meta(f, _data, children, meta):
     return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
@@ -415,6 +409,7 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
         inline (bool, optional): Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
         meta (bool, optional): Provides two arguments: ``children`` and ``meta`` (instead of just the first)
         tree (bool, optional): Provides the entire tree as the argument, instead of the children.
+        wrapper (function, optional): Provide a function to decorate all methods.
 
     Example:
         ::
@@ -457,7 +452,7 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 ###}
 
 
-#--- Visitor Utilities ---
+# --- Visitor Utilities ---
 
 class CollapseAmbiguities(Transformer):
     """
@@ -471,7 +466,9 @@ class CollapseAmbiguities(Transformer):
     """
     def _ambig(self, options):
         return sum(options, [])
+
     def __default__(self, data, children_lists, meta):
         return [Tree(data, children, meta) for children in combine_alternatives(children_lists)]
+
     def __default_token__(self, t):
         return [t]

@@ -6,14 +6,18 @@ from .utils import STRING_TYPE, logger
 class LarkError(Exception):
     pass
 
+
 class GrammarError(LarkError):
     pass
+
 
 class ParseError(LarkError):
     pass
 
+
 class LexError(LarkError):
     pass
+
 
 class UnexpectedEOF(ParseError):
     def __init__(self, expected):

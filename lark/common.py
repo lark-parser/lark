@@ -3,6 +3,7 @@ from .lexer import TerminalDef
 
 ###{standalone
 
+
 class LexerConf(Serialize):
     __serialize_fields__ = 'tokens', 'ignore', 'g_regex_flags', 'use_bytes'
     __serialize_namespace__ = TerminalDef,
@@ -19,11 +20,10 @@ class LexerConf(Serialize):
 
 ###}
 
+
 class ParserConf:
     def __init__(self, rules, callbacks, start):
         assert isinstance(start, list)
         self.rules = rules
         self.callbacks = callbacks
         self.start = start
-
-

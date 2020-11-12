@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from types import ModuleType
 from typing import (
-    TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional,
+    TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
     Pattern as REPattern,
 )
 from abc import abstractmethod, ABC
@@ -100,10 +100,22 @@ class Lexer(ABC):
     lex: Callable[..., Iterator[Token]]
 
 
+class LexerConf:
+     tokens: Collection[TerminalDef]
+     re_module: ModuleType
+     ignore: Collection[str] = ()
+     postlex: Any =None
+     callbacks: Optional[Dict[str, _Callback]] = None
+     g_regex_flags: int = 0
+     skip_validation: bool = False
+     use_bytes: bool = False
+
+
+
 class TraditionalLexer(Lexer):
     terminals: Collection[TerminalDef]
-    ignore_types: List[str]
-    newline_types: List[str]
+    ignore_types: FrozenSet[str]
+    newline_types: FrozenSet[str]
     user_callbacks: Dict[str, _Callback]
     callback: Dict[str, _Callback]
     mres: List[Tuple[REPattern, Dict[int, str]]]
@@ -111,11 +123,7 @@ class TraditionalLexer(Lexer):
 
     def __init__(
         self,
-        terminals: Collection[TerminalDef],
-        re_: ModuleType,
-        ignore: Collection[str] = ...,
-        user_callbacks: Dict[str, _Callback] = ...,
-        g_regex_flags: int = ...
+        conf: LexerConf
     ):
         ...
 
@@ -128,6 +136,8 @@ class TraditionalLexer(Lexer):
     def lex(self, stream: str) -> Iterator[Token]:
         ...
 
+    def next_token(self, lex_state: Any) -> Token:
+        ...
 
 class ContextualLexer(Lexer):
     lexers: Dict[str, TraditionalLexer]

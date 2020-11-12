@@ -1,4 +1,4 @@
-## Lexer Implementation
+# Lexer Implementation
 
 import re
 
@@ -7,6 +7,7 @@ from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
 from copy import copy
+
 
 class Pattern(Serialize):
 
@@ -20,6 +21,7 @@ class Pattern(Serialize):
     # Pattern Hashing assumes all subclasses have a different priority!
     def __hash__(self):
         return hash((type(self), self.value, self.flags))
+
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
@@ -53,6 +55,7 @@ class PatternStr(Pattern):
         return len(self.value)
     max_width = min_width
 
+
 class PatternRE(Pattern):
     __serialize_fields__ = 'value', 'flags', '_width'
 
@@ -70,6 +73,7 @@ class PatternRE(Pattern):
     @property
     def min_width(self):
         return self._get_width()[0]
+
     @property
     def max_width(self):
         return self._get_width()[1]
@@ -139,7 +143,7 @@ class Token(Str):
         return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
+        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column))
 
     def __repr__(self):
         return 'Token(%r, %r)' % (self.type, self.value)
@@ -193,6 +197,7 @@ class UnlessCallback:
                 break
         return t
 
+
 class CallChain:
     def __init__(self, callback1, callback2, cond):
         self.callback1 = callback1
@@ -204,16 +209,13 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
-
-
-
 def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
-        unless = [] # {}
+        unless = []
         for strtok in tokens_by_type.get(PatternStr, []):
             if strtok.priority > retok.priority:
                 continue
@@ -245,12 +247,14 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
         except AssertionError:  # Yes, this is what Python provides us.. :/
             return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
 
-        mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
+        mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
         terminals = terminals[max_size:]
     return mres
 
+
 def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
     return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
+
 
 def _regexp_has_newline(r):
     r"""Expressions that may indicate newlines in a regexp:
@@ -261,6 +265,7 @@ def _regexp_has_newline(r):
         - spaces (\s)
     """
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
+
 
 class Lexer(object):
     """Lexer interface
@@ -300,7 +305,7 @@ class TraditionalLexer(Lexer):
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
         self.ignore_types = frozenset(conf.ignore)
 
-        terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        terminals.sort(key=lambda x: (-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
         self.terminals = terminals
         self.user_callbacks = conf.callbacks
         self.g_regex_flags = conf.g_regex_flags
@@ -309,7 +314,7 @@ class TraditionalLexer(Lexer):
         self._mres = None
 
     def _build(self):
-        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, re_=self.re, use_bytes=self.use_bytes)
+        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
@@ -333,7 +338,7 @@ class TraditionalLexer(Lexer):
             if m:
                 return m.group(0), type_from_index[m.lastindex]
 
-    def lex(self, state, parser_state):
+    def lex(self, state, _parser_state):
         with suppress(EOFError):
             while True:
                 yield self.next_token(state)
@@ -372,6 +377,7 @@ class TraditionalLexer(Lexer):
         # EOF
         raise EOFError(self)
 
+
 class LexerState:
     __slots__ = 'text', 'line_ctr', 'last_token'
 
@@ -382,6 +388,7 @@ class LexerState:
 
     def __copy__(self):
         return type(self)(self.text, copy(self.line_ctr), self.last_token)
+
 
 class ContextualLexer(Lexer):
 
@@ -430,8 +437,9 @@ class ContextualLexer(Lexer):
             token = self.root_lexer.next_token(lexer_state)
             raise UnexpectedToken(token, e.allowed, state=parser_state.position)
 
+
 class LexerThread:
-    "A thread that ties a lexer instance and a lexer state, to be used by the parser"
+    """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
 
     def __init__(self, lexer, text):
         self.lexer = lexer

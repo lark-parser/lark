@@ -24,6 +24,7 @@ except ImportError:
 
 ###{standalone
 
+
 class LarkOptions(Serialize):
     """Specifies the options for Lark
 
@@ -36,7 +37,7 @@ class LarkOptions(Serialize):
     debug
             Display debug information, such as warnings (default: False)
     transformer
-            Applies the transformer to every parse tree (equivlent to applying it after the parse, but faster)
+            Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
     maybe_placeholders
@@ -320,7 +321,7 @@ class Lark(Serialize):
         # Else, if the user asked to disable priorities, strip them from the
         # rules. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
-        elif self.options.priority == None:
+        elif self.options.priority is None:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = None
@@ -360,7 +361,7 @@ class Lark(Serialize):
                     self.rules,
                     self.options.tree_class or Tree,
                     self.options.propagate_positions,
-                    self.options.parser!='lalr' and self.options.ambiguity=='explicit',
+                    self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
                     self.options.maybe_placeholders
                 )
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
@@ -410,7 +411,7 @@ class Lark(Serialize):
             data['parser'],
             memo,
             self._callbacks,
-            self.options, # Not all, but multiple attributes are used
+            self.options,  # Not all, but multiple attributes are used
         )
         self.terminals = self.parser.lexer_conf.tokens
         self._terminals_dict = {t.name: t for t in self.terminals}

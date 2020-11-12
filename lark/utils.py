@@ -1,16 +1,18 @@
-import sys
 import os
 from functools import reduce
 from ast import literal_eval
 from collections import deque
 
 ###{standalone
+import sys, re
 import logging
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
+
+Py36 = (sys.version_info[:2] >= (3, 6))
 
 
 def classify(seq, key=None, value=None):
@@ -27,7 +29,7 @@ def classify(seq, key=None, value=None):
 
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
-        if '__type__' in data: # Object
+        if '__type__' in data:  # Object
             class_ = namespace[data['__type__']]
             return class_.deserialize(data, memo)
         elif '@' in data:
@@ -105,7 +107,6 @@ class SerializeMemoizer(Serialize):
         return _deserialize(data, namespace, memo)
 
 
-
 try:
     STRING_TYPE = basestring
 except NameError:   # Python 3
@@ -118,9 +119,10 @@ from contextlib import contextmanager
 
 Str = type(u'')
 try:
-    classtype = types.ClassType # Python2
+    classtype = types.ClassType  # Python2
 except AttributeError:
     classtype = type    # Python3
+
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
@@ -139,17 +141,16 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+
 try:
     import regex
 except ImportError:
     regex = None
 
-import sys, re
-Py36 = (sys.version_info[:2] >= (3, 6))
-
 import sre_parse
 import sre_constants
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
+
 def get_regexp_width(expr):
     if regex:
         # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
@@ -173,9 +174,7 @@ def dedup_list(l):
        preserving the original order of the list. Assumes that
        the list entries are hashable."""
     dedup = set()
-    return [ x for x in l if not (x in dedup or dedup.add(x))]
-
-
+    return [x for x in l if not (x in dedup or dedup.add(x))]
 
 
 try:
@@ -197,8 +196,6 @@ except ImportError:
             pass
 
 
-
-
 try:
     compare = cmp
 except NameError:
@@ -208,7 +205,6 @@ except NameError:
         elif a > b:
             return 1
         return -1
-
 
 
 class Enumerator(Serialize):

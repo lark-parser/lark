@@ -130,7 +130,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         else:
             _s = seq[lex_pos]
 
-        message = "No terminal defined for '%s' at line %d col %d" % (_s, line, column)
+        message = "No terminal defined for %r at line %d col %d" % (_s, line, column)
         message += '\n\n' + self.get_context(seq)
         if allowed:
             message += '\nExpecting: %s\n' % allowed

@@ -459,15 +459,20 @@ class PackedData():
     that comes from the left child and the right child.
     """
 
+    class _NoData():
+        pass
+
+    NO_DATA = _NoData()
+
     def __init__(self, node, data):
-        self.left = None
-        self.right = None
+        self.left = self.NO_DATA
+        self.right = self.NO_DATA
         if data:
-            if node.left:
+            if node.left is not None:
                 self.left = data[0]
-                if len(data) > 1 and node.right:
+                if len(data) > 1:
                     self.right = data[1]
-            elif node.right:
+            else:
                 self.right = data[0]
 
 class ForestToParseTree(ForestTransformer):
@@ -558,12 +563,12 @@ class ForestToParseTree(ForestTransformer):
         children = []
         assert len(data) <= 2
         data = PackedData(node, data)
-        if data.left is not None:
+        if data.left is not PackedData.NO_DATA:
             if node.left.is_intermediate and isinstance(data.left, list):
                 children += data.left
             else:
                 children.append(data.left)
-        if data.right is not None:
+        if data.right is not PackedData.NO_DATA:
             children.append(data.right)
         if node.parent.is_intermediate:
             return children

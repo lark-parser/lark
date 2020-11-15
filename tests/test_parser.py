@@ -322,6 +322,22 @@ class TestParsers(unittest.TestCase):
 
     def test_alias(self):
         Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)
+        
+    def test_backwards_custom_lexer(self):
+        class OldCustomLexer(Lexer):
+            def __init__(self, lexer_conf):
+                pass
+
+            def lex(self, text):
+                yield Token('A', 'A')
+        
+        p = Lark("""
+        start: A
+        %declare A
+        """, parser='lalr', lexer=OldCustomLexer)
+        
+        r = p.parse('')
+        self.assertEqual(r, Tree('start', [Token('A', 'A')]))
 
 
 
@@ -849,6 +865,8 @@ class CustomLexer(Lexer):
         self.lexer = TraditionalLexer(copy(lexer_conf))
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
+    
+    __future_interface__ = True
 
 def _tree_structure_check(a, b):
     """

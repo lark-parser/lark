@@ -29,10 +29,9 @@ def get_frontend(parser, lexer):
                 def lex(self, lexer_state, parser_state):
                     return self.lexer.lex(lexer_state.text)
 
-            class LALR_CustomLexerWrapper(LALR_CustomLexer):
+            class LALR_CustomLexerWrapper(LALR_WithLexer):
                 def __init__(self, lexer_conf, parser_conf, options=None):
-                    super(LALR_CustomLexerWrapper, self).__init__(
-                        lexer, lexer_conf, parser_conf, options=options)
+                    super(LALR_CustomLexerWrapper, self).__init__(lexer_conf, parser_conf, options=options)
                 def init_lexer(self):
                     future_interface = getattr(lexer, '__future_interface__', False)
                     if future_interface:
@@ -162,13 +161,6 @@ class LALR_ContextualLexer(LALR_WithLexer):
         self.lexer = ContextualLexer(self.lexer_conf, states, always_accept=always_accept)
 
 ###}
-
-class LALR_CustomLexer(LALR_WithLexer):
-    def __init__(self, lexer_cls, lexer_conf, parser_conf, options=None):
-        self.lexer = lexer_cls(lexer_conf)
-        debug = options.debug if options else False
-        self.parser = LALR_Parser(parser_conf, debug=debug)
-        WithLexer.__init__(self, lexer_conf, parser_conf, options)
 
 
 class Earley(WithLexer):

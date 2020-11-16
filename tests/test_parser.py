@@ -37,6 +37,7 @@ from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
+from lark.indenter import Indenter
 
 logger.setLevel(logging.INFO)
 
@@ -1893,6 +1894,28 @@ def _make_parser_test(LEXER, PARSER):
             test_file = "A"
             tree = parser.parse(test_file)
             self.assertEqual(tree.children, [Token('B', 'A')])
+
+        @unittest.skipIf(LEXER=='dynamic', "%declare/postlex doesn't work with dynamic")
+        def test_postlex_indenter(self):
+            class CustomIndenter(Indenter):
+                NL_type = 'NEWLINE'
+                OPEN_PAREN_types = []
+                CLOSE_PAREN_types = []
+                INDENT_type = 'INDENT'
+                DEDENT_type = 'DEDENT'
+                tab_len = 8
+
+            grammar = r"""
+            start: "a" NEWLINE INDENT "b" NEWLINE DEDENT
+
+            NEWLINE: ( /\r?\n */  )+
+
+            %ignore " "+
+            %declare INDENT DEDENT
+            """
+
+            parser = _Lark(grammar, postlex=CustomIndenter())
+            parser.parse("a\n    b\n")
 
         def test_import_custom_sources(self):
             custom_loader = FromPackageLoader('tests', ('grammars', ))

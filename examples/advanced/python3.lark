@@ -23,7 +23,7 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" NAME "(" parameters? ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," [ starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," "/"] ["," [starparams | kwparams]]
           | starparams
           | kwparams
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]

@@ -299,7 +299,7 @@ class Parser:
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if not solutions:
             expected_terminals = [t.expect for t in to_scan]
-            raise UnexpectedEOF(expected_terminals)
+            raise UnexpectedEOF(expected_terminals, state={i.s for i in to_scan})
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor

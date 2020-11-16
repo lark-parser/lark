@@ -19,14 +19,6 @@ class LexError(LarkError):
     pass
 
 
-class UnexpectedEOF(ParseError):
-    def __init__(self, expected):
-        self.expected = expected
-
-        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
-        super(UnexpectedEOF, self).__init__(message)
-
-
 class UnexpectedInput(LarkError):
     """UnexpectedInput Error.
 
@@ -47,6 +39,7 @@ class UnexpectedInput(LarkError):
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
         """
+        assert self.pos_in_stream is not None, self
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
@@ -91,7 +84,7 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and ut.accepts != self.accepts:
+                        if use_accepts and hasattr(self, 'accepts') and ut.accepts != self.accepts:
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                         (self.state, self.accepts, ut.accepts, i, j))
                             continue
@@ -113,6 +106,19 @@ class UnexpectedInput(LarkError):
                             candidate = label, False
 
         return candidate[0]
+
+class UnexpectedEOF(ParseError, UnexpectedInput):
+    def __init__(self, expected, state=None):
+        self.expected = expected
+        self.state = state
+        from .lexer import Token
+        self.token = Token("<EOF>", "") #, line=-1, column=-1, pos_in_stream=-1)
+        self.pos_in_stream = -1
+        self.line = -1
+        self.column = -1
+
+        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
+        super(UnexpectedEOF, self).__init__(message)
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

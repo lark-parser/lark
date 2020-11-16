@@ -35,7 +35,8 @@ class LarkOptions(Serialize):
     start
             The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
     debug
-            Display debug information, such as warnings (default: False)
+            Display debug information and extra warnings. Use only when debugging (default: False)
+            When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions

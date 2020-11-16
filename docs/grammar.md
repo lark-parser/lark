@@ -268,7 +268,7 @@ When importing rules, all their dependencies will be imported into a namespace, 
 %import <module> (<TERM1>, <TERM2>, <rule1>, <rule2>)
 ```
 
-If the module path is absolute, Lark will attempt to load it from the built-in directory (currently, only `common.lark` is available).
+If the module path is absolute, Lark will attempt to load it from the built-in directory (which currently contains `common.lark`, `python.lark`, and `unicode.lark`).
 
 If the module path is relative, such as `.path.to.file`, Lark will attempt to load it from the current working directory. Grammars must have the `.lark` extension.
 

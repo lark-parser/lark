@@ -8,7 +8,7 @@ import functools
 
 from lark.tree import Tree
 from lark.lexer import Token
-from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard
+from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Inline
 
 
 class TestTrees(TestCase):
@@ -229,6 +229,24 @@ class TestTrees(TestCase):
             Tree('b', []),
         ])
         t2 = Tree('root', [1, Tree('c', [])])
+
+        x = MyTransformer().transform( t )
+        self.assertEqual(x, t2)
+
+    def test_inline(self):
+        class MyTransformer(Transformer):
+            def b(self, children):
+                return 'b'
+
+            def a(self, children):
+                return Inline('c', 'd')
+
+        t = Tree('root', [
+            Tree('b', []),
+            Tree('a', []),
+            Tree('b', []),
+        ])
+        t2 = Tree('root', ['b', 'c', 'd', 'b'])
 
         x = MyTransformer().transform( t )
         self.assertEqual(x, t2)

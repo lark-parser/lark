@@ -15,7 +15,7 @@ class Discard(Exception):
     """
     pass
 
-class Inline:
+class Inline(object):
     """When returning an Inline instance in a transformer callback,
     the node is inlined, and replaced by its children.
     """

@@ -63,7 +63,7 @@ class Lark:
         *,
         start: Union[None, str, List[str]] = "start",
         parser: Literal["earley", "lalr", "cyk"] = "auto",
-        lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Lexer] = "auto",
+        lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]] = "auto",
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
         ambiguity: Literal["explicit", "resolve"] = "resolve",

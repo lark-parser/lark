@@ -106,7 +106,7 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
  - MyPy support using type stubs
  - And much more!
 
-See the full list of [features here](https://lark-parser.readthedocs.io/en/latest/features/)
+See the full list of [features here](https://lark-parser.readthedocs.io/en/latest/features.html)
 
 
 ### Comparison to other libraries

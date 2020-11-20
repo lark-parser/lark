@@ -132,7 +132,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 |:--------|:----------|:----|:--------|:------------|:------------|:----------|:----------
 | **Lark** | Earley/LALR(1) | EBNF | Yes! | Yes! | Yes! | Yes! | Yes! (LALR only) |
 | [PLY](http://www.dabeaz.com/ply/) | LALR(1) | BNF | No | No | No | No | No |
-| [PyParsing](http://pyparsing.wikispaces.com/) | PEG | Combinators | No | No | No\* | No | No |
+| [PyParsing](https://github.com/pyparsing/pyparsing) | PEG | Combinators | No | No | No\* | No | No |
 | [Parsley](https://pypi.python.org/pypi/Parsley) | PEG | EBNF | No | No | No\* | No | No |
 | [Parsimonious](https://github.com/erikrose/parsimonious) | PEG | EBNF | Yes | No | No\* | No | No |
 | [ANTLR](https://github.com/antlr/antlr4) | LL(*) | EBNF | Yes | No | Yes? | Yes | No |

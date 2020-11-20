@@ -30,6 +30,7 @@ try:
 except ImportError:
     regex = None
 
+import lark
 from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
@@ -942,10 +943,24 @@ class DualBytesLark:
 
 def _make_parser_test(LEXER, PARSER):
     lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
-    def _Lark(grammar, **kwargs):
-        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
-    def _Lark_open(gfilename, **kwargs):
-        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+    if (LEXER, PARSER) == ('standard', 'earley'): 
+        # Check that the `lark.lark` grammar represents can parse every example used in these tests.
+        # Doesn't matter when we do it, or how often. Just do it for the first entry in `TO_TEST`
+        lalr_parser = Lark.open(os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark'), parser='lalr')
+        def _Lark(grammar, **kwargs):
+            inst = Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+            lalr_parser.parse(inst.source_grammar) # Test after instance creation. When the grammar should fail, don't test it.
+            return inst
+        def _Lark_open(gfilename, **kwargs):
+            inst = Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+            lalr_parser.parse(inst.source_grammar)
+            return inst
+    else:
+        def _Lark(grammar, **kwargs):
+            return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+        def _Lark_open(gfilename, **kwargs):
+            return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+
 
     class _TestParser(unittest.TestCase):
         def test_basic1(self):

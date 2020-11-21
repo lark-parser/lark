@@ -436,7 +436,7 @@ class ContextualLexer(Lexer):
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
             token = self.root_lexer.next_token(lexer_state, parser_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state.position)
+            raise UnexpectedToken(token, e.allowed, state=parser_state.position, token_history=[lexer_state.last_token])
 
 
 class LexerThread:

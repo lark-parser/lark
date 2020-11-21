@@ -147,7 +147,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     see: :ref:`ParserPuppet`.
     """
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, token_history=None):
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
@@ -157,6 +157,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.expected = expected     # XXX deprecate? `accepts` is better
         self.considered_rules = considered_rules
         self.puppet = puppet
+        self.token_history = token_history
 
         # TODO Only calculate `accepts()` when we need to display it to the user
         # This will improve performance when doing automatic error handling
@@ -165,6 +166,9 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"
                    % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
+
+        if self.token_history:
+            message += "Previous tokens: %r\n" % token_history
 
         super(UnexpectedToken, self).__init__(message)
 

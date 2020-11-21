@@ -18,6 +18,8 @@ class ParseError(LarkError):
 class LexError(LarkError):
     pass
 
+class ConfigurationError(LarkError):
+    pass
 
 class UnexpectedEOF(ParseError):
     def __init__(self, expected):

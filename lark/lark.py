@@ -154,7 +154,7 @@ class LarkOptions(Serialize):
         if isinstance(options["start"], STRING_TYPE):
             options["start"] = [options["start"]]
 
-        self.__dict__["options"] = options
+        self.__dict__["options"] = optionsrm
 
         if not self.parser in ("earley", "lalr", "cyk", None):
             raise ConfigurationError("%s must be one of 'earley', 'lalr' or 'cyk'" % self.parser)
@@ -172,7 +172,7 @@ class LarkOptions(Serialize):
         try:
             return self.options[name]
         except KeyError as e:
-            raise AttributeError(e) from e
+            raise AttributeError(e)  # from e
 
     def __setattr__(self, name, value):
         assert name in self.options

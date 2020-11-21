@@ -43,9 +43,7 @@ class ParseTable:
 
         states = {
             state: {
-                tokens.get(token): (
-                    (1, arg.serialize(memo)) if action is Reduce else (0, arg)
-                )
+                tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
                 for token, (action, arg) in actions.items()
             }
             for state, actions in self.states.items()
@@ -63,11 +61,7 @@ class ParseTable:
         tokens = data["tokens"]
         states = {
             state: {
-                tokens[token]: (
-                    (Reduce, Rule.deserialize(arg, memo))
-                    if action == 1
-                    else (Shift, arg)
-                )
+                tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action == 1 else (Shift, arg))
                 for token, (action, arg) in actions.items()
             }
             for state, actions in data["states"].items()
@@ -83,18 +77,11 @@ class IntParseTable(ParseTable):
         int_states = {}
 
         for s, la in parse_table.states.items():
-            la = {
-                k: (v[0], state_to_idx[v[1]]) if v[0] is Shift else v
-                for k, v in la.items()
-            }
+            la = {k: (v[0], state_to_idx[v[1]]) if v[0] is Shift else v for k, v in la.items()}
             int_states[state_to_idx[s]] = la
 
-        start_states = {
-            start: state_to_idx[s] for start, s in parse_table.start_states.items()
-        }
-        end_states = {
-            start: state_to_idx[s] for start, s in parse_table.end_states.items()
-        }
+        start_states = {start: state_to_idx[s] for start, s in parse_table.start_states.items()}
+        end_states = {start: state_to_idx[s] for start, s in parse_table.end_states.items()}
         return cls(int_states, start_states, end_states)
 
 
@@ -175,9 +162,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                     closure = set(kernel)
                     for rp in kernel:
                         if not rp.is_satisfied and not rp.next.is_term:
-                            closure |= self.expand_rule(
-                                rp.next, self.lr0_rules_by_origin
-                            )
+                            closure |= self.expand_rule(rp.next, self.lr0_rules_by_origin)
                     new_state = LR0ItemSet(kernel, closure)
                     cache[kernel] = new_state
 
@@ -254,9 +239,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 self.includes[nt2].add(nt)
 
     def compute_lookaheads(self):
-        read_sets = digraph(
-            self.nonterminal_transitions, self.reads, self.directly_reads
-        )
+        read_sets = digraph(self.nonterminal_transitions, self.reads, self.directly_reads)
         follow_sets = digraph(self.nonterminal_transitions, self.includes, read_sets)
 
         for nt, lookbacks in self.lookback.items():
@@ -268,10 +251,7 @@ class LALR_Analyzer(GrammarAnalyzer):
         m = {}
         reduce_reduce = []
         for state in self.lr0_states:
-            actions = {
-                la: (Shift, next_state.closure)
-                for la, next_state in state.transitions.items()
-            }
+            actions = {la: (Shift, next_state.closure) for la, next_state in state.transitions.items()}
 
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
@@ -297,9 +277,9 @@ class LALR_Analyzer(GrammarAnalyzer):
         if reduce_reduce:
             msgs = []
             for state, la, rules in reduce_reduce:
-                msg = (
-                    "Reduce/Reduce collision in %s between the following rules: %s"
-                    % (la, "".join(["\n\t- " + str(r) for r in rules]))
+                msg = "Reduce/Reduce collision in %s between the following rules: %s" % (
+                    la,
+                    "".join(["\n\t- " + str(r) for r in rules]),
                 )
                 if self.debug:
                     msg += "\n    collision occurred in state: {%s\n    }" % "".join(

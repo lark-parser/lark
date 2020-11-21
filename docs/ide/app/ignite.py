@@ -179,9 +179,7 @@ class Table(html5.Table):
                 return
 
     def fastGrid(self, rows, cols, createHidden=False):
-        colsstr = "".join(
-            ['<td class="ignt-table-body-cell"></td>' for i in range(cols)]
-        )
+        colsstr = "".join(['<td class="ignt-table-body-cell"></td>' for i in range(cols)])
 
         tblstr = '<tbody [name]="body" class="ignt-table-body" >'
 

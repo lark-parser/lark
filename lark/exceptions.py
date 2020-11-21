@@ -27,10 +27,7 @@ class UnexpectedEOF(ParseError):
     def __init__(self, expected):
         self.expected = expected
 
-        message = (
-            "Unexpected end-of-input. Expected one of: \n\t* %s\n"
-            % "\n\t* ".join(x.name for x in self.expected)
-        )
+        message = "Unexpected end-of-input. Expected one of: \n\t* %s\n" % "\n\t* ".join(x.name for x in self.expected)
         super(UnexpectedEOF, self).__init__(message)
 
 
@@ -65,13 +62,11 @@ class UnexpectedInput(LarkError):
         else:
             before = text[start:pos].rsplit(b"\n", 1)[-1]
             after = text[pos:end].split(b"\n", 1)[0]
-            return (
-                before + after + b"\n" + b" " * len(before.expandtabs()) + b"^\n"
-            ).decode("ascii", "backslashreplace")
+            return (before + after + b"\n" + b" " * len(before.expandtabs()) + b"^\n").decode(
+                "ascii", "backslashreplace"
+            )
 
-    def match_examples(
-        self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False
-    ):
+    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
 
@@ -116,21 +111,14 @@ class UnexpectedInput(LarkError):
 
                             if token_type_match_fallback:
                                 # Fallback to token types match
-                                if (ut.token.type == self.token.type) and not candidate[
-                                    -1
-                                ]:
-                                    logger.debug(
-                                        "Token Type Fallback at example [%s][%s]"
-                                        % (i, j)
-                                    )
+                                if (ut.token.type == self.token.type) and not candidate[-1]:
+                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
                         except AttributeError:
                             pass
                         if not candidate[0]:
-                            logger.debug(
-                                "Same State match at example [%s][%s]" % (i, j)
-                            )
+                            logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 
         return candidate[0]
@@ -166,9 +154,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         if allowed:
             message += "\nExpecting: %s\n" % allowed
         if token_history:
-            message += "\nPrevious tokens: %s\n" % ", ".join(
-                repr(t) for t in token_history
-            )
+            message += "\nPrevious tokens: %s\n" % ", ".join(repr(t) for t in token_history)
 
         super(UnexpectedCharacters, self).__init__(message)
 
@@ -196,15 +182,11 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         # This will improve performance when doing automatic error handling
         self.accepts = puppet and puppet.accepts()
 
-        message = (
-            "Unexpected token %r at line %s, column %s.\n"
-            "Expected one of: \n\t* %s\n"
-            % (
-                token,
-                self.line,
-                self.column,
-                "\n\t* ".join(self.accepts or self.expected),
-            )
+        message = "Unexpected token %r at line %s, column %s.\n" "Expected one of: \n\t* %s\n" % (
+            token,
+            self.line,
+            self.column,
+            "\n\t* ".join(self.accepts or self.expected),
         )
 
         super(UnexpectedToken, self).__init__(message)

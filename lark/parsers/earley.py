@@ -43,19 +43,13 @@ class Parser:
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
         #  the slow 'isupper' in is_terminal.
-        self.TERMINALS = {
-            sym for r in parser_conf.rules for sym in r.expansion if sym.is_term
-        }
-        self.NON_TERMINALS = {
-            sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term
-        }
+        self.TERMINALS = {sym for r in parser_conf.rules for sym in r.expansion if sym.is_term}
+        self.NON_TERMINALS = {sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term}
 
         self.forest_sum_visitor = None
         for rule in parser_conf.rules:
             if rule.origin not in self.predictions:
-                self.predictions[rule.origin] = [
-                    x.rule for x in analysis.expand_rule(rule.origin)
-                ]
+                self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
             ## Detect if any rules have priorities set. If the user specified priority = "none" then
             #  the priorities will be stripped from all rules before they reach us, allowing us to
@@ -89,9 +83,7 @@ class Parser:
                 if item.node is None:
                     label = (item.s, item.start, i)
                     item.node = (
-                        node_cache[label]
-                        if label in node_cache
-                        else node_cache.setdefault(label, SymbolNode(*label))
+                        node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                     )
                     item.node.add_family(item.s, item.rule, item.start, None, None)
 
@@ -101,18 +93,14 @@ class Parser:
                 if item.rule.origin in transitives[item.start]:
                     transitive = transitives[item.start][item.s]
                     if transitive.previous in transitives[transitive.column]:
-                        root_transitive = transitives[transitive.column][
-                            transitive.previous
-                        ]
+                        root_transitive = transitives[transitive.column][transitive.previous]
                     else:
                         root_transitive = transitive
 
                     new_item = Item(transitive.rule, transitive.ptr, transitive.start)
                     label = (root_transitive.s, root_transitive.start, i)
                     new_item.node = (
-                        node_cache[label]
-                        if label in node_cache
-                        else node_cache.setdefault(label, SymbolNode(*label))
+                        node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                     )
                     new_item.node.add_path(root_transitive, item.node)
                     if new_item.expect in self.TERMINALS:
@@ -146,9 +134,7 @@ class Parser:
                             if label in node_cache
                             else node_cache.setdefault(label, SymbolNode(*label))
                         )
-                        new_item.node.add_family(
-                            new_item.s, new_item.rule, i, originator.node, item.node
-                        )
+                        new_item.node.add_family(new_item.s, new_item.rule, i, originator.node, item.node)
                         if new_item.expect in self.TERMINALS:
                             # Add (B :: aC.B, h, y) to Q
                             to_scan.add(new_item)
@@ -169,9 +155,7 @@ class Parser:
                     new_item = item.advance()
                     label = (new_item.s, item.start, i)
                     new_item.node = (
-                        node_cache[label]
-                        if label in node_cache
-                        else node_cache.setdefault(label, SymbolNode(*label))
+                        node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                     )
                     new_item.node.add_family(
                         new_item.s,
@@ -255,9 +239,7 @@ class Parser:
                 origin, start, originator = to_create.pop()
                 titem = None
                 if previous is not None:
-                    titem = previous.next_titem = TransitiveItem(
-                        origin, trule, originator, previous.column
-                    )
+                    titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
                 else:
                     titem = TransitiveItem(origin, trule, originator, start)
                 previous = transitives[start][origin] = titem
@@ -281,13 +263,9 @@ class Parser:
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
                     new_item.node = (
-                        node_cache[label]
-                        if label in node_cache
-                        else node_cache.setdefault(label, SymbolNode(*label))
+                        node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                     )
-                    new_item.node.add_family(
-                        new_item.s, item.rule, new_item.start, item.node, token
-                    )
+                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
 
                     if new_item.expect in self.TERMINALS:
                         # add (B ::= Aai+1.B, h, y) to Q'
@@ -349,12 +327,7 @@ class Parser:
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
         solutions = [
-            n.node
-            for n in columns[-1]
-            if n.is_complete
-            and n.node is not None
-            and n.s == start_symbol
-            and n.start == 0
+            n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0
         ]
         if not solutions:
             expected_terminals = [t.expect for t in to_scan]
@@ -366,9 +339,7 @@ class Parser:
             try:
                 debug_walker = ForestToPyDotVisitor()
             except ImportError:
-                logger.warning(
-                    "Cannot find dependency 'pydot', will not generate sppf debug image"
-                )
+                logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
             else:
                 debug_walker.visit(solutions[0], "sppf.png")
 

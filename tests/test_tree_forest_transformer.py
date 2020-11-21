@@ -41,9 +41,7 @@ class TestTreeForestTransformer(unittest.TestCase):
             def __default__(self, tree):
                 assert isinstance(tree, CustomTree)
 
-        tree = TreeForestTransformer(
-            resolve_ambiguity=False, tree_class=CustomTree
-        ).transform(self.forest)
+        tree = TreeForestTransformer(resolve_ambiguity=False, tree_class=CustomTree).transform(self.forest)
         TreeChecker().visit(tree)
 
     def test_token_calls(self):

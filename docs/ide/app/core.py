@@ -189,14 +189,10 @@ class _WidgetDataWrapper(dict):
         dict.update(self, E, **F)
         if E is not None and "keys" in dir(E):
             for key in E:
-                self.targetWidget.element.setAttribute(
-                    str("data-" + key), E["data-" + key]
-                )
+                self.targetWidget.element.setAttribute(str("data-" + key), E["data-" + key])
         elif E:
             for (key, val) in E:
-                self.targetWidget.element.setAttribute(
-                    str("data-" + key), "data-" + val
-                )
+                self.targetWidget.element.setAttribute(str("data-" + key), "data-" + val)
         for key in F:
             self.targetWidget.element.setAttribute(str("data-" + key), F["data-" + key])
 
@@ -287,9 +283,7 @@ class Widget(object):
                 continue
 
             eventFn = getattr(self, event_attrName, None)
-            assert eventFn and callable(eventFn), "{} must provide a {} method".format(
-                str(self), event_attrName
-            )
+            assert eventFn and callable(eventFn), "{} must provide a {} method".format(str(self), event_attrName)
 
             self._catchedEvents[event_attrName] = eventFn
 
@@ -362,9 +356,7 @@ class Widget(object):
         if funcName in dir(self):
             return getattr(self, funcName)(value)
 
-        raise ValueError(
-            "{} is no valid attribute for {}".format(key, (self._tagName or str(self)))
-        )
+        raise ValueError("{} is no valid attribute for {}".format(key, (self._tagName or str(self))))
 
     def __str__(self):
         return str(self.__class__.__name__)
@@ -675,9 +667,7 @@ class Widget(object):
             c.onDetach()
 
     def __collectChildren(self, *args, **kwargs):
-        assert not isinstance(self, _isVoid), (
-            "<%s> can't have children!" % self._tagName
-        )
+        assert not isinstance(self, _isVoid), "<%s> can't have children!" % self._tagName
 
         if kwargs.get("bindTo") is None:
             kwargs["bindTo"] = self
@@ -1053,9 +1043,7 @@ class Widget(object):
             self.element.removeChild(c.element)
             self.element.insertBefore(c.element, self.element.children.item(0))
 
-    def fromHTML(
-        self, html, appendTo=None, bindTo=None, replace=False, vars=None, **kwargs
-    ):
+    def fromHTML(self, html, appendTo=None, bindTo=None, replace=False, vars=None, **kwargs):
         """
         Parses html and constructs its elements as part of self.
 
@@ -2095,9 +2083,7 @@ class Select(
         return self.element.options
 
 
-class Textarea(
-    Widget, _attrDisabled, _attrForm, _attrAutofocus, _attrName, _attrInputs, _attrValue
-):
+class Textarea(Widget, _attrDisabled, _attrForm, _attrAutofocus, _attrName, _attrInputs, _attrValue):
     _tagName = "textarea"
 
     def _getCols(self):
@@ -2460,9 +2446,7 @@ class SvgG(Widget, _attrSvgTransform, _attrSvgStyles):
         self.element.setAttribute("transform", val)
 
 
-class SvgImage(
-    Widget, _attrSvgViewBox, _attrSvgDimensions, _attrSvgTransform, _attrSvgXlink
-):
+class SvgImage(Widget, _attrSvgViewBox, _attrSvgDimensions, _attrSvgTransform, _attrSvgXlink):
     _tagName = "image"
     _namespace = "SVG"
 
@@ -2565,9 +2549,7 @@ class ColWrapper(object):
         self.parentElem = parentElem
 
     def __getitem__(self, item):
-        assert isinstance(item, int), "Invalid col-number. Expected int, got {}".format(
-            str(type(item))
-        )
+        assert isinstance(item, int), "Invalid col-number. Expected int, got {}".format(str(type(item)))
         if item < 0 or item > len(self.parentElem._children):
             return None
 
@@ -2594,9 +2576,7 @@ class RowWrapper(object):
         self.parentElem = parentElem
 
     def __getitem__(self, item):
-        assert isinstance(item, int), "Invalid row-number. Expected int, got {}".format(
-            str(type(item))
-        )
+        assert isinstance(item, int), "Invalid row-number. Expected int, got {}".format(str(type(item)))
         if item < 0 or item > len(self.parentElem._children):
             return None
 
@@ -2730,12 +2710,7 @@ def unescape(val, maxLength=0):
     :returns: The unquoted string.
     :rtype: str
     """
-    val = (
-        val.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", '"')
-        .replace("&#39;", "'")
-    )
+    val = val.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'")
 
     if maxLength > 0:
         return val[0:maxLength]
@@ -2763,10 +2738,7 @@ def doesEventHitWidgetOrChildren(event, widget):
     if event.target == widget.element:
         return True
 
-    return any(
-        doesEventHitWidgetOrChildren(event, child)
-        for child in widget._children
-    )
+    return any(doesEventHitWidgetOrChildren(event, child) for child in widget._children)
 
 
 def textToHtml(node, text):
@@ -2887,21 +2859,14 @@ def registerTag(tagName, widgetClass, override=True):
     if not override and tagName.lower() in __tags:
         return
 
-    attr = [
-        fname[4:].lower()
-        for fname in dir(widgetClass)
-        if fname.startswith("_set")
-    ]
-
+    attr = [fname[4:].lower() for fname in dir(widgetClass) if fname.startswith("_set")]
 
     __tags[tagName.lower()] = (widgetClass, attr)
 
 
 def tag(cls):
     assert issubclass(cls, Widget)
-    registerTag(
-        cls._parserTagName or cls.__name__, cls
-    )  # do NOT check for cls._tagName here!!!
+    registerTag(cls._parserTagName or cls.__name__, cls)  # do NOT check for cls._tagName here!!!
     return cls
 
 
@@ -2927,9 +2892,7 @@ def _buildTags(debug=False):
         except:
             continue
 
-        registerTag(
-            cls._parserTagName or cls._tagName or cls.__name__, cls, override=False
-        )
+        registerTag(cls._parserTagName or cls._tagName or cls.__name__, cls, override=False)
 
     if debug:
         __tags = {}
@@ -2968,9 +2931,7 @@ def parseHTML(html, debug=False):
         if __domParser is None:
             __domParser = jseval("new DOMParser")
 
-        dom = __domParser.parseFromString(
-            "<!doctype html><body>" + str(txt), "text/html"
-        )
+        dom = __domParser.parseFromString("<!doctype html><body>" + str(txt), "text/html")
         return dom.body.textContent
 
     def scanWhite(l):
@@ -3063,10 +3024,7 @@ def parseHTML(html, debug=False):
                 text += ch
 
         # Append plain text (if not only whitespace)
-        if text and (
-            (len(text) == 1 and text in ["\t "])
-            or not all([ch in " \t\r\n" for ch in text])
-        ):
+        if text and ((len(text) == 1 and text in ["\t "]) or not all([ch in " \t\r\n" for ch in text])):
             # print("text", text)
             parent.append(convertEncodedText(text))
 
@@ -3106,11 +3064,7 @@ def parseHTML(html, debug=False):
                     html.pop(0)
                     continue
 
-                if (
-                    att in __tags[tag][1]
-                    or att in ["[name]", "style", "disabled", "hidden"]
-                    or att.startswith("data-")
-                ):
+                if att in __tags[tag][1] or att in ["[name]", "style", "disabled", "hidden"] or att.startswith("data-"):
                     scanWhite(html)
                     if html[0] == "=":
                         html.pop(0)
@@ -3217,31 +3171,16 @@ def fromHTML(html, appendTo=None, bindTo=None, debug=False, vars=None, **kwargs)
                         continue
 
                     if getattr(bindTo, val, None):
-                        print(
-                            "Cannot assign name '{}' because it already exists in {}".format(
-                                val, bindTo
-                            )
-                        )
+                        print("Cannot assign name '{}' because it already exists in {}".format(val, bindTo))
 
                     elif not (
-                        any(
-                            val.startswith(x)
-                            for x in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-                            + "_"
-                        )
+                        any(val.startswith(x) for x in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + "_")
                         and all(
-                            x
-                            in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-                            + "0123456789"
-                            + "_"
+                            x in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + "0123456789" + "_"
                             for x in val[1:]
                         )
                     ):
-                        print(
-                            "Cannot assign name '{}' because it contains invalid characters".format(
-                                val
-                            )
-                        )
+                        print("Cannot assign name '{}' because it contains invalid characters".format(val))
 
                     else:
                         setattr(bindTo, val, wdg)

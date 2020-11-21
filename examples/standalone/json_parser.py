@@ -33,43 +33,47 @@ from io import open
 class LarkError(Exception):
     pass
 
+
 class GrammarError(LarkError):
     pass
+
 
 class ParseError(LarkError):
     pass
 
+
 class LexError(LarkError):
     pass
+
 
 class UnexpectedEOF(ParseError):
     def __init__(self, expected):
         self.expected = expected
 
-        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
+        message = "Unexpected end-of-input. Expected one of: \n\t* %s\n" % "\n\t* ".join(x.name for x in self.expected)
         super(UnexpectedEOF, self).__init__(message)
 
 
 class UnexpectedInput(LarkError):
-    #--
+    # --
     pos_in_stream = None
 
     def get_context(self, text, span=40):
-        #--
+        # --
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
         if not isinstance(text, bytes):
-            before = text[start:pos].rsplit('\n', 1)[-1]
-            after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before) + '^\n'
+            before = text[start:pos].rsplit("\n", 1)[-1]
+            after = text[pos:end].split("\n", 1)[0]
+            return before + after + "\n" + " " * len(before) + "^\n"
         else:
-            before = text[start:pos].rsplit(b'\n', 1)[-1]
-            after = text[pos:end].split(b'\n', 1)[0]
-            return (before + after + b'\n' + b' ' * len(before) + b'^\n').decode("ascii", "backslashreplace")
+            before = text[start:pos].rsplit(b"\n", 1)[-1]
+            after = text[pos:end].split(b"\n", 1)[0]
+            return (before + after + b"\n" + b" " * len(before) + b"^\n").decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
-        #--
+        # --
         assert self.state is not None, "Not supported for this exception"
 
         if isinstance(examples, dict):
@@ -85,8 +89,10 @@ class UnexpectedInput(LarkError):
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
                         if use_accepts and ut.accepts != self.accepts:
-                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
-                                        (self.state, self.accepts, ut.accepts, i, j))
+                            logger.debug(
+                                "Different accepts with same state[%d]: %s != %s at example [%s][%s]"
+                                % (self.state, self.accepts, ut.accepts, i, j)
+                            )
                             continue
                         try:
                             if ut.token == self.token:  ##
@@ -94,11 +100,7 @@ class UnexpectedInput(LarkError):
                                 logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
-                            if (
-                                token_type_match_fallback
-                                and (ut.token.type == self.token.type)
-                                and not candidate[-1]
-                            ):
+                            if token_type_match_fallback and (ut.token.type == self.token.type) and not candidate[-1]:
                                 logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                 candidate = label, True
 
@@ -112,7 +114,9 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+    def __init__(
+        self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None
+    ):
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
@@ -122,30 +126,30 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         self.considered_tokens = considered_tokens
 
         if isinstance(seq, bytes):
-            _s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
+            _s = seq[lex_pos : lex_pos + 1].decode("ascii", "backslashreplace")
         else:
             _s = seq[lex_pos]
 
         message = "No terminal defined for '%s' at line %d col %d" % (_s, line, column)
-        message += '\n\n' + self.get_context(seq)
+        message += "\n\n" + self.get_context(seq)
         if allowed:
-            message += '\nExpecting: %s\n' % allowed
+            message += "\nExpecting: %s\n" % allowed
         if token_history:
-            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in token_history)
+            message += "\nPrevious tokens: %s\n" % ", ".join(repr(t) for t in token_history)
 
         super(UnexpectedCharacters, self).__init__(message)
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    #--
+    # --
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
-        self.line = getattr(token, 'line', '?')
-        self.column = getattr(token, 'column', '?')
-        self.pos_in_stream = getattr(token, 'pos_in_stream', None)
+        self.line = getattr(token, "line", "?")
+        self.column = getattr(token, "column", "?")
+        self.pos_in_stream = getattr(token, "pos_in_stream", None)
         self.state = state
 
         self.token = token
-        self.expected = expected     ##
+        self.expected = expected  ##
 
         self.considered_rules = considered_rules
         self.puppet = puppet
@@ -156,21 +160,25 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         self.accepts = puppet and puppet.accepts()
 
-        message = ("Unexpected token %r at line %s, column %s.\n"
-                   "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
+        message = "Unexpected token %r at line %s, column %s.\n" "Expected one of: \n\t* %s\n" % (
+            token,
+            self.line,
+            self.column,
+            "\n\t* ".join(self.accepts or self.expected),
+        )
 
         super(UnexpectedToken, self).__init__(message)
 
 
 class VisitError(LarkError):
-    #--
+    # --
     def __init__(self, rule, obj, orig_exc):
         self.obj = obj
         self.orig_exc = orig_exc
 
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
+
 
 import logging
 
@@ -197,13 +205,13 @@ def classify(seq, key=None, value=None):
 
 def _deserialize(data, namespace, memo):
     if isinstance(data, dict):
-        if '__type__' in data: ##
+        if "__type__" in data:  ##
 
-            class_ = namespace[data['__type__']]
+            class_ = namespace[data["__type__"]]
             return class_.deserialize(data, memo)
-        elif '@' in data:
-            return memo[data['@']]
-        return {key:_deserialize(value, namespace, memo) for key, value in data.items()}
+        elif "@" in data:
+            return memo[data["@"]]
+        return {key: _deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
     return data
@@ -216,25 +224,25 @@ class Serialize(object):
 
     def serialize(self, memo=None):
         if memo and memo.in_types(self):
-            return {'@': memo.memoized.get(self)}
+            return {"@": memo.memoized.get(self)}
 
-        fields = getattr(self, '__serialize_fields__')
+        fields = getattr(self, "__serialize_fields__")
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
-        res['__type__'] = type(self).__name__
-        postprocess = getattr(self, '_serialize', None)
+        res["__type__"] = type(self).__name__
+        postprocess = getattr(self, "_serialize", None)
         if postprocess:
             postprocess(res, memo)
         return res
 
     @classmethod
     def deserialize(cls, data, memo):
-        namespace = getattr(cls, '__serialize_namespace__', {})
-        namespace = {c.__name__:c for c in namespace}
+        namespace = getattr(cls, "__serialize_namespace__", {})
+        namespace = {c.__name__: c for c in namespace}
 
-        fields = getattr(cls, '__serialize_fields__')
+        fields = getattr(cls, "__serialize_fields__")
 
-        if '@' in data:
-            return memo[data['@']]
+        if "@" in data:
+            return memo[data["@"]]
 
         inst = cls.__new__(cls)
         for f in fields:
@@ -242,14 +250,14 @@ class Serialize(object):
                 setattr(inst, f, _deserialize(data[f], namespace, memo))
             except KeyError as e:
                 raise KeyError("Cannot find key for class", cls, e)
-        postprocess = getattr(inst, '_deserialize', None)
+        postprocess = getattr(inst, "_deserialize", None)
         if postprocess:
             postprocess()
         return inst
 
 
 class SerializeMemoizer(Serialize):
-    __serialize_fields__ = 'memoized',
+    __serialize_fields__ = ("memoized",)
 
     def __init__(self, types_to_memoize):
         self.types_to_memoize = tuple(types_to_memoize)
@@ -266,10 +274,9 @@ class SerializeMemoizer(Serialize):
         return _deserialize(data, namespace, memo)
 
 
-
 try:
     STRING_TYPE = basestring
-except NameError:   ##
+except NameError:  ##
 
     STRING_TYPE = str
 
@@ -278,12 +285,12 @@ import types
 from contextlib import contextmanager
 from functools import partial, wraps
 
-Str = type(u'')
+Str = type(u"")
 try:
-    classtype = types.ClassType ##
+    classtype = types.ClassType  ##
 
 except AttributeError:
-    classtype = type    ##
+    classtype = type  ##
 
 
 def smart_decorator(f, create_decorator):
@@ -304,6 +311,7 @@ def smart_decorator(f, create_decorator):
     else:
         return create_decorator(f.__func__.__call__, True)
 
+
 try:
     import regex
 except ImportError:
@@ -312,12 +320,14 @@ except ImportError:
 import re
 import sys
 
-Py36 = (sys.version_info[:2] >= (3, 6))
+Py36 = sys.version_info[:2] >= (3, 6)
 
 import sre_constants
 import sre_parse
 
-categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
+categ_pattern = re.compile(r"\\p{[A-Za-z_]+}")
+
+
 def get_regexp_width(expr):
     if regex:
         ##
@@ -326,10 +336,10 @@ def get_regexp_width(expr):
 
         ##
 
-        regexp_final = re.sub(categ_pattern, 'A', expr)
+        regexp_final = re.sub(categ_pattern, "A", expr)
     else:
         if re.search(categ_pattern, expr):
-            raise ImportError('`regex` module must be installed in order to use Unicode categories.', expr)
+            raise ImportError("`regex` module must be installed in order to use Unicode categories.", expr)
         regexp_final = expr
     try:
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
@@ -346,7 +356,7 @@ class Meta:
 
 
 class Tree(object):
-    #--
+    # --
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -359,27 +369,27 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%s, %s)' % (self.data, self.children)
+        return "Tree(%s, %s)" % (self.data, self.children)
 
     def _pretty_label(self):
         return self.data
 
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [ indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
+            return [indent_str * level, self._pretty_label(), "\t", "%s" % (self.children[0],), "\n"]
 
-        l = [ indent_str*level, self._pretty_label(), '\n' ]
+        l = [indent_str * level, self._pretty_label(), "\n"]
         for n in self.children:
             if isinstance(n, Tree):
-                l += n._pretty(level+1, indent_str)
+                l += n._pretty(level + 1, indent_str)
             else:
-                l += [ indent_str*(level+1), '%s' % (n,), '\n' ]
+                l += [indent_str * (level + 1), "%s" % (n,), "\n"]
 
         return l
 
-    def pretty(self, indent_str='  '):
-        #--
-        return ''.join(self._pretty(0, indent_str))
+    def pretty(self, indent_str="  "):
+        # --
+        return "".join(self._pretty(0, indent_str))
 
     def __eq__(self, other):
         try:
@@ -394,23 +404,22 @@ class Tree(object):
         return hash((self.data, tuple(self.children)))
 
     def iter_subtrees(self):
-        #--
+        # --
         queue = [self]
         subtrees = OrderedDict()
         for subtree in queue:
             subtrees[id(subtree)] = subtree
-            queue += [c for c in reversed(subtree.children)
-                      if isinstance(c, Tree) and id(c) not in subtrees]
+            queue += [c for c in reversed(subtree.children) if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
         return reversed(list(subtrees.values()))
 
     def find_pred(self, pred):
-        #--
+        # --
         return filter(pred, self.iter_subtrees())
 
     def find_data(self, data):
-        #--
+        # --
         return self.find_pred(lambda t: t.data == data)
 
 
@@ -418,14 +427,15 @@ from inspect import getmembers, getmro
 
 
 class Discard(Exception):
-    #--
+    # --
     pass
+
 
 ##
 
 
 class _Decoratable:
-    #--
+    # --
 
     @classmethod
     def _apply_decorator(cls, decorator, **kwargs):
@@ -436,14 +446,14 @@ class _Decoratable:
 
             ##
 
-            if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
+            if name.startswith("_") or (name in libmembers and name not in cls.__dict__):
                 continue
             if not callable(value):
                 continue
 
             ##
 
-            if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
+            if hasattr(cls.__dict__[name], "vargs_applied") or hasattr(value, "vargs_applied"):
                 continue
 
             static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
@@ -455,11 +465,10 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable):
-    #--
-    __visit_tokens__ = True   ##
+    # --
+    __visit_tokens__ = True  ##
 
-
-    def __init__(self,  visit_tokens=True):
+    def __init__(self, visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
@@ -472,7 +481,7 @@ class Transformer(_Decoratable):
             return self.__default__(tree.data, children, tree.meta)
         else:
             try:
-                wrapper = getattr(f, 'visit_wrapper', None)
+                wrapper = getattr(f, "visit_wrapper", None)
                 if wrapper is not None:
                     return f.visit_wrapper(f, tree.data, children, tree.meta)
                 else:
@@ -494,7 +503,6 @@ class Transformer(_Decoratable):
                 raise
             except Exception as e:
                 raise VisitError(token.type, token, e)
-
 
     def _transform_children(self, children):
         for c in children:
@@ -519,17 +527,15 @@ class Transformer(_Decoratable):
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
-        #--
+        # --
         return Tree(data, children, meta)
 
     def __default_token__(self, token):
-        #--
+        # --
         return token
 
 
-
-class InlineTransformer(Transformer):   ##
-
+class InlineTransformer(Transformer):  ##
     def _call_userfunc(self, tree, new_children=None):
         ##
 
@@ -556,8 +562,8 @@ class TransformerChain(object):
 
 
 class Transformer_InPlace(Transformer):
-    #--
-    def _transform_tree(self, tree):           ##
+    # --
+    def _transform_tree(self, tree):  ##
 
         return self._call_userfunc(tree)
 
@@ -569,7 +575,7 @@ class Transformer_InPlace(Transformer):
 
 
 class Transformer_NonRecursive(Transformer):
-    #--
+    # --
 
     def transform(self, tree):
         ##
@@ -578,7 +584,7 @@ class Transformer_NonRecursive(Transformer):
         q = [tree]
         while q:
             t = q.pop()
-            rev_postfix.append( t )
+            rev_postfix.append(t)
             if isinstance(t, Tree):
                 q += t.children
 
@@ -597,18 +603,16 @@ class Transformer_NonRecursive(Transformer):
             else:
                 stack.append(x)
 
-        t ,= stack  ##
+        (t,) = stack  ##
 
         return t
 
 
-
 class Transformer_InPlaceRecursive(Transformer):
-    #--
+    # --
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree)
-
 
 
 ##
@@ -619,7 +623,7 @@ class VisitorBase:
         return getattr(self, tree.data, self.__default__)(tree)
 
     def __default__(self, tree):
-        #--
+        # --
         return tree
 
     def __class_getitem__(cls, _):
@@ -627,21 +631,21 @@ class VisitorBase:
 
 
 class Visitor(VisitorBase):
-    #--
+    # --
 
     def visit(self, tree):
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self, tree):
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
         return tree
 
 
 class Visitor_Recursive(VisitorBase):
-    #--
+    # --
 
     def visit(self, tree):
         for child in tree.children:
@@ -651,7 +655,7 @@ class Visitor_Recursive(VisitorBase):
         self._call_userfunc(tree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self, tree):
         self._call_userfunc(tree)
 
         for child in tree.children:
@@ -661,38 +665,35 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-
 def visit_children_decor(func):
-    #--
+    # --
     @wraps(func)
     def inner(cls, tree):
         values = cls.visit_children(tree)
         return func(cls, values)
+
     return inner
 
 
 class Interpreter(_Decoratable):
-    #--
+    # --
 
     def visit(self, tree):
         f = getattr(self, tree.data)
-        wrapper = getattr(f, 'visit_wrapper', None)
+        wrapper = getattr(f, "visit_wrapper", None)
         if wrapper is not None:
             return f.visit_wrapper(f, tree.data, tree.children, tree.meta)
         else:
             return f(tree)
 
     def visit_children(self, tree):
-        return [self.visit(child) if isinstance(child, Tree) else child
-                for child in tree.children]
+        return [self.visit(child) if isinstance(child, Tree) else child for child in tree.children]
 
     def __getattr__(self, name):
         return self.__default__
 
     def __default__(self, tree):
         return self.visit_children(tree)
-
-
 
 
 ##
@@ -707,35 +708,41 @@ def _apply_decorator(obj, decorator, **kwargs):
         return _apply(decorator, **kwargs)
 
 
-
 def _inline_args__func(func):
     @wraps(func)
     def create_decorator(_f, with_self):
         if with_self:
+
             def f(self, children):
                 return _f(self, *children)
+
         else:
+
             def f(self, children):
                 return _f(*children)
+
         return f
 
     return smart_decorator(func, create_decorator)
 
 
-def inline_args(obj):   ##
+def inline_args(obj):  ##
 
     return _apply_decorator(obj, _inline_args__func)
-
 
 
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     def create_decorator(_f, with_self):
         if with_self:
+
             def f(self, *args, **kwargs):
                 return _f(self, *args, **kwargs)
+
         else:
+
             def f(self, *args, **kwargs):
                 return _f(*args, **kwargs)
+
         return f
 
     if static:
@@ -749,17 +756,22 @@ def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
 
 def _vargs_inline(f, data, children, meta):
     return f(*children)
+
+
 def _vargs_meta_inline(f, data, children, meta):
     return f(meta, *children)
+
+
 def _vargs_meta(f, data, children, meta):
-    return f(children, meta)   ##
+    return f(children, meta)  ##
+
 
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
 
 def v_args(inline=False, meta=False, tree=False, wrapper=None):
-    #--
+    # --
     if tree and (meta or inline):
         raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
 
@@ -781,8 +793,8 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 
     def _visitor_args_dec(obj):
         return _apply_decorator(obj, _visitor_args_func_dec, visit_wrapper=func)
-    return _visitor_args_dec
 
+    return _visitor_args_dec
 
 
 class Indenter:
@@ -797,9 +809,9 @@ class Indenter:
 
         yield token
 
-        indent_str = token.rsplit('\n', 1)[1] ##
+        indent_str = token.rsplit("\n", 1)[1]  ##
 
-        indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
+        indent = indent_str.count(" ") + indent_str.count("\t") * self.tab_len
 
         if indent > self.indent_level[-1]:
             self.indent_level.append(indent)
@@ -809,7 +821,7 @@ class Indenter:
                 self.indent_level.pop()
                 yield Token.new_borrow_pos(self.DEDENT_type, indent_str, token)
 
-            assert indent == self.indent_level[-1], '%s != %s' % (indent, self.indent_level[-1])
+            assert indent == self.indent_level[-1], "%s != %s" % (indent, self.indent_level[-1])
 
     def _process(self, stream):
         for token in stream:
@@ -826,7 +838,7 @@ class Indenter:
 
         while len(self.indent_level) > 1:
             self.indent_level.pop()
-            yield Token(self.DEDENT_type, '')
+            yield Token(self.DEDENT_type, "")
 
         assert self.indent_level == [0], self.indent_level
 
@@ -842,9 +854,8 @@ class Indenter:
         return (self.NL_type,)
 
 
-
 class Symbol(Serialize):
-    __slots__ = ('name',)
+    __slots__ = ("name",)
 
     is_term = NotImplemented
 
@@ -862,13 +873,13 @@ class Symbol(Serialize):
         return hash(self.name)
 
     def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.name)
+        return "%s(%r)" % (type(self).__name__, self.name)
 
     fullrepr = property(__repr__)
 
 
 class Terminal(Symbol):
-    __serialize_fields__ = 'name', 'filter_out'
+    __serialize_fields__ = "name", "filter_out"
 
     is_term = True
 
@@ -878,19 +889,17 @@ class Terminal(Symbol):
 
     @property
     def fullrepr(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
-
+        return "%s(%r, %r)" % (type(self).__name__, self.name, self.filter_out)
 
 
 class NonTerminal(Symbol):
-    __serialize_fields__ = 'name',
+    __serialize_fields__ = ("name",)
 
     is_term = False
 
 
-
 class RuleOptions(Serialize):
-    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
+    __serialize_fields__ = "keep_all_tokens", "expand1", "priority", "template_source", "empty_indices"
 
     def __init__(self, keep_all_tokens=False, expand1=False, priority=None, template_source=None, empty_indices=()):
         self.keep_all_tokens = keep_all_tokens
@@ -900,19 +909,14 @@ class RuleOptions(Serialize):
         self.empty_indices = empty_indices
 
     def __repr__(self):
-        return 'RuleOptions(%r, %r, %r, %r)' % (
-            self.keep_all_tokens,
-            self.expand1,
-            self.priority,
-            self.template_source
-        )
+        return "RuleOptions(%r, %r, %r, %r)" % (self.keep_all_tokens, self.expand1, self.priority, self.template_source)
 
 
 class Rule(Serialize):
-    #--
-    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
+    # --
+    __slots__ = ("origin", "expansion", "alias", "options", "order", "_hash")
 
-    __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
+    __serialize_fields__ = "origin", "expansion", "order", "alias", "options"
     __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
 
     def __init__(self, origin, expansion, order=0, alias=None, options=None):
@@ -927,10 +931,10 @@ class Rule(Serialize):
         self._hash = hash((self.origin, tuple(self.expansion)))
 
     def __str__(self):
-        return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
+        return "<%s : %s>" % (self.origin.name, " ".join(x.name for x in self.expansion))
 
     def __repr__(self):
-        return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+        return "Rule(%r, %r, %r, %r)" % (self.origin, self.expansion, self.alias, self.options)
 
     def __hash__(self):
         return self._hash
@@ -941,13 +945,10 @@ class Rule(Serialize):
         return self.origin == other.origin and self.expansion == other.expansion
 
 
-
-
 from copy import copy
 
 
 class Pattern(Serialize):
-
     def __init__(self, value, flags=()):
         self.value = value
         self.flags = frozenset(flags)
@@ -959,6 +960,7 @@ class Pattern(Serialize):
 
     def __hash__(self):
         return hash((type(self), self.value, self.flags))
+
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
@@ -970,18 +972,19 @@ class Pattern(Serialize):
 
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s:%s)' % (f, value))
+                value = "(?%s:%s)" % (f, value)
             return value
 
     else:
+
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s)' % f) + value
+                value = ("(?%s)" % f) + value
             return value
 
 
 class PatternStr(Pattern):
-    __serialize_fields__ = 'value', 'flags'
+    __serialize_fields__ = "value", "flags"
 
     type = "str"
 
@@ -991,10 +994,12 @@ class PatternStr(Pattern):
     @property
     def min_width(self):
         return len(self.value)
+
     max_width = min_width
 
+
 class PatternRE(Pattern):
-    __serialize_fields__ = 'value', 'flags', '_width'
+    __serialize_fields__ = "value", "flags", "_width"
 
     type = "re"
 
@@ -1002,6 +1007,7 @@ class PatternRE(Pattern):
         return self._get_flags(self.value)
 
     _width = None
+
     def _get_width(self):
         if self._width is None:
             self._width = get_regexp_width(self.to_regexp())
@@ -1010,13 +1016,14 @@ class PatternRE(Pattern):
     @property
     def min_width(self):
         return self._get_width()[0]
+
     @property
     def max_width(self):
         return self._get_width()[1]
 
 
 class TerminalDef(Serialize):
-    __serialize_fields__ = 'name', 'pattern', 'priority'
+    __serialize_fields__ = "name", "pattern", "priority"
     __serialize_namespace__ = PatternStr, PatternRE
 
     def __init__(self, name, pattern, priority=1):
@@ -1026,18 +1033,20 @@ class TerminalDef(Serialize):
         self.priority = priority
 
     def __repr__(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+        return "%s(%r, %r)" % (type(self).__name__, self.name, self.pattern)
 
 
 class Token(Str):
-    #--
-    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
+    # --
+    __slots__ = ("type", "pos_in_stream", "value", "line", "column", "end_line", "end_column", "end_pos")
 
-    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    def __new__(
+        cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None
+    ):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
-            value = value.decode('latin1')
+            value = value.decode("latin1")
             self = super(Token, cls).__new__(cls, value)
 
         self.type = type_
@@ -1052,20 +1061,36 @@ class Token(Str):
 
     def update(self, type_=None, value=None):
         return Token.new_borrow_pos(
-            type_ if type_ is not None else self.type,
-            value if value is not None else self.value,
-            self
+            type_ if type_ is not None else self.type, value if value is not None else self.value, self
         )
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
+        return cls(
+            type_,
+            value,
+            borrow_t.pos_in_stream,
+            borrow_t.line,
+            borrow_t.column,
+            borrow_t.end_line,
+            borrow_t.end_column,
+            borrow_t.end_pos,
+        )
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column, ))
+        return (
+            self.__class__,
+            (
+                self.type,
+                self.value,
+                self.pos_in_stream,
+                self.line,
+                self.column,
+            ),
+        )
 
     def __repr__(self):
-        return 'Token(%s, %r)' % (self.type, self.value)
+        return "Token(%s, %r)" % (self.type, self.value)
 
     def __deepcopy__(self, memo):
         return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
@@ -1088,7 +1113,7 @@ class LineCounter:
         self.line_start_pos = 0
 
     def feed(self, token, test_newline=True):
-        #--
+        # --
         if test_newline:
             newlines = token.count(self.newline_char)
             if newlines:
@@ -1098,8 +1123,9 @@ class LineCounter:
         self.char_pos += len(token)
         self.column = self.char_pos - self.line_start_pos + 1
 
+
 class _Lex:
-    #--
+    # --
     def __init__(self, lexer, state=None):
         self.lexer = lexer
         self.state = state
@@ -1107,7 +1133,7 @@ class _Lex:
     def lex(self, stream, newline_types, ignore_types):
         newline_types = frozenset(newline_types)
         ignore_types = frozenset(ignore_types)
-        line_ctr = LineCounter('\n' if not self.lexer.use_bytes else b'\n')
+        line_ctr = LineCounter("\n" if not self.lexer.use_bytes else b"\n")
         last_token = None
 
         while line_ctr.char_pos < len(stream):
@@ -1117,7 +1143,15 @@ class _Lex:
                 allowed = {v for m, tfi in lexer.mres for v in tfi.values()} - ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
-                raise UnexpectedCharacters(stream, line_ctr.char_pos, line_ctr.line, line_ctr.column, allowed=allowed, state=self.state, token_history=last_token and [last_token])
+                raise UnexpectedCharacters(
+                    stream,
+                    line_ctr.char_pos,
+                    line_ctr.line,
+                    line_ctr.column,
+                    allowed=allowed,
+                    state=self.state,
+                    token_history=last_token and [last_token],
+                )
 
             value, type_ = res
 
@@ -1140,8 +1174,6 @@ class _Lex:
                 line_ctr.feed(value, type_ in newline_types)
 
 
-
-
 class UnlessCallback:
     def __init__(self, mres):
         self.mres = mres
@@ -1154,6 +1186,7 @@ class UnlessCallback:
                 break
         return t
 
+
 class CallChain:
     def __init__(self, callback1, callback2, cond):
         self.callback1 = callback1
@@ -1165,16 +1198,13 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
-
-
-
 def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
-        unless = [] ##
+        unless = []  ##
 
         for strtok in tokens_by_type.get(PatternStr, []):
             if strtok.priority > retok.priority:
@@ -1186,7 +1216,9 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
+            callback[retok.name] = UnlessCallback(
+                build_mres(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes)
+            )
 
     terminals = [t for t in terminals if t not in embedded_strs]
     return terminals, callback
@@ -1199,38 +1231,40 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
 
     ##
 
-    postfix = '$' if match_whole else ''
+    postfix = "$" if match_whole else ""
     mres = []
     while terminals:
-        pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+        pattern = u"|".join(u"(?P<%s>%s)" % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
         if use_bytes:
-            pattern = pattern.encode('latin-1')
+            pattern = pattern.encode("latin-1")
         try:
             mre = re_.compile(pattern, g_regex_flags)
         except AssertionError:  ##
 
-            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
+            return _build_mres(terminals, max_size // 2, g_regex_flags, match_whole, re_, use_bytes)
 
         ##
 
-        mres.append((mre, {i:n for n,i in mre.groupindex.items()} ))
+        mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
         terminals = terminals[max_size:]
     return mres
+
 
 def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
     return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
 
+
 def _regexp_has_newline(r):
-    #--
-    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
+    # --
+    return "\n" in r or "\\n" in r or "\\s" in r or "[^" in r or ("(?s" in r and "." in r)
+
 
 class Lexer(object):
-    #--
+    # --
     lex = NotImplemented
 
 
 class TraditionalLexer(Lexer):
-
     def __init__(self, conf):
         terminals = list(conf.tokens)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
@@ -1256,7 +1290,7 @@ class TraditionalLexer(Lexer):
         self.newline_types = [t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())]
         self.ignore_types = list(conf.ignore)
 
-        terminals.sort(key=lambda x:(-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        terminals.sort(key=lambda x: (-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
         self.terminals = terminals
         self.user_callbacks = conf.callbacks
         self.g_regex_flags = conf.g_regex_flags
@@ -1265,9 +1299,10 @@ class TraditionalLexer(Lexer):
         self._mres = None
         ##
 
-
     def _build(self):
-        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, re_=self.re, use_bytes=self.use_bytes)
+        terminals, self.callback = _create_unless(
+            self.terminals, self.g_regex_flags, re_=self.re, use_bytes=self.use_bytes
+        )
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
@@ -1296,10 +1331,7 @@ class TraditionalLexer(Lexer):
         return _Lex(self).lex(stream, self.newline_types, self.ignore_types)
 
 
-
-
 class ContextualLexer(Lexer):
-
     def __init__(self, conf, states, always_accept=()):
         terminals = list(conf.tokens)
         tokens_by_name = {}
@@ -1337,7 +1369,7 @@ class ContextualLexer(Lexer):
                 yield x
                 parser_state = get_parser_state()
                 l.lexer = self.lexers[parser_state]
-                l.state = parser_state ##
+                l.state = parser_state  ##
 
         except UnexpectedCharacters as e:
             ##
@@ -1355,13 +1387,22 @@ class ContextualLexer(Lexer):
             raise UnexpectedToken(t, e.allowed, state=e.state)
 
 
-
 class LexerConf(Serialize):
-    __serialize_fields__ = 'tokens', 'ignore', 'g_regex_flags', 'use_bytes'
-    __serialize_namespace__ = TerminalDef,
+    __serialize_fields__ = "tokens", "ignore", "g_regex_flags", "use_bytes"
+    __serialize_namespace__ = (TerminalDef,)
 
-    def __init__(self, tokens, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
-        self.tokens = tokens    ##
+    def __init__(
+        self,
+        tokens,
+        re_module,
+        ignore=(),
+        postlex=None,
+        callbacks=None,
+        g_regex_flags=0,
+        skip_validation=False,
+        use_bytes=False,
+    ):
+        self.tokens = tokens  ##
 
         self.ignore = ignore
         self.postlex = postlex
@@ -1385,6 +1426,7 @@ class ExpandSingleChild:
             return children[0]
         else:
             return self.node_builder(children)
+
 
 class PropagatePositions:
     def __init__(self, node_builder):
@@ -1454,8 +1496,9 @@ class ChildFilter:
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR(ChildFilter):
-    #--
+    # --
 
     def __call__(self, children):
         filtered = []
@@ -1465,7 +1508,7 @@ class ChildFilterLALR(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   ##
+                else:  ##
 
                     filtered = children[i].children
             else:
@@ -1476,8 +1519,9 @@ class ChildFilterLALR(ChildFilter):
 
         return self.node_builder(filtered)
 
+
 class ChildFilterLALR_NoPlaceholders(ChildFilter):
-    #--
+    # --
     def __init__(self, to_include, node_builder):
         self.node_builder = node_builder
         self.to_include = to_include
@@ -1488,26 +1532,28 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
             if to_expand:
                 if filtered:
                     filtered += children[i].children
-                else:   ##
+                else:  ##
 
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
         return self.node_builder(filtered)
 
+
 def _should_expand(sym):
-    return not sym.is_term and sym.name.startswith('_')
+    return not sym.is_term and sym.name.startswith("_")
+
 
 def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indices):
     ##
 
     if _empty_indices:
         assert _empty_indices.count(False) == len(expansion)
-        s = ''.join(str(int(b)) for b in _empty_indices)
-        empty_indices = [len(ones) for ones in s.split('0')]
-        assert len(empty_indices) == len(expansion)+1, (empty_indices, len(expansion))
+        s = "".join(str(int(b)) for b in _empty_indices)
+        empty_indices = [len(ones) for ones in s.split("0")]
+        assert len(empty_indices) == len(expansion) + 1, (empty_indices, len(expansion))
     else:
-        empty_indices = [0] * (len(expansion)+1)
+        empty_indices = [0] * (len(expansion) + 1)
 
     to_include = []
     nones_to_add = 0
@@ -1519,16 +1565,17 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
 
     nones_to_add += empty_indices[len(expansion)]
 
-    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand,_ in to_include):
+    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand, _ in to_include):
         if _empty_indices or ambiguous:
             return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add)
         else:
             ##
 
-            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
+            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i, x, _ in to_include])
+
 
 class AmbiguousExpander:
-    #--
+    # --
     def __init__(self, to_expand, tree_class, node_builder):
         self.node_builder = node_builder
         self.tree_class = tree_class
@@ -1536,7 +1583,7 @@ class AmbiguousExpander:
 
     def __call__(self, children):
         def _is_ambig_tree(child):
-            return hasattr(child, 'data') and child.data == '_ambig'
+            return hasattr(child, "data") and child.data == "_ambig"
 
         ##
 
@@ -1558,20 +1605,27 @@ class AmbiguousExpander:
         if not ambiguous:
             return self.node_builder(children)
 
-        expand = [ iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children) ]
-        return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+        expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
+        return self.tree_class("_ambig", [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
-    to_expand = [i for i, sym in enumerate(expansion)
-                 if keep_all_tokens or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))]
+    to_expand = [
+        i
+        for i, sym in enumerate(expansion)
+        if keep_all_tokens or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))
+    ]
     if to_expand:
         return partial(AmbiguousExpander, to_expand, tree_class)
+
 
 def ptb_inline_args(func):
     @wraps(func)
     def f(children):
         return func(*children)
+
     return f
+
 
 def inplace_transformer(func):
     @wraps(func)
@@ -1580,19 +1634,31 @@ def inplace_transformer(func):
 
         tree = Tree(func.__name__, children)
         return func(tree)
+
     return f
+
 
 def apply_visit_wrapper(func, name, wrapper):
     if wrapper is _vargs_meta or wrapper is _vargs_meta_inline:
         raise NotImplementedError("Meta args not supported for internal transformer")
+
     @wraps(func)
     def f(children):
         return wrapper(func, name, children, None)
+
     return f
 
 
 class ParseTreeBuilder:
-    def __init__(self, rules, tree_class, propagate_positions=False, keep_all_tokens=False, ambiguous=False, maybe_placeholders=False):
+    def __init__(
+        self,
+        rules,
+        tree_class,
+        propagate_positions=False,
+        keep_all_tokens=False,
+        ambiguous=False,
+        maybe_placeholders=False,
+    ):
         self.tree_class = tree_class
         self.propagate_positions = propagate_positions
         self.always_keep_all_tokens = keep_all_tokens
@@ -1607,15 +1673,25 @@ class ParseTreeBuilder:
             keep_all_tokens = self.always_keep_all_tokens or options.keep_all_tokens
             expand_single_child = options.expand1
 
-            wrapper_chain = list(filter(None, [
-                (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
-                self.propagate_positions and PropagatePositions,
-                self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
-            ]))
+            wrapper_chain = list(
+                filter(
+                    None,
+                    [
+                        (expand_single_child and not rule.alias) and ExpandSingleChild,
+                        maybe_create_child_filter(
+                            rule.expansion,
+                            keep_all_tokens,
+                            self.ambiguous,
+                            options.empty_indices if self.maybe_placeholders else None,
+                        ),
+                        self.propagate_positions and PropagatePositions,
+                        self.ambiguous
+                        and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
+                    ],
+                )
+            )
 
             yield rule, wrapper_chain
-
 
     def create_callback(self, transformer=None):
         callbacks = {}
@@ -1627,7 +1703,7 @@ class ParseTreeBuilder:
                 f = getattr(transformer, user_callback_name)
                 ##
 
-                wrapper = getattr(f, 'visit_wrapper', None)
+                wrapper = getattr(f, "visit_wrapper", None)
                 if wrapper is not None:
                     f = apply_visit_wrapper(f, user_callback_name, wrapper)
                 else:
@@ -1647,7 +1723,6 @@ class ParseTreeBuilder:
             callbacks[rule] = f
 
         return callbacks
-
 
 
 class LALR_Parser(object):
@@ -1691,7 +1766,8 @@ class _Parser:
         state_stack = state_stack or [start_state]
         value_stack = value_stack or []
 
-        if set_state: set_state(start_state)
+        if set_state:
+            set_state(start_state)
 
         def get_action(token):
             state = state_stack[-1]
@@ -1701,7 +1777,7 @@ class _Parser:
                 expected = {s for s in states[state].keys() if s.isupper()}
                 try:
                     puppet = ParserPuppet(self, state_stack, value_stack, start, stream, set_state)
-                except NameError:   ##
+                except NameError:  ##
 
                     puppet = None
                 raise UnexpectedToken(token, expected, state=state, puppet=puppet)
@@ -1733,8 +1809,9 @@ class _Parser:
                     if action is Shift:
                         state_stack.append(arg)
                         value_stack.append(token)
-                        if set_state: set_state(arg)
-                        break ##
+                        if set_state:
+                            set_state(arg)
+                        break  ##
 
                     else:
                         reduce(arg)
@@ -1744,31 +1821,33 @@ class _Parser:
                 print("STATE STACK DUMP")
                 print("----------------")
                 for i, s in enumerate(state_stack):
-                    print('%d)' % i , s)
+                    print("%d)" % i, s)
                 print("")
 
             raise
 
-        token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+        token = Token.new_borrow_pos("$END", "", token) if token else Token("$END", "", 0, 1, 1)
         while True:
             _action, arg = get_action(token)
-            assert(_action is Reduce)
+            assert _action is Reduce
             reduce(arg)
             if state_stack[-1] == end_state:
                 return value_stack[-1]
 
 
-
 class Action:
     def __init__(self, name):
         self.name = name
+
     def __str__(self):
         return self.name
+
     def __repr__(self):
         return str(self)
 
-Shift = Action('Shift')
-Reduce = Action('Reduce')
+
+Shift = Action("Shift")
+Reduce = Action("Reduce")
 
 
 class ParseTable:
@@ -1782,86 +1861,87 @@ class ParseTable:
         rules = Enumerator()
 
         states = {
-            state: {tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
-                    for token, (action, arg) in actions.items()}
+            state: {
+                tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
+                for token, (action, arg) in actions.items()
+            }
             for state, actions in self.states.items()
         }
 
         return {
-            'tokens': tokens.reversed(),
-            'states': states,
-            'start_states': self.start_states,
-            'end_states': self.end_states,
+            "tokens": tokens.reversed(),
+            "states": states,
+            "start_states": self.start_states,
+            "end_states": self.end_states,
         }
 
     @classmethod
     def deserialize(cls, data, memo):
-        tokens = data['tokens']
+        tokens = data["tokens"]
         states = {
-            state: {tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action==1 else (Shift, arg))
-                    for token, (action, arg) in actions.items()}
-            for state, actions in data['states'].items()
+            state: {
+                tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action == 1 else (Shift, arg))
+                for token, (action, arg) in actions.items()
+            }
+            for state, actions in data["states"].items()
         }
-        return cls(states, data['start_states'], data['end_states'])
+        return cls(states, data["start_states"], data["end_states"])
 
 
 class IntParseTable(ParseTable):
-
     @classmethod
     def from_ParseTable(cls, parse_table):
         enum = list(parse_table.states)
-        state_to_idx = {s:i for i,s in enumerate(enum)}
+        state_to_idx = {s: i for i, s in enumerate(enum)}
         int_states = {}
 
         for s, la in parse_table.states.items():
-            la = {k:(v[0], state_to_idx[v[1]]) if v[0] is Shift else v
-                  for k,v in la.items()}
-            int_states[ state_to_idx[s] ] = la
+            la = {k: (v[0], state_to_idx[v[1]]) if v[0] is Shift else v for k, v in la.items()}
+            int_states[state_to_idx[s]] = la
 
-
-        start_states = {start:state_to_idx[s] for start, s in parse_table.start_states.items()}
-        end_states = {start:state_to_idx[s] for start, s in parse_table.end_states.items()}
+        start_states = {start: state_to_idx[s] for start, s in parse_table.start_states.items()}
+        end_states = {start: state_to_idx[s] for start, s in parse_table.end_states.items()}
         return cls(int_states, start_states, end_states)
 
 
-
 def get_frontend(parser, lexer):
-    if parser=='lalr':
+    if parser == "lalr":
         if lexer is None:
-            raise ValueError('The LALR parser requires use of a lexer')
-        elif lexer == 'standard':
+            raise ValueError("The LALR parser requires use of a lexer")
+        elif lexer == "standard":
             return LALR_TraditionalLexer
-        elif lexer == 'contextual':
+        elif lexer == "contextual":
             return LALR_ContextualLexer
         elif issubclass(lexer, Lexer):
+
             class LALR_CustomLexerWrapper(LALR_CustomLexer):
                 def __init__(self, lexer_conf, parser_conf, options=None):
-                    super(LALR_CustomLexerWrapper, self).__init__(
-                        lexer, lexer_conf, parser_conf, options=options)
+                    super(LALR_CustomLexerWrapper, self).__init__(lexer, lexer_conf, parser_conf, options=options)
+
                 def init_lexer(self):
                     self.lexer = lexer(self.lexer_conf)
 
             return LALR_CustomLexerWrapper
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser=='earley':
-        if lexer=='standard':
+            raise ValueError("Unknown lexer: %s" % lexer)
+    elif parser == "earley":
+        if lexer == "standard":
             return Earley
-        elif lexer=='dynamic':
+        elif lexer == "dynamic":
             return XEarley
-        elif lexer=='dynamic_complete':
+        elif lexer == "dynamic_complete":
             return XEarley_CompleteLex
-        elif lexer=='contextual':
-            raise ValueError('The Earley parser does not support the contextual parser')
+        elif lexer == "contextual":
+            raise ValueError("The Earley parser does not support the contextual parser")
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
-    elif parser == 'cyk':
-        if lexer == 'standard':
+            raise ValueError("Unknown lexer: %s" % lexer)
+    elif parser == "cyk":
+        if lexer == "standard":
             return CYK
         else:
-            raise ValueError('CYK parser requires using standard parser.')
+            raise ValueError("CYK parser requires using standard parser.")
     else:
-        raise ValueError('Unknown parser: %s' % parser)
+        raise ValueError("Unknown parser: %s" % parser)
 
 
 class _ParserFrontend(Serialize):
@@ -1869,8 +1949,11 @@ class _ParserFrontend(Serialize):
         if start is None:
             start = self.start
             if len(start) > 1:
-                raise ValueError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
-            start ,= start
+                raise ValueError(
+                    "Lark initialized with more than 1 possible start rule. Must specify which start rule to parse",
+                    start,
+                )
+            (start,) = start
         return self.parser.parse(input, start, *args)
 
 
@@ -1889,8 +1972,8 @@ class WithLexer(_ParserFrontend):
     lexer_conf = None
     start = None
 
-    __serialize_fields__ = 'parser', 'lexer_conf', 'start'
-    __serialize_namespace__ = LexerConf,
+    __serialize_fields__ = "parser", "lexer_conf", "start"
+    __serialize_namespace__ = (LexerConf,)
 
     def __init__(self, lexer_conf, parser_conf, options=None):
         self.lexer_conf = lexer_conf
@@ -1907,13 +1990,13 @@ class WithLexer(_ParserFrontend):
         terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
         inst.lexer_conf.callbacks = _get_lexer_callbacks(transformer, terminals)
         inst.lexer_conf.re_module = re_module
-        inst.lexer_conf.skip_validation=True
+        inst.lexer_conf.skip_validation = True
         inst.init_lexer()
 
         return inst
 
     def _serialize(self, data, memo):
-        data['parser'] = data['parser'].serialize(memo)
+        data["parser"] = data["parser"].serialize(memo)
 
     def lex(self, *args):
         stream = self.lexer.lex(*args)
@@ -1926,6 +2009,7 @@ class WithLexer(_ParserFrontend):
     def init_traditional_lexer(self):
         self.lexer = TraditionalLexer(self.lexer_conf)
 
+
 class LALR_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         debug = options.debug if options else False
@@ -1937,19 +2021,21 @@ class LALR_WithLexer(WithLexer):
     def init_lexer(self, **kw):
         raise NotImplementedError()
 
+
 class LALR_TraditionalLexer(LALR_WithLexer):
     def init_lexer(self):
         self.init_traditional_lexer()
 
+
 class LALR_ContextualLexer(LALR_WithLexer):
     def init_lexer(self):
-        states = {idx:list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
+        states = {idx: list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = self.postlex.always_accept if self.postlex else ()
         self.lexer = ContextualLexer(self.lexer_conf, states, always_accept=always_accept)
 
-
     def parse(self, text, start=None):
         parser_state = [None]
+
         def set_parser_state(s):
             parser_state[0] = s
 
@@ -1958,7 +2044,7 @@ class LALR_ContextualLexer(LALR_WithLexer):
 
 
 class LarkOptions(Serialize):
-    #--
+    # --
     OPTIONS_DOC = """
     **===  General  ===**
 
@@ -2026,24 +2112,24 @@ class LarkOptions(Serialize):
         __doc__ += OPTIONS_DOC
 
     _defaults = {
-        'debug': False,
-        'keep_all_tokens': False,
-        'tree_class': None,
-        'cache': False,
-        'postlex': None,
-        'parser': 'earley',
-        'lexer': 'auto',
-        'transformer': None,
-        'start': 'start',
-        'priority': 'auto',
-        'ambiguity': 'auto',
-        'regex': False,
-        'propagate_positions': False,
-        'lexer_callbacks': {},
-        'maybe_placeholders': False,
-        'edit_terminals': None,
-        'g_regex_flags': 0,
-        'use_bytes': False,
+        "debug": False,
+        "keep_all_tokens": False,
+        "tree_class": None,
+        "cache": False,
+        "postlex": None,
+        "parser": "earley",
+        "lexer": "auto",
+        "transformer": None,
+        "start": "start",
+        "priority": "auto",
+        "ambiguity": "auto",
+        "regex": False,
+        "propagate_positions": False,
+        "lexer_callbacks": {},
+        "maybe_placeholders": False,
+        "edit_terminals": None,
+        "g_regex_flags": 0,
+        "use_bytes": False,
     }
 
     def __init__(self, options_dict):
@@ -2053,23 +2139,25 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
+                if isinstance(default, bool) and name not in ("cache", "use_bytes"):
                     value = bool(value)
             else:
                 value = default
 
             options[name] = value
 
-        if isinstance(options['start'], STRING_TYPE):
-            options['start'] = [options['start']]
+        if isinstance(options["start"], STRING_TYPE):
+            options["start"] = [options["start"]]
 
-        self.__dict__['options'] = options
+        self.__dict__["options"] = options
 
-        assert self.parser in ('earley', 'lalr', 'cyk', None)
+        assert self.parser in ("earley", "lalr", "cyk", None)
 
-        if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
-                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
+        if self.parser == "earley" and self.transformer:
+            raise ValueError(
+                "Cannot specify an embedded transformer when using the Earley algorithm."
+                "Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)"
+            )
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -2093,7 +2181,7 @@ class LarkOptions(Serialize):
 
 
 class Lark(Serialize):
-    #--
+    # --
     def __init__(self, grammar, **options):
         self.options = LarkOptions(options)
 
@@ -2104,7 +2192,7 @@ class Lark(Serialize):
             if regex:
                 re_module = regex
             else:
-                raise ImportError('`regex` module must be installed if calling `Lark(regex=True)`.')
+                raise ImportError("`regex` module must be installed if calling `Lark(regex=True)`.")
         else:
             re_module = re
 
@@ -2113,7 +2201,7 @@ class Lark(Serialize):
         try:
             self.source = grammar.name
         except AttributeError:
-            self.source = '<string>'
+            self.source = "<string>"
 
         ##
 
@@ -2129,63 +2217,82 @@ class Lark(Serialize):
         if self.options.use_bytes:
             if not isascii(grammar):
                 raise ValueError("Grammar must be ascii only, when use_bytes=True")
-            if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                raise NotImplementedError("`use_bytes=True` may have issues on python2."
-                                          "Use `use_bytes='force'` to use it at your own risk.")
+            if sys.version_info[0] == 2 and self.options.use_bytes != "force":
+                raise NotImplementedError(
+                    "`use_bytes=True` may have issues on python2." "Use `use_bytes='force'` to use it at your own risk."
+                )
 
         cache_fn = None
         if self.options.cache:
-            if self.options.parser != 'lalr':
+            if self.options.parser != "lalr":
                 raise NotImplementedError("cache only works with parser='lalr' for now")
             if isinstance(self.options.cache, STRING_TYPE):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
                     raise ValueError("cache argument must be bool or str")
-                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                unhashable = ("transformer", "postlex", "lexer_callbacks", "edit_terminals")
                 from . import __version__
-                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+
+                options_str = "".join(k + str(v) for k, v in options.items() if k not in unhashable)
                 s = grammar + options_str + __version__
                 md5 = hashlib.md5(s.encode()).hexdigest()
-                cache_fn = '.lark_cache_%s.tmp' % md5
+                cache_fn = ".lark_cache_%s.tmp" % md5
 
             if FS.exists(cache_fn):
-                logger.debug('Loading grammar from cache: %s', cache_fn)
-                with FS.open(cache_fn, 'rb') as f:
+                logger.debug("Loading grammar from cache: %s", cache_fn)
+                with FS.open(cache_fn, "rb") as f:
                     self._load(f, self.options.transformer, self.options.postlex)
                 return
 
-        if self.options.lexer == 'auto':
-            if self.options.parser == 'lalr':
-                self.options.lexer = 'contextual'
-            elif self.options.parser == 'earley':
-                self.options.lexer = 'dynamic'
-            elif self.options.parser == 'cyk':
-                self.options.lexer = 'standard'
+        if self.options.lexer == "auto":
+            if self.options.parser == "lalr":
+                self.options.lexer = "contextual"
+            elif self.options.parser == "earley":
+                self.options.lexer = "dynamic"
+            elif self.options.parser == "cyk":
+                self.options.lexer = "standard"
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete') or issubclass(lexer, Lexer)
+        assert lexer in ("standard", "contextual", "dynamic", "dynamic_complete") or issubclass(lexer, Lexer)
 
-        if self.options.ambiguity == 'auto':
-            if self.options.parser == 'earley':
-                self.options.ambiguity = 'resolve'
+        if self.options.ambiguity == "auto":
+            if self.options.parser == "earley":
+                self.options.ambiguity = "resolve"
         else:
-            disambig_parsers = ['earley', 'cyk']
-            assert self.options.parser in disambig_parsers, (
-                'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
+            disambig_parsers = ["earley", "cyk"]
+            assert self.options.parser in disambig_parsers, ("Only %s supports disambiguation right now") % ", ".join(
+                disambig_parsers
+            )
 
-        if self.options.priority == 'auto':
-            if self.options.parser in ('earley', 'cyk', ):
-                self.options.priority = 'normal'
-            elif self.options.parser in ('lalr', ):
+        if self.options.priority == "auto":
+            if self.options.parser in (
+                "earley",
+                "cyk",
+            ):
+                self.options.priority = "normal"
+            elif self.options.parser in ("lalr",):
                 self.options.priority = None
-        elif self.options.priority in ('invert', 'normal'):
-            assert self.options.parser in ('earley', 'cyk'), "priorities are not supported for LALR at this time"
+        elif self.options.priority in ("invert", "normal"):
+            assert self.options.parser in ("earley", "cyk"), "priorities are not supported for LALR at this time"
 
-        assert self.options.priority in ('auto', None, 'normal', 'invert'), 'invalid priority option specified: {}. options are auto, none, normal, invert.'.format(self.options.priority)
-        assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
-        assert self.options.ambiguity in ('resolve', 'explicit', 'auto', )
+        assert self.options.priority in (
+            "auto",
+            None,
+            "normal",
+            "invert",
+        ), "invalid priority option specified: {}. options are auto, none, normal, invert.".format(
+            self.options.priority
+        )
+        assert self.options.ambiguity not in (
+            "resolve__antiscore_sum",
+        ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
+        assert self.options.ambiguity in (
+            "resolve",
+            "explicit",
+            "auto",
+        )
 
         ##
 
@@ -2206,11 +2313,11 @@ class Lark(Serialize):
         ##
 
         for rule in self.rules:
-                ##
+            ##
 
-                ##
+            ##
 
-            if self.options.priority == 'invert':
+            if self.options.priority == "invert":
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
             elif self.options.priority is None:
@@ -2219,12 +2326,20 @@ class Lark(Serialize):
 
         ##
 
-        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
-                           if self.options.transformer
-                           else {})
+        lexer_callbacks = (
+            _get_lexer_callbacks(self.options.transformer, self.terminals) if self.options.transformer else {}
+        )
         lexer_callbacks.update(self.options.lexer_callbacks)
 
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
+        self.lexer_conf = LexerConf(
+            self.terminals,
+            re_module,
+            self.ignore_tokens,
+            self.options.postlex,
+            lexer_callbacks,
+            self.options.g_regex_flags,
+            use_bytes=self.options.use_bytes,
+        )
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -2232,22 +2347,29 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logger.debug('Saving grammar to cache: %s', cache_fn)
-            with FS.open(cache_fn, 'wb') as f:
+            logger.debug("Saving grammar to cache: %s", cache_fn)
+            with FS.open(cache_fn, "wb") as f:
                 self.save(f)
 
     ##
 
     __doc__ += "\nOptions:\n" + LarkOptions.OPTIONS_DOC
 
-    __serialize_fields__ = 'parser', 'rules', 'options'
+    __serialize_fields__ = "parser", "rules", "options"
 
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf)
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self._parse_tree_builder = ParseTreeBuilder(self.rules, self.options.tree_class or Tree, self.options.propagate_positions, self.options.keep_all_tokens, self.options.parser!='lalr' and self.options.ambiguity=='explicit', self.options.maybe_placeholders)
+        self._parse_tree_builder = ParseTreeBuilder(
+            self.rules,
+            self.options.tree_class or Tree,
+            self.options.propagate_positions,
+            self.options.keep_all_tokens,
+            self.options.parser != "lalr" and self.options.ambiguity == "explicit",
+            self.options.maybe_placeholders,
+        )
         self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
     def _build_parser(self):
@@ -2256,64 +2378,58 @@ class Lark(Serialize):
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
-        #--
+        # --
         data, m = self.memo_serialize([TerminalDef, Rule])
-        pickle.dump({'data': data, 'memo': m}, f)
+        pickle.dump({"data": data, "memo": m}, f)
 
     @classmethod
     def load(cls, f):
-        #--
+        # --
         inst = cls.__new__(cls)
         return inst._load(f)
 
     def _load(self, f, transformer=None, postlex=None):
         d = f if isinstance(f, dict) else pickle.load(f)
-        memo = d['memo']
-        data = d['data']
+        memo = d["memo"]
+        data = d["data"]
 
         assert memo
-        memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
-        options = dict(data['options'])
+        memo = SerializeMemoizer.deserialize(memo, {"Rule": Rule, "TerminalDef": TerminalDef}, {})
+        options = dict(data["options"])
         if transformer is not None:
-            options['transformer'] = transformer
+            options["transformer"] = transformer
         if postlex is not None:
-            options['postlex'] = postlex
+            options["postlex"] = postlex
         self.options = LarkOptions.deserialize(options, memo)
         re_module = regex if self.options.regex else re
-        self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source = '<deserialized>'
+        self.rules = [Rule.deserialize(r, memo) for r in data["rules"]]
+        self.source = "<deserialized>"
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
-            data['parser'],
-            memo,
-            self._callbacks,
-            self.options.postlex,
-            self.options.transformer,
-            re_module
+            data["parser"], memo, self._callbacks, self.options.postlex, self.options.transformer, re_module
         )
         return self
 
     @classmethod
     def _load_from_dict(cls, data, memo, transformer=None, postlex=None):
         inst = cls.__new__(cls)
-        return inst._load({'data': data, 'memo': memo}, transformer, postlex)
+        return inst._load({"data": data, "memo": memo}, transformer, postlex)
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
-        #--
+        # --
         if rel_to:
             basepath = os.path.dirname(rel_to)
             grammar_filename = os.path.join(basepath, grammar_filename)
-        with open(grammar_filename, encoding='utf8') as f:
+        with open(grammar_filename, encoding="utf8") as f:
             return cls(f, **options)
 
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
-
+        return "Lark(open(%r), parser=%r, lexer=%r, ...)" % (self.source, self.options.parser, self.options.lexer)
 
     def lex(self, text):
-        #--
-        if not hasattr(self, 'lexer'):
+        # --
+        if not hasattr(self, "lexer"):
             self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
         if self.options.postlex:
@@ -2321,11 +2437,11 @@ class Lark(Serialize):
         return stream
 
     def get_terminal(self, name):
-        #--
+        # --
         return self._terminals_dict[name]
 
     def parse(self, text, start=None, on_error=None):
-        #--
+        # --
 
         try:
             return self.parser.parse(text, start=start)
@@ -2342,14 +2458,628 @@ class Lark(Serialize):
                     e = e2
 
 
-
-DATA = (
-{'parser': {'parser': {'tokens': {0: 'RBRACE', 1: 'COMMA', 2: 'RSQB', 3: '$END', 4: '__object_star_1', 5: 'COLON', 6: 'LBRACE', 7: 'value', 8: 'string', 9: 'object', 10: 'TRUE', 11: 'SIGNED_NUMBER', 12: 'LSQB', 13: 'NULL', 14: 'FALSE', 15: 'array', 16: 'ESCAPED_STRING', 17: '__array_star_0', 18: 'pair', 19: 'start'}, 'states': {0: {0: (1, {'@': 12}), 1: (1, {'@': 12})}, 1: {1: (1, {'@': 13}), 2: (1, {'@': 13}), 0: (1, {'@': 13}), 3: (1, {'@': 13})}, 2: {1: (1, {'@': 14}), 2: (1, {'@': 14}), 0: (1, {'@': 14}), 3: (1, {'@': 14})}, 3: {0: (0, 25), 1: (0, 32)}, 4: {4: (0, 3), 1: (0, 27), 0: (0, 33)}, 5: {0: (1, {'@': 15}), 1: (1, {'@': 15})}, 6: {}, 7: {1: (0, 23), 2: (0, 2)}, 8: {1: (1, {'@': 16}), 2: (1, {'@': 16})}, 9: {1: (1, {'@': 17}), 2: (1, {'@': 17}), 5: (1, {'@': 17}), 0: (1, {'@': 17}), 3: (1, {'@': 17})}, 10: {1: (1, {'@': 18}), 2: (1, {'@': 18}), 0: (1, {'@': 18}), 3: (1, {'@': 18})}, 11: {1: (1, {'@': 19}), 2: (1, {'@': 19}), 0: (1, {'@': 19}), 3: (1, {'@': 19})}, 12: {1: (1, {'@': 20}), 2: (1, {'@': 20}), 0: (1, {'@': 20}), 3: (1, {'@': 20})}, 13: {5: (0, 22)}, 14: {6: (0, 21), 7: (0, 29), 8: (0, 12), 9: (0, 1), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 16: (0, 9)}, 15: {1: (1, {'@': 21}), 2: (1, {'@': 21}), 0: (1, {'@': 21}), 3: (1, {'@': 21})}, 16: {1: (1, {'@': 22}), 2: (1, {'@': 22}), 0: (1, {'@': 22}), 3: (1, {'@': 22})}, 17: {1: (1, {'@': 23}), 2: (1, {'@': 23}), 0: (1, {'@': 23}), 3: (1, {'@': 23})}, 18: {2: (0, 24), 1: (0, 14), 17: (0, 7)}, 19: {1: (1, {'@': 24}), 2: (1, {'@': 24}), 0: (1, {'@': 24}), 3: (1, {'@': 24})}, 20: {0: (1, {'@': 25}), 1: (1, {'@': 25})}, 21: {8: (0, 13), 18: (0, 4), 16: (0, 9), 0: (0, 19)}, 22: {6: (0, 21), 8: (0, 12), 9: (0, 1), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 7: (0, 20), 16: (0, 9)}, 23: {6: (0, 21), 7: (0, 8), 9: (0, 1), 8: (0, 12), 10: (0, 16), 11: (0, 11), 12: (0, 26), 13: (0, 30), 14: (0, 15), 15: (0, 10), 16: (0, 9)}, 24: {1: (1, {'@': 26}), 2: (1, {'@': 26}), 0: (1, {'@': 26}), 3: (1, {'@': 26})}, 25: {1: (1, {'@': 27}), 2: (1, {'@': 27}), 0: (1, {'@': 27}), 3: (1, {'@': 27})}, 26: {6: (0, 21), 10: (0, 16), 12: (0, 26), 13: (0, 30), 14: (0, 15), 7: (0, 18), 8: (0, 12), 16: (0, 9), 9: (0, 1), 11: (0, 11), 15: (0, 10), 2: (0, 17)}, 27: {8: (0, 13), 18: (0, 0), 16: (0, 9)}, 28: {6: (0, 21), 10: (0, 16), 12: (0, 26), 13: (0, 30), 8: (0, 12), 16: (0, 9), 19: (0, 6), 9: (0, 1), 11: (0, 11), 7: (0, 31), 15: (0, 10), 14: (0, 15)}, 29: {1: (1, {'@': 28}), 2: (1, {'@': 28})}, 30: {1: (1, {'@': 29}), 2: (1, {'@': 29}), 0: (1, {'@': 29}), 3: (1, {'@': 29})}, 31: {3: (1, {'@': 30})}, 32: {18: (0, 5), 8: (0, 13), 16: (0, 9)}, 33: {1: (1, {'@': 31}), 2: (1, {'@': 31}), 0: (1, {'@': 31}), 3: (1, {'@': 31})}}, 'start_states': {'start': 28}, 'end_states': {'start': 6}}, 'lexer_conf': {'tokens': [{'@': 0}, {'@': 1}, {'@': 2}, {'@': 3}, {'@': 4}, {'@': 5}, {'@': 6}, {'@': 7}, {'@': 8}, {'@': 9}, {'@': 10}, {'@': 11}], 'ignore': ['WS'], 'g_regex_flags': 0, 'use_bytes': False, '__type__': 'LexerConf'}, 'start': ['start'], '__type__': 'LALR_ContextualLexer'}, 'rules': [{'@': 30}, {'@': 13}, {'@': 18}, {'@': 20}, {'@': 19}, {'@': 22}, {'@': 21}, {'@': 29}, {'@': 14}, {'@': 26}, {'@': 23}, {'@': 27}, {'@': 31}, {'@': 24}, {'@': 25}, {'@': 17}, {'@': 28}, {'@': 16}, {'@': 12}, {'@': 15}], 'options': {'debug': False, 'keep_all_tokens': False, 'tree_class': None, 'cache': False, 'postlex': None, 'parser': 'lalr', 'lexer': 'contextual', 'transformer': None, 'start': ['start'], 'priority': None, 'ambiguity': 'auto', 'regex': False, 'propagate_positions': False, 'lexer_callbacks': {}, 'maybe_placeholders': False, 'edit_terminals': None, 'g_regex_flags': 0, 'use_bytes': False}, '__type__': 'Lark'}
-)
-MEMO = (
-{0: {'name': 'ESCAPED_STRING', 'pattern': {'value': '\\".*?(?<!\\\\)(\\\\\\\\)*?\\"', 'flags': [], '_width': [2, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 1: {'name': 'SIGNED_NUMBER', 'pattern': {'value': '(?:(?:\\+|\\-))?(?:(?:(?:[0-9])+(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+|(?:(?:[0-9])+\\.(?:(?:[0-9])+)?|\\.(?:[0-9])+)(?:(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+)?)|(?:[0-9])+)', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 2: {'name': 'WS', 'pattern': {'value': '(?:[ \t\x0c\r\n])+', 'flags': [], '_width': [1, 4294967295], '__type__': 'PatternRE'}, 'priority': 1, '__type__': 'TerminalDef'}, 3: {'name': 'TRUE', 'pattern': {'value': 'true', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 4: {'name': 'FALSE', 'pattern': {'value': 'false', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 5: {'name': 'NULL', 'pattern': {'value': 'null', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 6: {'name': 'COMMA', 'pattern': {'value': ',', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 7: {'name': 'LSQB', 'pattern': {'value': '[', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 8: {'name': 'RSQB', 'pattern': {'value': ']', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 9: {'name': 'LBRACE', 'pattern': {'value': '{', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 10: {'name': 'RBRACE', 'pattern': {'value': '}', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 11: {'name': 'COLON', 'pattern': {'value': ':', 'flags': [], '__type__': 'PatternStr'}, 'priority': 1, '__type__': 'TerminalDef'}, 12: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 13: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'object', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 14: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 15: {'origin': {'name': '__object_star_1', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 16: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': '__array_star_0', '__type__': 'NonTerminal'}, {'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 17: {'origin': {'name': 'string', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'ESCAPED_STRING', 'filter_out': False, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 18: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'array', '__type__': 'NonTerminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 19: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'SIGNED_NUMBER', 'filter_out': False, '__type__': 'Terminal'}], 'order': 3, 'alias': 'number', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 20: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 21: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'FALSE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 5, 'alias': 'false', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 22: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'TRUE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 4, 'alias': 'true', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 23: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 24: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 2, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': [False, True, False], '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 25: {'origin': {'name': 'pair', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'string', '__type__': 'NonTerminal'}, {'name': 'COLON', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 26: {'origin': {'name': 'array', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LSQB', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}, {'name': 'RSQB', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 27: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': '__object_star_1', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 28: {'origin': {'name': '__array_star_0', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'COMMA', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 29: {'origin': {'name': 'value', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'NULL', 'filter_out': True, '__type__': 'Terminal'}], 'order': 6, 'alias': 'null', 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 30: {'origin': {'name': 'start', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'value', '__type__': 'NonTerminal'}], 'order': 0, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': True, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}, 31: {'origin': {'name': 'object', '__type__': 'NonTerminal'}, 'expansion': [{'name': 'LBRACE', 'filter_out': True, '__type__': 'Terminal'}, {'name': 'pair', '__type__': 'NonTerminal'}, {'name': 'RBRACE', 'filter_out': True, '__type__': 'Terminal'}], 'order': 1, 'alias': None, 'options': {'keep_all_tokens': False, 'expand1': False, 'priority': None, 'template_source': None, 'empty_indices': (), '__type__': 'RuleOptions'}, '__type__': 'Rule'}}
-)
+DATA = {
+    "parser": {
+        "parser": {
+            "tokens": {
+                0: "RBRACE",
+                1: "COMMA",
+                2: "RSQB",
+                3: "$END",
+                4: "__object_star_1",
+                5: "COLON",
+                6: "LBRACE",
+                7: "value",
+                8: "string",
+                9: "object",
+                10: "TRUE",
+                11: "SIGNED_NUMBER",
+                12: "LSQB",
+                13: "NULL",
+                14: "FALSE",
+                15: "array",
+                16: "ESCAPED_STRING",
+                17: "__array_star_0",
+                18: "pair",
+                19: "start",
+            },
+            "states": {
+                0: {0: (1, {"@": 12}), 1: (1, {"@": 12})},
+                1: {1: (1, {"@": 13}), 2: (1, {"@": 13}), 0: (1, {"@": 13}), 3: (1, {"@": 13})},
+                2: {1: (1, {"@": 14}), 2: (1, {"@": 14}), 0: (1, {"@": 14}), 3: (1, {"@": 14})},
+                3: {0: (0, 25), 1: (0, 32)},
+                4: {4: (0, 3), 1: (0, 27), 0: (0, 33)},
+                5: {0: (1, {"@": 15}), 1: (1, {"@": 15})},
+                6: {},
+                7: {1: (0, 23), 2: (0, 2)},
+                8: {1: (1, {"@": 16}), 2: (1, {"@": 16})},
+                9: {1: (1, {"@": 17}), 2: (1, {"@": 17}), 5: (1, {"@": 17}), 0: (1, {"@": 17}), 3: (1, {"@": 17})},
+                10: {1: (1, {"@": 18}), 2: (1, {"@": 18}), 0: (1, {"@": 18}), 3: (1, {"@": 18})},
+                11: {1: (1, {"@": 19}), 2: (1, {"@": 19}), 0: (1, {"@": 19}), 3: (1, {"@": 19})},
+                12: {1: (1, {"@": 20}), 2: (1, {"@": 20}), 0: (1, {"@": 20}), 3: (1, {"@": 20})},
+                13: {5: (0, 22)},
+                14: {
+                    6: (0, 21),
+                    7: (0, 29),
+                    8: (0, 12),
+                    9: (0, 1),
+                    10: (0, 16),
+                    11: (0, 11),
+                    12: (0, 26),
+                    13: (0, 30),
+                    14: (0, 15),
+                    15: (0, 10),
+                    16: (0, 9),
+                },
+                15: {1: (1, {"@": 21}), 2: (1, {"@": 21}), 0: (1, {"@": 21}), 3: (1, {"@": 21})},
+                16: {1: (1, {"@": 22}), 2: (1, {"@": 22}), 0: (1, {"@": 22}), 3: (1, {"@": 22})},
+                17: {1: (1, {"@": 23}), 2: (1, {"@": 23}), 0: (1, {"@": 23}), 3: (1, {"@": 23})},
+                18: {2: (0, 24), 1: (0, 14), 17: (0, 7)},
+                19: {1: (1, {"@": 24}), 2: (1, {"@": 24}), 0: (1, {"@": 24}), 3: (1, {"@": 24})},
+                20: {0: (1, {"@": 25}), 1: (1, {"@": 25})},
+                21: {8: (0, 13), 18: (0, 4), 16: (0, 9), 0: (0, 19)},
+                22: {
+                    6: (0, 21),
+                    8: (0, 12),
+                    9: (0, 1),
+                    10: (0, 16),
+                    11: (0, 11),
+                    12: (0, 26),
+                    13: (0, 30),
+                    14: (0, 15),
+                    15: (0, 10),
+                    7: (0, 20),
+                    16: (0, 9),
+                },
+                23: {
+                    6: (0, 21),
+                    7: (0, 8),
+                    9: (0, 1),
+                    8: (0, 12),
+                    10: (0, 16),
+                    11: (0, 11),
+                    12: (0, 26),
+                    13: (0, 30),
+                    14: (0, 15),
+                    15: (0, 10),
+                    16: (0, 9),
+                },
+                24: {1: (1, {"@": 26}), 2: (1, {"@": 26}), 0: (1, {"@": 26}), 3: (1, {"@": 26})},
+                25: {1: (1, {"@": 27}), 2: (1, {"@": 27}), 0: (1, {"@": 27}), 3: (1, {"@": 27})},
+                26: {
+                    6: (0, 21),
+                    10: (0, 16),
+                    12: (0, 26),
+                    13: (0, 30),
+                    14: (0, 15),
+                    7: (0, 18),
+                    8: (0, 12),
+                    16: (0, 9),
+                    9: (0, 1),
+                    11: (0, 11),
+                    15: (0, 10),
+                    2: (0, 17),
+                },
+                27: {8: (0, 13), 18: (0, 0), 16: (0, 9)},
+                28: {
+                    6: (0, 21),
+                    10: (0, 16),
+                    12: (0, 26),
+                    13: (0, 30),
+                    8: (0, 12),
+                    16: (0, 9),
+                    19: (0, 6),
+                    9: (0, 1),
+                    11: (0, 11),
+                    7: (0, 31),
+                    15: (0, 10),
+                    14: (0, 15),
+                },
+                29: {1: (1, {"@": 28}), 2: (1, {"@": 28})},
+                30: {1: (1, {"@": 29}), 2: (1, {"@": 29}), 0: (1, {"@": 29}), 3: (1, {"@": 29})},
+                31: {3: (1, {"@": 30})},
+                32: {18: (0, 5), 8: (0, 13), 16: (0, 9)},
+                33: {1: (1, {"@": 31}), 2: (1, {"@": 31}), 0: (1, {"@": 31}), 3: (1, {"@": 31})},
+            },
+            "start_states": {"start": 28},
+            "end_states": {"start": 6},
+        },
+        "lexer_conf": {
+            "tokens": [
+                {"@": 0},
+                {"@": 1},
+                {"@": 2},
+                {"@": 3},
+                {"@": 4},
+                {"@": 5},
+                {"@": 6},
+                {"@": 7},
+                {"@": 8},
+                {"@": 9},
+                {"@": 10},
+                {"@": 11},
+            ],
+            "ignore": ["WS"],
+            "g_regex_flags": 0,
+            "use_bytes": False,
+            "__type__": "LexerConf",
+        },
+        "start": ["start"],
+        "__type__": "LALR_ContextualLexer",
+    },
+    "rules": [
+        {"@": 30},
+        {"@": 13},
+        {"@": 18},
+        {"@": 20},
+        {"@": 19},
+        {"@": 22},
+        {"@": 21},
+        {"@": 29},
+        {"@": 14},
+        {"@": 26},
+        {"@": 23},
+        {"@": 27},
+        {"@": 31},
+        {"@": 24},
+        {"@": 25},
+        {"@": 17},
+        {"@": 28},
+        {"@": 16},
+        {"@": 12},
+        {"@": 15},
+    ],
+    "options": {
+        "debug": False,
+        "keep_all_tokens": False,
+        "tree_class": None,
+        "cache": False,
+        "postlex": None,
+        "parser": "lalr",
+        "lexer": "contextual",
+        "transformer": None,
+        "start": ["start"],
+        "priority": None,
+        "ambiguity": "auto",
+        "regex": False,
+        "propagate_positions": False,
+        "lexer_callbacks": {},
+        "maybe_placeholders": False,
+        "edit_terminals": None,
+        "g_regex_flags": 0,
+        "use_bytes": False,
+    },
+    "__type__": "Lark",
+}
+MEMO = {
+    0: {
+        "name": "ESCAPED_STRING",
+        "pattern": {
+            "value": '\\".*?(?<!\\\\)(\\\\\\\\)*?\\"',
+            "flags": [],
+            "_width": [2, 4294967295],
+            "__type__": "PatternRE",
+        },
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    1: {
+        "name": "SIGNED_NUMBER",
+        "pattern": {
+            "value": "(?:(?:\\+|\\-))?(?:(?:(?:[0-9])+(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+|(?:(?:[0-9])+\\.(?:(?:[0-9])+)?|\\.(?:[0-9])+)(?:(?:e|E)(?:(?:\\+|\\-))?(?:[0-9])+)?)|(?:[0-9])+)",
+            "flags": [],
+            "_width": [1, 4294967295],
+            "__type__": "PatternRE",
+        },
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    2: {
+        "name": "WS",
+        "pattern": {"value": "(?:[ \t\x0c\r\n])+", "flags": [], "_width": [1, 4294967295], "__type__": "PatternRE"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    3: {
+        "name": "TRUE",
+        "pattern": {"value": "true", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    4: {
+        "name": "FALSE",
+        "pattern": {"value": "false", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    5: {
+        "name": "NULL",
+        "pattern": {"value": "null", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    6: {
+        "name": "COMMA",
+        "pattern": {"value": ",", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    7: {
+        "name": "LSQB",
+        "pattern": {"value": "[", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    8: {
+        "name": "RSQB",
+        "pattern": {"value": "]", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    9: {
+        "name": "LBRACE",
+        "pattern": {"value": "{", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    10: {
+        "name": "RBRACE",
+        "pattern": {"value": "}", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    11: {
+        "name": "COLON",
+        "pattern": {"value": ":", "flags": [], "__type__": "PatternStr"},
+        "priority": 1,
+        "__type__": "TerminalDef",
+    },
+    12: {
+        "origin": {"name": "__object_star_1", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "COMMA", "filter_out": True, "__type__": "Terminal"},
+            {"name": "pair", "__type__": "NonTerminal"},
+        ],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    13: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "object", "__type__": "NonTerminal"}],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    14: {
+        "origin": {"name": "array", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LSQB", "filter_out": True, "__type__": "Terminal"},
+            {"name": "value", "__type__": "NonTerminal"},
+            {"name": "__array_star_0", "__type__": "NonTerminal"},
+            {"name": "RSQB", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    15: {
+        "origin": {"name": "__object_star_1", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "__object_star_1", "__type__": "NonTerminal"},
+            {"name": "COMMA", "filter_out": True, "__type__": "Terminal"},
+            {"name": "pair", "__type__": "NonTerminal"},
+        ],
+        "order": 1,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    16: {
+        "origin": {"name": "__array_star_0", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "__array_star_0", "__type__": "NonTerminal"},
+            {"name": "COMMA", "filter_out": True, "__type__": "Terminal"},
+            {"name": "value", "__type__": "NonTerminal"},
+        ],
+        "order": 1,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    17: {
+        "origin": {"name": "string", "__type__": "NonTerminal"},
+        "expansion": [{"name": "ESCAPED_STRING", "filter_out": False, "__type__": "Terminal"}],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    18: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "array", "__type__": "NonTerminal"}],
+        "order": 1,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    19: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "SIGNED_NUMBER", "filter_out": False, "__type__": "Terminal"}],
+        "order": 3,
+        "alias": "number",
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    20: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "string", "__type__": "NonTerminal"}],
+        "order": 2,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    21: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "FALSE", "filter_out": True, "__type__": "Terminal"}],
+        "order": 5,
+        "alias": "false",
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    22: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "TRUE", "filter_out": True, "__type__": "Terminal"}],
+        "order": 4,
+        "alias": "true",
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    23: {
+        "origin": {"name": "array", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LSQB", "filter_out": True, "__type__": "Terminal"},
+            {"name": "RSQB", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 2,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": [False, True, False],
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    24: {
+        "origin": {"name": "object", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LBRACE", "filter_out": True, "__type__": "Terminal"},
+            {"name": "RBRACE", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 2,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": [False, True, False],
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    25: {
+        "origin": {"name": "pair", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "string", "__type__": "NonTerminal"},
+            {"name": "COLON", "filter_out": True, "__type__": "Terminal"},
+            {"name": "value", "__type__": "NonTerminal"},
+        ],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    26: {
+        "origin": {"name": "array", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LSQB", "filter_out": True, "__type__": "Terminal"},
+            {"name": "value", "__type__": "NonTerminal"},
+            {"name": "RSQB", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 1,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    27: {
+        "origin": {"name": "object", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LBRACE", "filter_out": True, "__type__": "Terminal"},
+            {"name": "pair", "__type__": "NonTerminal"},
+            {"name": "__object_star_1", "__type__": "NonTerminal"},
+            {"name": "RBRACE", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    28: {
+        "origin": {"name": "__array_star_0", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "COMMA", "filter_out": True, "__type__": "Terminal"},
+            {"name": "value", "__type__": "NonTerminal"},
+        ],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    29: {
+        "origin": {"name": "value", "__type__": "NonTerminal"},
+        "expansion": [{"name": "NULL", "filter_out": True, "__type__": "Terminal"}],
+        "order": 6,
+        "alias": "null",
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    30: {
+        "origin": {"name": "start", "__type__": "NonTerminal"},
+        "expansion": [{"name": "value", "__type__": "NonTerminal"}],
+        "order": 0,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": True,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+    31: {
+        "origin": {"name": "object", "__type__": "NonTerminal"},
+        "expansion": [
+            {"name": "LBRACE", "filter_out": True, "__type__": "Terminal"},
+            {"name": "pair", "__type__": "NonTerminal"},
+            {"name": "RBRACE", "filter_out": True, "__type__": "Terminal"},
+        ],
+        "order": 1,
+        "alias": None,
+        "options": {
+            "keep_all_tokens": False,
+            "expand1": False,
+            "priority": None,
+            "template_source": None,
+            "empty_indices": (),
+            "__type__": "RuleOptions",
+        },
+        "__type__": "Rule",
+    },
+}
 Shift = 0
 Reduce = 1
+
+
 def Lark_StandAlone(transformer=None, postlex=None):
-  return Lark._load_from_dict(DATA, MEMO, transformer=transformer, postlex=postlex)
+    return Lark._load_from_dict(DATA, MEMO, transformer=transformer, postlex=postlex)

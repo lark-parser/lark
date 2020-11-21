@@ -37,9 +37,7 @@ class WriteTokensTransformer(Transformer_InPlace):
                 except KeyError:
                     t = self.tokens[sym.name]
                     if not isinstance(t.pattern, PatternStr):
-                        raise NotImplementedError(
-                            "Reconstructing regexps not supported yet: %s" % t
-                        )
+                        raise NotImplementedError("Reconstructing regexps not supported yet: %s" % t)
 
                     v = t.pattern.value
                 to_write.append(v)
@@ -90,9 +88,7 @@ class Reconstructor(TreeMatcher):
     def __init__(self, parser, term_subs=None):
         TreeMatcher.__init__(self, parser)
 
-        self.write_tokens = WriteTokensTransformer(
-            {t.name: t for t in self.tokens}, term_subs or {}
-        )
+        self.write_tokens = WriteTokensTransformer({t.name: t for t in self.tokens}, term_subs or {})
 
     def _reconstruct(self, tree):
         unreduced_tree = self.match_tree(tree, tree.data)

@@ -31,17 +31,13 @@ class _Decoratable:
         for name, value in getmembers(cls):
 
             # Make sure the function isn't inherited (unless it's overwritten)
-            if name.startswith("_") or (
-                name in libmembers and name not in cls.__dict__
-            ):
+            if name.startswith("_") or (name in libmembers and name not in cls.__dict__):
                 continue
             if not callable(value):
                 continue
 
             # Skip if v_args already applied (at the function level)
-            if hasattr(cls.__dict__[name], "vargs_applied") or hasattr(
-                value, "vargs_applied"
-            ):
+            if hasattr(cls.__dict__[name], "vargs_applied") or hasattr(value, "vargs_applied"):
                 continue
 
             static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
@@ -337,10 +333,7 @@ class Interpreter(_Decoratable):
             return f(tree)
 
     def visit_children(self, tree):
-        return [
-            self.visit(child) if isinstance(child, Tree) else child
-            for child in tree.children
-        ]
+        return [self.visit(child) if isinstance(child, Tree) else child for child in tree.children]
 
     def __getattr__(self, name):
         return self.__default__
@@ -454,9 +447,7 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
                     tree.children = tree.children[::-1]
     """
     if tree and (meta or inline):
-        raise ValueError(
-            "Visitor functions cannot combine 'tree' with 'meta' or 'inline'."
-        )
+        raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
 
     func = None
     if meta:
@@ -471,9 +462,7 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 
     if wrapper is not None:
         if func is not None:
-            raise ValueError(
-                "Cannot use 'wrapper' along with 'tree', 'meta' or 'inline'."
-            )
+            raise ValueError("Cannot use 'wrapper' along with 'tree', 'meta' or 'inline'.")
         func = wrapper
 
     def _visitor_args_dec(obj):
@@ -503,10 +492,7 @@ class CollapseAmbiguities(Transformer):
         return sum(options, [])
 
     def __default__(self, data, children_lists, meta):
-        return [
-            Tree(data, children, meta)
-            for children in combine_alternatives(children_lists)
-        ]
+        return [Tree(data, children, meta) for children in combine_alternatives(children_lists)]
 
     def __default_token__(self, t):
         return [t]

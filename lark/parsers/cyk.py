@@ -155,13 +155,8 @@ def _parse(s, g):
             if match(terminal, w):
                 for rule in rules:
                     table[(i, i)].add(rule)
-                    if (
-                        rule.lhs not in trees[(i, i)]
-                        or rule.weight < trees[(i, i)][rule.lhs].weight
-                    ):
-                        trees[(i, i)][rule.lhs] = RuleNode(
-                            rule, [T(w)], weight=rule.weight
-                        )
+                    if rule.lhs not in trees[(i, i)] or rule.weight < trees[(i, i)][rule.lhs].weight:
+                        trees[(i, i)][rule.lhs] = RuleNode(rule, [T(w)], weight=rule.weight)
 
     # Iterate over lengths of sub-sentences
     for l in xrange(2, len(s) + 1):
@@ -176,13 +171,10 @@ def _parse(s, g):
                         table[(i, i + l - 1)].add(rule)
                         r1_tree = trees[span1][r1.lhs]
                         r2_tree = trees[span2][r2.lhs]
-                        rule_total_weight = (
-                            rule.weight + r1_tree.weight + r2_tree.weight
-                        )
+                        rule_total_weight = rule.weight + r1_tree.weight + r2_tree.weight
                         if (
                             rule.lhs not in trees[(i, i + l - 1)]
-                            or rule_total_weight
-                            < trees[(i, i + l - 1)][rule.lhs].weight
+                            or rule_total_weight < trees[(i, i + l - 1)][rule.lhs].weight
                         ):
                             trees[(i, i + l - 1)][rule.lhs] = RuleNode(
                                 rule, [r1_tree, r2_tree], weight=rule_total_weight
@@ -243,9 +235,7 @@ class UnitSkipRule(Rule):
         self.skipped_rules = skipped_rules
 
     def __eq__(self, other):
-        return (
-            isinstance(other, type(self)) and self.skipped_rules == other.skipped_rules
-        )
+        return isinstance(other, type(self)) and self.skipped_rules == other.skipped_rules
 
     __hash__ = Rule.__hash__
 
@@ -286,9 +276,7 @@ def _split(rule):
     """Splits a rule whose len(rhs) > 2 into shorter rules."""
     rule_str = str(rule.lhs) + "__" + "_".join(str(x) for x in rule.rhs)
     rule_name = "__SP_%s" % (rule_str) + "_%d"
-    yield Rule(
-        rule.lhs, [rule.rhs[0], NT(rule_name % 1)], weight=rule.weight, alias=rule.alias
-    )
+    yield Rule(rule.lhs, [rule.rhs[0], NT(rule_name % 1)], weight=rule.weight, alias=rule.alias)
     for i in xrange(1, len(rule.rhs) - 2):
         yield Rule(
             NT(rule_name % i),
@@ -296,24 +284,18 @@ def _split(rule):
             weight=0,
             alias="Split",
         )
-    yield Rule(
-        NT(rule_name % (len(rule.rhs) - 2)), rule.rhs[-2:], weight=0, alias="Split"
-    )
+    yield Rule(NT(rule_name % (len(rule.rhs) - 2)), rule.rhs[-2:], weight=0, alias="Split")
 
 
 def _term(g):
     """Applies the TERM rule on 'g' (see top comment)."""
     all_t = {x for rule in g.rules for x in rule.rhs if isinstance(x, T)}
-    t_rules = {
-        t: Rule(NT("__T_%s" % str(t)), [t], weight=0, alias="Term") for t in all_t
-    }
+    t_rules = {t: Rule(NT("__T_%s" % str(t)), [t], weight=0, alias="Term") for t in all_t}
     new_rules = []
     for rule in g.rules:
         if len(rule.rhs) > 1 and any(isinstance(x, T) for x in rule.rhs):
             new_rhs = [t_rules[x].lhs if isinstance(x, T) else x for x in rule.rhs]
-            new_rules.append(
-                Rule(rule.lhs, new_rhs, weight=rule.weight, alias=rule.alias)
-            )
+            new_rules.append(Rule(rule.lhs, new_rhs, weight=rule.weight, alias=rule.alias))
             new_rules.extend(v for k, v in t_rules.items() if k in rule.rhs)
         else:
             new_rules.append(rule)
@@ -348,9 +330,7 @@ def to_cnf(g):
 
 def unroll_unit_skiprule(lhs, orig_rhs, skipped_rules, children, weight, alias):
     if not skipped_rules:
-        return RuleNode(
-            Rule(lhs, orig_rhs, weight=weight, alias=alias), children, weight=weight
-        )
+        return RuleNode(Rule(lhs, orig_rhs, weight=weight, alias=alias), children, weight=weight)
     weight = weight - skipped_rules[0].weight
     return RuleNode(
         Rule(lhs, [skipped_rules[0].lhs], weight=weight, alias=alias),

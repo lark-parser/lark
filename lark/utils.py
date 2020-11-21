@@ -36,9 +36,7 @@ def _deserialize(data, namespace, memo):
             return class_.deserialize(data, memo)
         elif "@" in data:
             return memo[data["@"]]
-        return {
-            key: _deserialize(value, namespace, memo) for key, value in data.items()
-        }
+        return {key: _deserialize(value, namespace, memo) for key, value in data.items()}
     elif isinstance(data, list):
         return [_deserialize(value, namespace, memo) for value in data]
     return data
@@ -140,9 +138,7 @@ def smart_decorator(f, create_decorator):
 
     elif isinstance(f, partial):
         # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        return wraps(f.func)(
-            create_decorator(lambda *args, **kw: f(*args[1:], **kw), True)
-        )
+        return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
 
     else:
         return create_decorator(f.__func__.__call__, True)

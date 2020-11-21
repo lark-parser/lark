@@ -42,9 +42,7 @@ class LarkOptions:
     cache: Union[bool, str]
     g_regex_flags: int
     use_bytes: bool
-    import_paths: List[
-        Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]
-    ]
+    import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]
     source_path: Optional[str]
 
 class PackageResource(object):
@@ -86,18 +84,12 @@ class Lark:
         cache: Union[bool, str] = False,
         g_regex_flags: int = ...,
         use_bytes: bool = False,
-        import_paths: List[
-            Union[
-                str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]
-            ]
-        ] = ...,
+        import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]] = ...,
         source_path: Optional[str] = None,
     ): ...
     def parse(self, text: str, start: Optional[str] = None) -> Tree: ...
     @classmethod
-    def open(
-        cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options
-    ) -> _T: ...
+    def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options) -> _T: ...
     @classmethod
     def open_from_package(
         cls: Type[_T],

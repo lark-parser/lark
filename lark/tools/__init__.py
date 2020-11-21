@@ -14,9 +14,7 @@ from logging import DEBUG, ERROR, INFO, WARN
 
 from lark import Lark, logger
 
-lalr_argparser = ArgumentParser(
-    add_help=False, epilog="Look at the Lark documentation for more info on the options"
-)
+lalr_argparser = ArgumentParser(add_help=False, epilog="Look at the Lark documentation for more info on the options")
 
 flags = [
     ("d", "debug"),
@@ -37,9 +35,7 @@ lalr_argparser.add_argument(
     help="Increase Logger output level, up to three times",
 )
 lalr_argparser.add_argument("-s", "--start", action="append", default=[])
-lalr_argparser.add_argument(
-    "-l", "--lexer", default="contextual", choices=("standard", "contextual")
-)
+lalr_argparser.add_argument("-l", "--lexer", default="contextual", choices=("standard", "contextual"))
 k = {"encoding": "utf-8"} if sys.version_info > (3, 4) else {}
 lalr_argparser.add_argument(
     "-o",
@@ -48,9 +44,7 @@ lalr_argparser.add_argument(
     default=sys.stdout,
     help="the output file (default=stdout)",
 )
-lalr_argparser.add_argument(
-    "grammar_file", type=FileType("r", **k), help="A valid .lark file"
-)
+lalr_argparser.add_argument("grammar_file", type=FileType("r", **k), help="A valid .lark file")
 
 for f in flags:
     if isinstance(f, tuple):

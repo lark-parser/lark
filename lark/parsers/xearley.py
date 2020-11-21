@@ -35,9 +35,7 @@ class Parser(BaseParser):
         debug=False,
         tree_class=Tree,
     ):
-        BaseParser.__init__(
-            self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class
-        )
+        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 
@@ -91,17 +89,11 @@ class Parser(BaseParser):
                 m = match(x, stream, i)
                 if m:
                     # Carry over any items still in the scan buffer, to past the end of the ignored items.
-                    delayed_matches[m.end()].extend(
-                        [(item, i, None) for item in to_scan]
-                    )
+                    delayed_matches[m.end()].extend([(item, i, None) for item in to_scan])
 
                     # If we're ignoring up to the end of the file, # carry over the start symbol if it already completed.
                     delayed_matches[m.end()].extend(
-                        [
-                            (item, i, None)
-                            for item in columns[i]
-                            if item.is_complete and item.s == start_symbol
-                        ]
+                        [(item, i, None) for item in columns[i] if item.is_complete and item.s == start_symbol]
                     )
 
             next_to_scan = set()
@@ -123,13 +115,9 @@ class Parser(BaseParser):
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
                     new_item.node = (
-                        node_cache[label]
-                        if label in node_cache
-                        else node_cache.setdefault(label, SymbolNode(*label))
+                        node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
                     )
-                    new_item.node.add_family(
-                        new_item.s, item.rule, new_item.start, item.node, token
-                    )
+                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
                 else:
                     new_item = item
 

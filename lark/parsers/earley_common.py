@@ -43,9 +43,7 @@ class Item(object):
         else:
             self.s = (rule, ptr)
             self.expect = rule.expansion[ptr]
-        self.previous = (
-            rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
-        )
+        self.previous = rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
         self._hash = hash((self.s, self.start))
 
     def advance(self):
@@ -60,9 +58,7 @@ class Item(object):
     def __repr__(self):
         before = (expansion.name for expansion in self.rule.expansion[: self.ptr])
         after = (expansion.name for expansion in self.rule.expansion[self.ptr :])
-        symbol = "{} ::= {}* {}".format(
-            self.rule.origin.name, " ".join(before), " ".join(after)
-        )
+        symbol = "{} ::= {}* {}".format(self.rule.origin.name, " ".join(before), " ".join(after))
         return "%s (%d)" % (symbol, self.start)
 
 

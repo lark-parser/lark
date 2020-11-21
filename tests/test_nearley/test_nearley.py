@@ -29,9 +29,7 @@ class TestNearley(unittest.TestCase):
         with open(fn) as f:
             grammar = f.read()
 
-        code = create_code_for_nearley_grammar(
-            grammar, "csscolor", BUILTIN_PATH, os.path.dirname(fn)
-        )
+        code = create_code_for_nearley_grammar(grammar, "csscolor", BUILTIN_PATH, os.path.dirname(fn))
         d = {}
         exec(code, d)
         parse = d["parse"]
@@ -51,9 +49,7 @@ class TestNearley(unittest.TestCase):
         with open(fn) as f:
             grammar = f.read()
 
-        code = create_code_for_nearley_grammar(
-            grammar, "main", BUILTIN_PATH, os.path.dirname(fn)
-        )
+        code = create_code_for_nearley_grammar(grammar, "main", BUILTIN_PATH, os.path.dirname(fn))
         d = {}
         exec(code, d)
         parse = d["parse"]
@@ -66,9 +62,7 @@ class TestNearley(unittest.TestCase):
         with open(fn) as f:
             grammar = f.read()
 
-        code = create_code_for_nearley_grammar(
-            grammar, "main", BUILTIN_PATH, os.path.dirname(fn)
-        )
+        code = create_code_for_nearley_grammar(grammar, "main", BUILTIN_PATH, os.path.dirname(fn))
         d = {}
         exec(code, d)
         parse = d["parse"]

@@ -55,9 +55,7 @@ print(tree.pretty())
 forest = parser.parse("Hello World")
 
 print("Custom prioritizer:")
-tree = TreeForestTransformer(
-    resolve_ambiguity=True, prioritizer=TokenPrioritizer()
-).transform(forest)
+tree = TreeForestTransformer(resolve_ambiguity=True, prioritizer=TokenPrioritizer()).transform(forest)
 print(tree.pretty())
 
 # Output:

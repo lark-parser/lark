@@ -83,9 +83,7 @@ class SymbolNode(ForestNode):
     def load_paths(self):
         for transitive, node in self.paths:
             if transitive.next_titem is not None:
-                vn = SymbolNode(
-                    transitive.next_titem.s, transitive.next_titem.start, self.end
-                )
+                vn = SymbolNode(transitive.next_titem.s, transitive.next_titem.start, self.end)
                 vn.add_path(transitive.next_titem, node)
                 self.add_family(
                     transitive.reduction.rule.origin,
@@ -124,10 +122,7 @@ class SymbolNode(ForestNode):
         if not isinstance(other, SymbolNode):
             return False
         return self is other or (
-            type(self.s) == type(other.s)
-            and self.s == other.s
-            and self.start == other.start
-            and self.end is other.end
+            type(self.s) == type(other.s) and self.s == other.s and self.start == other.start and self.end is other.end
         )
 
     def __hash__(self):
@@ -139,9 +134,7 @@ class SymbolNode(ForestNode):
             ptr = self.s[1]
             before = (expansion.name for expansion in rule.expansion[:ptr])
             after = (expansion.name for expansion in rule.expansion[ptr:])
-            symbol = "{} ::= {}* {}".format(
-                rule.origin.name, " ".join(before), " ".join(after)
-            )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, " ".join(before), " ".join(after))
         else:
             symbol = self.s.name
         return "({}, {}, {}, {})".format(symbol, self.start, self.end, self.priority)
@@ -207,14 +200,10 @@ class PackedNode(ForestNode):
             ptr = self.s[1]
             before = (expansion.name for expansion in rule.expansion[:ptr])
             after = (expansion.name for expansion in rule.expansion[ptr:])
-            symbol = "{} ::= {}* {}".format(
-                rule.origin.name, " ".join(before), " ".join(after)
-            )
+            symbol = "{} ::= {}* {}".format(rule.origin.name, " ".join(before), " ".join(after))
         else:
             symbol = self.s.name
-        return "({}, {}, {}, {})".format(
-            symbol, self.start, self.priority, self.rule.order
-        )
+        return "({}, {}, {}, {})".format(symbol, self.start, self.priority, self.rule.order)
 
 
 class ForestVisitor(object):
@@ -356,9 +345,7 @@ class ForestVisitor(object):
                 if next_node is None:
                     continue
 
-                if not isinstance(next_node, ForestNode) and not isinstance(
-                    next_node, Token
-                ):
+                if not isinstance(next_node, ForestNode) and not isinstance(next_node, Token):
                     next_node = iter(next_node)
                 elif id(next_node) in visiting:
                     oc(next_node, path)
@@ -494,11 +481,7 @@ class ForestSumVisitor(ForestVisitor):
         return iter(node.children)
 
     def visit_packed_node_out(self, node):
-        priority = (
-            node.rule.options.priority
-            if not node.parent.is_intermediate and node.rule.options.priority
-            else 0
-        )
+        priority = node.rule.options.priority if not node.parent.is_intermediate and node.rule.options.priority else 0
         priority += getattr(node.right, "priority", 0)
         priority += getattr(node.left, "priority", 0)
         node.priority = priority
@@ -698,12 +681,8 @@ class TreeForestTransformer(ForestToParseTree):
         priorities.
     """
 
-    def __init__(
-        self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True
-    ):
-        super(TreeForestTransformer, self).__init__(
-            tree_class, dict(), prioritizer, resolve_ambiguity
-        )
+    def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True):
+        super(TreeForestTransformer, self).__init__(tree_class, dict(), prioritizer, resolve_ambiguity)
 
     def __default__(self, name, data):
         """Default operation on tree (for override).
@@ -735,11 +714,7 @@ class TreeForestTransformer(ForestToParseTree):
         return getattr(self, node.type, self.__default_token__)(node)
 
     def _call_rule_func(self, node, data):
-        name = (
-            node.rule.alias
-            or node.rule.options.template_source
-            or node.rule.origin.name
-        )
+        name = node.rule.alias or node.rule.options.template_source or node.rule.origin.name
         user_func = getattr(self, name, self.__default__)
         if user_func == self.__default__ or hasattr(user_func, "handles_ambiguity"):
             user_func = partial(self.__default__, name)
@@ -751,9 +726,7 @@ class TreeForestTransformer(ForestToParseTree):
     def _call_ambig_func(self, node, data):
         name = node.s.name
         user_func = getattr(self, name, self.__default_ambig__)
-        if user_func == self.__default_ambig__ or not hasattr(
-            user_func, "handles_ambiguity"
-        ):
+        if user_func == self.__default_ambig__ or not hasattr(user_func, "handles_ambiguity"):
             user_func = partial(self.__default_ambig__, name)
         return user_func(data)
 
@@ -821,22 +794,12 @@ class ForestToPyDotVisitor(ForestVisitor):
                 self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
             else:
                 #### Try and be above the Python object ID range; probably impl. specific, but maybe this is okay.
-                child_graph_node_id = str(
-                    randint(
-                        100000000000000000000000000000, 123456789012345678901234567890
-                    )
-                )
+                child_graph_node_id = str(randint(100000000000000000000000000000, 123456789012345678901234567890))
                 child_graph_node_style = "invis"
-                child_graph_node = self.pydot.Node(
-                    child_graph_node_id, style=child_graph_node_style, label="None"
-                )
+                child_graph_node = self.pydot.Node(child_graph_node_id, style=child_graph_node_style, label="None")
                 child_edge_style = "invis"
                 self.graph.add_node(child_graph_node)
-                self.graph.add_edge(
-                    self.pydot.Edge(
-                        graph_node, child_graph_node, style=child_edge_style
-                    )
-                )
+                self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node, style=child_edge_style))
 
     def visit_symbol_node_in(self, node):
         graph_node_id = str(id(node))

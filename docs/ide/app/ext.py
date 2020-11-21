@@ -35,16 +35,7 @@ class Button(html5.Button):
 
 
 class Input(html5.Input):
-    def __init__(
-        self,
-        type="text",
-        placeholder=None,
-        callback=None,
-        id=None,
-        focusCallback=None,
-        *args,
-        **kwargs
-    ):
+    def __init__(self, type="text", placeholder=None, callback=None, id=None, focusCallback=None, *args, **kwargs):
         """
 
         :param type: Input type. Default: "text
@@ -87,15 +78,7 @@ class Input(html5.Input):
 
 class Popup(html5.Div):
     def __init__(
-        self,
-        title=None,
-        id=None,
-        className=None,
-        icon=None,
-        enableShortcuts=True,
-        closeable=True,
-        *args,
-        **kwargs
+        self, title=None, id=None, className=None, icon=None, enableShortcuts=True, closeable=True, *args, **kwargs
     ):
         super().__init__(
             """
@@ -140,9 +123,7 @@ class Popup(html5.Div):
         elif title:
             self.popupIcon.appendChild(title[0])
         else:
-            self.popupIcon.appendChild(
-                "Vi"
-            )  # fixme!!! this _LIBRARY_ is not only used in the Vi...
+            self.popupIcon.appendChild("Vi")  # fixme!!! this _LIBRARY_ is not only used in the Vi...
 
         # id can be used to pass information to callbacks
         self.id = id
@@ -163,9 +144,7 @@ class Popup(html5.Div):
         super(Popup, self).onAttach()
 
         if self.enableShortcuts:
-            self.onDocumentKeyDownMethod = (
-                self.onDocumentKeyDown
-            )  # safe reference to method
+            self.onDocumentKeyDownMethod = self.onDocumentKeyDown  # safe reference to method
             html5.document.addEventListener("keydown", self.onDocumentKeyDownMethod)
 
     def onDetach(self):
@@ -218,14 +197,10 @@ class InputDialog(Popup):
         )
 
         # Cancel
-        self.popupFoot.appendChild(
-            Button(abortLbl, self.onCancel, className="btn--cancel btn--danger")
-        )
+        self.popupFoot.appendChild(Button(abortLbl, self.onCancel, className="btn--cancel btn--danger"))
 
         # Okay
-        self.okayBtn = Button(
-            successLbl, self.onOkay, className="btn--okay btn--primary"
-        )
+        self.okayBtn = Button(successLbl, self.onOkay, className="btn--okay btn--primary")
         if not value:
             self.okayBtn.disable()
 
@@ -268,20 +243,9 @@ class Alert(Popup):
     """
 
     def __init__(
-        self,
-        msg,
-        title=None,
-        className=None,
-        okCallback=None,
-        okLabel="OK",
-        icon="!",
-        closeable=True,
-        *args,
-        **kwargs
+        self, msg, title=None, className=None, okCallback=None, okLabel="OK", icon="!", closeable=True, *args, **kwargs
     ):
-        super().__init__(
-            title, className=None, icon=icon, closeable=closeable, *args, **kwargs
-        )
+        super().__init__(title, className=None, icon=icon, closeable=closeable, *args, **kwargs)
         self.addClass("popup--alert")
 
         if className:
@@ -467,18 +431,12 @@ class SelectDialog(Popup):
                 self.popupFoot.appendChild(Button(okBtn, callback=self.onOkClick))
 
             if cancelBtn:
-                self.popupFoot.appendChild(
-                    Button(cancelBtn, callback=self.onCancelClick)
-                )
+                self.popupFoot.appendChild(Button(cancelBtn, callback=self.onCancelClick))
 
     def onAnyBtnClick(self, sender):
         item = self.items[sender.idx]
 
-        if (
-            isinstance(item, dict)
-            and item.get("callback")
-            and callable(item["callback"])
-        ):
+        if isinstance(item, dict) and item.get("callback") and callable(item["callback"]):
             item["callback"](item)
 
         if self.callback:
@@ -492,15 +450,9 @@ class SelectDialog(Popup):
 
     def onOkClick(self, sender=None):
         assert self.select["selectedIndex"] >= 0
-        item = self.items[
-            int(self.select.children(self.select["selectedIndex"])["value"])
-        ]
+        item = self.items[int(self.select.children(self.select["selectedIndex"])["value"])]
 
-        if (
-            isinstance(item, dict)
-            and item.get("callback")
-            and callable(item["callback"])
-        ):
+        if isinstance(item, dict) and item.get("callback") and callable(item["callback"]):
             item["callback"](item)
 
         if self.callback:

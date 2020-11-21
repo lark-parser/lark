@@ -403,9 +403,7 @@ class TestParsers(unittest.TestCase):
 
 def _make_full_earley_test(LEXER):
     def _Lark(grammar, **kwargs):
-        return Lark(
-            grammar, lexer=LEXER, parser="earley", propagate_positions=True, **kwargs
-        )
+        return Lark(grammar, lexer=LEXER, parser="earley", propagate_positions=True, **kwargs)
 
     class _TestFullEarley(unittest.TestCase):
         def test_anon(self):
@@ -446,9 +444,7 @@ def _make_full_earley_test(LEXER):
             l = Lark(grammar, parser="earley", lexer=LEXER)
             l.parse(program)
 
-        @unittest.skipIf(
-            LEXER == "dynamic", "Only relevant for the dynamic_complete parser"
-        )
+        @unittest.skipIf(LEXER == "dynamic", "Only relevant for the dynamic_complete parser")
         def test_earley3(self):
             """Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)
 
@@ -842,9 +838,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(tree.data, expected.data)
             self.assertEqual(set(tree.children), set(expected.children))
 
-        @unittest.skipIf(
-            LEXER != "dynamic_complete", "Only relevant for the dynamic_complete parser"
-        )
+        @unittest.skipIf(LEXER != "dynamic_complete", "Only relevant for the dynamic_complete parser")
         def test_explicit_ambiguity2(self):
             grammar = r"""
             start: NAME+
@@ -858,9 +852,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(tree.data, "_ambig")
 
             combinations = {tuple(str(s) for s in t.children) for t in tree.children}
-            self.assertEqual(
-                combinations, {("cat",), ("ca", "t"), ("c", "at"), ("c", "a", "t")}
-            )
+            self.assertEqual(combinations, {("cat",), ("ca", "t"), ("c", "at"), ("c", "a", "t")})
 
         def test_term_ambig_resolve(self):
             grammar = r"""
@@ -1012,9 +1004,7 @@ class DualBytesLark:
             self.bytes_lark = None
         else:
             # Everything here should work, so use `use_bytes='force'`
-            self.bytes_lark = Lark(
-                self.text_lexer.grammar_source, *args, use_bytes="force", **kwargs
-            )
+            self.bytes_lark = Lark(self.text_lexer.grammar_source, *args, use_bytes="force", **kwargs)
 
     def parse(self, text, start=None):
         # TODO: Easy workaround, more complex checks would be beneficial
@@ -1026,17 +1016,13 @@ class DualBytesLark:
             try:
                 self.bytes_lark.parse(text.encode(), start)
             except Exception as be:
-                assert type(e) == type(
-                    be
-                ), "Parser with and without `use_bytes` raise different exceptions"
+                assert type(e) == type(be), "Parser with and without `use_bytes` raise different exceptions"
                 raise e
             assert False, "Parser without `use_bytes` raises exception, with doesn't"
         try:
             bv = self.bytes_lark.parse(text.encode(), start)
         except Exception as be:
-            assert (
-                False
-            ), "Parser without `use_bytes` doesn't raise an exception, with does"
+            assert False, "Parser without `use_bytes` doesn't raise an exception, with does"
         _tree_structure_check(rv, bv)
         return rv
 
@@ -1063,22 +1049,10 @@ def _make_parser_test(LEXER, PARSER):
     lexer_class_or_name = CustomLexer if LEXER == "custom" else LEXER
 
     def _Lark(grammar, **kwargs):
-        return Lark(
-            grammar,
-            lexer=lexer_class_or_name,
-            parser=PARSER,
-            propagate_positions=True,
-            **kwargs
-        )
+        return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
 
     def _Lark_open(gfilename, **kwargs):
-        return Lark.open(
-            gfilename,
-            lexer=lexer_class_or_name,
-            parser=PARSER,
-            propagate_positions=True,
-            **kwargs
-        )
+        return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
 
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
@@ -1225,9 +1199,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("a")
 
             # because 'list' is an expand-if-contains-one rule and we only provided one element it should have expanded to 'item'
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("item",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("item",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
@@ -1243,9 +1215,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("a!")
 
             # because 'list' is an expand-if-contains-one rule and we only provided one element it should have expanded to 'item'
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("item",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("item",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
@@ -1261,18 +1231,14 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("aa")
 
             # because 'list' is an expand-if-contains-one rule and we've provided more than one element it should *not* have expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
 
             # Sanity check: verify that 'list' contains the two 'item's we've given it
             [list] = r.children
-            self.assertSequenceEqual(
-                [item.data for item in list.children], ("item", "item")
-            )
+            self.assertSequenceEqual([item.data for item in list.children], ("item", "item"))
 
         def test_dont_expand1_lists_with_multiple_items_2(self):
             g = _Lark(
@@ -1285,18 +1251,14 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("aa!")
 
             # because 'list' is an expand-if-contains-one rule and we've provided more than one element it should *not* have expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
 
             # Sanity check: verify that 'list' contains the two 'item's we've given it
             [list] = r.children
-            self.assertSequenceEqual(
-                [item.data for item in list.children], ("item", "item")
-            )
+            self.assertSequenceEqual([item.data for item in list.children], ("item", "item"))
 
         @unittest.skipIf(PARSER == "cyk", "No empty rules")
         def test_empty_expand1_list(self):
@@ -1310,9 +1272,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("")
 
             # because 'list' is an expand-if-contains-one rule and we've provided less than one element (i.e. none) it should *not* have expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
@@ -1333,9 +1293,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("")
 
             # because 'list' is an expand-if-contains-one rule and we've provided less than one element (i.e. none) it should *not* have expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # regardless of the amount of items: there should be only *one* child in 'start' because 'list' isn't an expand-all rule
             self.assertEqual(len(r.children), 1)
@@ -1356,9 +1314,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("")
 
             # Because 'list' is a flatten rule it's top-level element should *never* be expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # Sanity check: verify that 'list' contains no 'item's as we've given it none
             [list] = r.children
@@ -1376,9 +1332,7 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("a,")
 
             # Because 'list' is a flatten rule it's top-level element should *never* be expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # Sanity check: verify that 'list' contains exactly the one 'item' we've given it
             [list] = r.children
@@ -1396,15 +1350,11 @@ def _make_parser_test(LEXER, PARSER):
             r = g.parse("a,a,")
 
             # Because 'list' is a flatten rule it's top-level element should *never* be expanded
-            self.assertSequenceEqual(
-                [subtree.data for subtree in r.children], ("list",)
-            )
+            self.assertSequenceEqual([subtree.data for subtree in r.children], ("list",))
 
             # Sanity check: verify that 'list' contains exactly the two 'item's we've given it
             [list] = r.children
-            self.assertSequenceEqual(
-                [item.data for item in list.children], ("item", "item")
-            )
+            self.assertSequenceEqual([item.data for item in list.children], ("item", "item"))
 
         @unittest.skipIf(True, "Flattening list isn't implemented (and may never be)")
         def test_recurse_flatten(self):
@@ -1605,9 +1555,7 @@ def _make_parser_test(LEXER, PARSER):
                         A: "a" """
             )
             x = g.parse("aa")
-            self.assertEqual(
-                len(x.children), 1, 'only "a" should be considered anonymous'
-            )
+            self.assertEqual(len(x.children), 1, 'only "a" should be considered anonymous')
             self.assertEqual(x.children[0].type, "A")
 
             g = _Lark(
@@ -1747,9 +1695,7 @@ def _make_parser_test(LEXER, PARSER):
             )
 
         def test_float_without_lexer(self):
-            expected_error = (
-                UnexpectedCharacters if LEXER.startswith("dynamic") else UnexpectedToken
-            )
+            expected_error = UnexpectedCharacters if LEXER.startswith("dynamic") else UnexpectedToken
             if PARSER == "cyk":
                 expected_error = ParseError
 
@@ -1917,9 +1863,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse("aa")
             self.assertEqual(len(tree.children), 2)
 
-        @unittest.skipIf(
-            LEXER != "standard", "Only standard lexers care about token priority"
-        )
+        @unittest.skipIf(LEXER != "standard", "Only standard lexers care about token priority")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -2021,9 +1965,7 @@ def _make_parser_test(LEXER, PARSER):
 
         def test_relative_rule_import_drop_ignore(self):
             # %ignore rules are dropped on import
-            l = _Lark_open(
-                "test_relative_rule_import_drop_ignore.lark", rel_to=__file__
-            )
+            l = _Lark_open("test_relative_rule_import_drop_ignore.lark", rel_to=__file__)
             self.assertRaises((ParseError, UnexpectedInput), l.parse, "xa abby")
 
         def test_relative_rule_import_subrule(self):
@@ -2051,9 +1993,7 @@ def _make_parser_test(LEXER, PARSER):
             )
 
         def test_relative_rule_import_subrule_no_conflict(self):
-            l = _Lark_open(
-                "test_relative_rule_import_subrule_no_conflict.lark", rel_to=__file__
-            )
+            l = _Lark_open("test_relative_rule_import_subrule_no_conflict.lark", rel_to=__file__)
             x = l.parse("xaby")
             self.assertEqual(
                 x.children,
@@ -2078,9 +2018,7 @@ def _make_parser_test(LEXER, PARSER):
         def test_relative_rule_import_rename(self):
             l = _Lark_open("test_relative_rule_import_rename.lark", rel_to=__file__)
             x = l.parse("xaabby")
-            self.assertEqual(
-                x.children, ["x", Tree("ab", ["a", Tree("ab", ["a", "b"]), "b"]), "y"]
-            )
+            self.assertEqual(x.children, ["x", Tree("ab", ["a", Tree("ab", ["a", "b"]), "b"]), "y"])
 
         def test_multi_import(self):
             grammar = """
@@ -2108,9 +2046,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(next(x.find_data("c")).children, ["A"])
 
         def test_relative_import_of_nested_grammar(self):
-            l = _Lark_open(
-                "grammars/test_relative_import_of_nested_grammar.lark", rel_to=__file__
-            )
+            l = _Lark_open("grammars/test_relative_import_of_nested_grammar.lark", rel_to=__file__)
             x = l.parse("N")
             self.assertEqual(next(x.find_data("rule_to_import")).children, ["N"])
 
@@ -2139,9 +2075,7 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(IOError, _Lark, grammar)
 
-        @unittest.skipIf(
-            LEXER == "dynamic", "%declare/postlex doesn't work with dynamic"
-        )
+        @unittest.skipIf(LEXER == "dynamic", "%declare/postlex doesn't work with dynamic")
         def test_postlex_declare(
             self,
         ):  # Note: this test does a lot. maybe split it up?
@@ -2167,9 +2101,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse(test_file)
             self.assertEqual(tree.children, [Token("B", "A")])
 
-        @unittest.skipIf(
-            LEXER == "dynamic", "%declare/postlex doesn't work with dynamic"
-        )
+        @unittest.skipIf(LEXER == "dynamic", "%declare/postlex doesn't work with dynamic")
         def test_postlex_indenter(self):
             class CustomIndenter(Indenter):
                 NL_type = "NEWLINE"
@@ -2310,9 +2242,7 @@ def _make_parser_test(LEXER, PARSER):
 
             l = _Lark(grammar, priority="invert")
             res = l.parse("abba")
-            self.assertEqual(
-                "".join(child.data for child in res.children), "indirection"
-            )
+            self.assertEqual("".join(child.data for child in res.children), "indirection")
 
             grammar = """
             start: ab_ b_ a_ | indirection
@@ -2338,9 +2268,7 @@ def _make_parser_test(LEXER, PARSER):
 
             l = _Lark(grammar, priority="invert")
             res = l.parse("abba")
-            self.assertEqual(
-                "".join(child.data for child in res.children), "indirection"
-            )
+            self.assertEqual("".join(child.data for child in res.children), "indirection")
 
         def test_utf8(self):
             g = u"""start: a
@@ -2370,9 +2298,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse("int 1 ! This is a comment\n")
             self.assertEqual(tree.children, ["1"])
 
-            tree = parser.parse(
-                "int 1 ! This is a comment"
-            )  # A trailing ignore token can be tricky!
+            tree = parser.parse("int 1 ! This is a comment")  # A trailing ignore token can be tricky!
             self.assertEqual(tree.children, ["1"])
 
             parser = _Lark(
@@ -2444,9 +2370,7 @@ def _make_parser_test(LEXER, PARSER):
                 """
             l = _Lark(g)
             self.assertEqual(l.parse(u"AABB"), Tree("start", ["A", "A", "B", "B"]))
-            self.assertEqual(
-                l.parse(u"AAABB"), Tree("start", ["A", "A", "A", "B", "B"])
-            )
+            self.assertEqual(l.parse(u"AAABB"), Tree("start", ["A", "A", "A", "B", "B"]))
             self.assertRaises(ParseError, l.parse, u"AAAB")
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u"AAABBB")
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u"ABB")
@@ -2474,9 +2398,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u"ABB")
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u"AAAABB")
 
-        @unittest.skipIf(
-            PARSER == "earley", "Priority not handled correctly right now"
-        )  # TODO XXX
+        @unittest.skipIf(PARSER == "earley", "Priority not handled correctly right now")  # TODO XXX
         def test_priority_vs_embedded(self):
             g = """
             A.2: "a"
@@ -2580,15 +2502,11 @@ def _make_parser_test(LEXER, PARSER):
                 ],
             )
 
-            p = _Lark(
-                """!start: ["a"] ["c"] "b"+ ["a"] ["d"] """, maybe_placeholders=True
-            )
+            p = _Lark("""!start: ["a"] ["c"] "b"+ ["a"] ["d"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("bb").children, [None, None, "b", "b", None, None])
             self.assertEqual(p.parse("bd").children, [None, None, "b", None, "d"])
             self.assertEqual(p.parse("abba").children, ["a", None, "b", "b", "a", None])
-            self.assertEqual(
-                p.parse("cbbbb").children, [None, "c", "b", "b", "b", "b", None, None]
-            )
+            self.assertEqual(p.parse("cbbbb").children, [None, "c", "b", "b", "b", "b", None, None])
 
         def test_escaped_string(self):
             "Tests common.ESCAPED_STRING"
@@ -2703,9 +2621,7 @@ def _make_parser_test(LEXER, PARSER):
             )
             self.assertEqual(g.parse("வணக்கம்"), "வணக்கம்")
 
-        @unittest.skipIf(
-            PARSER != "lalr", "Puppet error handling only works with LALR for now"
-        )
+        @unittest.skipIf(PARSER != "lalr", "Puppet error handling only works with LALR for now")
         def test_error_with_puppet(self):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):

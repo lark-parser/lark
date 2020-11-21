@@ -105,11 +105,7 @@ class TreeMatcher:
                 aliases[r.origin].append(r.alias)
 
         rule_names = {r.origin for r in rules}
-        nonterminals = {
-            sym
-            for sym in rule_names
-            if sym.name.startswith("_") or sym in expand1s or sym in aliases
-        }
+        nonterminals = {sym for sym in rule_names if sym.name.startswith("_") or sym in expand1s or sym in aliases}
 
         seen = set()
         for r in rules:

@@ -15,9 +15,7 @@ from .test_trees import TestTrees
 try:
     from .test_nearley.test_nearley import TestNearley
 except ImportError:
-    logger.warning(
-        "Warning: Skipping tests for Nearley grammar imports (js2py required)"
-    )
+    logger.warning("Warning: Skipping tests for Nearley grammar imports (js2py required)")
 
 # from .test_selectors import TestSelectors
 # from .test_grammars import TestPythonG, TestConfigG

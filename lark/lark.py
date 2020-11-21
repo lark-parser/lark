@@ -34,9 +34,8 @@ except ImportError:
 
 
 class LarkOptions(Serialize):
-    """Specifies the options for Lark
+    """Specifies the options for Lark"""
 
-    """
     OPTIONS_DOC = """
     **===  General Options  ===**
 
@@ -112,7 +111,6 @@ class LarkOptions(Serialize):
     if __doc__:
         __doc__ += OPTIONS_DOC
 
-
     # Adding a new option needs to be done in multiple places:
     # - In the dictionary below. This is the primary truth of which options `Lark.__init__` accepts
     # - In the docstring above. It is used both for the docstring of `LarkOptions` and `Lark`, and in readthedocs
@@ -122,26 +120,26 @@ class LarkOptions(Serialize):
     # - Potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
     # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
     _defaults = {
-        'debug': False,
-        'keep_all_tokens': False,
-        'tree_class': None,
-        'cache': False,
-        'postlex': None,
-        'parser': 'earley',
-        'lexer': 'auto',
-        'transformer': None,
-        'start': 'start',
-        'priority': 'auto',
-        'ambiguity': 'auto',
-        'regex': False,
-        'propagate_positions': False,
-        'lexer_callbacks': {},
-        'maybe_placeholders': False,
-        'edit_terminals': None,
-        'g_regex_flags': 0,
-        'use_bytes': False,
-        'import_paths': [],
-        'source_path': None,
+        "debug": False,
+        "keep_all_tokens": False,
+        "tree_class": None,
+        "cache": False,
+        "postlex": None,
+        "parser": "earley",
+        "lexer": "auto",
+        "transformer": None,
+        "start": "start",
+        "priority": "auto",
+        "ambiguity": "auto",
+        "regex": False,
+        "propagate_positions": False,
+        "lexer_callbacks": {},
+        "maybe_placeholders": False,
+        "edit_terminals": None,
+        "g_regex_flags": 0,
+        "use_bytes": False,
+        "import_paths": [],
+        "source_path": None,
     }
 
     def __init__(self, options_dict):
@@ -151,26 +149,26 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
+                if isinstance(default, bool) and name not in ("cache", "use_bytes"):
                     value = bool(value)
             else:
                 value = default
 
             options[name] = value
 
-        if isinstance(options['start'], STRING_TYPE):
-            options['start'] = [options['start']]
+        if isinstance(options["start"], STRING_TYPE):
+            options["start"] = [options["start"]]
 
-        self.__dict__['options'] = options
+        self.__dict__["options"] = options
 
-
-        if not self.parser in ('earley', 'lalr', 'cyk', None):
+        if not self.parser in ("earley", "lalr", "cyk", None):
             raise ConfigurationError("%s must be one of 'earley', 'lalr' or 'cyk'" % self.parser)
 
-
-        if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
-                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
+        if self.parser == "earley" and self.transformer:
+            raise ValueError(
+                "Cannot specify an embedded transformer when using the Earley algorithm."
+                "Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)"
+            )
 
         if o:
             raise ValueError("Unknown options: %s" % o.keys())
@@ -195,10 +193,19 @@ class LarkOptions(Serialize):
 
 # Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
 # These option are only used outside of `load_grammar`.
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
+_LOAD_ALLOWED_OPTIONS = {
+    "postlex",
+    "transformer",
+    "use_bytes",
+    "debug",
+    "g_regex_flags",
+    "regex",
+    "propagate_positions",
+    "tree_class",
+}
 
-_VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
-_VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
+_VALID_PRIORITY_OPTIONS = ("auto", "normal", "invert", None)
+_VALID_AMBIGUITY_OPTIONS = ("auto", "resolve", "explicit", "forest")
 
 
 class Lark(Serialize):
@@ -214,6 +221,7 @@ class Lark(Serialize):
         >>> Lark(r'''start: "foo" ''')
         Lark(...)
     """
+
     def __init__(self, grammar, **options):
         self.options = LarkOptions(options)
 
@@ -223,7 +231,7 @@ class Lark(Serialize):
             if regex:
                 re_module = regex
             else:
-                raise ImportError('`regex` module must be installed if calling `Lark(regex=True)`.')
+                raise ImportError("`regex` module must be installed if calling `Lark(regex=True)`.")
         else:
             re_module = re
 
@@ -232,7 +240,7 @@ class Lark(Serialize):
             try:
                 self.source_path = grammar.name
             except AttributeError:
-                self.source_path = '<string>'
+                self.source_path = "<string>"
         else:
             self.source_path = self.options.source_path
 
@@ -249,63 +257,71 @@ class Lark(Serialize):
         if self.options.use_bytes:
             if not isascii(grammar):
                 raise ValueError("Grammar must be ascii only, when use_bytes=True")
-            if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                raise NotImplementedError("`use_bytes=True` may have issues on python2."
-                                          "Use `use_bytes='force'` to use it at your own risk.")
+            if sys.version_info[0] == 2 and self.options.use_bytes != "force":
+                raise NotImplementedError(
+                    "`use_bytes=True` may have issues on python2." "Use `use_bytes='force'` to use it at your own risk."
+                )
 
         cache_fn = None
         if self.options.cache:
-            if self.options.parser != 'lalr':
+            if self.options.parser != "lalr":
                 raise NotImplementedError("cache only works with parser='lalr' for now")
             if isinstance(self.options.cache, STRING_TYPE):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
                     raise ValueError("cache argument must be bool or str")
-                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                unhashable = ("transformer", "postlex", "lexer_callbacks", "edit_terminals")
                 from . import __version__
-                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+
+                options_str = "".join(k + str(v) for k, v in options.items() if k not in unhashable)
                 s = grammar + options_str + __version__
                 md5 = hashlib.md5(s.encode()).hexdigest()
-                cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % md5
+                cache_fn = tempfile.gettempdir() + "/.lark_cache_%s.tmp" % md5
 
             if FS.exists(cache_fn):
-                logger.debug('Loading grammar from cache: %s', cache_fn)
+                logger.debug("Loading grammar from cache: %s", cache_fn)
                 # Remove options that aren't relevant for loading from cache
-                for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
+                for name in set(options) - _LOAD_ALLOWED_OPTIONS:
                     del options[name]
-                with FS.open(cache_fn, 'rb') as f:
+                with FS.open(cache_fn, "rb") as f:
                     self._load(f, **options)
                 return
 
-        if self.options.lexer == 'auto':
-            if self.options.parser == 'lalr':
-                self.options.lexer = 'contextual'
-            elif self.options.parser == 'earley':
-                self.options.lexer = 'dynamic'
-            elif self.options.parser == 'cyk':
-                self.options.lexer = 'standard'
+        if self.options.lexer == "auto":
+            if self.options.parser == "lalr":
+                self.options.lexer = "contextual"
+            elif self.options.parser == "earley":
+                self.options.lexer = "dynamic"
+            elif self.options.parser == "cyk":
+                self.options.lexer = "standard"
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete') or issubclass(lexer, Lexer)
+        assert lexer in ("standard", "contextual", "dynamic", "dynamic_complete") or issubclass(lexer, Lexer)
 
-        if self.options.ambiguity == 'auto':
-            if self.options.parser == 'earley':
-                self.options.ambiguity = 'resolve'
+        if self.options.ambiguity == "auto":
+            if self.options.parser == "earley":
+                self.options.ambiguity = "resolve"
         else:
-            disambig_parsers = ['earley', 'cyk']
+            disambig_parsers = ["earley", "cyk"]
             if not self.options.parser in disambig_parsers:
-                raise ConfigurationError('Only %s supports disambiguation right now' % ', '.join(disambig_parsers))
+                raise ConfigurationError("Only %s supports disambiguation right now" % ", ".join(disambig_parsers))
 
-        if self.options.priority == 'auto':
-            self.options.priority = 'normal'
+        if self.options.priority == "auto":
+            self.options.priority = "normal"
 
         if self.options.priority not in _VALID_PRIORITY_OPTIONS:
-            raise ValueError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
-        assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
+            raise ValueError(
+                "invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS)
+            )
+        assert self.options.ambiguity not in (
+            "resolve__antiscore_sum",
+        ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
-            raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
+            raise ValueError(
+                "invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS)
+            )
 
         # Parse the grammar file and compose the grammars
         self.grammar = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
@@ -326,7 +342,7 @@ class Lark(Serialize):
 
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.
-        if self.options.priority == 'invert':
+        if self.options.priority == "invert":
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
@@ -339,12 +355,20 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
-                           if self.options.transformer
-                           else {})
+        lexer_callbacks = (
+            _get_lexer_callbacks(self.options.transformer, self.terminals) if self.options.transformer else {}
+        )
         lexer_callbacks.update(self.options.lexer_callbacks)
 
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
+        self.lexer_conf = LexerConf(
+            self.terminals,
+            re_module,
+            self.ignore_tokens,
+            self.options.postlex,
+            lexer_callbacks,
+            self.options.g_regex_flags,
+            use_bytes=self.options.use_bytes,
+        )
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -352,14 +376,14 @@ class Lark(Serialize):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logger.debug('Saving grammar to cache: %s', cache_fn)
-            with FS.open(cache_fn, 'wb') as f:
+            logger.debug("Saving grammar to cache: %s", cache_fn)
+            with FS.open(cache_fn, "wb") as f:
                 self.save(f)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
-    __serialize_fields__ = 'parser', 'rules', 'options'
+    __serialize_fields__ = "parser", "rules", "options"
 
     def _build_lexer(self):
         return TraditionalLexer(self.lexer_conf)
@@ -368,14 +392,14 @@ class Lark(Serialize):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self._callbacks = None
         # we don't need these callbacks if we aren't building a tree
-        if self.options.ambiguity != 'forest':
+        if self.options.ambiguity != "forest":
             self._parse_tree_builder = ParseTreeBuilder(
-                    self.rules,
-                    self.options.tree_class or Tree,
-                    self.options.propagate_positions,
-                    self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
-                    self.options.maybe_placeholders
-                )
+                self.rules,
+                self.options.tree_class or Tree,
+                self.options.propagate_positions,
+                self.options.parser != "lalr" and self.options.ambiguity == "explicit",
+                self.options.maybe_placeholders,
+            )
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
 
     def _build_parser(self):
@@ -389,7 +413,7 @@ class Lark(Serialize):
         Useful for caching and multiprocessing.
         """
         data, m = self.memo_serialize([TerminalDef, Rule])
-        pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump({"data": data, "memo": m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def load(cls, f):
@@ -402,22 +426,23 @@ class Lark(Serialize):
 
     def _load(self, f, **kwargs):
         d = f if isinstance(f, dict) else pickle.load(f)
-        memo = d['memo']
-        data = d['data']
+        memo = d["memo"]
+        data = d["data"]
 
         assert memo
-        memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
-        options = dict(data['options'])
+        memo = SerializeMemoizer.deserialize(memo, {"Rule": Rule, "TerminalDef": TerminalDef}, {})
+        options = dict(data["options"])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
-            raise ValueError("Some options are not allowed when loading a Parser: {}"
-                             .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
+            raise ValueError(
+                "Some options are not allowed when loading a Parser: {}".format(set(kwargs) - _LOAD_ALLOWED_OPTIONS)
+            )
         options.update(kwargs)
         self.options = LarkOptions.deserialize(options, memo)
-        self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source_path = '<deserialized>'
+        self.rules = [Rule.deserialize(r, memo) for r in data["rules"]]
+        self.source_path = "<deserialized>"
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
-            data['parser'],
+            data["parser"],
             memo,
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
@@ -429,7 +454,7 @@ class Lark(Serialize):
     @classmethod
     def _load_from_dict(cls, data, memo, **kwargs):
         inst = cls.__new__(cls)
-        return inst._load({'data': data, 'memo': memo}, **kwargs)
+        return inst._load({"data": data, "memo": memo}, **kwargs)
 
     @classmethod
     def open(cls, grammar_filename, rel_to=None, **options):
@@ -446,7 +471,7 @@ class Lark(Serialize):
         if rel_to:
             basepath = os.path.dirname(rel_to)
             grammar_filename = os.path.join(basepath, grammar_filename)
-        with open(grammar_filename, encoding='utf8') as f:
+        with open(grammar_filename, encoding="utf8") as f:
             return cls(f, **options)
 
     @classmethod
@@ -462,18 +487,17 @@ class Lark(Serialize):
         """
         package = FromPackageLoader(package, search_paths)
         full_path, text = package(None, grammar_path)
-        options.setdefault('source_path', full_path)
-        options.setdefault('import_paths', [])
-        options['import_paths'].append(package)
+        options.setdefault("source_path", full_path)
+        options.setdefault("import_paths", [])
+        options["import_paths"].append(package)
         return cls(text, **options)
 
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
-
+        return "Lark(open(%r), parser=%r, lexer=%r, ...)" % (self.source_path, self.options.parser, self.options.lexer)
 
     def lex(self, text):
         "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"
-        if not hasattr(self, 'lexer'):
+        if not hasattr(self, "lexer"):
             self.lexer = self._build_lexer()
         stream = self.lexer.lex(text)
         if self.options.postlex:
@@ -516,12 +540,16 @@ class Lark(Serialize):
                 if isinstance(e, UnexpectedCharacters):
                     # If user didn't change the character position, then we should
                     if p == s.line_ctr.char_pos:
-                        s.line_ctr.feed(s.text[p:p+1])
+                        s.line_ctr.feed(s.text[p : p + 1])
 
                 try:
                     return e.puppet.resume_parse()
                 except UnexpectedToken as e2:
-                    if isinstance(e, UnexpectedToken) and e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
+                    if (
+                        isinstance(e, UnexpectedToken)
+                        and e.token.type == e2.token.type == "$END"
+                        and e.puppet == e2.puppet
+                    ):
                         # Prevent infinite loop
                         raise e2
                     e = e2

@@ -42,9 +42,7 @@ def get_frontend(parser, lexer):
 
             class LALR_CustomLexerWrapper(LALR_WithLexer):
                 def __init__(self, lexer_conf, parser_conf, options=None):
-                    super(LALR_CustomLexerWrapper, self).__init__(
-                        lexer_conf, parser_conf, options=options
-                    )
+                    super(LALR_CustomLexerWrapper, self).__init__(lexer_conf, parser_conf, options=options)
 
                 def init_lexer(self):
                     future_interface = getattr(lexer, "__future_interface__", False)
@@ -130,9 +128,7 @@ class WithLexer(_ParserFrontend):
         inst = super(WithLexer, cls).deserialize(data, memo)
 
         inst.postlex = options.postlex
-        inst.parser = LALR_Parser.deserialize(
-            inst.parser, memo, callbacks, options.debug
-        )
+        inst.parser = LALR_Parser.deserialize(inst.parser, memo, callbacks, options.debug)
 
         terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
         inst.lexer_conf.callbacks = _get_lexer_callbacks(options.transformer, terminals)
@@ -179,13 +175,9 @@ class LALR_TraditionalLexer(LALR_WithLexer):
 
 class LALR_ContextualLexer(LALR_WithLexer):
     def init_lexer(self):
-        states = {
-            idx: list(t.keys()) for idx, t in self.parser._parse_table.states.items()
-        }
+        states = {idx: list(t.keys()) for idx, t in self.parser._parse_table.states.items()}
         always_accept = self.postlex.always_accept if self.postlex else ()
-        self.lexer = ContextualLexer(
-            self.lexer_conf, states, always_accept=always_accept
-        )
+        self.lexer = ContextualLexer(self.lexer_conf, states, always_accept=always_accept)
 
 
 ###}
@@ -198,9 +190,7 @@ class Earley(WithLexer):
 
         resolve_ambiguity = options.ambiguity == "resolve"
         debug = options.debug if options else False
-        tree_class = (
-            options.tree_class or Tree if options.ambiguity != "forest" else None
-        )
+        tree_class = options.tree_class or Tree if options.ambiguity != "forest" else None
         self.parser = earley.Parser(
             parser_conf,
             self.match,
@@ -224,9 +214,7 @@ class XEarley(_ParserFrontend):
         self._prepare_match(lexer_conf)
         resolve_ambiguity = options.ambiguity == "resolve"
         debug = options.debug if options else False
-        tree_class = (
-            options.tree_class or Tree if options.ambiguity != "forest" else None
-        )
+        tree_class = options.tree_class or Tree if options.ambiguity != "forest" else None
         self.parser = xearley.Parser(
             parser_conf,
             self.match,
@@ -244,9 +232,7 @@ class XEarley(_ParserFrontend):
         self.regexps = {}
         for t in lexer_conf.tokens:
             if t.priority != 1:
-                raise ValueError(
-                    "Dynamic Earley doesn't support weights on terminals", t, t.priority
-                )
+                raise ValueError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:
                 width = get_regexp_width(regexp)[0]
@@ -254,15 +240,11 @@ class XEarley(_ParserFrontend):
                 raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
             else:
                 if width == 0:
-                    raise ValueError(
-                        "Dynamic Earley doesn't allow zero-width regexps", t
-                    )
+                    raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
             if lexer_conf.use_bytes:
                 regexp = regexp.encode("utf-8")
 
-            self.regexps[t.name] = lexer_conf.re_module.compile(
-                regexp, lexer_conf.g_regex_flags
-            )
+            self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 
     def parse(self, text, start):
         return self._parse(start, text)
@@ -292,10 +274,7 @@ class CYK(WithLexer):
     def _transform(self, tree):
         subtrees = list(tree.iter_subtrees())
         for subtree in subtrees:
-            subtree.children = [
-                self._apply_callback(c) if isinstance(c, Tree) else c
-                for c in subtree.children
-            ]
+            subtree.children = [self._apply_callback(c) if isinstance(c, Tree) else c for c in subtree.children]
 
         return self._apply_callback(tree)
 

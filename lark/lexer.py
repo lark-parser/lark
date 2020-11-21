@@ -22,11 +22,7 @@ class Pattern(Serialize):
         return hash((type(self), self.value, self.flags))
 
     def __eq__(self, other):
-        return (
-            type(self) == type(other)
-            and self.value == other.value
-            and self.flags == other.flags
-        )
+        return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
     def to_regexp(self):
         raise NotImplementedError()
@@ -217,9 +213,7 @@ class LineCounter:
             newlines = token.count(self.newline_char)
             if newlines:
                 self.line += newlines
-                self.line_start_pos = (
-                    self.char_pos + token.rindex(self.newline_char) + 1
-                )
+                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
         self.column = self.char_pos - self.line_start_pos + 1
@@ -267,9 +261,7 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                     embedded_strs.add(strtok)
         if unless:
             callback[retok.name] = UnlessCallback(
-                build_mres(
-                    unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes
-                )
+                build_mres(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes)
             )
 
     terminals = [t for t in terminals if t not in embedded_strs]
@@ -283,18 +275,13 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
     postfix = "$" if match_whole else ""
     mres = []
     while terminals:
-        pattern = u"|".join(
-            u"(?P<%s>%s)" % (t.name, t.pattern.to_regexp() + postfix)
-            for t in terminals[:max_size]
-        )
+        pattern = u"|".join(u"(?P<%s>%s)" % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
         if use_bytes:
             pattern = pattern.encode("latin-1")
         try:
             mre = re_.compile(pattern, g_regex_flags)
         except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(
-                terminals, max_size // 2, g_regex_flags, match_whole, re_, use_bytes
-            )
+            return _build_mres(terminals, max_size // 2, g_regex_flags, match_whole, re_, use_bytes)
 
         mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
         terminals = terminals[max_size:]
@@ -302,9 +289,7 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
 
 
 def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
-    return _build_mres(
-        terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes
-    )
+    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
 
 
 def _regexp_has_newline(r):
@@ -315,9 +300,7 @@ def _regexp_has_newline(r):
     - any-char (.) when the flag (?s) exists
     - spaces (\s)
     """
-    return (
-        "\n" in r or "\\n" in r or "\\s" in r or "[^" in r or ("(?s" in r and "." in r)
-    )
+    return "\n" in r or "\\n" in r or "\\s" in r or "[^" in r or ("(?s" in r and "." in r)
 
 
 class Lexer(object):
@@ -350,17 +333,12 @@ class TraditionalLexer(Lexer):
                     raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
                 if t.pattern.min_width == 0:
-                    raise LexError(
-                        "Lexer does not allow zero-width terminals. (%s: %s)"
-                        % (t.name, t.pattern)
-                    )
+                    raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
 
             assert set(conf.ignore) <= {t.name for t in terminals}
 
         # Init
-        self.newline_types = frozenset(
-            t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())
-        )
+        self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
         self.ignore_types = frozenset(conf.ignore)
 
         terminals.sort(
@@ -379,17 +357,13 @@ class TraditionalLexer(Lexer):
         self._mres = None
 
     def _build(self):
-        terminals, self.callback = _create_unless(
-            self.terminals, self.g_regex_flags, self.re, self.use_bytes
-        )
+        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
             if type_ in self.callback:
                 # Already a callback there, probably UnlessCallback
-                self.callback[type_] = CallChain(
-                    self.callback[type_], f, lambda t: t.type == type_
-                )
+                self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
             else:
                 self.callback[type_] = f
 
@@ -417,9 +391,7 @@ class TraditionalLexer(Lexer):
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
             if not res:
-                allowed = {
-                    v for m, tfi in self.mres for v in tfi.values()
-                } - self.ignore_types
+                allowed = {v for m, tfi in self.mres for v in tfi.values()} - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(
@@ -435,9 +407,7 @@ class TraditionalLexer(Lexer):
             value, type_ = res
 
             if type_ not in self.ignore_types:
-                t = Token(
-                    type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column
-                )
+                t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                 line_ctr.feed(value, type_ in self.newline_types)
                 t.end_line = line_ctr.line
                 t.end_column = line_ctr.column
@@ -445,16 +415,12 @@ class TraditionalLexer(Lexer):
                 if t.type in self.callback:
                     t = self.callback[t.type](t)
                     if not isinstance(t, Token):
-                        raise ValueError(
-                            "Callbacks must return a token (returned %r)" % t
-                        )
+                        raise ValueError("Callbacks must return a token (returned %r)" % t)
                 lex_state.last_token = t
                 return t
             else:
                 if type_ in self.callback:
-                    t2 = Token(
-                        type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column
-                    )
+                    t2 = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
                     self.callback[type_](t2)
                 line_ctr.feed(value, type_ in self.newline_types)
 
@@ -493,9 +459,7 @@ class ContextualLexer(Lexer):
                 lexer = lexer_by_tokens[key]
             except KeyError:
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
-                state_tokens = [
-                    tokens_by_name[n] for n in accepts if n and n in tokens_by_name
-                ]
+                state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
                 lexer_conf = copy(trad_conf)
                 lexer_conf.tokens = state_tokens
                 lexer = TraditionalLexer(lexer_conf)

@@ -73,9 +73,7 @@ class App(html5.Div):
 
         print(ast)
         traverse = lambda node: html5.Li(
-            [node.data, html5.Ul([traverse(c) for c in node.children])]
-            if isinstance(node, Tree)
-            else node
+            [node.data, html5.Ul([traverse(c) for c in node.children])] if isinstance(node, Tree) else node
         )
         self.ast.appendChild(traverse(ast), replace=True)
 

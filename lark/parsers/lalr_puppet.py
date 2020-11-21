@@ -43,10 +43,7 @@ class ParserPuppet(object):
         if not isinstance(other, ParserPuppet):
             return False
 
-        return (
-            self.parser_state == other.parser_state
-            and self.lexer_state == other.lexer_state
-        )
+        return self.parser_state == other.parser_state and self.lexer_state == other.lexer_state
 
     def as_immutable(self):
         p = copy(self)
@@ -67,9 +64,7 @@ class ParserPuppet(object):
 
         Updated by ``feed_token()``.
         """
-        return self.parser_state.parse_conf.parse_table.states[
-            self.parser_state.position
-        ]
+        return self.parser_state.parse_conf.parse_table.states[self.parser_state.position]
 
     def accepts(self):
         accepts = set()

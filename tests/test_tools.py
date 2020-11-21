@@ -19,9 +19,7 @@ class TestStandalone(TestCase):
 
     def _create_standalone(self, grammar, compress=False):
         code_buf = StringIO()
-        standalone.gen_standalone(
-            Lark(grammar, parser="lalr"), out=code_buf, compress=compress
-        )
+        standalone.gen_standalone(Lark(grammar, parser="lalr"), out=code_buf, compress=compress)
         code = code_buf.getvalue()
 
         context = {"__doc__": None}

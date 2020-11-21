@@ -40,9 +40,7 @@ class Interpreter(ABC, Generic[_T]):
 
 _InterMethod = Callable[[Type[Interpreter], _T], _R]
 
-def v_args(
-    inline: bool = False, meta: bool = False, tree: bool = False
-) -> Callable[[_FUNC], _FUNC]: ...
+def v_args(inline: bool = False, meta: bool = False, tree: bool = False) -> Callable[[_FUNC], _FUNC]: ...
 def visit_children_decor(func: _InterMethod) -> _InterMethod: ...
 
 class Discard(Exception):

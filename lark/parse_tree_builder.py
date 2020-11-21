@@ -154,20 +154,12 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
 
     nones_to_add += empty_indices[len(expansion)]
 
-    if (
-        _empty_indices
-        or len(to_include) < len(expansion)
-        or any(to_expand for i, to_expand, _ in to_include)
-    ):
+    if _empty_indices or len(to_include) < len(expansion) or any(to_expand for i, to_expand, _ in to_include):
         if _empty_indices or ambiguous:
-            return partial(
-                ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add
-            )
+            return partial(ChildFilter if ambiguous else ChildFilterLALR, to_include, nones_to_add)
         else:
             # LALR without placeholders
-            return partial(
-                ChildFilterLALR_NoPlaceholders, [(i, x) for i, x, _ in to_include]
-            )
+            return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i, x, _ in to_include])
 
 
 class AmbiguousExpander:
@@ -195,31 +187,21 @@ class AmbiguousExpander:
                 if i in self.to_expand:
                     ambiguous.append(i)
 
-                to_expand = [
-                    j
-                    for j, grandchild in enumerate(child.children)
-                    if _is_ambig_tree(grandchild)
-                ]
+                to_expand = [j for j, grandchild in enumerate(child.children) if _is_ambig_tree(grandchild)]
                 child.expand_kids_by_index(*to_expand)
 
         if not ambiguous:
             return self.node_builder(children)
 
-        expand = [
-            iter(child.children) if i in ambiguous else repeat(child)
-            for i, child in enumerate(children)
-        ]
-        return self.tree_class(
-            "_ambig", [self.node_builder(list(f[0])) for f in product(zip(*expand))]
-        )
+        expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
+        return self.tree_class("_ambig", [self.node_builder(list(f[0])) for f in product(zip(*expand))])
 
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
     to_expand = [
         i
         for i, sym in enumerate(expansion)
-        if keep_all_tokens
-        or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))
+        if keep_all_tokens or ((not (sym.is_term and sym.filter_out)) and _should_expand(sym))
     ]
     if to_expand:
         return partial(AmbiguousExpander, to_expand, tree_class)
@@ -294,9 +276,7 @@ class AmbiguousIntermediateExpander:
                             child.children += children[1:]
                         result += collapsed
                     else:
-                        new_tree = self.tree_class(
-                            "_inter", grandchild.children + children[1:]
-                        )
+                        new_tree = self.tree_class("_inter", grandchild.children + children[1:])
                         result.append(new_tree)
                 return result
 
@@ -372,11 +352,8 @@ class ParseTreeBuilder:
                         ),
                         self.propagate_positions and PropagatePositions,
                         self.ambiguous
-                        and maybe_create_ambiguous_expander(
-                            self.tree_class, rule.expansion, keep_all_tokens
-                        ),
-                        self.ambiguous
-                        and partial(AmbiguousIntermediateExpander, self.tree_class),
+                        and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
+                        self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class),
                     ],
                 )
             )
@@ -388,9 +365,7 @@ class ParseTreeBuilder:
 
         for rule, wrapper_chain in self.rule_builders:
 
-            user_callback_name = (
-                rule.alias or rule.options.template_source or rule.origin.name
-            )
+            user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
                 # XXX InlineTransformer is deprecated!

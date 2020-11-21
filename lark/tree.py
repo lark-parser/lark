@@ -90,11 +90,7 @@ class Tree(object):
         subtrees = OrderedDict()
         for subtree in queue:
             subtrees[id(subtree)] = subtree
-            queue += [
-                c
-                for c in reversed(subtree.children)
-                if isinstance(c, Tree) and id(c) not in subtrees
-            ]
+            queue += [c for c in reversed(subtree.children) if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
         return reversed(list(subtrees.values()))
@@ -111,9 +107,7 @@ class Tree(object):
 
     def expand_kids_by_index(self, *indices):
         """Expand (inline) children at the given indices"""
-        for i in sorted(
-            indices, reverse=True
-        ):  # reverse so that changing tail won't affect indices
+        for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
             kid = self.children[i]
             self.children[i : i + 1] = kid.children
 
@@ -208,13 +202,8 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
         color = hash(subtree.data) & 0xFFFFFF
         color |= 0x808080
 
-        subnodes = [
-            _to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
-            for child in subtree.children
-        ]
-        node = pydot.Node(
-            i[0], style="filled", fillcolor="#%x" % color, label=subtree.data
-        )
+        subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child) for child in subtree.children]
+        node = pydot.Node(i[0], style="filled", fillcolor="#%x" % color, label=subtree.data)
         i[0] += 1
         graph.add_node(node)
 

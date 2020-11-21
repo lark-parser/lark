@@ -144,11 +144,7 @@ class _Parser:
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 
-            token = (
-                Token.new_borrow_pos("$END", "", token)
-                if token
-                else Token("$END", "", 0, 1, 1)
-            )
+            token = Token.new_borrow_pos("$END", "", token) if token else Token("$END", "", 0, 1, 1)
             return state.feed_token(token, True)
         except UnexpectedInput as e:
             try:

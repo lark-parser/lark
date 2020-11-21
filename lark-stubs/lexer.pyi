@@ -139,7 +139,7 @@ class TraditionalLexer(Lexer):
     def lex(self, stream: str) -> Iterator[Token]:
         ...
 
-    def next_token(self, lex_state: Any) -> Token:
+    def next_token(self, lex_state: Any, parser_state: Any = None) -> Token:
         ...
 
 class ContextualLexer(Lexer):

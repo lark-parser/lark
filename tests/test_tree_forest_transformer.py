@@ -8,6 +8,7 @@ from lark.tree import Tree
 from lark.visitors import Visitor, Transformer, Discard
 from lark.parsers.earley_forest import TreeForestTransformer, handles_ambiguity
 
+
 class TestTreeForestTransformer(unittest.TestCase):
 
     grammar = """
@@ -17,23 +18,22 @@ class TestTreeForestTransformer(unittest.TestCase):
     !cd: "C"? "D"
     """
 
-    parser = Lark(grammar, parser='earley', ambiguity='forest')
+    parser = Lark(grammar, parser="earley", ambiguity="forest")
     forest = parser.parse("ABCD")
 
     def test_identity_resolve_ambiguity(self):
-        l = Lark(self.grammar, parser='earley', ambiguity='resolve')
+        l = Lark(self.grammar, parser="earley", ambiguity="resolve")
         tree1 = l.parse("ABCD")
         tree2 = TreeForestTransformer(resolve_ambiguity=True).transform(self.forest)
         self.assertEqual(tree1, tree2)
 
     def test_identity_explicit_ambiguity(self):
-        l = Lark(self.grammar, parser='earley', ambiguity='explicit')
+        l = Lark(self.grammar, parser="earley", ambiguity="explicit")
         tree1 = l.parse("ABCD")
         tree2 = TreeForestTransformer(resolve_ambiguity=False).transform(self.forest)
         self.assertEqual(tree1, tree2)
 
     def test_tree_class(self):
-
         class CustomTree(Tree):
             pass
 
@@ -41,7 +41,9 @@ class TestTreeForestTransformer(unittest.TestCase):
             def __default__(self, tree):
                 assert isinstance(tree, CustomTree)
 
-        tree = TreeForestTransformer(resolve_ambiguity=False, tree_class=CustomTree).transform(self.forest)
+        tree = TreeForestTransformer(
+            resolve_ambiguity=False, tree_class=CustomTree
+        ).transform(self.forest)
         TreeChecker().visit(tree)
 
     def test_token_calls(self):
@@ -50,16 +52,19 @@ class TestTreeForestTransformer(unittest.TestCase):
 
         class CustomTransformer(TreeForestTransformer):
             def A(self, node):
-                assert node.type == 'A'
+                assert node.type == "A"
                 visited[0] = True
+
             def B(self, node):
-                assert node.type == 'B'
+                assert node.type == "B"
                 visited[1] = True
+
             def C(self, node):
-                assert node.type == 'C'
+                assert node.type == "C"
                 visited[2] = True
+
             def D(self, node):
-                assert node.type == 'D'
+                assert node.type == "D"
                 visited[3] = True
 
         tree = CustomTransformer(resolve_ambiguity=False).transform(self.forest)
@@ -87,10 +92,13 @@ class TestTreeForestTransformer(unittest.TestCase):
         class CustomTransformer(TreeForestTransformer):
             def start(self, data):
                 visited_start[0] = True
+
             def ab(self, data):
                 visited_ab[0] = True
+
             def bc(self, data):
                 visited_bc[0] = True
+
             def cd(self, data):
                 visited_cd[0] = True
 
@@ -124,27 +132,25 @@ class TestTreeForestTransformer(unittest.TestCase):
         self.assertEqual(ambig_count[0], 1)
 
     def test_handles_ambiguity(self):
-
         class CustomTransformer(TreeForestTransformer):
             @handles_ambiguity
             def start(self, data):
                 assert isinstance(data, list)
                 assert len(data) == 4
                 for tree in data:
-                    assert tree.data == 'start'
-                return 'handled'
+                    assert tree.data == "start"
+                return "handled"
 
             @handles_ambiguity
             def ab(self, data):
                 assert isinstance(data, list)
                 assert len(data) == 1
-                assert data[0].data == 'ab'
+                assert data[0].data == "ab"
 
         tree = CustomTransformer(resolve_ambiguity=False).transform(self.forest)
-        self.assertEqual(tree, 'handled')
+        self.assertEqual(tree, "handled")
 
     def test_discard(self):
-
         class CustomTransformer(TreeForestTransformer):
             def bc(self, data):
                 raise Discard()
@@ -171,21 +177,21 @@ class TestTreeForestTransformer(unittest.TestCase):
             @handles_ambiguity
             def start(self, data):
                 for tree in data:
-                    assert tree.data == 'ambiguous' or tree.data == 'full'
+                    assert tree.data == "ambiguous" or tree.data == "full"
 
             def ambiguous(self, data):
                 visited_ambiguous[0] = True
                 assert len(data) == 3
-                assert data[0].data == 'ab'
-                assert data[1].data == 'bc'
-                assert data[2].data == 'cd'
-                return self.tree_class('ambiguous', data)
+                assert data[0].data == "ab"
+                assert data[1].data == "bc"
+                assert data[2].data == "cd"
+                return self.tree_class("ambiguous", data)
 
             def full(self, data):
                 visited_full[0] = True
                 assert len(data) == 1
-                assert data[0].data == 'abcd'
-                return self.tree_class('full', data)
+                assert data[0].data == "abcd"
+                return self.tree_class("full", data)
 
         grammar = """
         start: ab bc cd -> ambiguous
@@ -196,14 +202,13 @@ class TestTreeForestTransformer(unittest.TestCase):
         !abcd: "ABCD"
         """
 
-        l = Lark(grammar, parser='earley', ambiguity='forest')
-        forest = l.parse('ABCD')
+        l = Lark(grammar, parser="earley", ambiguity="forest")
+        forest = l.parse("ABCD")
         tree = CustomTransformer(resolve_ambiguity=False).transform(forest)
         self.assertTrue(visited_ambiguous[0])
         self.assertTrue(visited_full[0])
 
     def test_transformation(self):
-
         class CustomTransformer(TreeForestTransformer):
             def __default__(self, name, data):
                 result = []
@@ -221,8 +226,9 @@ class TestTreeForestTransformer(unittest.TestCase):
                 return data[0]
 
         result = CustomTransformer(resolve_ambiguity=False).transform(self.forest)
-        expected = ['a', 'b', 'c', 'd']
+        expected = ["a", "b", "c", "d"]
         self.assertEqual(result, expected)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

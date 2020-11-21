@@ -17,7 +17,8 @@ See examples/conf_earley.py for an example of that approach.
 """
 from lark import Lark
 
-parser = Lark(r"""
+parser = Lark(
+    r"""
         start: _NL? section+
         section: "[" NAME "]" _NL item+
         item: NAME "=" VALUE? _NL
@@ -27,7 +28,9 @@ parser = Lark(r"""
         %import common.NEWLINE -> _NL
         %import common.WS_INLINE
         %ignore WS_INLINE
-    """, parser="lalr")
+    """,
+    parser="lalr",
+)
 
 
 sample_conf = """

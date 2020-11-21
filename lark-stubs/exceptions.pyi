@@ -8,20 +8,16 @@ from .parsers.lalr_puppet import ParserPuppet
 class LarkError(Exception):
     pass
 
-
 class GrammarError(LarkError):
     pass
-
 
 class ParseError(LarkError):
     pass
 
-
 class LexError(LarkError):
     pass
 
-
-T = TypeVar('T')
+T = TypeVar("T")
 
 class UnexpectedEOF(ParseError):
     expected: List[Token]
@@ -31,19 +27,14 @@ class UnexpectedInput(LarkError):
     column: int
     pos_in_stream: int
     state: Any
-
-    def get_context(self, text: str, span: int = ...):
-        ...
-
+    def get_context(self, text: str, span: int = ...): ...
     def match_examples(
-            self,
-            parse_fn: Callable[[str], Tree],
-            examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
-            token_type_match_fallback: bool = False,
-            use_accepts: bool = False,
-    ) -> T:
-        ...
-
+        self,
+        parse_fn: Callable[[str], Tree],
+        examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
+        token_type_match_fallback: bool = False,
+        use_accepts: bool = False,
+    ) -> T: ...
 
 class UnexpectedToken(ParseError, UnexpectedInput):
     expected: Set[str]
@@ -54,7 +45,6 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 class UnexpectedCharacters(LexError, UnexpectedInput):
     allowed: Set[str]
     considered_tokens: Set[Any]
-
 
 class VisitError(LarkError):
     obj: Union[Tree, Token]

@@ -25,13 +25,23 @@ from .earley_forest import SymbolNode
 
 
 class Parser(BaseParser):
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False, tree_class=Tree):
-        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
+    def __init__(
+        self,
+        parser_conf,
+        term_matcher,
+        resolve_ambiguity=True,
+        ignore=(),
+        complete_lex=False,
+        debug=False,
+        tree_class=Tree,
+    ):
+        BaseParser.__init__(
+            self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class
+        )
         self.ignore = [Terminal(t) for t in ignore]
         self.complete_lex = complete_lex
 
     def _parse(self, stream, columns, to_scan, start_symbol=None):
-
         def scan(i, to_scan):
             """The core Earley Scanner.
 
@@ -53,15 +63,21 @@ class Parser(BaseParser):
                 m = match(item.expect, stream, i)
                 if m:
                     t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].append( (item, i, t) )
+                    delayed_matches[m.end()].append((item, i, t))
 
                     if self.complete_lex:
                         s = m.group(0)
                         for j in range(1, len(s)):
                             m = match(item.expect, s[:-j])
                             if m:
-                                t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                                delayed_matches[i+m.end()].append( (item, i, t) )
+                                t = Token(
+                                    item.expect.name,
+                                    m.group(0),
+                                    i,
+                                    text_line,
+                                    text_column,
+                                )
+                                delayed_matches[i + m.end()].append((item, i, t))
 
                     # Remove any items that successfully matched in this pass from the to_scan buffer.
                     # This ensures we don't carry over tokens that already matched, if we're ignoring below.
@@ -75,10 +91,18 @@ class Parser(BaseParser):
                 m = match(x, stream, i)
                 if m:
                     # Carry over any items still in the scan buffer, to past the end of the ignored items.
-                    delayed_matches[m.end()].extend([(item, i, None) for item in to_scan ])
+                    delayed_matches[m.end()].extend(
+                        [(item, i, None) for item in to_scan]
+                    )
 
                     # If we're ignoring up to the end of the file, # carry over the start symbol if it already completed.
-                    delayed_matches[m.end()].extend([(item, i, None) for item in columns[i] if item.is_complete and item.s == start_symbol])
+                    delayed_matches[m.end()].extend(
+                        [
+                            (item, i, None)
+                            for item in columns[i]
+                            if item.is_complete and item.s == start_symbol
+                        ]
+                    )
 
             next_to_scan = set()
             next_set = set()
@@ -90,7 +114,7 @@ class Parser(BaseParser):
             # and create the symbol node in the SPPF tree. Advance the item that completed,
             # and add the resulting new item to either the Earley set (for processing by the
             # completer/predictor) or the to_scan buffer for the next parse step.
-            for item, start, token in delayed_matches[i+1]:
+            for item, start, token in delayed_matches[i + 1]:
                 if token is not None:
                     token.end_line = text_line
                     token.end_column = text_column + 1
@@ -98,8 +122,14 @@ class Parser(BaseParser):
 
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
-                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
+                    new_item.node = (
+                        node_cache[label]
+                        if label in node_cache
+                        else node_cache.setdefault(label, SymbolNode(*label))
+                    )
+                    new_item.node.add_family(
+                        new_item.s, item.rule, new_item.start, item.node, token
+                    )
                 else:
                     new_item = item
 
@@ -110,13 +140,19 @@ class Parser(BaseParser):
                     # add (B ::= Aa+1.B, h, y) to Ei+1
                     next_set.add(new_item)
 
-            del delayed_matches[i+1]    # No longer needed, so unburden memory
+            del delayed_matches[i + 1]  # No longer needed, so unburden memory
 
             if not next_set and not delayed_matches and not next_to_scan:
-                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect.name for item in to_scan}, set(to_scan))
+                raise UnexpectedCharacters(
+                    stream,
+                    i,
+                    text_line,
+                    text_column,
+                    {item.expect.name for item in to_scan},
+                    set(to_scan),
+                )
 
             return next_to_scan
-
 
         delayed_matches = defaultdict(list)
         match = self.term_matcher
@@ -138,7 +174,7 @@ class Parser(BaseParser):
 
             to_scan = scan(i, to_scan)
 
-            if token == '\n':
+            if token == "\n":
                 text_line += 1
                 text_column = 1
             else:
@@ -148,5 +184,5 @@ class Parser(BaseParser):
         self.predict_and_complete(i, to_scan, columns, transitives)
 
         ## Column is now the final column in the parse.
-        assert i == len(columns)-1
+        assert i == len(columns) - 1
         return to_scan

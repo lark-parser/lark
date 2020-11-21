@@ -27,15 +27,17 @@ tree_grammar = r"""
     _NL: /(\r?\n[\t ]*)+/
 """
 
+
 class TreeIndenter(Indenter):
-    NL_type = '_NL'
+    NL_type = "_NL"
     OPEN_PAREN_types = []
     CLOSE_PAREN_types = []
-    INDENT_type = '_INDENT'
-    DEDENT_type = '_DEDENT'
+    INDENT_type = "_INDENT"
+    DEDENT_type = "_DEDENT"
     tab_len = 8
 
-parser = Lark(tree_grammar, parser='lalr', postlex=TreeIndenter())
+
+parser = Lark(tree_grammar, parser="lalr", postlex=TreeIndenter())
 
 test_tree = """
 a
@@ -47,9 +49,10 @@ a
         g
 """
 
+
 def test():
     print(parser.parse(test_tree).pretty())
 
-if __name__ == '__main__':
-    test()
 
+if __name__ == "__main__":
+    test()

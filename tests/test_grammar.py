@@ -22,10 +22,5 @@ class TestGrammar(TestCase):
                     assert False, "example did not raise an error"
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-
-

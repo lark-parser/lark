@@ -22,7 +22,6 @@ from lark import Lark
 
 
 class LexerJson(QsciLexerCustom):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.create_parser()
@@ -43,7 +42,7 @@ class LexerJson(QsciLexerCustom):
             2: yellowgreen,
             3: deeppink,
             4: khaki,
-            5: lightcyan
+            5: lightcyan,
         }
 
         for style, color in styles.items():
@@ -66,7 +65,7 @@ class LexerJson(QsciLexerCustom):
         }
 
     def create_parser(self):
-        grammar = '''
+        grammar = """
             anons: ":" "{" "}" "," "[" "]"
             TRUE: "true"
             FALSE: "false"
@@ -75,9 +74,9 @@ class LexerJson(QsciLexerCustom):
             %import common.SIGNED_NUMBER  -> NUMBER
             %import common.WS
             %ignore WS
-        '''
+        """
 
-        self.lark = Lark(grammar, parser=None, lexer='standard')
+        self.lark = Lark(grammar, parser=None, lexer="standard")
         # All tokens: print([t.name for t in self.lark.parser.lexer.tokens])
 
     def defaultPaper(self, style):
@@ -98,11 +97,10 @@ class LexerJson(QsciLexerCustom):
             for token in self.lark.lex(text):
                 ws_len = token.pos_in_stream - last_pos
                 if ws_len:
-                    self.setStyling(ws_len, 0)    # whitespace
+                    self.setStyling(ws_len, 0)  # whitespace
 
                 token_len = len(bytearray(token, "utf-8"))
-                self.setStyling(
-                    token_len, self.token_styles.get(token.type, 0))
+                self.setStyling(token_len, self.token_styles.get(token.type, 0))
 
                 last_pos = token.pos_in_stream + token_len
         except Exception as e:
@@ -110,13 +108,12 @@ class LexerJson(QsciLexerCustom):
 
 
 class EditorAll(QsciScintilla):
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
         # Set font defaults
         font = QFont()
-        font.setFamily('Consolas')
+        font.setFamily("Consolas")
         font.setFixedPitch(True)
         font.setPointSize(8)
         font.setBold(True)
@@ -151,14 +148,14 @@ class EditorAll(QsciScintilla):
         # Set multiselection defaults
         self.SendScintilla(QsciScintilla.SCI_SETMULTIPLESELECTION, True)
         self.SendScintilla(QsciScintilla.SCI_SETMULTIPASTE, 1)
-        self.SendScintilla(
-            QsciScintilla.SCI_SETADDITIONALSELECTIONTYPING, True)
+        self.SendScintilla(QsciScintilla.SCI_SETADDITIONALSELECTIONTYPING, True)
 
         lexer = LexerJson(self)
         self.setLexer(lexer)
 
 
-EXAMPLE_TEXT = textwrap.dedent("""\
+EXAMPLE_TEXT = textwrap.dedent(
+    """\
         {
             "_id": "5b05ffcbcf8e597939b3f5ca",
             "about": "Excepteur consequat commodo esse voluptate aute aliquip ad sint deserunt commodo eiusmod irure. Sint aliquip sit magna duis eu est culpa aliqua excepteur ut tempor nulla. Aliqua ex pariatur id labore sit. Quis sit ex aliqua veniam exercitation laboris anim adipisicing. Lorem nisi reprehenderit ullamco labore qui sit ut aliqua tempor consequat pariatur proident.",
@@ -189,7 +186,9 @@ EXAMPLE_TEXT = textwrap.dedent("""\
                 "nostrud"
             ]
         }\
-    """)
+    """
+)
+
 
 def main():
     app = QApplication(sys.argv)

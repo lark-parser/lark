@@ -9,6 +9,7 @@ from .grammar import Terminal, NonTerminal
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal
 
+
 def is_iter_empty(i):
     try:
         _ = next(i)
@@ -25,7 +26,7 @@ class WriteTokensTransformer(Transformer_InPlace):
         self.term_subs = term_subs
 
     def __default__(self, data, children, meta):
-        if not getattr(meta, 'match_tree', False):
+        if not getattr(meta, "match_tree", False):
             return Tree(data, children)
 
         iter_args = iter(children)
@@ -37,7 +38,9 @@ class WriteTokensTransformer(Transformer_InPlace):
                 except KeyError:
                     t = self.tokens[sym.name]
                     if not isinstance(t.pattern, PatternStr):
-                        raise NotImplementedError("Reconstructing regexps not supported yet: %s" % t)
+                        raise NotImplementedError(
+                            "Reconstructing regexps not supported yet: %s" % t
+                        )
 
                     v = t.pattern.value
                 to_write.append(v)
@@ -58,7 +61,19 @@ class WriteTokensTransformer(Transformer_InPlace):
 
 def _isalnum(x):
     # Categories defined here: https://www.python.org/dev/peps/pep-3131/
-    return unicodedata.category(x) in ['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Mn', 'Mc', 'Nd', 'Pc']
+    return unicodedata.category(x) in [
+        "Lu",
+        "Ll",
+        "Lt",
+        "Lm",
+        "Lo",
+        "Nl",
+        "Mn",
+        "Mc",
+        "Nd",
+        "Pc",
+    ]
+
 
 class Reconstructor(TreeMatcher):
     """
@@ -76,7 +91,9 @@ class Reconstructor(TreeMatcher):
     def __init__(self, parser, term_subs=None):
         TreeMatcher.__init__(self, parser)
 
-        self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
+        self.write_tokens = WriteTokensTransformer(
+            {t.name: t for t in self.tokens}, term_subs or {}
+        )
 
     def _reconstruct(self, tree):
         unreduced_tree = self.match_tree(tree, tree.data)
@@ -95,10 +112,10 @@ class Reconstructor(TreeMatcher):
         if postproc:
             x = postproc(x)
         y = []
-        prev_item = ''
+        prev_item = ""
         for item in x:
             if prev_item and item and _isalnum(prev_item[-1]) and _isalnum(item[0]):
-                y.append(' ')
+                y.append(" ")
             y.append(item)
             prev_item = item
-        return ''.join(y)
+        return "".join(y)

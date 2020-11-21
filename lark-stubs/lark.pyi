@@ -1,22 +1,29 @@
 # -*- coding: utf-8 -*-
 
 from typing import (
-    TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
-    Literal, Protocol, Tuple,  Iterable,
+    TypeVar,
+    Type,
+    List,
+    Dict,
+    IO,
+    Iterator,
+    Callable,
+    Union,
+    Optional,
+    Literal,
+    Protocol,
+    Tuple,
+    Iterable,
 )
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
 
-_T = TypeVar('_T')
+_T = TypeVar("_T")
 
 class PostLex(Protocol):
-
-    def process(self, stream: Iterator[Token]) -> Iterator[Token]:
-        ...
-    
+    def process(self, stream: Iterator[Token]) -> Iterator[Token]: ...
     always_accept: Iterable[str]
-
 
 class LarkOptions:
     start: List[str]
@@ -34,21 +41,21 @@ class LarkOptions:
     cache: Union[bool, str]
     g_regex_flags: int
     use_bytes: bool
-    import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]
+    import_paths: List[
+        Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]
+    ]
     source_path: Optional[str]
-
 
 class PackageResource(object):
     pkg_name: str
     path: str
-    
     def __init__(self, pkg_name: str, path: str): ...
 
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
-    
-    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]: ...
-
+    def __call__(
+        self, base_path: Union[None, str, PackageResource], grammar_path: str
+    ) -> Tuple[PackageResource, str]: ...
 
 class Lark:
     source_path: str
@@ -56,14 +63,16 @@ class Lark:
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
-
     def __init__(
         self,
         grammar: Union[str, IO[str]],
         *,
         start: Union[None, str, List[str]] = "start",
         parser: Literal["earley", "lalr", "cyk"] = "auto",
-        lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]] = "auto",
+        lexer: Union[
+            Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"],
+            Type[Lexer],
+        ] = "auto",
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
         ambiguity: Literal["explicit", "resolve"] = "resolve",
@@ -76,24 +85,25 @@ class Lark:
         cache: Union[bool, str] = False,
         g_regex_flags: int = ...,
         use_bytes: bool = False,
-        import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]] = ...,
-        source_path: Optional[str]=None,
-    ):
-        ...
-
-    def parse(self, text: str, start: Optional[str] = None) -> Tree:
-        ...
-
+        import_paths: List[
+            Union[
+                str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]
+            ]
+        ] = ...,
+        source_path: Optional[str] = None,
+    ): ...
+    def parse(self, text: str, start: Optional[str] = None) -> Tree: ...
     @classmethod
-    def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options) -> _T:
-        ...
-    
+    def open(
+        cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options
+    ) -> _T: ...
     @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...] = ..., **options) -> _T:
-        ...
-
-    def lex(self, text: str) -> Iterator[Token]:
-        ...
-
-    def get_terminal(self, name: str) -> TerminalDef:
-        ...
+    def open_from_package(
+        cls: Type[_T],
+        package: str,
+        grammar_path: str,
+        search_paths: Tuple[str, ...] = ...,
+        **options,
+    ) -> _T: ...
+    def lex(self, text: str) -> Iterator[Token]: ...
+    def get_terminal(self, name: str) -> TerminalDef: ...

@@ -10,26 +10,30 @@ common = """
 %ignore WS_INLINE
 """
 
+
 def _remove_ws(s):
-    return s.replace(' ', '').replace('\n','')
+    return s.replace(" ", "").replace("\n", "")
+
 
 class TestReconstructor(TestCase):
-
     def assert_reconstruct(self, grammar, code):
-        parser = Lark(grammar, parser='lalr', maybe_placeholders=False)
+        parser = Lark(grammar, parser="lalr", maybe_placeholders=False)
         tree = parser.parse(code)
         new = Reconstructor(parser).reconstruct(tree)
         self.assertEqual(_remove_ws(code), _remove_ws(new))
 
     def test_starred_rule(self):
 
-        g = """
+        g = (
+            """
         start: item*
         item: NL
             | rule
         rule: WORD ":" NUMBER
         NL: /(\\r?\\n)+\\s*/
-        """ + common
+        """
+            + common
+        )
 
         code = """
         Elephants: 12
@@ -39,11 +43,14 @@ class TestReconstructor(TestCase):
 
     def test_starred_group(self):
 
-        g = """
+        g = (
+            """
         start: (rule | NL)*
         rule: WORD ":" NUMBER
         NL: /(\\r?\\n)+\\s*/
-        """ + common
+        """
+            + common
+        )
 
         code = """
         Elephants: 12
@@ -53,14 +60,17 @@ class TestReconstructor(TestCase):
 
     def test_alias(self):
 
-        g = """
+        g = (
+            """
         start: line*
         line: NL
             | rule
             | "hello" -> hi
         rule: WORD ":" NUMBER
         NL: /(\\r?\\n)+\\s*/
-        """ + common
+        """
+            + common
+        )
 
         code = """
         Elephants: 12
@@ -70,13 +80,16 @@ class TestReconstructor(TestCase):
         self.assert_reconstruct(g, code)
 
     def test_keep_tokens(self):
-        g = """
+        g = (
+            """
         start: (NL | stmt)*
         stmt: var op var
         !op: ("+" | "-" | "*" | "/")
         var: WORD
         NL: /(\\r?\\n)+\s*/
-        """ + common
+        """
+            + common
+        )
 
         code = """
         a+b
@@ -85,21 +98,24 @@ class TestReconstructor(TestCase):
         self.assert_reconstruct(g, code)
 
     def test_expand_rule(self):
-        g = """
+        g = (
+            """
         ?start: (NL | mult_stmt)*
         ?mult_stmt: sum_stmt ["*" sum_stmt]
         ?sum_stmt: var ["+" var]
         var: WORD
         NL: /(\\r?\\n)+\s*/
-        """ + common
+        """
+            + common
+        )
 
-        code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
+        code = ["a", "a*b", "a+b", "a*b+c", "a+b*c", "a+b*c+d"]
 
         for c in code:
             self.assert_reconstruct(g, c)
 
     def test_json_example(self):
-        test_json = '''
+        test_json = """
             {
                 "empty_object" : {},
                 "empty_array"  : [],
@@ -108,7 +124,7 @@ class TestReconstructor(TestCase):
                 "strings"      : [ "This", [ "And" , "That", "And a \\"b" ] ],
                 "nothing"      : null
             }
-        '''
+        """
 
         json_grammar = r"""
             ?start: value
@@ -134,12 +150,12 @@ class TestReconstructor(TestCase):
             %ignore WS
         """
 
-        json_parser = Lark(json_grammar, parser='lalr', maybe_placeholders=False)
+        json_parser = Lark(json_grammar, parser="lalr", maybe_placeholders=False)
         tree = json_parser.parse(test_json)
 
         new_json = Reconstructor(json_parser).reconstruct(tree)
         self.assertEqual(json.loads(new_json), json.loads(test_json))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

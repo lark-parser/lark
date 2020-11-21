@@ -14,7 +14,9 @@ from .test_tree_forest_transformer import TestTreeForestTransformer
 try:
     from .test_nearley.test_nearley import TestNearley
 except ImportError:
-    logger.warning("Warning: Skipping tests for Nearley grammar imports (js2py required)")
+    logger.warning(
+        "Warning: Skipping tests for Nearley grammar imports (js2py required)"
+    )
 
 # from .test_selectors import TestSelectors
 # from .test_grammars import TestPythonG, TestConfigG
@@ -22,21 +24,19 @@ except ImportError:
 from .test_logger import Testlogger
 
 from .test_parser import (
-        TestLalrStandard,
-        TestEarleyStandard,
-        TestCykStandard,
-        TestLalrContextual,
-        TestEarleyDynamic,
-        TestLalrCustom,
-
-        # TestFullEarleyStandard,
-        TestFullEarleyDynamic,
-        TestFullEarleyDynamic_complete,
-
-        TestParsers,
-        )
+    TestLalrStandard,
+    TestEarleyStandard,
+    TestCykStandard,
+    TestLalrContextual,
+    TestEarleyDynamic,
+    TestLalrCustom,
+    # TestFullEarleyStandard,
+    TestFullEarleyDynamic,
+    TestFullEarleyDynamic_complete,
+    TestParsers,
+)
 
 logger.setLevel(logging.INFO)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

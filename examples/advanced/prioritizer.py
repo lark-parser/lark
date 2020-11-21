@@ -13,8 +13,8 @@ descendants. Thus, we choose the more specific parse.
 from lark import Lark
 from lark.parsers.earley_forest import ForestVisitor, TreeForestTransformer
 
-class TokenPrioritizer(ForestVisitor):
 
+class TokenPrioritizer(ForestVisitor):
     def visit_symbol_node_in(self, node):
         # visit the entire forest by returning node.children
         return node.children
@@ -27,17 +27,18 @@ class TokenPrioritizer(ForestVisitor):
         for child in node.children:
             # Tokens do not have a priority attribute
             # count them as -1
-            priority += getattr(child, 'priority', -1)
+            priority += getattr(child, "priority", -1)
         node.priority = priority
 
     def visit_packed_node_out(self, node):
         priority = 0
         for child in node.children:
-            priority += getattr(child, 'priority', -1)
+            priority += getattr(child, "priority", -1)
         node.priority = priority
 
     def on_cycle(self, node, path):
         raise Exception("Oops, we encountered a cycle.")
+
 
 grammar = """
 start: hello " " world | hello_world
@@ -46,7 +47,7 @@ world: "World"
 hello_world: "Hello World"
 """
 
-parser = Lark(grammar, parser='earley', ambiguity='forest')
+parser = Lark(grammar, parser="earley", ambiguity="forest")
 forest = parser.parse("Hello World")
 
 print("Default prioritizer:")
@@ -56,7 +57,9 @@ print(tree.pretty())
 forest = parser.parse("Hello World")
 
 print("Custom prioritizer:")
-tree = TreeForestTransformer(resolve_ambiguity=True, prioritizer=TokenPrioritizer()).transform(forest)
+tree = TreeForestTransformer(
+    resolve_ambiguity=True, prioritizer=TokenPrioritizer()
+).transform(forest)
 print(tree.pretty())
 
 # Output:

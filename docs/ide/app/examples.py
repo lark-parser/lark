@@ -1,19 +1,20 @@
-
 # Examples formattet this way:
 #   "name": ("grammar", "demo-input")
 
 examples = {
-
-	# --- hello.lark ---
-	"hello.lark": ("""
+    # --- hello.lark ---
+    "hello.lark": (
+        """
 start: WORD "," WORD "!"
 
 %import common.WORD   // imports from terminal library
 %ignore " "           // Disregard spaces in text
-""", "Hello, World!"),
-
-	# --- calc.lark ---
-"calc.lark": ("""
+""",
+        "Hello, World!",
+    ),
+    # --- calc.lark ---
+    "calc.lark": (
+        """
 ?start: sum
       | NAME "=" sum    -> assign_var
 
@@ -34,10 +35,11 @@ start: WORD "," WORD "!"
 %import common.NUMBER
 %import common.WS_INLINE
 %ignore WS_INLINE""",
-	"1 + 2 * 3 + 4"),
-
-	# --- json.lark ---
-	"json.lark": ("""
+        "1 + 2 * 3 + 4",
+    ),
+    # --- json.lark ---
+    "json.lark": (
+        """
 ?start: value
 ?value: object
       | array
@@ -54,7 +56,7 @@ string : ESCAPED_STRING
 %import common.SIGNED_NUMBER
 %import common.WS
 %ignore WS""",
-"""
+        """
 [
   {
     "_id": "5edb875cf3d764da55602437",
@@ -146,5 +148,6 @@ string : ESCAPED_STRING
     "greeting": "Hello, Lily Ross! You have 3 unread messages.",
     "favoriteFruit": "strawberry"
   }
-]""")
+]""",
+    ),
 }

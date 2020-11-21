@@ -12,6 +12,7 @@ class ParserPuppet(object):
 
     For a simpler, more streamlined interface, see the ``on_error`` argument to ``Lark.parse()``.
     """
+
     def __init__(self, parser, parser_state, lexer_state):
         self.parser = parser
         self.parser_state = parser_state
@@ -22,7 +23,7 @@ class ParserPuppet(object):
 
         Note that ``token`` has to be an instance of ``Token``.
         """
-        return self.parser_state.feed_token(token, token.type == '$END')
+        return self.parser_state.feed_token(token, token.type == "$END")
 
     def __copy__(self):
         """Create a new puppet with a separate state.
@@ -42,7 +43,10 @@ class ParserPuppet(object):
         if not isinstance(other, ParserPuppet):
             return False
 
-        return self.parser_state == other.parser_state and self.lexer_state == other.lexer_state
+        return (
+            self.parser_state == other.parser_state
+            and self.lexer_state == other.lexer_state
+        )
 
     def as_immutable(self):
         p = copy(self)
@@ -52,9 +56,9 @@ class ParserPuppet(object):
         """Print the output of ``choices()`` in a way that's easier to read."""
         out = ["Puppet choices:"]
         for k, v in self.choices().items():
-            out.append('\t- %s -> %s' % (k, v))
-        out.append('stack size: %s' % len(self.parser_state.state_stack))
-        return '\n'.join(out)
+            out.append("\t- %s -> %s" % (k, v))
+        out.append("stack size: %s" % len(self.parser_state.state_stack))
+        return "\n".join(out)
 
     def choices(self):
         """Returns a dictionary of token types, matched to their action in the parser.
@@ -63,15 +67,17 @@ class ParserPuppet(object):
 
         Updated by ``feed_token()``.
         """
-        return self.parser_state.parse_conf.parse_table.states[self.parser_state.position]
+        return self.parser_state.parse_conf.parse_table.states[
+            self.parser_state.position
+        ]
 
     def accepts(self):
         accepts = set()
         for t in self.choices():
-            if t.isupper(): # is terminal?
+            if t.isupper():  # is terminal?
                 new_puppet = copy(self)
                 try:
-                    new_puppet.feed_token(Token(t, ''))
+                    new_puppet.feed_token(Token(t, ""))
                 except UnexpectedToken:
                     pass
                 else:
@@ -81,7 +87,6 @@ class ParserPuppet(object):
     def resume_parse(self):
         """Resume parsing from the current puppet state."""
         return self.parser.parse_from_state(self.parser_state)
-
 
 
 class ImmutableParserPuppet(ParserPuppet):

@@ -10,7 +10,6 @@ from copy import copy
 
 
 class Pattern(Serialize):
-
     def __init__(self, value, flags=()):
         self.value = value
         self.flags = frozenset(flags)
@@ -23,7 +22,11 @@ class Pattern(Serialize):
         return hash((type(self), self.value, self.flags))
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.value == other.value and self.flags == other.flags
+        return (
+            type(self) == type(other)
+            and self.value == other.value
+            and self.flags == other.flags
+        )
 
     def to_regexp(self):
         raise NotImplementedError()
@@ -32,18 +35,19 @@ class Pattern(Serialize):
         # Python 3.6 changed syntax for flags in regular expression
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s:%s)' % (f, value))
+                value = "(?%s:%s)" % (f, value)
             return value
 
     else:
+
         def _get_flags(self, value):
             for f in self.flags:
-                value = ('(?%s)' % f) + value
+                value = ("(?%s)" % f) + value
             return value
 
 
 class PatternStr(Pattern):
-    __serialize_fields__ = 'value', 'flags'
+    __serialize_fields__ = "value", "flags"
 
     type = "str"
 
@@ -53,11 +57,12 @@ class PatternStr(Pattern):
     @property
     def min_width(self):
         return len(self.value)
+
     max_width = min_width
 
 
 class PatternRE(Pattern):
-    __serialize_fields__ = 'value', 'flags', '_width'
+    __serialize_fields__ = "value", "flags", "_width"
 
     type = "re"
 
@@ -65,6 +70,7 @@ class PatternRE(Pattern):
         return self._get_flags(self.value)
 
     _width = None
+
     def _get_width(self):
         if self._width is None:
             self._width = get_regexp_width(self.to_regexp())
@@ -80,7 +86,7 @@ class PatternRE(Pattern):
 
 
 class TerminalDef(Serialize):
-    __serialize_fields__ = 'name', 'pattern', 'priority'
+    __serialize_fields__ = "name", "pattern", "priority"
     __serialize_namespace__ = PatternStr, PatternRE
 
     def __init__(self, name, pattern, priority=1):
@@ -90,7 +96,7 @@ class TerminalDef(Serialize):
         self.priority = priority
 
     def __repr__(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+        return "%s(%r, %r)" % (type(self).__name__, self.name, self.pattern)
 
 
 class Token(Str):
@@ -112,13 +118,33 @@ class Token(Str):
             end_column will be 5.
         end_pos: the index where the token ends (basically ``pos_in_stream + len(token)``)
     """
-    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
-    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    __slots__ = (
+        "type",
+        "pos_in_stream",
+        "value",
+        "line",
+        "column",
+        "end_line",
+        "end_column",
+        "end_pos",
+    )
+
+    def __new__(
+        cls,
+        type_,
+        value,
+        pos_in_stream=None,
+        line=None,
+        column=None,
+        end_line=None,
+        end_column=None,
+        end_pos=None,
+    ):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
-            value = value.decode('latin1')
+            value = value.decode("latin1")
             self = super(Token, cls).__new__(cls, value)
 
         self.type = type_
@@ -135,18 +161,30 @@ class Token(Str):
         return Token.new_borrow_pos(
             type_ if type_ is not None else self.type,
             value if value is not None else self.value,
-            self
+            self,
         )
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
+        return cls(
+            type_,
+            value,
+            borrow_t.pos_in_stream,
+            borrow_t.line,
+            borrow_t.column,
+            borrow_t.end_line,
+            borrow_t.end_column,
+            borrow_t.end_pos,
+        )
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column))
+        return (
+            self.__class__,
+            (self.type, self.value, self.pos_in_stream, self.line, self.column),
+        )
 
     def __repr__(self):
-        return 'Token(%r, %r)' % (self.type, self.value)
+        return "Token(%r, %r)" % (self.type, self.value)
 
     def __deepcopy__(self, memo):
         return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
@@ -161,7 +199,7 @@ class Token(Str):
 
 
 class LineCounter:
-    __slots__ = 'char_pos', 'line', 'column', 'line_start_pos', 'newline_char'
+    __slots__ = "char_pos", "line", "column", "line_start_pos", "newline_char"
 
     def __init__(self, newline_char):
         self.newline_char = newline_char
@@ -179,7 +217,9 @@ class LineCounter:
             newlines = token.count(self.newline_char)
             if newlines:
                 self.line += newlines
-                self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
+                self.line_start_pos = (
+                    self.char_pos + token.rindex(self.newline_char) + 1
+                )
 
         self.char_pos += len(token)
         self.column = self.char_pos - self.line_start_pos + 1
@@ -226,7 +266,11 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
+            callback[retok.name] = UnlessCallback(
+                build_mres(
+                    unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes
+                )
+            )
 
     terminals = [t for t in terminals if t not in embedded_strs]
     return terminals, callback
@@ -236,16 +280,21 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
     # Python sets an unreasonable group limit (currently 100) in its re module
     # Worse, the only way to know we reached it is by catching an AssertionError!
     # This function recursively tries less and less groups until it's successful.
-    postfix = '$' if match_whole else ''
+    postfix = "$" if match_whole else ""
     mres = []
     while terminals:
-        pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+        pattern = u"|".join(
+            u"(?P<%s>%s)" % (t.name, t.pattern.to_regexp() + postfix)
+            for t in terminals[:max_size]
+        )
         if use_bytes:
-            pattern = pattern.encode('latin-1')
+            pattern = pattern.encode("latin-1")
         try:
             mre = re_.compile(pattern, g_regex_flags)
         except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
+            return _build_mres(
+                terminals, max_size // 2, g_regex_flags, match_whole, re_, use_bytes
+            )
 
         mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
         terminals = terminals[max_size:]
@@ -253,18 +302,22 @@ def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes)
 
 
 def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
-    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
+    return _build_mres(
+        terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes
+    )
 
 
 def _regexp_has_newline(r):
     r"""Expressions that may indicate newlines in a regexp:
-        - newlines (\n)
-        - escaped newline (\\n)
-        - anything but ([^...])
-        - any-char (.) when the flag (?s) exists
-        - spaces (\s)
+    - newlines (\n)
+    - escaped newline (\\n)
+    - anything but ([^...])
+    - any-char (.) when the flag (?s) exists
+    - spaces (\s)
     """
-    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
+    return (
+        "\n" in r or "\\n" in r or "\\s" in r or "[^" in r or ("(?s" in r and "." in r)
+    )
 
 
 class Lexer(object):
@@ -273,15 +326,15 @@ class Lexer(object):
     Method Signatures:
         lex(self, text) -> Iterator[Token]
     """
+
     lex = NotImplemented
 
     def make_lexer_state(self, text):
-        line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')
+        line_ctr = LineCounter(b"\n" if isinstance(text, bytes) else "\n")
         return LexerState(text, line_ctr)
 
 
 class TraditionalLexer(Lexer):
-
     def __init__(self, conf):
         terminals = list(conf.tokens)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
@@ -297,15 +350,27 @@ class TraditionalLexer(Lexer):
                     raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
                 if t.pattern.min_width == 0:
-                    raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
+                    raise LexError(
+                        "Lexer does not allow zero-width terminals. (%s: %s)"
+                        % (t.name, t.pattern)
+                    )
 
             assert set(conf.ignore) <= {t.name for t in terminals}
 
         # Init
-        self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
+        self.newline_types = frozenset(
+            t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp())
+        )
         self.ignore_types = frozenset(conf.ignore)
 
-        terminals.sort(key=lambda x: (-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))
+        terminals.sort(
+            key=lambda x: (
+                -x.priority,
+                -x.pattern.max_width,
+                -len(x.pattern.value),
+                x.name,
+            )
+        )
         self.terminals = terminals
         self.user_callbacks = conf.callbacks
         self.g_regex_flags = conf.g_regex_flags
@@ -314,13 +379,17 @@ class TraditionalLexer(Lexer):
         self._mres = None
 
     def _build(self):
-        terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
+        terminals, self.callback = _create_unless(
+            self.terminals, self.g_regex_flags, self.re, self.use_bytes
+        )
         assert all(self.callback.values())
 
         for type_, f in self.user_callbacks.items():
             if type_ in self.callback:
                 # Already a callback there, probably UnlessCallback
-                self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
+                self.callback[type_] = CallChain(
+                    self.callback[type_], f, lambda t: t.type == type_
+                )
             else:
                 self.callback[type_] = f
 
@@ -348,17 +417,27 @@ class TraditionalLexer(Lexer):
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
             if not res:
-                allowed = {v for m, tfi in self.mres for v in tfi.values()} - self.ignore_types
+                allowed = {
+                    v for m, tfi in self.mres for v in tfi.values()
+                } - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
-                raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
-                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
-                                           state=(parser_state and parser_state.position))
+                raise UnexpectedCharacters(
+                    lex_state.text,
+                    line_ctr.char_pos,
+                    line_ctr.line,
+                    line_ctr.column,
+                    allowed=allowed,
+                    token_history=lex_state.last_token and [lex_state.last_token],
+                    state=(parser_state and parser_state.position),
+                )
 
             value, type_ = res
 
             if type_ not in self.ignore_types:
-                t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                t = Token(
+                    type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column
+                )
                 line_ctr.feed(value, type_ in self.newline_types)
                 t.end_line = line_ctr.line
                 t.end_column = line_ctr.column
@@ -366,12 +445,16 @@ class TraditionalLexer(Lexer):
                 if t.type in self.callback:
                     t = self.callback[t.type](t)
                     if not isinstance(t, Token):
-                        raise ValueError("Callbacks must return a token (returned %r)" % t)
+                        raise ValueError(
+                            "Callbacks must return a token (returned %r)" % t
+                        )
                 lex_state.last_token = t
                 return t
             else:
                 if type_ in self.callback:
-                    t2 = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
+                    t2 = Token(
+                        type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column
+                    )
                     self.callback[type_](t2)
                 line_ctr.feed(value, type_ in self.newline_types)
 
@@ -380,7 +463,7 @@ class TraditionalLexer(Lexer):
 
 
 class LexerState:
-    __slots__ = 'text', 'line_ctr', 'last_token'
+    __slots__ = "text", "line_ctr", "last_token"
 
     def __init__(self, text, line_ctr, last_token=None):
         self.text = text
@@ -392,7 +475,6 @@ class LexerState:
 
 
 class ContextualLexer(Lexer):
-
     def __init__(self, conf, states, always_accept=()):
         terminals = list(conf.tokens)
         tokens_by_name = {}
@@ -411,7 +493,9 @@ class ContextualLexer(Lexer):
                 lexer = lexer_by_tokens[key]
             except KeyError:
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
-                state_tokens = [tokens_by_name[n] for n in accepts if n and n in tokens_by_name]
+                state_tokens = [
+                    tokens_by_name[n] for n in accepts if n and n in tokens_by_name
+                ]
                 lexer_conf = copy(trad_conf)
                 lexer_conf.tokens = state_tokens
                 lexer = TraditionalLexer(lexer_conf)
@@ -448,4 +532,6 @@ class LexerThread:
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
+
+
 ###}

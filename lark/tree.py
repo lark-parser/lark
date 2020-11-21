@@ -27,6 +27,7 @@ class Tree(object):
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
             meta attributes: line, column, start_pos, end_line, end_column, end_pos
     """
+
     def __init__(self, data, children, meta=None):
         self.data = data
         self.children = children
@@ -39,30 +40,36 @@ class Tree(object):
         return self._meta
 
     def __repr__(self):
-        return 'Tree(%r, %r)' % (self.data, self.children)
+        return "Tree(%r, %r)" % (self.data, self.children)
 
     def _pretty_label(self):
         return self.data
 
     def _pretty(self, level, indent_str):
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
+            return [
+                indent_str * level,
+                self._pretty_label(),
+                "\t",
+                "%s" % (self.children[0],),
+                "\n",
+            ]
 
-        l = [indent_str*level, self._pretty_label(), '\n']
+        l = [indent_str * level, self._pretty_label(), "\n"]
         for n in self.children:
             if isinstance(n, Tree):
-                l += n._pretty(level+1, indent_str)
+                l += n._pretty(level + 1, indent_str)
             else:
-                l += [indent_str*(level+1), '%s' % (n,), '\n']
+                l += [indent_str * (level + 1), "%s" % (n,), "\n"]
 
         return l
 
-    def pretty(self, indent_str='  '):
+    def pretty(self, indent_str="  "):
         """Returns an indented string representation of the tree.
 
         Great for debugging.
         """
-        return ''.join(self._pretty(0, indent_str))
+        return "".join(self._pretty(0, indent_str))
 
     def __eq__(self, other):
         try:
@@ -85,8 +92,11 @@ class Tree(object):
         subtrees = OrderedDict()
         for subtree in queue:
             subtrees[id(subtree)] = subtree
-            queue += [c for c in reversed(subtree.children)
-                      if isinstance(c, Tree) and id(c) not in subtrees]
+            queue += [
+                c
+                for c in reversed(subtree.children)
+                if isinstance(c, Tree) and id(c) not in subtrees
+            ]
 
         del queue
         return reversed(list(subtrees.values()))
@@ -99,13 +109,15 @@ class Tree(object):
         """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
 
-###}
+    ###}
 
     def expand_kids_by_index(self, *indices):
         """Expand (inline) children at the given indices"""
-        for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
+        for i in sorted(
+            indices, reverse=True
+        ):  # reverse so that changing tail won't affect indices
             kid = self.children[i]
-            self.children[i:i+1] = kid.children
+            self.children[i : i + 1] = kid.children
 
     def scan_values(self, pred):
         for c in self.children:
@@ -159,7 +171,7 @@ class Tree(object):
 
 
 class SlottedTree(Tree):
-    __slots__ = 'data', 'children', 'rule', '_meta'
+    __slots__ = "data", "children", "rule", "_meta"
 
 
 def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
@@ -184,7 +196,8 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
     """
 
     import pydot
-    graph = pydot.Dot(graph_type='digraph', rankdir=rankdir, **kwargs)
+
+    graph = pydot.Dot(graph_type="digraph", rankdir=rankdir, **kwargs)
 
     i = [0]
 
@@ -195,12 +208,16 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
         return node
 
     def _to_pydot(subtree):
-        color = hash(subtree.data) & 0xffffff
+        color = hash(subtree.data) & 0xFFFFFF
         color |= 0x808080
 
-        subnodes = [_to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
-                    for child in subtree.children]
-        node = pydot.Node(i[0], style="filled", fillcolor="#%x" % color, label=subtree.data)
+        subnodes = [
+            _to_pydot(child) if isinstance(child, Tree) else new_leaf(child)
+            for child in subtree.children
+        ]
+        node = pydot.Node(
+            i[0], style="filled", fillcolor="#%x" % color, label=subtree.data
+        )
         i[0] += 1
         graph.add_node(node)
 

@@ -11,6 +11,7 @@ from .lalr_puppet import ParserPuppet
 
 ###{standalone
 
+
 class LALR_Parser(object):
     def __init__(self, parser_conf, debug=False):
         analysis = LALR_Analyzer(parser_conf, debug=debug)
@@ -36,7 +37,14 @@ class LALR_Parser(object):
 
 
 class ParseConf:
-    __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
+    __slots__ = (
+        "parse_table",
+        "callbacks",
+        "start",
+        "start_state",
+        "end_state",
+        "states",
+    )
 
     def __init__(self, parse_table, callbacks, start):
         self.parse_table = parse_table
@@ -50,7 +58,7 @@ class ParseConf:
 
 
 class ParserState:
-    __slots__ = 'parse_conf', 'lexer', 'state_stack', 'value_stack'
+    __slots__ = "parse_conf", "lexer", "state_stack", "value_stack"
 
     def __init__(self, parse_conf, lexer, state_stack=None, value_stack=None):
         self.parse_conf = parse_conf
@@ -65,7 +73,7 @@ class ParserState:
     def __copy__(self):
         return type(self)(
             self.parse_conf,
-            self.lexer, # XXX copy
+            self.lexer,  # XXX copy
             copy(self.state_stack),
             deepcopy(self.value_stack),
         )
@@ -117,6 +125,7 @@ class ParserState:
                 if is_end and state_stack[-1] == end_state:
                     return value_stack[-1]
 
+
 class _Parser:
     def __init__(self, parse_table, callbacks, debug=False):
         self.parse_table = parse_table
@@ -135,7 +144,11 @@ class _Parser:
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 
-            token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            token = (
+                Token.new_borrow_pos("$END", "", token)
+                if token
+                else Token("$END", "", 0, 1, 1)
+            )
             return state.feed_token(token, True)
         except UnexpectedInput as e:
             try:
@@ -149,9 +162,10 @@ class _Parser:
                 print("STATE STACK DUMP")
                 print("----------------")
                 for i, s in enumerate(state.state_stack):
-                    print('%d)' % i , s)
+                    print("%d)" % i, s)
                 print("")
 
             raise
-###}
 
+
+###}

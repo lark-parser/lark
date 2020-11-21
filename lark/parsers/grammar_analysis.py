@@ -6,7 +6,7 @@ from ..grammar import Rule, Terminal, NonTerminal
 
 
 class RulePtr(object):
-    __slots__ = ('rule', 'index')
+    __slots__ = ("rule", "index")
 
     def __init__(self, rule, index):
         assert isinstance(rule, Rule)
@@ -15,9 +15,13 @@ class RulePtr(object):
         self.index = index
 
     def __repr__(self):
-        before = [x.name for x in self.rule.expansion[:self.index]]
-        after = [x.name for x in self.rule.expansion[self.index:]]
-        return '<%s : %s * %s>' % (self.rule.origin.name, ' '.join(before), ' '.join(after))
+        before = [x.name for x in self.rule.expansion[: self.index]]
+        after = [x.name for x in self.rule.expansion[self.index :]]
+        return "<%s : %s * %s>" % (
+            self.rule.origin.name,
+            " ".join(before),
+            " ".join(after),
+        )
 
     @property
     def next(self):
@@ -25,7 +29,7 @@ class RulePtr(object):
 
     def advance(self, sym):
         assert self.next == sym
-        return RulePtr(self.rule, self.index+1)
+        return RulePtr(self.rule, self.index + 1)
 
     @property
     def is_satisfied(self):
@@ -33,13 +37,14 @@ class RulePtr(object):
 
     def __eq__(self, other):
         return self.rule == other.rule and self.index == other.index
+
     def __hash__(self):
         return hash((self.rule, self.index))
 
 
 # state generation ensures no duplicate LR0ItemSets
 class LR0ItemSet(object):
-    __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads')
+    __slots__ = ("kernel", "closure", "transitions", "lookaheads")
 
     def __init__(self, kernel, closure):
         self.kernel = fzset(kernel)
@@ -48,7 +53,10 @@ class LR0ItemSet(object):
         self.lookaheads = defaultdict(set)
 
     def __repr__(self):
-        return '{%s | %s}' % (', '.join([repr(r) for r in self.kernel]), ', '.join([repr(r) for r in self.closure]))
+        return "{%s | %s}" % (
+            ", ".join([repr(r) for r in self.kernel]),
+            ", ".join([repr(r) for r in self.closure]),
+        )
 
 
 def update_set(set1, set2):
@@ -59,11 +67,14 @@ def update_set(set1, set2):
     set1 |= set2
     return set1 != copy
 
+
 def calculate_sets(rules):
     """Calculate FOLLOW sets.
 
     Adapted from: http://lara.epfl.ch/w/cc09:algorithm_for_first_and_follow_sets"""
-    symbols = {sym for rule in rules for sym in rule.expansion} | {rule.origin for rule in rules}
+    symbols = {sym for rule in rules for sym in rule.expansion} | {
+        rule.origin for rule in rules
+    }
 
     # foreach grammar rule X ::= Y(1) ... Y(k)
     # if k=0 or {Y(1),...,Y(k)} subset of NULLABLE then
@@ -82,8 +93,8 @@ def calculate_sets(rules):
     FIRST = {}
     FOLLOW = {}
     for sym in symbols:
-        FIRST[sym]={sym} if sym.is_term else set()
-        FOLLOW[sym]=set()
+        FIRST[sym] = {sym} if sym.is_term else set()
+        FOLLOW[sym] = set()
 
     # Calculate NULLABLE and FIRST
     changed = True
@@ -109,12 +120,15 @@ def calculate_sets(rules):
 
         for rule in rules:
             for i, sym in enumerate(rule.expansion):
-                if i==len(rule.expansion)-1 or set(rule.expansion[i+1:]) <= NULLABLE:
+                if (
+                    i == len(rule.expansion) - 1
+                    or set(rule.expansion[i + 1 :]) <= NULLABLE
+                ):
                     if update_set(FOLLOW[sym], FOLLOW[rule.origin]):
                         changed = True
 
-                for j in range(i+1, len(rule.expansion)):
-                    if set(rule.expansion[i+1:j]) <= NULLABLE:
+                for j in range(i + 1, len(rule.expansion)):
+                    if set(rule.expansion[i + 1 : j]) <= NULLABLE:
                         if update_set(FOLLOW[sym], FIRST[rule.expansion[j]]):
                             changed = True
 
@@ -125,38 +139,55 @@ class GrammarAnalyzer(object):
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 
-        root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start), Terminal('$END')])
-                      for start in parser_conf.start}
+        root_rules = {
+            start: Rule(
+                NonTerminal("$root_" + start), [NonTerminal(start), Terminal("$END")]
+            )
+            for start in parser_conf.start
+        }
 
         rules = parser_conf.rules + list(root_rules.values())
         self.rules_by_origin = classify(rules, lambda r: r.origin)
 
         if len(rules) != len(set(rules)):
             duplicates = [item for item, count in Counter(rules).items() if count > 1]
-            raise GrammarError("Rules defined twice: %s" % ', '.join(str(i) for i in duplicates))
+            raise GrammarError(
+                "Rules defined twice: %s" % ", ".join(str(i) for i in duplicates)
+            )
 
         for r in rules:
             for sym in r.expansion:
                 if not (sym.is_term or sym in self.rules_by_origin):
                     raise GrammarError("Using an undefined rule: %s" % sym)
 
-        self.start_states = {start: self.expand_rule(root_rule.origin)
-                             for start, root_rule in root_rules.items()}
+        self.start_states = {
+            start: self.expand_rule(root_rule.origin)
+            for start, root_rule in root_rules.items()
+        }
 
-        self.end_states = {start: fzset({RulePtr(root_rule, len(root_rule.expansion))})
-                           for start, root_rule in root_rules.items()}
+        self.end_states = {
+            start: fzset({RulePtr(root_rule, len(root_rule.expansion))})
+            for start, root_rule in root_rules.items()
+        }
 
-        lr0_root_rules = {start: Rule(NonTerminal('$root_' + start), [NonTerminal(start)])
-                for start in parser_conf.start}
+        lr0_root_rules = {
+            start: Rule(NonTerminal("$root_" + start), [NonTerminal(start)])
+            for start in parser_conf.start
+        }
 
         lr0_rules = parser_conf.rules + list(lr0_root_rules.values())
-        assert(len(lr0_rules) == len(set(lr0_rules)))
+        assert len(lr0_rules) == len(set(lr0_rules))
 
         self.lr0_rules_by_origin = classify(lr0_rules, lambda r: r.origin)
 
         # cache RulePtr(r, 0) in r (no duplicate RulePtr objects)
-        self.lr0_start_states = {start: LR0ItemSet([RulePtr(root_rule, 0)], self.expand_rule(root_rule.origin, self.lr0_rules_by_origin))
-                for start, root_rule in lr0_root_rules.items()}
+        self.lr0_start_states = {
+            start: LR0ItemSet(
+                [RulePtr(root_rule, 0)],
+                self.expand_rule(root_rule.origin, self.lr0_rules_by_origin),
+            )
+            for start, root_rule in lr0_root_rules.items()
+        }
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
@@ -167,6 +198,7 @@ class GrammarAnalyzer(object):
             rules_by_origin = self.rules_by_origin
 
         init_ptrs = set()
+
         def _expand_rule(rule):
             assert not rule.is_term, rule
 
@@ -174,7 +206,7 @@ class GrammarAnalyzer(object):
                 init_ptr = RulePtr(r, 0)
                 init_ptrs.add(init_ptr)
 
-                if r.expansion: # if not empty rule
+                if r.expansion:  # if not empty rule
                     new_r = init_ptr.next
                     if not new_r.is_term:
                         yield new_r

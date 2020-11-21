@@ -13,7 +13,9 @@ class Discard(Exception):
     """When raising the Discard exception in a transformer callback,
     that node is discarded and won't appear in the parent.
     """
+
     pass
+
 
 # Transformers
 
@@ -29,13 +31,17 @@ class _Decoratable:
         for name, value in getmembers(cls):
 
             # Make sure the function isn't inherited (unless it's overwritten)
-            if name.startswith('_') or (name in libmembers and name not in cls.__dict__):
+            if name.startswith("_") or (
+                name in libmembers and name not in cls.__dict__
+            ):
                 continue
             if not callable(value):
                 continue
 
             # Skip if v_args already applied (at the function level)
-            if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
+            if hasattr(cls.__dict__[name], "vargs_applied") or hasattr(
+                value, "vargs_applied"
+            ):
                 continue
 
             static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
@@ -72,9 +78,10 @@ class Transformer(_Decoratable):
 
     NOTE: A transformer without methods essentially performs a non-memoized deepcopy.
     """
-    __visit_tokens__ = True   # For backwards compatibility
 
-    def __init__(self,  visit_tokens=True):
+    __visit_tokens__ = True  # For backwards compatibility
+
+    def __init__(self, visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
@@ -86,7 +93,7 @@ class Transformer(_Decoratable):
             return self.__default__(tree.data, children, tree.meta)
         else:
             try:
-                wrapper = getattr(f, 'visit_wrapper', None)
+                wrapper = getattr(f, "visit_wrapper", None)
                 if wrapper is not None:
                     return f.visit_wrapper(f, tree.data, children, tree.meta)
                 else:
@@ -130,8 +137,7 @@ class Transformer(_Decoratable):
         return self._transform_tree(tree)
 
     def __mul__(self, other):
-        """Chain two transformers together, returning a new transformer.
-        """
+        """Chain two transformers together, returning a new transformer."""
         return TransformerChain(self, other)
 
     def __default__(self, data, children, meta):
@@ -149,7 +155,7 @@ class Transformer(_Decoratable):
         return token
 
 
-class InlineTransformer(Transformer):   # XXX Deprecated
+class InlineTransformer(Transformer):  # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
@@ -179,7 +185,8 @@ class Transformer_InPlace(Transformer):
 
     Useful for huge trees. Conservative in memory.
     """
-    def _transform_tree(self, tree):           # Cancel recursion
+
+    def _transform_tree(self, tree):  # Cancel recursion
         return self._call_userfunc(tree)
 
     def transform(self, tree):
@@ -221,18 +228,20 @@ class Transformer_NonRecursive(Transformer):
             else:
                 stack.append(x)
 
-        t ,= stack  # We should have only one tree remaining
+        (t,) = stack  # We should have only one tree remaining
         return t
 
 
 class Transformer_InPlaceRecursive(Transformer):
     "Same as Transformer, recursive, but changes the tree in-place instead of returning new instances"
+
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree)
 
 
 # Visitors
+
 
 class VisitorBase:
     def _call_userfunc(self, tree):
@@ -261,7 +270,7 @@ class Visitor(VisitorBase):
             self._call_userfunc(subtree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self, tree):
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
@@ -285,7 +294,7 @@ class Visitor_Recursive(VisitorBase):
         self._call_userfunc(tree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self, tree):
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         self._call_userfunc(tree)
 
@@ -298,10 +307,12 @@ class Visitor_Recursive(VisitorBase):
 
 def visit_children_decor(func):
     "See Interpreter"
+
     @wraps(func)
     def inner(cls, tree):
         values = cls.visit_children(tree)
         return func(cls, values)
+
     return inner
 
 
@@ -319,15 +330,17 @@ class Interpreter(_Decoratable):
 
     def visit(self, tree):
         f = getattr(self, tree.data)
-        wrapper = getattr(f, 'visit_wrapper', None)
+        wrapper = getattr(f, "visit_wrapper", None)
         if wrapper is not None:
             return f.visit_wrapper(f, tree.data, tree.children, tree.meta)
         else:
             return f(tree)
 
     def visit_children(self, tree):
-        return [self.visit(child) if isinstance(child, Tree) else child
-                for child in tree.children]
+        return [
+            self.visit(child) if isinstance(child, Tree) else child
+            for child in tree.children
+        ]
 
     def __getattr__(self, name):
         return self.__default__
@@ -337,6 +350,7 @@ class Interpreter(_Decoratable):
 
 
 # Decorators
+
 
 def _apply_decorator(obj, decorator, **kwargs):
     try:
@@ -351,28 +365,36 @@ def _inline_args__func(func):
     @wraps(func)
     def create_decorator(_f, with_self):
         if with_self:
+
             def f(self, children):
                 return _f(self, *children)
+
         else:
+
             def f(self, children):
                 return _f(*children)
+
         return f
 
     return smart_decorator(func, create_decorator)
 
 
-def inline_args(obj):   # XXX Deprecated
+def inline_args(obj):  # XXX Deprecated
     return _apply_decorator(obj, _inline_args__func)
 
 
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     def create_decorator(_f, with_self):
         if with_self:
+
             def f(self, *args, **kwargs):
                 return _f(self, *args, **kwargs)
+
         else:
+
             def f(self, *args, **kwargs):
                 return _f(*args, **kwargs)
+
         return f
 
     if static:
@@ -386,10 +408,16 @@ def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
 
 def _vargs_inline(f, _data, children, _meta):
     return f(*children)
+
+
 def _vargs_meta_inline(f, _data, children, meta):
     return f(meta, *children)
+
+
 def _vargs_meta(f, _data, children, meta):
-    return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
+    return f(children, meta)  # TODO swap these for consistency? Backwards incompatible!
+
+
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
@@ -426,7 +454,9 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
                     tree.children = tree.children[::-1]
     """
     if tree and (meta or inline):
-        raise ValueError("Visitor functions cannot combine 'tree' with 'meta' or 'inline'.")
+        raise ValueError(
+            "Visitor functions cannot combine 'tree' with 'meta' or 'inline'."
+        )
 
     func = None
     if meta:
@@ -441,11 +471,14 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 
     if wrapper is not None:
         if func is not None:
-            raise ValueError("Cannot use 'wrapper' along with 'tree', 'meta' or 'inline'.")
+            raise ValueError(
+                "Cannot use 'wrapper' along with 'tree', 'meta' or 'inline'."
+            )
         func = wrapper
 
     def _visitor_args_dec(obj):
         return _apply_decorator(obj, _visitor_args_func_dec, visit_wrapper=func)
+
     return _visitor_args_dec
 
 
@@ -453,6 +486,7 @@ def v_args(inline=False, meta=False, tree=False, wrapper=None):
 
 
 # --- Visitor Utilities ---
+
 
 class CollapseAmbiguities(Transformer):
     """
@@ -464,11 +498,15 @@ class CollapseAmbiguities(Transformer):
     Warning: This may quickly explode for highly ambiguous trees.
 
     """
+
     def _ambig(self, options):
         return sum(options, [])
 
     def __default__(self, data, children_lists, meta):
-        return [Tree(data, children, meta) for children in combine_alternatives(children_lists)]
+        return [
+            Tree(data, children, meta)
+            for children in combine_alternatives(children_lists)
+        ]
 
     def __default_token__(self, t):
         return [t]

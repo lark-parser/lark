@@ -2,6 +2,7 @@ import sys
 
 from json_parser import Lark_StandAlone, Transformer, inline_args
 
+
 class TreeToJson(Transformer):
     @inline_args
     def string(self, s):
@@ -19,7 +20,6 @@ class TreeToJson(Transformer):
 
 parser = Lark_StandAlone(transformer=TreeToJson())
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with open(sys.argv[1]) as f:
         print(parser.parse(f.read()))
-

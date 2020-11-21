@@ -5,11 +5,21 @@ from .lexer import TerminalDef
 
 
 class LexerConf(Serialize):
-    __serialize_fields__ = 'tokens', 'ignore', 'g_regex_flags', 'use_bytes'
-    __serialize_namespace__ = TerminalDef,
+    __serialize_fields__ = "tokens", "ignore", "g_regex_flags", "use_bytes"
+    __serialize_namespace__ = (TerminalDef,)
 
-    def __init__(self, tokens, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
-        self.tokens = tokens    # TODO should be terminals
+    def __init__(
+        self,
+        tokens,
+        re_module,
+        ignore=(),
+        postlex=None,
+        callbacks=None,
+        g_regex_flags=0,
+        skip_validation=False,
+        use_bytes=False,
+    ):
+        self.tokens = tokens  # TODO should be terminals
         self.ignore = ignore
         self.postlex = postlex
         self.callbacks = callbacks or {}
@@ -17,6 +27,7 @@ class LexerConf(Serialize):
         self.re_module = re_module
         self.skip_validation = skip_validation
         self.use_bytes = use_bytes
+
 
 ###}
 

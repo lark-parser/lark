@@ -16,16 +16,20 @@ from ..grammar import Rule
 
 ###{standalone
 
+
 class Action:
     def __init__(self, name):
         self.name = name
+
     def __str__(self):
         return self.name
+
     def __repr__(self):
         return str(self)
 
-Shift = Action('Shift')
-Reduce = Action('Reduce')
+
+Shift = Action("Shift")
+Reduce = Action("Reduce")
 
 
 class ParseTable:
@@ -39,46 +43,61 @@ class ParseTable:
         rules = Enumerator()
 
         states = {
-            state: {tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
-                    for token, (action, arg) in actions.items()}
+            state: {
+                tokens.get(token): (
+                    (1, arg.serialize(memo)) if action is Reduce else (0, arg)
+                )
+                for token, (action, arg) in actions.items()
+            }
             for state, actions in self.states.items()
         }
 
         return {
-            'tokens': tokens.reversed(),
-            'states': states,
-            'start_states': self.start_states,
-            'end_states': self.end_states,
+            "tokens": tokens.reversed(),
+            "states": states,
+            "start_states": self.start_states,
+            "end_states": self.end_states,
         }
 
     @classmethod
     def deserialize(cls, data, memo):
-        tokens = data['tokens']
+        tokens = data["tokens"]
         states = {
-            state: {tokens[token]: ((Reduce, Rule.deserialize(arg, memo)) if action==1 else (Shift, arg))
-                    for token, (action, arg) in actions.items()}
-            for state, actions in data['states'].items()
+            state: {
+                tokens[token]: (
+                    (Reduce, Rule.deserialize(arg, memo))
+                    if action == 1
+                    else (Shift, arg)
+                )
+                for token, (action, arg) in actions.items()
+            }
+            for state, actions in data["states"].items()
         }
-        return cls(states, data['start_states'], data['end_states'])
+        return cls(states, data["start_states"], data["end_states"])
 
 
 class IntParseTable(ParseTable):
-
     @classmethod
     def from_ParseTable(cls, parse_table):
         enum = list(parse_table.states)
-        state_to_idx = {s:i for i,s in enumerate(enum)}
+        state_to_idx = {s: i for i, s in enumerate(enum)}
         int_states = {}
 
         for s, la in parse_table.states.items():
-            la = {k:(v[0], state_to_idx[v[1]]) if v[0] is Shift else v
-                  for k,v in la.items()}
-            int_states[ state_to_idx[s] ] = la
+            la = {
+                k: (v[0], state_to_idx[v[1]]) if v[0] is Shift else v
+                for k, v in la.items()
+            }
+            int_states[state_to_idx[s]] = la
 
-
-        start_states = {start:state_to_idx[s] for start, s in parse_table.start_states.items()}
-        end_states = {start:state_to_idx[s] for start, s in parse_table.end_states.items()}
+        start_states = {
+            start: state_to_idx[s] for start, s in parse_table.start_states.items()
+        }
+        end_states = {
+            start: state_to_idx[s] for start, s in parse_table.end_states.items()
+        }
         return cls(int_states, start_states, end_states)
+
 
 ###}
 
@@ -101,6 +120,7 @@ def digraph(X, R, G):
             traverse(x, S, N, X, R, G, F)
     return F
 
+
 # x: single node
 # S: stack
 # N: weights
@@ -117,9 +137,9 @@ def traverse(x, S, N, X, R, G, F):
         if N[y] == 0:
             traverse(y, S, N, X, R, G, F)
         n_x = N[x]
-        assert(n_x > 0)
+        assert n_x > 0
         n_y = N[y]
-        assert(n_y != 0)
+        assert n_y != 0
         if (n_y > 0) and (n_y < n_x):
             N[x] = n_y
         F[x].update(F[y])
@@ -142,7 +162,6 @@ class LALR_Analyzer(GrammarAnalyzer):
         self.includes = defaultdict(set)
         self.lookback = defaultdict(set)
 
-
     def compute_lr0_states(self):
         self.lr0_states = set()
         # map of kernels to LR0ItemSets
@@ -159,7 +178,9 @@ class LALR_Analyzer(GrammarAnalyzer):
                     closure = set(kernel)
                     for rp in kernel:
                         if not rp.is_satisfied and not rp.next.is_term:
-                            closure |= self.expand_rule(rp.next, self.lr0_rules_by_origin)
+                            closure |= self.expand_rule(
+                                rp.next, self.lr0_rules_by_origin
+                            )
                     new_state = LR0ItemSet(kernel, closure)
                     cache[kernel] = new_state
 
@@ -174,10 +195,10 @@ class LALR_Analyzer(GrammarAnalyzer):
     def compute_reads_relations(self):
         # handle start state
         for root in self.lr0_start_states.values():
-            assert(len(root.kernel) == 1)
+            assert len(root.kernel) == 1
             for rp in root.kernel:
-                assert(rp.index == 0)
-                self.directly_reads[(root, rp.next)] = set([ Terminal('$END') ])
+                assert rp.index == 0
+                self.directly_reads[(root, rp.next)] = set([Terminal("$END")])
 
         for state in self.lr0_states:
             seen = set()
@@ -236,7 +257,9 @@ class LALR_Analyzer(GrammarAnalyzer):
                 self.includes[nt2].add(nt)
 
     def compute_lookaheads(self):
-        read_sets = digraph(self.nonterminal_transitions, self.reads, self.directly_reads)
+        read_sets = digraph(
+            self.nonterminal_transitions, self.reads, self.directly_reads
+        )
         follow_sets = digraph(self.nonterminal_transitions, self.includes, read_sets)
 
         for nt, lookbacks in self.lookback.items():
@@ -263,33 +286,45 @@ class LALR_Analyzer(GrammarAnalyzer):
                         reduce_reduce.append((state, la, rules))
                 if la in actions:
                     if self.debug:
-                        logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
-                        logger.warning(' * %s', list(rules)[0])
+                        logger.warning(
+                            "Shift/Reduce conflict for terminal %s: (resolving as shift)",
+                            la.name,
+                        )
+                        logger.warning(" * %s", list(rules)[0])
                 else:
                     actions[la] = (Reduce, list(rules)[0])
-            m[state] = { k.name: v for k, v in actions.items() }
+            m[state] = {k.name: v for k, v in actions.items()}
 
         if reduce_reduce:
             msgs = []
             for state, la, rules in reduce_reduce:
-                msg = 'Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t- ' + str(r) for r in rules ]))
+                msg = (
+                    "Reduce/Reduce collision in %s between the following rules: %s"
+                    % (la, "".join(["\n\t- " + str(r) for r in rules]))
+                )
                 if self.debug:
-                    msg += '\n    collision occurred in state: {%s\n    }' % ''.join(['\n\t' + str(x) for x in state.closure])
+                    msg += "\n    collision occurred in state: {%s\n    }" % "".join(
+                        ["\n\t" + str(x) for x in state.closure]
+                    )
                 msgs.append(msg)
-            raise GrammarError('\n\n'.join(msgs))
+            raise GrammarError("\n\n".join(msgs))
 
-        states = { k.closure: v for k, v in m.items() }
+        states = {k.closure: v for k, v in m.items()}
 
         # compute end states
         end_states = {}
         for state in states:
             for rp in state:
                 for start in self.lr0_start_states:
-                    if rp.rule.origin.name == ('$root_' + start) and rp.is_satisfied:
-                        assert(not start in end_states)
+                    if rp.rule.origin.name == ("$root_" + start) and rp.is_satisfied:
+                        assert not start in end_states
                         end_states[start] = state
 
-        _parse_table = ParseTable(states, { start: state.closure for start, state in self.lr0_start_states.items() }, end_states)
+        _parse_table = ParseTable(
+            states,
+            {start: state.closure for start, state in self.lr0_start_states.items()},
+            end_states,
+        )
 
         if self.debug:
             self.parse_table = _parse_table

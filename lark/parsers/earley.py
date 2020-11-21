@@ -20,8 +20,16 @@ from ..grammar import NonTerminal
 from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestSumVisitor, SymbolNode, ForestToParseTree
 
+
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
+    def __init__(
+        self,
+        parser_conf,
+        term_matcher,
+        resolve_ambiguity=True,
+        debug=False,
+        tree_class=Tree,
+    ):
         analysis = GrammarAnalyzer(parser_conf)
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
@@ -35,13 +43,19 @@ class Parser:
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
         #  the slow 'isupper' in is_terminal.
-        self.TERMINALS = { sym for r in parser_conf.rules for sym in r.expansion if sym.is_term }
-        self.NON_TERMINALS = { sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term }
+        self.TERMINALS = {
+            sym for r in parser_conf.rules for sym in r.expansion if sym.is_term
+        }
+        self.NON_TERMINALS = {
+            sym for r in parser_conf.rules for sym in r.expansion if not sym.is_term
+        }
 
         self.forest_sum_visitor = None
         for rule in parser_conf.rules:
             if rule.origin not in self.predictions:
-                self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
+                self.predictions[rule.origin] = [
+                    x.rule for x in analysis.expand_rule(rule.origin)
+                ]
 
             ## Detect if any rules have priorities set. If the user specified priority = "none" then
             #  the priorities will be stripped from all rules before they reach us, allowing us to
@@ -51,7 +65,6 @@ class Parser:
                 self.forest_sum_visitor = ForestSumVisitor
 
         self.term_matcher = term_matcher
-
 
     def predict_and_complete(self, i, to_scan, columns, transitives):
         """The core Earley Predictor and Completer.
@@ -69,13 +82,17 @@ class Parser:
         # R (items) = Ei (column.items)
         items = deque(column)
         while items:
-            item = items.pop()    # remove an element, A say, from R
+            item = items.pop()  # remove an element, A say, from R
 
             ### The Earley completer
-            if item.is_complete:   ### (item.s == string)
+            if item.is_complete:  ### (item.s == string)
                 if item.node is None:
                     label = (item.s, item.start, i)
-                    item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                    item.node = (
+                        node_cache[label]
+                        if label in node_cache
+                        else node_cache.setdefault(label, SymbolNode(*label))
+                    )
                     item.node.add_family(item.s, item.rule, item.start, None, None)
 
                 # create_leo_transitives(item.rule.origin, item.start)
@@ -84,13 +101,19 @@ class Parser:
                 if item.rule.origin in transitives[item.start]:
                     transitive = transitives[item.start][item.s]
                     if transitive.previous in transitives[transitive.column]:
-                        root_transitive = transitives[transitive.column][transitive.previous]
+                        root_transitive = transitives[transitive.column][
+                            transitive.previous
+                        ]
                     else:
                         root_transitive = transitive
 
                     new_item = Item(transitive.rule, transitive.ptr, transitive.start)
                     label = (root_transitive.s, root_transitive.start, i)
-                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
+                    new_item.node = (
+                        node_cache[label]
+                        if label in node_cache
+                        else node_cache.setdefault(label, SymbolNode(*label))
+                    )
                     new_item.node.add_path(root_transitive, item.node)
                     if new_item.expect in self.TERMINALS:
                         # Add (B :: aC.B, h, y) to Q
@@ -110,12 +133,22 @@ class Parser:
                     if is_empty_item:
                         held_completions[item.rule.origin] = item.node
 
-                    originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
+                    originators = [
+                        originator
+                        for originator in columns[item.start]
+                        if originator.expect is not None and originator.expect == item.s
+                    ]
                     for originator in originators:
                         new_item = originator.advance()
                         label = (new_item.s, originator.start, i)
-                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                        new_item.node.add_family(new_item.s, new_item.rule, i, originator.node, item.node)
+                        new_item.node = (
+                            node_cache[label]
+                            if label in node_cache
+                            else node_cache.setdefault(label, SymbolNode(*label))
+                        )
+                        new_item.node.add_family(
+                            new_item.s, new_item.rule, i, originator.node, item.node
+                        )
                         if new_item.expect in self.TERMINALS:
                             # Add (B :: aC.B, h, y) to Q
                             to_scan.add(new_item)
@@ -125,7 +158,7 @@ class Parser:
                             items.append(new_item)
 
             ### The Earley predictor
-            elif item.expect in self.NON_TERMINALS: ### (item.s == lr0)
+            elif item.expect in self.NON_TERMINALS:  ### (item.s == lr0)
                 new_items = []
                 for rule in self.predictions[item.expect]:
                     new_item = Item(rule, 0, i)
@@ -135,8 +168,18 @@ class Parser:
                 if item.expect in held_completions:
                     new_item = item.advance()
                     label = (new_item.s, item.start, i)
-                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                    new_item.node.add_family(new_item.s, new_item.rule, new_item.start, item.node, held_completions[item.expect])
+                    new_item.node = (
+                        node_cache[label]
+                        if label in node_cache
+                        else node_cache.setdefault(label, SymbolNode(*label))
+                    )
+                    new_item.node.add_family(
+                        new_item.s,
+                        new_item.rule,
+                        new_item.start,
+                        item.node,
+                        held_completions[item.expect],
+                    )
                     new_items.append(new_item)
 
                 for new_item in new_items:
@@ -178,7 +221,11 @@ class Parser:
                 if is_empty_rule:
                     break
 
-                candidates = [ candidate for candidate in columns[start] if candidate.expect is not None and origin == candidate.expect ]
+                candidates = [
+                    candidate
+                    for candidate in columns[start]
+                    if candidate.expect is not None and origin == candidate.expect
+                ]
                 if len(candidates) != 1:
                     break
                 originator = next(iter(candidates))
@@ -208,12 +255,12 @@ class Parser:
                 origin, start, originator = to_create.pop()
                 titem = None
                 if previous is not None:
-                        titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
+                    titem = previous.next_titem = TransitiveItem(
+                        origin, trule, originator, previous.column
+                    )
                 else:
-                        titem = TransitiveItem(origin, trule, originator, start)
+                    titem = TransitiveItem(origin, trule, originator, start)
                 previous = transitives[start][origin] = titem
-
-
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.
@@ -233,8 +280,14 @@ class Parser:
                 if match(item.expect, token):
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
-                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
+                    new_item.node = (
+                        node_cache[label]
+                        if label in node_cache
+                        else node_cache.setdefault(label, SymbolNode(*label))
+                    )
+                    new_item.node.add_family(
+                        new_item.s, item.rule, new_item.start, item.node, token
+                    )
 
                     if new_item.expect in self.TERMINALS:
                         # add (B ::= Aai+1.B, h, y) to Q'
@@ -245,10 +298,9 @@ class Parser:
 
             if not next_set and not next_to_scan:
                 expect = {i.expect.name for i in to_scan}
-                raise UnexpectedToken(token, expect, considered_rules = set(to_scan))
+                raise UnexpectedToken(token, expect, considered_rules=set(to_scan))
 
             return next_to_scan
-
 
         # Define parser functions
         match = self.term_matcher
@@ -271,7 +323,7 @@ class Parser:
         self.predict_and_complete(i, to_scan, columns, transitives)
 
         ## Column is now the final column in the parse.
-        assert i == len(columns)-1
+        assert i == len(columns) - 1
         return to_scan
 
     def parse(self, stream, start):
@@ -279,7 +331,7 @@ class Parser:
         start_symbol = NonTerminal(start)
 
         columns = [set()]
-        to_scan = set()     # The scan buffer. 'Q' in E.Scott's paper.
+        to_scan = set()  # The scan buffer. 'Q' in E.Scott's paper.
 
         ## Predict for the start_symbol.
         # Add predicted items to the first Earley set (for the predictor) if they
@@ -296,31 +348,46 @@ class Parser:
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        solutions = [
+            n.node
+            for n in columns[-1]
+            if n.is_complete
+            and n.node is not None
+            and n.s == start_symbol
+            and n.start == 0
+        ]
         if not solutions:
             expected_terminals = [t.expect for t in to_scan]
             raise UnexpectedEOF(expected_terminals)
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
+
             try:
                 debug_walker = ForestToPyDotVisitor()
             except ImportError:
-                logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
+                logger.warning(
+                    "Cannot find dependency 'pydot', will not generate sppf debug image"
+                )
             else:
                 debug_walker.visit(solutions[0], "sppf.png")
 
-
         if len(solutions) > 1:
-            assert False, 'Earley should not generate multiple start symbol items!'
+            assert False, "Earley should not generate multiple start symbol items!"
 
         if self.tree_class is not None:
             # Perform our SPPF -> AST conversion
-            transformer = ForestToParseTree(self.tree_class, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
+            transformer = ForestToParseTree(
+                self.tree_class,
+                self.callbacks,
+                self.forest_sum_visitor and self.forest_sum_visitor(),
+                self.resolve_ambiguity,
+            )
             return transformer.transform(solutions[0])
 
         # return the root of the SPPF
         return solutions[0]
+
 
 class ApplyCallbacks(Transformer_InPlace):
     def __init__(self, postprocess):

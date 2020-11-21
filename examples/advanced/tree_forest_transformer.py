@@ -9,21 +9,22 @@ directly transform a SPPF.
 from lark import Lark
 from lark.parsers.earley_forest import TreeForestTransformer, handles_ambiguity, Discard
 
-class CustomTransformer(TreeForestTransformer):
 
+class CustomTransformer(TreeForestTransformer):
     @handles_ambiguity
     def sentence(self, trees):
-        return next(tree for tree in trees if tree.data == 'simple')
+        return next(tree for tree in trees if tree.data == "simple")
 
     def simple(self, children):
-        children.append('.')
-        return self.tree_class('simple', children)
+        children.append(".")
+        return self.tree_class("simple", children)
 
     def adj(self, children):
         raise Discard()
 
     def __default_token__(self, token):
         return token.capitalize()
+
 
 grammar = """
     sentence: noun verb noun        -> simple
@@ -41,8 +42,8 @@ grammar = """
     %ignore WS
 """
 
-parser = Lark(grammar, start='sentence', ambiguity='forest')
-sentence = 'fruit flies like bananas'
+parser = Lark(grammar, start="sentence", ambiguity="forest")
+sentence = "fruit flies like bananas"
 forest = parser.parse(sentence)
 
 tree = CustomTransformer(resolve_ambiguity=False).transform(forest)

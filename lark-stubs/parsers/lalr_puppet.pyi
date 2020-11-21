@@ -1,4 +1,4 @@
-from typing import Set, Dict, Any
+from typing import Any, Dict, Set
 
 from lark import Token, Tree
 

@@ -5,9 +5,9 @@ Example-Driven Error Reporting
 A demonstration of example-driven error reporting with the LALR parser
 
 """
-from lark import Lark, UnexpectedInput
-
 from _json_parser import json_grammar  # Using the grammar from the json_parser example
+
+from lark import Lark, UnexpectedInput
 
 json_parser = Lark(json_grammar, parser="lalr")
 

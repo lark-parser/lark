@@ -1,28 +1,36 @@
 """Parses and creates Grammar objects"""
 
 import os.path
+import pkgutil
 import sys
 from copy import copy, deepcopy
 from io import open
-import pkgutil
 
-from .utils import bfs, eval_escaping, Py36, logger, classify_bool
-from .lexer import Token, TerminalDef, PatternStr, PatternRE
-
+from .common import LexerConf, ParserConf
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
+from .grammar import NonTerminal, Rule, RuleOptions, Symbol, Terminal
+from .lexer import PatternRE, PatternStr, TerminalDef, Token
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
-from .common import LexerConf, ParserConf
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress, dedup_list, Str
-from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
-
-from .tree import Tree, SlottedTree as ST
+from .tree import SlottedTree as ST
+from .tree import Tree
+from .utils import (
+    Py36,
+    Str,
+    bfs,
+    classify,
+    classify_bool,
+    dedup_list,
+    eval_escaping,
+    logger,
+    suppress,
+)
 from .visitors import (
     Transformer,
-    Visitor,
-    v_args,
     Transformer_InPlace,
     Transformer_NonRecursive,
+    Visitor,
+    v_args,
 )
 
 inline_args = v_args(inline=True)

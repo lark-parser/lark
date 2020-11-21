@@ -30,7 +30,6 @@ import os
 from io import open
 
 
-
 class LarkError(Exception):
     pass
 
@@ -173,6 +172,7 @@ class VisitError(LarkError):
         super(VisitError, self).__init__(message)
 
 import logging
+
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 ##
@@ -274,8 +274,8 @@ except NameError:   ##
 
 
 import types
-from functools import wraps, partial
 from contextlib import contextmanager
+from functools import partial, wraps
 
 Str = type(u'')
 try:
@@ -308,11 +308,14 @@ try:
 except ImportError:
     regex = None
 
-import sys, re
+import re
+import sys
+
 Py36 = (sys.version_info[:2] >= (3, 6))
 
-import sre_parse
 import sre_constants
+import sre_parse
+
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
 def get_regexp_width(expr):
     if regex:
@@ -411,6 +414,7 @@ class Tree(object):
 
 
 from inspect import getmembers, getmro
+
 
 class Discard(Exception):
     #--
@@ -941,6 +945,7 @@ class Rule(Serialize):
 
 from copy import copy
 
+
 class Pattern(Serialize):
 
     def __init__(self, value, flags=()):
@@ -1368,7 +1373,7 @@ class LexerConf(Serialize):
 
 
 from functools import partial, wraps
-from itertools import repeat, product
+from itertools import product, repeat
 
 
 class ExpandSingleChild:

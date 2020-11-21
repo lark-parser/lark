@@ -4,8 +4,9 @@ Lark Grammar
 
 A reference implementation of the Lark grammar (using LALR(1))
 """
-import lark
 from pathlib import Path
+
+import lark
 
 parser = lark.Lark.open("lark.lark", rel_to=__file__, parser="lalr")
 

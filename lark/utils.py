@@ -1,11 +1,12 @@
+import logging
 import os
-from functools import reduce
-from ast import literal_eval
-from collections import deque
+import re
 
 ###{standalone
-import sys, re
-import logging
+import sys
+from ast import literal_eval
+from collections import deque
+from functools import reduce
 
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
@@ -117,8 +118,8 @@ except NameError:  # Python 3
 
 
 import types
-from functools import wraps, partial
 from contextlib import contextmanager
+from functools import partial, wraps
 
 Str = type(u"")
 try:
@@ -152,8 +153,8 @@ try:
 except ImportError:
     regex = None
 
-import sre_parse
 import sre_constants
+import sre_parse
 
 categ_pattern = re.compile(r"\\p{[A-Za-z_]+}")
 

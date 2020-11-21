@@ -1,13 +1,12 @@
+###{standalone
+from functools import partial, wraps
+from itertools import product, repeat
+
 from .exceptions import GrammarError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer  # XXX Deprecated
-from .visitors import Transformer_InPlace
-from .visitors import _vargs_meta, _vargs_meta_inline
-
-###{standalone
-from functools import partial, wraps
-from itertools import repeat, product
+from .visitors import Transformer_InPlace, _vargs_meta, _vargs_meta_inline
 
 
 class ExpandSingleChild:

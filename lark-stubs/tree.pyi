@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Callable, Iterator, Union, Optional, Literal
+from typing import Callable, Iterator, List, Literal, Optional, Union
+
 from .lexer import TerminalDef
 
 class Meta:

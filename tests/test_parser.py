@@ -1,29 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import re
-import unittest
 import logging
 import os
+import re
 import sys
+import unittest
 from copy import copy, deepcopy
-
-from lark.utils import Py36, isascii
 
 from lark import Token
 from lark.load_grammar import FromPackageLoader
+from lark.utils import Py36, isascii
 
 try:
     from cStringIO import StringIO as cStringIO
 except ImportError:
     # Available only in Python 2.x, 3.x only has io.StringIO from below
     cStringIO = None
-from io import (
-    StringIO as uStringIO,
-    BytesIO,
-    open,
-)
-
+from io import BytesIO
+from io import StringIO as uStringIO
+from io import open
 
 try:
     import regex
@@ -31,19 +27,19 @@ except ImportError:
     regex = None
 
 from lark import logger
-from lark.lark import Lark
 from lark.exceptions import (
     GrammarError,
     ParseError,
-    UnexpectedToken,
-    UnexpectedInput,
     UnexpectedCharacters,
+    UnexpectedInput,
+    UnexpectedToken,
 )
+from lark.grammar import Rule
+from lark.indenter import Indenter
+from lark.lark import Lark
+from lark.lexer import Lexer, TerminalDef, TraditionalLexer
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args
-from lark.grammar import Rule
-from lark.lexer import TerminalDef, Lexer, TraditionalLexer
-from lark.indenter import Indenter
 
 logger.setLevel(logging.INFO)
 

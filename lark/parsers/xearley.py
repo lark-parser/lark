@@ -16,10 +16,10 @@ Earley's power in parsing any CFG.
 
 from collections import defaultdict
 
-from ..tree import Tree
 from ..exceptions import UnexpectedCharacters
-from ..lexer import Token
 from ..grammar import Terminal
+from ..lexer import Token
+from ..tree import Tree
 from .earley import Parser as BaseParser
 from .earley_forest import SymbolNode
 

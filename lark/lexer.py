@@ -2,11 +2,11 @@
 
 import re
 
-from .utils import Str, classify, get_regexp_width, Py36, Serialize, suppress
-from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
-
 ###{standalone
 from copy import copy
+
+from .exceptions import LexError, UnexpectedCharacters, UnexpectedToken
+from .utils import Py36, Serialize, Str, classify, get_regexp_width, suppress
 
 
 class Pattern(Serialize):

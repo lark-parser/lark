@@ -1,22 +1,30 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError
 
-import sys, os, pickle, hashlib
-from io import open
+import hashlib
+import os
+import pickle
+import re
+import sys
 import tempfile
+from io import open
 from warnings import warn
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar, FromPackageLoader
-from .tree import Tree
+from lark.exceptions import (
+    ConfigurationError,
+    UnexpectedCharacters,
+    UnexpectedInput,
+    UnexpectedToken,
+)
+
 from .common import LexerConf, ParserConf
-
-from .lexer import Lexer, TraditionalLexer, TerminalDef
-from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
+from .lexer import Lexer, TerminalDef, TraditionalLexer
+from .load_grammar import FromPackageLoader, load_grammar
+from .parse_tree_builder import ParseTreeBuilder
+from .parser_frontends import _get_lexer_callbacks, get_frontend
+from .tree import Tree
+from .utils import FS, STRING_TYPE, Serialize, SerializeMemoizer, isascii, logger
 
-import re
 try:
     import regex
 except ImportError:

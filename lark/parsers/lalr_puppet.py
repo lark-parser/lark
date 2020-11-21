@@ -2,9 +2,9 @@
 
 from copy import copy
 
-from .lalr_analysis import Shift, Reduce
 from .. import Token
 from ..exceptions import UnexpectedToken
+from .lalr_analysis import Reduce, Shift
 
 
 class ParserPuppet(object):

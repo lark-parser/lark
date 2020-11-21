@@ -1,8 +1,8 @@
 from collections import Counter, defaultdict
 
-from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
-from ..grammar import Rule, Terminal, NonTerminal
+from ..grammar import NonTerminal, Rule, Terminal
+from ..utils import bfs, classify, fzset
 
 
 class RulePtr(object):

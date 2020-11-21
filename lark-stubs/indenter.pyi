@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple, List, Iterator, Optional
 from abc import ABC, abstractmethod
+from typing import Iterator, List, Optional, Tuple
+
 from .lexer import Token
 
 class Indenter(ABC):

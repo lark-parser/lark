@@ -1,9 +1,9 @@
 import json
 import unittest
 from unittest import TestCase
+
 from lark import Lark
 from lark.reconstruct import Reconstructor
-
 
 common = """
 %import common (WS_INLINE, NUMBER, WORD)

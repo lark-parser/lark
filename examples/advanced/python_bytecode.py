@@ -11,10 +11,10 @@ It requires the 'bytecode' library. You can get it using
     $ pip install bytecode
 
 """
+from bytecode import Bytecode, Instr
+
 from lark import Lark, Transformer, v_args
 from lark.indenter import Indenter
-
-from bytecode import Instr, Bytecode
 
 
 class PythonIndenter(Indenter):

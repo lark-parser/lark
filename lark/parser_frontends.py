@@ -1,18 +1,18 @@
-from .utils import get_regexp_width, Serialize
-from .parsers.grammar_analysis import GrammarAnalyzer
+from .common import LexerConf
+from .grammar import Rule
 from .lexer import (
-    LexerThread,
-    TraditionalLexer,
     ContextualLexer,
     Lexer,
-    Token,
+    LexerThread,
     TerminalDef,
+    Token,
+    TraditionalLexer,
 )
-from .parsers import earley, xearley, cyk
+from .parsers import cyk, earley, xearley
+from .parsers.grammar_analysis import GrammarAnalyzer
 from .parsers.lalr_parser import LALR_Parser
-from .grammar import Rule
 from .tree import Tree
-from .common import LexerConf
+from .utils import Serialize, get_regexp_width
 
 try:
     import regex

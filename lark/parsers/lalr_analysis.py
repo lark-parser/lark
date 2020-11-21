@@ -8,11 +8,10 @@ For now, shift/reduce conflicts are automatically resolved as shifts.
 
 from collections import defaultdict
 
-from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
-
-from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
 from ..grammar import Rule
+from ..utils import Enumerator, bfs, classify, classify_bool, fzset, logger
+from .grammar_analysis import GrammarAnalyzer, LR0ItemSet, Terminal
 
 ###{standalone
 

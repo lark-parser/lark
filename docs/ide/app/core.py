@@ -6,7 +6,8 @@
 
 try:
     # Pyodide
-    from js import window, eval as jseval
+    from js import eval as jseval
+    from js import window
 
     document = window.document
 

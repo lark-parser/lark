@@ -4,7 +4,7 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark
-from lark.load_grammar import GrammarLoader, GrammarError
+from lark.load_grammar import GrammarError, GrammarLoader
 
 
 class TestGrammar(TestCase):

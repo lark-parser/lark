@@ -2,6 +2,7 @@
 
 from .lexer import Token
 
+
 ###{standalone
 class Indenter:
     def __init__(self):

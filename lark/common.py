@@ -1,5 +1,5 @@
-from .utils import Serialize
 from .lexer import TerminalDef
+from .utils import Serialize
 
 ###{standalone
 

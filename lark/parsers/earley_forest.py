@@ -7,18 +7,18 @@ Full reference and more details is here:
 http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
-from random import randint
-from math import isinf
 from collections import deque
-from operator import attrgetter
-from importlib import import_module
 from functools import partial
+from importlib import import_module
+from math import isinf
+from operator import attrgetter
+from random import randint
 
-from ..parse_tree_builder import AmbiguousIntermediateExpander
-from ..visitors import Discard
 from ..lexer import Token
-from ..utils import logger
+from ..parse_tree_builder import AmbiguousIntermediateExpander
 from ..tree import Tree
+from ..utils import logger
+from ..visitors import Discard
 
 
 class ForestNode(object):

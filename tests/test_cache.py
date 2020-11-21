@@ -3,16 +3,17 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
+import lark.lark as lark_module
 from lark import Lark, Tree
 from lark.lexer import Lexer, Token
-import lark.lark as lark_module
 
 try:
     from StringIO import StringIO
 except ImportError:
     from io import BytesIO as StringIO
 
-import tempfile, os
+import os
+import tempfile
 
 
 class MockFile(StringIO):

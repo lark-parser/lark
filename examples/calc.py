@@ -8,7 +8,6 @@ This example shows how to write a basic calculator with variables.
 """
 from lark import Lark, Transformer, v_args
 
-
 try:
     input = raw_input  # For Python2 compatibility
 except NameError:
@@ -42,7 +41,8 @@ calc_grammar = """
 
 @v_args(inline=True)  # Affects the signatures of the methods
 class CalculateTree(Transformer):
-    from operator import add, sub, mul, truediv as div, neg
+    from operator import add, mul, neg, sub
+    from operator import truediv as div
 
     number = float
 

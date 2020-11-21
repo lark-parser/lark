@@ -4,8 +4,8 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark
-from lark.tree import Tree
 from lark.tools import standalone
+from lark.tree import Tree
 
 try:
     from StringIO import StringIO

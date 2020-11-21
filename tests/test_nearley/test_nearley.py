@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import unittest
+import codecs
 import logging
 import os
-import codecs
+import unittest
 
 from lark import logger
-from lark.tools.nearley import (
-    create_code_for_nearley_grammar,
-    main as nearley_tool_main,
-)
+from lark.tools.nearley import create_code_for_nearley_grammar
+from lark.tools.nearley import main as nearley_tool_main
 
 logger.setLevel(logging.INFO)
 

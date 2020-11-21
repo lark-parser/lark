@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Dict, Union
+from typing import Dict, List, Union
+
 from .lark import Lark
+from .lexer import TerminalDef
 from .tree import Tree
 from .visitors import Transformer_InPlace
-from .lexer import TerminalDef
 
 class WriteTokensTransformer(Transformer_InPlace):
     def __init__(self, tokens: Dict[str, TerminalDef], term_subs): ...

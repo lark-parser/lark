@@ -9,8 +9,8 @@ except ImportError:
         return "".join(prefix + line for line in text.splitlines(True))
 
 
-from logging import DEBUG, INFO, WARN, ERROR
 import warnings
+from logging import DEBUG, ERROR, INFO, WARN
 
 from lark import Lark, logger
 

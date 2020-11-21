@@ -1,12 +1,12 @@
 from functools import wraps
 
-from .utils import smart_decorator, combine_alternatives
-from .tree import Tree
-from .exceptions import VisitError, GrammarError
-from .lexer import Token
-
 ###{standalone
 from inspect import getmembers, getmro
+
+from .exceptions import GrammarError, VisitError
+from .lexer import Token
+from .tree import Tree
+from .utils import combine_alternatives, smart_decorator
 
 
 class Discard(Exception):

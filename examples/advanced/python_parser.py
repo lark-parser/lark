@@ -6,10 +6,12 @@ A fully-working Python 2 & 3 parser (but not production ready yet!)
 
 This example demonstrates usage of the included Python grammars
 """
+import glob
+import os
+import os.path
 import sys
-import os, os.path
+import time
 from io import open
-import glob, time
 
 from lark import Lark
 from lark.indenter import Indenter

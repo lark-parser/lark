@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
-from .tree import Tree
+from typing import Any, Callable, Dict, Iterable, List, Set, Tuple, TypeVar, Union
+
 from .lexer import Token
 from .parsers.lalr_puppet import ParserPuppet
+from .tree import Tree
 
 class LarkError(Exception):
     pass

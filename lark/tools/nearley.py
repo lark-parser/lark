@@ -1,12 +1,11 @@
 "Converts Nearley grammars to Lark"
 
+import argparse
+import codecs
 import os.path
 import sys
-import codecs
-import argparse
 
-
-from lark import Lark, InlineTransformer
+from lark import InlineTransformer, Lark
 
 nearley_grammar = r"""
     start: (ruledef|directive)+

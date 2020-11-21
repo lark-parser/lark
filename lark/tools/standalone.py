@@ -1,5 +1,22 @@
 from __future__ import print_function
 
+import os
+import sys
+import token
+import tokenize
+from argparse import SUPPRESS, ArgumentParser
+from collections import defaultdict
+from functools import partial
+from io import open
+from os import path
+from warnings import warn
+
+import lark
+from lark import Lark
+from lark.grammar import Rule, RuleOptions
+from lark.lexer import TerminalDef
+from lark.tools import build_lalr, lalr_argparser, make_warnings_comments
+
 ###{standalone
 #
 #
@@ -26,26 +43,12 @@ from __future__ import print_function
 #
 #
 
-from io import open
 
 ###}
 
-import sys
-import token, tokenize
-import os
-from os import path
-from collections import defaultdict
-from functools import partial
-from argparse import ArgumentParser, SUPPRESS
-from warnings import warn
-
-import lark
-from lark import Lark
-from lark.tools import lalr_argparser, build_lalr, make_warnings_comments
 
 
-from lark.grammar import RuleOptions, Rule
-from lark.lexer import TerminalDef
+
 
 _dir = path.dirname(__file__)
 _larkdir = path.join(_dir, path.pardir)
@@ -133,7 +136,9 @@ def gen_standalone(lark_inst, output=None, out=sys.stdout, compress=False):
     if output is None:
         output = partial(print, file=out)
 
-    import pickle, zlib, base64
+    import base64
+    import pickle
+    import zlib
 
     def compressed_output(obj):
         s = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)

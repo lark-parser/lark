@@ -2,11 +2,11 @@
 """
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
-from copy import deepcopy, copy
+from copy import copy, deepcopy
+
 from ..exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 from ..lexer import Token
-
-from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
+from .lalr_analysis import IntParseTable, LALR_Analyzer, Reduce, Shift
 from .lalr_puppet import ParserPuppet
 
 ###{standalone

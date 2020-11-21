@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from typing import TypeVar, Tuple, List, Callable, Generic, Type
 from abc import ABC
+from typing import Callable, Generic, List, Tuple, Type, TypeVar
+
 from .tree import Tree
 
 _T = TypeVar("_T")

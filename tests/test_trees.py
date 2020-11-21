@@ -1,21 +1,21 @@
 from __future__ import absolute_import
 
+import copy
+import functools
+import pickle
 import unittest
 from unittest import TestCase
-import copy
-import pickle
-import functools
 
-from lark.tree import Tree
 from lark.lexer import Token
+from lark.tree import Tree
 from lark.visitors import (
+    Discard,
+    Interpreter,
+    Transformer,
     Visitor,
     Visitor_Recursive,
-    Transformer,
-    Interpreter,
-    visit_children_decor,
     v_args,
-    Discard,
+    visit_children_decor,
 )
 
 
@@ -171,7 +171,7 @@ class TestTrees(TestCase):
         class T(Transformer):
             i = int
             f = float
-            from operator import sub, add
+            from operator import add, sub
 
         res = T().transform(t)
         self.assertEqual(res, 2.9)

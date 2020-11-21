@@ -1,8 +1,8 @@
-from . import html5
-from .examples import examples
-
 from lark import Lark
 from lark.tree import Tree
+
+from . import html5
+from .examples import examples
 
 
 class App(html5.Div):

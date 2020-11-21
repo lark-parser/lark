@@ -4,9 +4,9 @@ import unittest
 
 from lark import Lark
 from lark.lexer import Token
-from lark.tree import Tree
-from lark.visitors import Visitor, Transformer, Discard
 from lark.parsers.earley_forest import TreeForestTransformer, handles_ambiguity
+from lark.tree import Tree
+from lark.visitors import Discard, Transformer, Visitor
 
 
 class TestTreeForestTransformer(unittest.TestCase):

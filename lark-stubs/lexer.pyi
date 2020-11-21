@@ -1,20 +1,9 @@
 # -*- coding: utf-8 -*-
+from abc import ABC, abstractmethod
 from types import ModuleType
-from typing import (
-    TypeVar,
-    Type,
-    Tuple,
-    List,
-    Dict,
-    Iterator,
-    Collection,
-    Callable,
-    Optional,
-    FrozenSet,
-    Any,
-    Pattern as REPattern,
-)
-from abc import abstractmethod, ABC
+from typing import Any, Callable, Collection, Dict, FrozenSet, Iterator, List, Optional
+from typing import Pattern as REPattern
+from typing import Tuple, Type, TypeVar
 
 _T = TypeVar("_T")
 

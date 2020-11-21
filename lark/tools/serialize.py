@@ -1,13 +1,12 @@
+import argparse
 import codecs
-import sys
 import json
+import sys
 
 from lark import Lark
-from lark.grammar import RuleOptions, Rule
+from lark.grammar import Rule, RuleOptions
 from lark.lexer import TerminalDef
-from lark.tools import lalr_argparser, build_lalr
-
-import argparse
+from lark.tools import build_lalr, lalr_argparser
 
 argparser = argparse.ArgumentParser(
     prog="python -m lark.tools.serialize",

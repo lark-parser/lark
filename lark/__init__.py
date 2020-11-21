@@ -1,17 +1,24 @@
-from .utils import logger
-from .tree import Tree
-from .visitors import Transformer, Visitor, v_args, Discard, Transformer_NonRecursive
-from .visitors import InlineTransformer, inline_args  # XXX Deprecated
 from .exceptions import (
-    ParseError,
-    LexError,
     GrammarError,
-    UnexpectedToken,
-    UnexpectedInput,
-    UnexpectedCharacters,
     LarkError,
+    LexError,
+    ParseError,
+    UnexpectedCharacters,
+    UnexpectedInput,
+    UnexpectedToken,
 )
-from .lexer import Token
 from .lark import Lark
+from .lexer import Token
+from .tree import Tree
+from .utils import logger
+from .visitors import (  # XXX Deprecated
+    Discard,
+    InlineTransformer,
+    Transformer,
+    Transformer_NonRecursive,
+    Visitor,
+    inline_args,
+    v_args,
+)
 
 __version__ = "0.11.1"

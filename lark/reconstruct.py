@@ -2,12 +2,11 @@
 
 import unicodedata
 
+from .grammar import NonTerminal, Terminal
+from .lexer import PatternStr, Token
 from .tree import Tree
-from .visitors import Transformer_InPlace
-from .lexer import Token, PatternStr
-from .grammar import Terminal, NonTerminal
-
 from .tree_matcher import TreeMatcher, is_discarded_terminal
+from .visitors import Transformer_InPlace
 
 
 def is_iter_empty(i):

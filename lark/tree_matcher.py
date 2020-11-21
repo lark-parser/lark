@@ -3,10 +3,10 @@
 import re
 from collections import defaultdict
 
-from . import Tree, Token
+from . import Token, Tree
 from .common import ParserConf
+from .grammar import NonTerminal, Rule, Terminal
 from .parsers import earley
-from .grammar import Rule, Terminal, NonTerminal
 
 
 def is_discarded_terminal(t):

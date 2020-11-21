@@ -1,7 +1,8 @@
 import logging
 from contextlib import contextmanager
-from lark import Lark, logger
 from unittest import TestCase, main
+
+from lark import Lark, logger
 
 try:
     from StringIO import StringIO

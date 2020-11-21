@@ -7,7 +7,7 @@ directly transform a SPPF.
 """
 
 from lark import Lark
-from lark.parsers.earley_forest import TreeForestTransformer, handles_ambiguity, Discard
+from lark.parsers.earley_forest import Discard, TreeForestTransformer, handles_ambiguity
 
 
 class CustomTransformer(TreeForestTransformer):

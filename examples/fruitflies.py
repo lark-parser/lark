@@ -8,6 +8,7 @@ This example shows how to use get explicit ambiguity from Lark's Earley parser.
 
 """
 import sys
+
 from lark import Lark, tree
 
 grammar = """

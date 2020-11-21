@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 
 from typing import (
-    TypeVar,
-    Type,
-    List,
-    Dict,
     IO,
-    Iterator,
     Callable,
-    Union,
-    Optional,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
     Literal,
+    Optional,
     Protocol,
     Tuple,
-    Iterable,
+    Type,
+    TypeVar,
+    Union,
 )
-from .visitors import Transformer
-from .lexer import Token, Lexer, TerminalDef
+
+from .lexer import Lexer, TerminalDef, Token
 from .tree import Tree
+from .visitors import Transformer
 
 _T = TypeVar("_T")
 

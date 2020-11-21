@@ -3,11 +3,9 @@ try:
 except ImportError:
     pass
 
-from copy import deepcopy
-
-
 ###{standalone
 from collections import OrderedDict
+from copy import deepcopy
 
 
 class Meta:

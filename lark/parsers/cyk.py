@@ -5,13 +5,15 @@
 # Adapted by Erez
 
 
-from collections import defaultdict
 import itertools
+from collections import defaultdict
 
 from ..exceptions import ParseError
+from ..grammar import NonTerminal as NT
+from ..grammar import Symbol
+from ..grammar import Terminal as T
 from ..lexer import Token
 from ..tree import Tree
-from ..grammar import Terminal as T, NonTerminal as NT, Symbol
 
 try:
     xrange

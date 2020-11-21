@@ -27,13 +27,7 @@ except ImportError:
     regex = None
 
 from lark import logger
-from lark.exceptions import (
-    GrammarError,
-    ParseError,
-    UnexpectedCharacters,
-    UnexpectedInput,
-    UnexpectedToken,
-)
+from lark.exceptions import GrammarError, ParseError, UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 from lark.grammar import Rule
 from lark.indenter import Indenter
 from lark.lark import Lark

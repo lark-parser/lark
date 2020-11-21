@@ -9,12 +9,7 @@ import tempfile
 from io import open
 from warnings import warn
 
-from lark.exceptions import (
-    ConfigurationError,
-    UnexpectedCharacters,
-    UnexpectedInput,
-    UnexpectedToken,
-)
+from lark.exceptions import ConfigurationError, UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 from .common import LexerConf, ParserConf
 from .grammar import Rule

@@ -1,13 +1,6 @@
 from .common import LexerConf
 from .grammar import Rule
-from .lexer import (
-    ContextualLexer,
-    Lexer,
-    LexerThread,
-    TerminalDef,
-    Token,
-    TraditionalLexer,
-)
+from .lexer import ContextualLexer, Lexer, LexerThread, TerminalDef, Token, TraditionalLexer
 from .parsers import cyk, earley, xearley
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .parsers.lalr_parser import LALR_Parser

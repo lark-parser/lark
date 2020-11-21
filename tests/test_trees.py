@@ -8,15 +8,7 @@ from unittest import TestCase
 
 from lark.lexer import Token
 from lark.tree import Tree
-from lark.visitors import (
-    Discard,
-    Interpreter,
-    Transformer,
-    Visitor,
-    Visitor_Recursive,
-    v_args,
-    visit_children_decor,
-)
+from lark.visitors import Discard, Interpreter, Transformer, Visitor, Visitor_Recursive, v_args, visit_children_decor
 
 
 class TestTrees(TestCase):

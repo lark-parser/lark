@@ -14,24 +14,8 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import LALR_TraditionalLexer
 from .tree import SlottedTree as ST
 from .tree import Tree
-from .utils import (
-    Py36,
-    Str,
-    bfs,
-    classify,
-    classify_bool,
-    dedup_list,
-    eval_escaping,
-    logger,
-    suppress,
-)
-from .visitors import (
-    Transformer,
-    Transformer_InPlace,
-    Transformer_NonRecursive,
-    Visitor,
-    v_args,
-)
+from .utils import Py36, Str, bfs, classify, classify_bool, dedup_list, eval_escaping, logger, suppress
+from .visitors import Transformer, Transformer_InPlace, Transformer_NonRecursive, Visitor, v_args
 
 inline_args = v_args(inline=True)
 

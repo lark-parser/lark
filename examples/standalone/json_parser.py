@@ -94,12 +94,13 @@ class UnexpectedInput(LarkError):
                                 logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
 
-                            if token_type_match_fallback:
-                                ##
-
-                                if (ut.token.type == self.token.type) and not candidate[-1]:
-                                    logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
-                                    candidate = label, True
+                            if (
+                                token_type_match_fallback
+                                and (ut.token.type == self.token.type)
+                                and not candidate[-1]
+                            ):
+                                logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
+                                candidate = label, True
 
                         except AttributeError:
                             pass
@@ -813,8 +814,7 @@ class Indenter:
     def _process(self, stream):
         for token in stream:
             if token.type == self.NL_type:
-                for t in self.handle_NL(token):
-                    yield t
+                yield from self.handle_NL(token)
             else:
                 yield token
 
@@ -1513,7 +1513,7 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
     nones_to_add = 0
     for i, sym in enumerate(expansion):
         nones_to_add += empty_indices[i]
-        if keep_all_tokens or not (sym.is_term and sym.filter_out):
+        if keep_all_tokens or not sym.is_term or not sym.filter_out:
             to_include.append((i, _should_expand(sym), nones_to_add))
             nones_to_add = 0
 
@@ -2205,18 +2205,15 @@ class Lark(Serialize):
 
         ##
 
-        if self.options.priority == 'invert':
-            for rule in self.rules:
+        for rule in self.rules:
+                ##
+
+                ##
+
+            if self.options.priority == 'invert':
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
-        ##
-
-        ##
-
-        ##
-
-        elif self.options.priority == None:
-            for rule in self.rules:
+            elif self.options.priority is None:
                 if rule.options.priority is not None:
                     rule.options.priority = None
 
@@ -2270,10 +2267,7 @@ class Lark(Serialize):
         return inst._load(f)
 
     def _load(self, f, transformer=None, postlex=None):
-        if isinstance(f, dict):
-            d = f
-        else:
-            d = pickle.load(f)
+        d = f if isinstance(f, dict) else pickle.load(f)
         memo = d['memo']
         data = d['data']
 

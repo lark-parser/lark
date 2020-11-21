@@ -148,7 +148,7 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
     nones_to_add = 0
     for i, sym in enumerate(expansion):
         nones_to_add += empty_indices[i]
-        if keep_all_tokens or not (sym.is_term and sym.filter_out):
+        if keep_all_tokens or not sym.is_term or not sym.filter_out:
             to_include.append((i, _should_expand(sym), nones_to_add))
             nones_to_add = 0
 

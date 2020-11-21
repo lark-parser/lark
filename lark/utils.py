@@ -281,7 +281,7 @@ def combine_alternatives(lists):
     """
     if not lists:
         return [[]]
-    assert all(l for l in lists), lists
+    assert all(lists), lists
     init = [[x] for x in lists[0]]
     return reduce(lambda a, b: [i + [j] for i in a for j in b], lists[1:], init)
 

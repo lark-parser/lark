@@ -40,6 +40,14 @@ def run_instruction(t):
     if t.data == "change_color":
         turtle.color(*t.children)  # We just pass the color names as-is
 
+    elif t.data == "code_block":
+        for cmd in t.children:
+            run_instruction(cmd)
+    elif t.data == "fill":
+        turtle.begin_fill()
+        run_instruction(t.children[0])
+        turtle.end_fill()
+
     elif t.data == "movement":
         name, number = t.children
         {"f": turtle.fd, "b": turtle.bk, "l": turtle.lt, "r": turtle.rt,}[
@@ -48,17 +56,9 @@ def run_instruction(t):
 
     elif t.data == "repeat":
         count, block = t.children
-        for i in range(int(count)):
+        for _ in range(int(count)):
             run_instruction(block)
 
-    elif t.data == "fill":
-        turtle.begin_fill()
-        run_instruction(t.children[0])
-        turtle.end_fill()
-
-    elif t.data == "code_block":
-        for cmd in t.children:
-            run_instruction(cmd)
     else:
         raise SyntaxError("Unknown instruction: %s" % t.data)
 

@@ -75,8 +75,8 @@ def showwarning_as_comment(message, category, filename, lineno, file=None, line=
     text = indent(text, "# ")
     if file is None:
         file = sys.stderr
-        if file is None:
-            return
+    if file is None:
+        return
     try:
         file.write(text)
     except OSError:

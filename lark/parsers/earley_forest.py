@@ -344,7 +344,6 @@ class ForestVisitor(object):
                 input_stack.pop()
                 path.pop()
                 visiting.remove(current_id)
-                continue
             else:
                 visiting.add(current_id)
                 path.append(current)
@@ -366,7 +365,8 @@ class ForestVisitor(object):
                     continue
 
                 input_stack.append(next_node)
-                continue
+
+            continue
 
 
 class ForestTransformer(ForestVisitor):
@@ -388,7 +388,7 @@ class ForestTransformer(ForestVisitor):
 
     def __init__(self):
         # results of transformations
-        self.data = dict()
+        self.data = {}
         # used to track parent nodes
         self.node_stack = deque()
 
@@ -843,10 +843,7 @@ class ForestToPyDotVisitor(ForestVisitor):
         graph_node_label = repr(node)
         graph_node_color = 0x808080
         graph_node_style = '"filled"'
-        if node.is_intermediate:
-            graph_node_shape = "ellipse"
-        else:
-            graph_node_shape = "rectangle"
+        graph_node_shape = "ellipse" if node.is_intermediate else "rectangle"
         graph_node = self.pydot.Node(
             graph_node_id,
             style=graph_node_style,

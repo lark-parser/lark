@@ -102,9 +102,10 @@ def calculate_sets(rules):
         changed = False
 
         for rule in rules:
-            if set(rule.expansion) <= NULLABLE:
-                if update_set(NULLABLE, {rule.origin}):
-                    changed = True
+            if set(rule.expansion) <= NULLABLE and update_set(
+                NULLABLE, {rule.origin}
+            ):
+                changed = True
 
             for i, sym in enumerate(rule.expansion):
                 if set(rule.expansion[:i]) <= NULLABLE:
@@ -121,16 +122,20 @@ def calculate_sets(rules):
         for rule in rules:
             for i, sym in enumerate(rule.expansion):
                 if (
-                    i == len(rule.expansion) - 1
-                    or set(rule.expansion[i + 1 :]) <= NULLABLE
-                ):
-                    if update_set(FOLLOW[sym], FOLLOW[rule.origin]):
-                        changed = True
+                    (
+                        i == len(rule.expansion) - 1
+                        or set(rule.expansion[i + 1 :]) <= NULLABLE
+                    )
+                ) and update_set(FOLLOW[sym], FOLLOW[rule.origin]):
+                    changed = True
 
                 for j in range(i + 1, len(rule.expansion)):
-                    if set(rule.expansion[i + 1 : j]) <= NULLABLE:
-                        if update_set(FOLLOW[sym], FIRST[rule.expansion[j]]):
-                            changed = True
+                    if set(
+                        rule.expansion[i + 1 : j]
+                    ) <= NULLABLE and update_set(
+                        FOLLOW[sym], FIRST[rule.expansion[j]]
+                    ):
+                        changed = True
 
     return FIRST, FOLLOW, NULLABLE
 

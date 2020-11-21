@@ -101,8 +101,7 @@ class Reconstructor(TreeMatcher):
         for item in res:
             if isinstance(item, Tree):
                 # TODO use orig_expansion.rulename to support templates
-                for x in self._reconstruct(item):
-                    yield x
+                yield from self._reconstruct(item)
             else:
                 yield item
 

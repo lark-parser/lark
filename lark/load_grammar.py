@@ -186,22 +186,22 @@ class EBNF_to_BNF(Transformer_InPlace):
         return t
 
     def expr(self, rule, op, *args):
-        if op.value == "?":
-            empty = ST("expansion", [])
-            return ST("expansions", [rule, empty])
-        elif op.value == "+":
-            # a : b c+ d
-            #   -->
-            # a : b _c d
-            # _c : _c c | c;
-            return self._add_recurse_rule("plus", rule)
-        elif op.value == "*":
+        if op.value == "*":
             # a : b c* d
             #   -->
             # a : b _c? d
             # _c : _c c | c;
             new_name = self._add_recurse_rule("star", rule)
             return ST("expansions", [new_name, ST("expansion", [])])
+        elif op.value == "+":
+            # a : b c+ d
+            #   -->
+            # a : b _c d
+            # _c : _c c | c;
+            return self._add_recurse_rule("plus", rule)
+        elif op.value == "?":
+            empty = ST("expansion", [])
+            return ST("expansions", [rule, empty])
         elif op.value == "~":
             if len(args) == 1:
                 mn = mx = int(args[0])
@@ -281,9 +281,11 @@ class SimplifyRule_Visitor(Visitor):
     def alias(self, tree):
         rule, alias_name = tree.children
         if rule.data == "expansions":
-            aliases = []
-            for child in tree.children[0].children:
-                aliases.append(ST("alias", [child, alias_name]))
+            aliases = [
+                ST("alias", [child, alias_name])
+                for child in tree.children[0].children
+            ]
+
             tree.data = "expansions"
             tree.children = aliases
 
@@ -458,11 +460,11 @@ def _literal_to_pattern(literal):
 
     s = eval_escaping(x)
 
-    if literal.type == "STRING":
+    if literal.type == "REGEXP":
+        return PatternRE(s, flags)
+    elif literal.type == "STRING":
         s = s.replace("\\\\", "\\")
         return PatternStr(s, flags)
-    elif literal.type == "REGEXP":
-        return PatternRE(s, flags)
     else:
         assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 

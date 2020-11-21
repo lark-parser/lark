@@ -40,15 +40,12 @@ class Item(object):
         if self.is_complete:
             self.s = rule.origin
             self.expect = None
-            self.previous = (
-                rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
-            )
         else:
             self.s = (rule, ptr)
             self.expect = rule.expansion[ptr]
-            self.previous = (
-                rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
-            )
+        self.previous = (
+            rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
+        )
         self._hash = hash((self.s, self.start))
 
     def advance(self):

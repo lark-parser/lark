@@ -31,9 +31,7 @@ class TokenPrioritizer(ForestVisitor):
         node.priority = priority
 
     def visit_packed_node_out(self, node):
-        priority = 0
-        for child in node.children:
-            priority += getattr(child, "priority", -1)
+        priority = sum(getattr(child, "priority", -1) for child in node.children)
         node.priority = priority
 
     def on_cycle(self, node, path):

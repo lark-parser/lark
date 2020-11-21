@@ -120,8 +120,7 @@ class Tree(object):
     def scan_values(self, pred):
         for c in self.children:
             if isinstance(c, Tree):
-                for t in c.scan_values(pred):
-                    yield t
+                yield from c.scan_values(pred)
             else:
                 if pred(c):
                     yield c

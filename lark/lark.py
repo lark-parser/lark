@@ -163,8 +163,10 @@ class LarkOptions(Serialize):
 
         self.__dict__['options'] = options
 
+
         if not self.parser in ('earley', 'lalr', 'cyk', None):
             raise ConfigurationError("%s must be one of 'earley', 'lalr' or 'cyk'" % self.parser)
+
 
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
@@ -399,10 +401,7 @@ class Lark(Serialize):
         return inst._load(f)
 
     def _load(self, f, **kwargs):
-        if isinstance(f, dict):
-            d = f
-        else:
-            d = pickle.load(f)
+        d = f if isinstance(f, dict) else pickle.load(f)
         memo = d['memo']
         data = d['data']
 

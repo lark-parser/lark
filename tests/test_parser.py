@@ -2150,9 +2150,7 @@ def _make_parser_test(LEXER, PARSER):
                     for t in stream:
                         if t.type == "A":
                             t.type = "B"
-                            yield t
-                        else:
-                            yield t
+                        yield t
 
                 always_accept = ("A",)
 

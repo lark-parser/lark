@@ -110,9 +110,7 @@ class IntParseTable(ParseTable):
 def digraph(X, R, G):
     F = {}
     S = []
-    N = {}
-    for x in X:
-        N[x] = 0
+    N = {x: 0 for x in X}
     for x in X:
         # this is always true for the first iteration, but N[x] may be updated in traverse below
         if N[x] == 0:
@@ -243,7 +241,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                     if nt2 not in self.reads:
                         continue
                     for j in range(i + 1, len(rp.rule.expansion)):
-                        if not rp.rule.expansion[j] in self.NULLABLE:
+                        if rp.rule.expansion[j] not in self.NULLABLE:
                             break
                     else:
                         includes.append(nt2)
@@ -270,9 +268,11 @@ class LALR_Analyzer(GrammarAnalyzer):
         m = {}
         reduce_reduce = []
         for state in self.lr0_states:
-            actions = {}
-            for la, next_state in state.transitions.items():
-                actions[la] = (Shift, next_state.closure)
+            actions = {
+                la: (Shift, next_state.closure)
+                for la, next_state in state.transitions.items()
+            }
+
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
                     # Try to resolve conflict based on priority
@@ -316,7 +316,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             for rp in state:
                 for start in self.lr0_start_states:
                     if rp.rule.origin.name == ("$root_" + start) and rp.is_satisfied:
-                        assert not start in end_states
+                        assert start not in end_states
                         end_states[start] = state
 
         _parse_table = ParseTable(

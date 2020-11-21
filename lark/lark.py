@@ -154,7 +154,7 @@ class LarkOptions(Serialize):
         if isinstance(options["start"], STRING_TYPE):
             options["start"] = [options["start"]]
 
-        self.__dict__["options"] = optionsrm
+        self.__dict__["options"] = options
 
         if not self.parser in ("earley", "lalr", "cyk", None):
             raise ConfigurationError("%s must be one of 'earley', 'lalr' or 'cyk'" % self.parser)

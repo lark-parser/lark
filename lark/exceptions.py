@@ -101,7 +101,7 @@ class UnexpectedInput(LarkError):
 
                         except AttributeError:
                             pass
-                        if not candidate[0]:
+                        if candidate[0] is None:
                             logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 

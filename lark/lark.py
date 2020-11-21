@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError
 
 import sys, os, pickle, hashlib
 from io import open
@@ -155,7 +155,8 @@ class LarkOptions(Serialize):
 
         self.__dict__['options'] = options
 
-        assert self.parser in ('earley', 'lalr', 'cyk', None)
+        if not self.parser in ('earley', 'lalr', 'cyk', None):
+            raise ConfigurationError(f"{self.parser} must be one of 'earley', 'lalr' or 'cyk'")
 
         if self.parser == 'earley' and self.transformer:
             raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'

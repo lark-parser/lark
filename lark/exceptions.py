@@ -123,6 +123,7 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+        # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
@@ -154,6 +155,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     see: :ref:`ParserPuppet`.
     """
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, token_history=None):
+        # TODO considered_tokens and allowed can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)

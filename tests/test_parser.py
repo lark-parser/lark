@@ -2342,7 +2342,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @unittest.skipIf(LEXER=='standard' and PARSER!='lalr', "Puppet error handling only works with LALR for now")
+        @unittest.skipIf(PARSER=='cyk', "match_examples() not supported for CYK")
         def test_match_examples(self):
             p = _Lark(r"""
                 start: "a" "b" "c"
@@ -2355,11 +2355,15 @@ def _make_parser_test(LEXER, PARSER):
                     return u.match_examples(p.parse, {
                         0: ['abe'],
                         1: ['ab'],
+                        2: ['cbc'],
                     })
                 assert False
 
             assert match_error("abe") == 0
             assert match_error("ab") == 1
+            assert match_error("bbc") == 2
+            assert match_error("cbc") == 2
+            self.assertEqual( match_error("dbc"), 2 )
 
 
         @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')

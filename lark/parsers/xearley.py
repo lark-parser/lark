@@ -113,7 +113,8 @@ class Parser(BaseParser):
             del delayed_matches[i+1]    # No longer needed, so unburden memory
 
             if not next_set and not delayed_matches and not next_to_scan:
-                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect.name for item in to_scan}, set(to_scan), state={i.s for i in next_to_scan})
+                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect.name for item in to_scan},
+                                           set(to_scan), state=frozenset(i.expect for i in to_scan))
 
             return next_to_scan
 

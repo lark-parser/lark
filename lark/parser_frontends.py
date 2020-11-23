@@ -28,10 +28,7 @@ def get_frontend(parser, lexer):
                     self.lexer = lexer(lexer_conf)
                 def lex(self, lexer_state, parser_state):
                     return self.lexer.lex(lexer_state.text)
-
             class LALR_CustomLexerWrapper(LALR_WithLexer):
-                def __init__(self, lexer_conf, parser_conf, options=None):
-                    super(LALR_CustomLexerWrapper, self).__init__(lexer_conf, parser_conf, options=options)
                 def init_lexer(self):
                     future_interface = getattr(lexer, '__future_interface__', False)
                     if future_interface:
@@ -44,13 +41,19 @@ def get_frontend(parser, lexer):
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':
         if lexer=='standard':
-            return Earley
+            return Earley_Traditional
         elif lexer=='dynamic':
             return XEarley
         elif lexer=='dynamic_complete':
             return XEarley_CompleteLex
         elif lexer=='contextual':
             raise ValueError('The Earley parser does not support the contextual parser')
+        elif issubclass(lexer, Lexer):
+            assert not getattr(lexer, '__future_interface__', False), "Earley doesn't support the future interface right now"
+            class Earley_CustomLexerWrapper(Earley_WithLexer):
+                def init_lexer(self, **kw):
+                    self.lexer = lexer(self.lexer_conf)
+            return Earley_CustomLexerWrapper
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser == 'cyk':
@@ -163,10 +166,10 @@ class LALR_ContextualLexer(LALR_WithLexer):
 ###}
 
 
-class Earley(WithLexer):
+class Earley_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf, parser_conf, options)
-        self.init_traditional_lexer()
+        self.init_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
         debug = options.debug if options else False
@@ -178,6 +181,13 @@ class Earley(WithLexer):
 
     def match(self, term, token):
         return term.name == token.type
+
+    def init_lexer(self, **kw):
+        raise NotImplementedError()
+
+class Earley_Traditional(Earley_WithLexer):
+    def init_lexer(self, **kw):
+        self.init_traditional_lexer()
 
 
 class XEarley(_ParserFrontend):

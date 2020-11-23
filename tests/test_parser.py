@@ -39,8 +39,7 @@ from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 from lark.indenter import Indenter
 
-logger.setLevel(logging.INFO)
-
+__all__ = ['TestParsers']
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -856,8 +855,9 @@ def _make_full_earley_test(LEXER):
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
+    __all__.append(_NAME)
 
-class CustomLexer(Lexer):
+class CustomLexerNew(Lexer):
     """
     Purpose of this custom lexer is to test the integration,
     so it uses the traditionalparser as implementation without custom lexing behaviour.
@@ -868,6 +868,18 @@ class CustomLexer(Lexer):
         return self.lexer.lex(*args, **kwargs)
     
     __future_interface__ = True
+    
+class CustomLexerOld(Lexer):
+    """
+    Purpose of this custom lexer is to test the integration,
+    so it uses the traditionalparser as implementation without custom lexing behaviour.
+    """
+    def __init__(self, lexer_conf):
+        self.lexer = TraditionalLexer(copy(lexer_conf))
+    def lex(self, *args, **kwargs):
+        return self.lexer.lex(*args, **kwargs)
+    
+    __future_interface__ = False
 
 def _tree_structure_check(a, b):
     """
@@ -941,11 +953,17 @@ class DualBytesLark:
             self.bytes_lark.load(f)
 
 def _make_parser_test(LEXER, PARSER):
-    lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
+    if LEXER == 'custom_new':
+        lexer_class_or_name = CustomLexerNew
+    elif LEXER == 'custom_old':
+        lexer_class_or_name = CustomLexerOld
+    else:
+        lexer_class_or_name = LEXER
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
         return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+
 
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
@@ -1992,7 +2010,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @unittest.skipIf(PARSER != 'earley' or LEXER == 'standard', "Currently only Earley supports priority sum in rules")
+        @unittest.skipIf(PARSER != 'earley' or 'dynamic' not in LEXER, "Currently only Earley supports priority sum in rules")
         def test_prioritization_sum(self):
             "Tests effect of priority on result"
 
@@ -2296,7 +2314,7 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
 
 
-        @unittest.skipIf(PARSER!='lalr' or LEXER=='custom', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
+        @unittest.skipIf(PARSER!='lalr' or 'custom' in LEXER, "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -2400,17 +2418,21 @@ def _make_parser_test(LEXER, PARSER):
     _TestParser.__name__ = _NAME
     _TestParser.__qualname__ = "tests.test_parser." + _NAME
     globals()[_NAME] = _TestParser
+    __all__.append(_NAME)
 
 # Note: You still have to import them in __main__ for the tests to run
 _TO_TEST = [
         ('standard', 'earley'),
         ('standard', 'cyk'),
+        ('standard', 'lalr'),
+    
         ('dynamic', 'earley'),
         ('dynamic_complete', 'earley'),
-        ('standard', 'lalr'),
+    
         ('contextual', 'lalr'),
-        ('custom', 'lalr'),
-        # (None, 'earley'),
+    
+        ('custom_new', 'lalr'),
+        ('custom_old', 'earley'),
 ]
 
 for _LEXER, _PARSER in _TO_TEST:

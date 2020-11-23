@@ -114,7 +114,7 @@ class Parser(BaseParser):
 
             if not next_set and not delayed_matches and not next_to_scan:
                 raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect.name for item in to_scan},
-                                           set(to_scan), state=frozenset(i.expect for i in to_scan))
+                                           set(to_scan), state=frozenset(i.s for i in to_scan))
 
             return next_to_scan
 

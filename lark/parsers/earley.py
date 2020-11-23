@@ -245,7 +245,7 @@ class Parser:
 
             if not next_set and not next_to_scan:
                 expect = {i.expect.name for i in to_scan}
-                raise UnexpectedToken(token, expect, considered_rules=set(to_scan), state=frozenset(i.expect for i in to_scan))
+                raise UnexpectedToken(token, expect, considered_rules=set(to_scan), state=frozenset(i.s for i in to_scan))
 
             return next_to_scan
 
@@ -303,7 +303,7 @@ class Parser:
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if not solutions:
             expected_terminals = [t.expect for t in to_scan]
-            raise UnexpectedEOF(expected_terminals, state=frozenset(i.expect for i in to_scan))
+            raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor

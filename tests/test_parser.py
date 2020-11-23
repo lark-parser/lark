@@ -2355,7 +2355,7 @@ def _make_parser_test(LEXER, PARSER):
                     return u.match_examples(p.parse, {
                         0: ['abe'],
                         1: ['ab'],
-                        2: ['cbc'],
+                        2: ['cbc', 'dbc'],
                     })
                 assert False
 
@@ -2364,6 +2364,7 @@ def _make_parser_test(LEXER, PARSER):
             assert match_error("bbc") == 2
             assert match_error("cbc") == 2
             self.assertEqual( match_error("dbc"), 2 )
+            self.assertEqual( match_error("ebc"), 2 )
 
 
         @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')

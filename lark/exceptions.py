@@ -155,7 +155,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     see: :ref:`ParserPuppet`.
     """
     def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, token_history=None):
-        # TODO considered_tokens and allowed can be figured out using state
+        # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)

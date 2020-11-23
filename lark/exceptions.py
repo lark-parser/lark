@@ -19,14 +19,6 @@ class LexError(LarkError):
     pass
 
 
-class UnexpectedEOF(ParseError):
-    def __init__(self, expected):
-        self.expected = expected
-
-        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
-        super(UnexpectedEOF, self).__init__(message)
-
-
 class UnexpectedInput(LarkError):
     """UnexpectedInput Error.
 
@@ -47,6 +39,7 @@ class UnexpectedInput(LarkError):
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
         """
+        assert self.pos_in_stream is not None, self
         pos = self.pos_in_stream
         start = max(pos - span, 0)
         end = pos + span
@@ -91,7 +84,7 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and ut.accepts != self.accepts:
+                        if use_accepts and hasattr(self, 'accepts') and ut.accepts != self.accepts:
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                         (self.state, self.accepts, ut.accepts, i, j))
                             continue
@@ -108,15 +101,29 @@ class UnexpectedInput(LarkError):
 
                         except AttributeError:
                             pass
-                        if not candidate[0]:
+                        if candidate[0] is None:
                             logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
 
         return candidate[0]
 
+class UnexpectedEOF(ParseError, UnexpectedInput):
+    def __init__(self, expected, state=None):
+        self.expected = expected
+        self.state = state
+        from .lexer import Token
+        self.token = Token("<EOF>", "") #, line=-1, column=-1, pos_in_stream=-1)
+        self.pos_in_stream = -1
+        self.line = -1
+        self.column = -1
+
+        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
+        super(UnexpectedEOF, self).__init__(message)
+
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+        # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
@@ -147,7 +154,8 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     see: :ref:`ParserPuppet`.
     """
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, token_history=None):
+        # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
         self.pos_in_stream = getattr(token, 'pos_in_stream', None)
@@ -157,6 +165,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.expected = expected     # XXX deprecate? `accepts` is better
         self.considered_rules = considered_rules
         self.puppet = puppet
+        self.token_history = token_history
 
         # TODO Only calculate `accepts()` when we need to display it to the user
         # This will improve performance when doing automatic error handling
@@ -165,6 +174,9 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         message = ("Unexpected token %r at line %s, column %s.\n"
                    "Expected one of: \n\t* %s\n"
                    % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
+
+        if self.token_history:
+            message += "Previous tokens: %r\n" % token_history
 
         super(UnexpectedToken, self).__init__(message)
 

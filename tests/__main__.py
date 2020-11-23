@@ -9,6 +9,7 @@ from .test_tools import TestStandalone
 from .test_cache import TestCache
 from .test_grammar import TestGrammar
 from .test_reconstructor import TestReconstructor
+from .test_tree_forest_transformer import TestTreeForestTransformer
 
 try:
     from .test_nearley.test_nearley import TestNearley

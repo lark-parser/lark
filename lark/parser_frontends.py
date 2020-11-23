@@ -179,9 +179,6 @@ class Earley_WithLexer(WithLexer):
         tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
         self.parser = earley.Parser(parser_conf, self.match, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class)
 
-    def make_lexer(self, text):
-        return WithLexer.make_lexer(self, text).lex(None)
-
     def match(self, term, token):
         return term.name == token.type
 

@@ -85,6 +85,9 @@ class Token(str):
     end_column: int
     end_pos: int
 
+    def __init__(self, type_: str, value: Any, pos_in_stream: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None):
+        ...
+
     def update(self, type_: Optional[str] = None, value: Optional[str] = None) -> Token:
         ...
 
@@ -136,7 +139,7 @@ class TraditionalLexer(Lexer):
     def lex(self, stream: str) -> Iterator[Token]:
         ...
 
-    def next_token(self, lex_state: Any) -> Token:
+    def next_token(self, lex_state: Any, parser_state: Any = None) -> Token:
         ...
 
 class ContextualLexer(Lexer):

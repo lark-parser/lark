@@ -338,12 +338,12 @@ class TraditionalLexer(Lexer):
             if m:
                 return m.group(0), type_from_index[m.lastindex]
 
-    def lex(self, state, _parser_state):
+    def lex(self, state, parser_state):
         with suppress(EOFError):
             while True:
-                yield self.next_token(state)
+                yield self.next_token(state, parser_state)
 
-    def next_token(self, lex_state):
+    def next_token(self, lex_state, parser_state=None):
         line_ctr = lex_state.line_ctr
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
@@ -352,7 +352,8 @@ class TraditionalLexer(Lexer):
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
-                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token])
+                                           allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
+                                           state=parser_state)
 
             value, type_ = res
 
@@ -428,14 +429,14 @@ class ContextualLexer(Lexer):
         try:
             while True:
                 lexer = self.lexers[parser_state.position]
-                yield lexer.next_token(lexer_state)
+                yield lexer.next_token(lexer_state, parser_state)
         except EOFError:
             pass
         except UnexpectedCharacters as e:
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
-            token = self.root_lexer.next_token(lexer_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state.position)
+            token = self.root_lexer.next_token(lexer_state, parser_state)
+            raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[lexer_state.last_token])
 
 
 class LexerThread:

@@ -29,8 +29,8 @@ setup(
     description = "a modern parsing library",
     license = "MIT",
     keywords = "Earley LALR parser parsing ast",
-    url = "https://github.com/erezsh/lark",
-    download_url = "https://github.com/erezsh/lark/tarball/master",
+    url = "https://github.com/lark-parser/lark",
+    download_url = "https://github.com/lark-parser/lark/tarball/master",
     long_description='''
 Lark is a modern general-purpose parsing library for Python.
 

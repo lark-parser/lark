@@ -146,7 +146,7 @@ class Parser:
                         column.add(new_item)
                         items.append(new_item)
 
-    def _parse(self, stream, columns, to_scan, start_symbol=None):
+    def _parse(self, lexer, columns, to_scan, start_symbol=None):
         def is_quasi_complete(item):
             if item.is_complete:
                 return True
@@ -245,7 +245,7 @@ class Parser:
 
             if not next_set and not next_to_scan:
                 expect = {i.expect.name for i in to_scan}
-                raise UnexpectedToken(token, expect, considered_rules = set(to_scan))
+                raise UnexpectedToken(token, expect, considered_rules=set(to_scan), state=frozenset(i.s for i in to_scan))
 
             return next_to_scan
 
@@ -261,12 +261,16 @@ class Parser:
         # Completions will be added to the SPPF tree, and predictions will be recursively
         # processed down to terminals/empty nodes to be added to the scanner for the next
         # step.
+        expects = {i.expect for i in to_scan}
         i = 0
-        for token in stream:
+        for token in lexer.lex(expects):
             self.predict_and_complete(i, to_scan, columns, transitives)
 
             to_scan = scan(i, token, to_scan)
             i += 1
+
+            expects.clear()
+            expects |= {i.expect for i in to_scan}
 
         self.predict_and_complete(i, to_scan, columns, transitives)
 
@@ -274,7 +278,7 @@ class Parser:
         assert i == len(columns)-1
         return to_scan
 
-    def parse(self, stream, start):
+    def parse(self, lexer, start):
         assert start, start
         start_symbol = NonTerminal(start)
 
@@ -291,7 +295,7 @@ class Parser:
             else:
                 columns[0].add(item)
 
-        to_scan = self._parse(stream, columns, to_scan, start_symbol)
+        to_scan = self._parse(lexer, columns, to_scan, start_symbol)
 
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
@@ -299,7 +303,7 @@ class Parser:
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if not solutions:
             expected_terminals = [t.expect for t in to_scan]
-            raise UnexpectedEOF(expected_terminals)
+            raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor

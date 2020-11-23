@@ -323,7 +323,7 @@ class TestParsers(unittest.TestCase):
 
     def test_alias(self):
         Lark("""start: ["a"] "b" ["c"] "e" ["f"] ["g"] ["h"] "x" -> d """)
-        
+
     def test_backwards_custom_lexer(self):
         class OldCustomLexer(Lexer):
             def __init__(self, lexer_conf):
@@ -331,12 +331,12 @@ class TestParsers(unittest.TestCase):
 
             def lex(self, text):
                 yield Token('A', 'A')
-        
+
         p = Lark("""
         start: A
         %declare A
         """, parser='lalr', lexer=OldCustomLexer)
-        
+
         r = p.parse('')
         self.assertEqual(r, Tree('start', [Token('A', 'A')]))
 
@@ -866,7 +866,7 @@ class CustomLexer(Lexer):
         self.lexer = TraditionalLexer(copy(lexer_conf))
     def lex(self, *args, **kwargs):
         return self.lexer.lex(*args, **kwargs)
-    
+
     __future_interface__ = True
 
 def _tree_structure_check(a, b):
@@ -2341,6 +2341,30 @@ def _make_parser_test(LEXER, PARSER):
                 a, b = g.parse('a\na').children
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
+
+        @unittest.skipIf(PARSER=='cyk', "match_examples() not supported for CYK")
+        def test_match_examples(self):
+            p = _Lark(r"""
+                start: "a" "b" "c"
+            """)
+
+            def match_error(s):
+                try:
+                    _ = p.parse(s)
+                except UnexpectedInput as u:
+                    return u.match_examples(p.parse, {
+                        0: ['abe'],
+                        1: ['ab'],
+                        2: ['cbc'],
+                    })
+                assert False
+
+            assert match_error("abe") == 0
+            assert match_error("ab") == 1
+            assert match_error("bbc") == 2
+            assert match_error("cbc") == 2
+            self.assertEqual( match_error("dbc"), 2 )
+
 
         @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
         def test_unicode_class(self):

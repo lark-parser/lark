@@ -353,7 +353,7 @@ class TraditionalLexer(Lexer):
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
                                            allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
-                                           state=(parser_state and parser_state.position))
+                                           state=parser_state)
 
             value, type_ = res
 
@@ -436,7 +436,7 @@ class ContextualLexer(Lexer):
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
             token = self.root_lexer.next_token(lexer_state, parser_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state.position)
+            raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[lexer_state.last_token])
 
 
 class LexerThread:

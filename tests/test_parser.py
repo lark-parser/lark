@@ -2361,7 +2361,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @unittest.skipIf(PARSER=='cyk', "match_examples() not supported for CYK")
+        @unittest.skipIf(PARSER=='cyk' or LEXER=='custom_old', "match_examples() not supported for CYK/old custom lexer")
         def test_match_examples(self):
             p = _Lark(r"""
                 start: "a" "b" "c"

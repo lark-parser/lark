@@ -101,6 +101,9 @@ class Tree(object):
     def __iter__(self):
         return (child for child in self.children)
 
+    def __getitem__(self, index):
+        return self.children[index]
+
 ###}
 
     def expand_kids_by_index(self, *indices):

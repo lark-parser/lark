@@ -61,6 +61,9 @@ class Tree:
     def __iter__(self) -> Iterator[Union[str, Tree]]:
         ...
 
+    def __getitem__(self, key) -> Union[str, Tree]:
+        ...
+
 
 class SlottedTree(Tree):
     pass

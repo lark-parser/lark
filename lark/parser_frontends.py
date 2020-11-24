@@ -1,3 +1,4 @@
+from .exceptions import ConfigurationError, GrammarError
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import LexerThread, TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
@@ -29,7 +30,7 @@ def _wrap_lexer(lexer_class):
 def get_frontend(parser, lexer):
     if parser=='lalr':
         if lexer is None:
-            raise ValueError('The LALR parser requires use of a lexer')
+            raise ConfigurationError('The LALR parser requires use of a lexer')
         elif lexer == 'standard':
             return LALR_TraditionalLexer
         elif lexer == 'contextual':
@@ -41,7 +42,7 @@ def get_frontend(parser, lexer):
                     self.lexer = wrapped(self.lexer_conf)
             return LALR_CustomLexerWrapper
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
+            raise ConfigurationError('Unknown lexer: %s' % lexer)
     elif parser=='earley':
         if lexer=='standard':
             return Earley_Traditional
@@ -50,7 +51,7 @@ def get_frontend(parser, lexer):
         elif lexer=='dynamic_complete':
             return XEarley_CompleteLex
         elif lexer=='contextual':
-            raise ValueError('The Earley parser does not support the contextual parser')
+            raise ConfigurationError('The Earley parser does not support the contextual parser')
         elif issubclass(lexer, Lexer):
             wrapped = _wrap_lexer(lexer)
             class Earley_CustomLexerWrapper(Earley_WithLexer):
@@ -58,14 +59,14 @@ def get_frontend(parser, lexer):
                     self.lexer = wrapped(self.lexer_conf)
             return Earley_CustomLexerWrapper
         else:
-            raise ValueError('Unknown lexer: %s' % lexer)
+            raise ConfigurationError('Unknown lexer: %s' % lexer)
     elif parser == 'cyk':
         if lexer == 'standard':
             return CYK
         else:
-            raise ValueError('CYK parser requires using standard parser.')
+            raise ConfigurationError('CYK parser requires using standard parser.')
     else:
-        raise ValueError('Unknown parser: %s' % parser)
+        raise ConfigurationError('Unknown parser: %s' % parser)
 
 
 class _ParserFrontend(Serialize):
@@ -73,7 +74,7 @@ class _ParserFrontend(Serialize):
         if start is None:
             start = self.start
             if len(start) > 1:
-                raise ValueError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
+                raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
             start ,= start
         return self.parser.parse(input, start, *args)
 
@@ -215,15 +216,15 @@ class XEarley(_ParserFrontend):
         self.regexps = {}
         for t in lexer_conf.tokens:
             if t.priority != 1:
-                raise ValueError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
+                raise GrammarError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:
                 width = get_regexp_width(regexp)[0]
             except ValueError:
-                raise ValueError("Bad regexp in token %s: %s" % (t.name, regexp))
+                raise GrammarError("Bad regexp in token %s: %s" % (t.name, regexp))
             else:
                 if width == 0:
-                    raise ValueError("Dynamic Earley doesn't allow zero-width regexps", t)
+                    raise GrammarError("Dynamic Earley doesn't allow zero-width regexps", t)
             if lexer_conf.use_bytes:
                 regexp = regexp.encode('utf-8')
 

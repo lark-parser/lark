@@ -366,7 +366,7 @@ class TraditionalLexer(Lexer):
                 if t.type in self.callback:
                     t = self.callback[t.type](t)
                     if not isinstance(t, Token):
-                        raise ValueError("Callbacks must return a token (returned %r)" % t)
+                        raise LexError("Callbacks must return a token (returned %r)" % t)
                 lex_state.last_token = t
                 return t
             else:

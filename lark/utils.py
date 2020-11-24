@@ -1,6 +1,5 @@
 import os
 from functools import reduce
-from ast import literal_eval
 from collections import deque
 
 ###{standalone
@@ -224,31 +223,6 @@ class Enumerator(Serialize):
         assert len(r) == len(self.enums)
         return r
 
-
-def eval_escaping(s):
-    w = ''
-    i = iter(s)
-    for n in i:
-        w += n
-        if n == '\\':
-            try:
-                n2 = next(i)
-            except StopIteration:
-                raise ValueError("Literal ended unexpectedly (bad escaping): `%r`" % s)
-            if n2 == '\\':
-                w += '\\\\'
-            elif n2 not in 'uxnftr':
-                w += '\\'
-            w += n2
-    w = w.replace('\\"', '"').replace("'", "\\'")
-
-    to_eval = "u'''%s'''" % w
-    try:
-        s = literal_eval(to_eval)
-    except SyntaxError as e:
-        raise ValueError(s, e)
-
-    return s
 
 
 def combine_alternatives(lists):

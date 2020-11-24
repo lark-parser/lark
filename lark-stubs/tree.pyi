@@ -58,15 +58,15 @@ class Tree:
     def __hash__(self) -> int:
         ...
 
+    def __iter__(self) -> Iterator[Union[str, Tree]]:
+        ...
+
 
 class SlottedTree(Tree):
     pass
 
 
 def pydot__tree_to_png(
-    tree: Tree,
-    filename: str,
-    rankdir: Literal["TB", "LR", "BT", "RL"] = ...,
-    **kwargs
+    tree: Tree, filename: str, rankdir: Literal["TB", "LR", "BT", "RL"] = ..., **kwargs
 ) -> None:
     ...

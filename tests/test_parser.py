@@ -30,6 +30,7 @@ try:
 except ImportError:
     regex = None
 
+import lark
 from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
@@ -866,9 +867,9 @@ class CustomLexerNew(Lexer):
         self.lexer = TraditionalLexer(copy(lexer_conf))
     def lex(self, lexer_state, parser_state):
         return self.lexer.lex(lexer_state, parser_state)
-    
+
     __future_interface__ = True
-    
+
 class CustomLexerOld(Lexer):
     """
     Purpose of this custom lexer is to test the integration,
@@ -879,7 +880,7 @@ class CustomLexerOld(Lexer):
     def lex(self, text):
         ls = self.lexer.make_lexer_state(text)
         return self.lexer.lex(ls, None)
-    
+
     __future_interface__ = False
 
 def _tree_structure_check(a, b):
@@ -954,16 +955,29 @@ class DualBytesLark:
             self.bytes_lark.load(f)
 
 def _make_parser_test(LEXER, PARSER):
-    if LEXER == 'custom_new':
-        lexer_class_or_name = CustomLexerNew
-    elif LEXER == 'custom_old':
-        lexer_class_or_name = CustomLexerOld
-    else:
-        lexer_class_or_name = LEXER
+    lexer_class_or_name = {
+        'custom_new': CustomLexerNew,
+        'custom_old': CustomLexerOld,
+    }.get(LEXER, LEXER)
+
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
         return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+
+    if (LEXER, PARSER) == ('standard', 'earley'):
+        # Check that the `lark.lark` grammar represents can parse every example used in these tests.
+        # Standard-Earley was an arbitrary choice, to make sure it only ran once.
+        lalr_parser = Lark.open(os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark'), parser='lalr')
+        def wrap_with_test_grammar(f):
+            def _f(x, **kwargs):
+                inst = f(x, **kwargs)
+                lalr_parser.parse(inst.source_grammar) # Test after instance creation. When the grammar should fail, don't test it.
+                return inst
+            return _f
+
+        _Lark = wrap_with_test_grammar(_Lark)
+        _Lark_open = wrap_with_test_grammar(_Lark_open)
 
 
     class _TestParser(unittest.TestCase):
@@ -2450,12 +2464,12 @@ _TO_TEST = [
         ('standard', 'earley'),
         ('standard', 'cyk'),
         ('standard', 'lalr'),
-    
+
         ('dynamic', 'earley'),
         ('dynamic_complete', 'earley'),
-    
+
         ('contextual', 'lalr'),
-    
+
         ('custom_new', 'lalr'),
         ('custom_old', 'earley'),
 ]

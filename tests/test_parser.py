@@ -39,8 +39,7 @@ from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 from lark.indenter import Indenter
 
-logger.setLevel(logging.INFO)
-
+__all__ = ['TestParsers']
 
 __path__ = os.path.dirname(__file__)
 def _read(n, *args):
@@ -856,18 +855,32 @@ def _make_full_earley_test(LEXER):
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
+    __all__.append(_NAME)
 
-class CustomLexer(Lexer):
+class CustomLexerNew(Lexer):
     """
     Purpose of this custom lexer is to test the integration,
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
     def __init__(self, lexer_conf):
         self.lexer = TraditionalLexer(copy(lexer_conf))
-    def lex(self, *args, **kwargs):
-        return self.lexer.lex(*args, **kwargs)
-
+    def lex(self, lexer_state, parser_state):
+        return self.lexer.lex(lexer_state, parser_state)
+    
     __future_interface__ = True
+    
+class CustomLexerOld(Lexer):
+    """
+    Purpose of this custom lexer is to test the integration,
+    so it uses the traditionalparser as implementation without custom lexing behaviour.
+    """
+    def __init__(self, lexer_conf):
+        self.lexer = TraditionalLexer(copy(lexer_conf))
+    def lex(self, text):
+        ls = self.lexer.make_lexer_state(text)
+        return self.lexer.lex(ls, None)
+    
+    __future_interface__ = False
 
 def _tree_structure_check(a, b):
     """
@@ -941,11 +954,17 @@ class DualBytesLark:
             self.bytes_lark.load(f)
 
 def _make_parser_test(LEXER, PARSER):
-    lexer_class_or_name = CustomLexer if LEXER == 'custom' else LEXER
+    if LEXER == 'custom_new':
+        lexer_class_or_name = CustomLexerNew
+    elif LEXER == 'custom_old':
+        lexer_class_or_name = CustomLexerOld
+    else:
+        lexer_class_or_name = LEXER
     def _Lark(grammar, **kwargs):
         return Lark(grammar, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
     def _Lark_open(gfilename, **kwargs):
         return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
+
 
     class _TestParser(unittest.TestCase):
         def test_basic1(self):
@@ -1502,7 +1521,7 @@ def _make_parser_test(LEXER, PARSER):
                       %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
 
         def test_float_without_lexer(self):
-            expected_error = UnexpectedCharacters if LEXER.startswith('dynamic') else UnexpectedToken
+            expected_error = UnexpectedCharacters if 'dynamic' in LEXER else UnexpectedToken
             if PARSER == 'cyk':
                 expected_error = ParseError
 
@@ -1635,13 +1654,13 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(d.line, 2)
             self.assertEqual(d.column, 2)
 
-            if LEXER != 'dynamic':
-                self.assertEqual(a.end_line, 1)
-                self.assertEqual(a.end_column, 2)
-                self.assertEqual(bc.end_line, 2)
-                self.assertEqual(bc.end_column, 2)
-                self.assertEqual(d.end_line, 2)
-                self.assertEqual(d.end_column, 3)
+            # if LEXER != 'dynamic':
+            self.assertEqual(a.end_line, 1)
+            self.assertEqual(a.end_column, 2)
+            self.assertEqual(bc.end_line, 2)
+            self.assertEqual(bc.end_column, 2)
+            self.assertEqual(d.end_line, 2)
+            self.assertEqual(d.end_column, 3)
 
 
 
@@ -1872,7 +1891,7 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(IOError, _Lark, grammar)
 
-        @unittest.skipIf(LEXER=='dynamic', "%declare/postlex doesn't work with dynamic")
+        @unittest.skipIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
         def test_postlex_declare(self): # Note: this test does a lot. maybe split it up?
             class TestPostLexer:
                 def process(self, stream):
@@ -1895,7 +1914,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse(test_file)
             self.assertEqual(tree.children, [Token('B', 'A')])
 
-        @unittest.skipIf(LEXER=='dynamic', "%declare/postlex doesn't work with dynamic")
+        @unittest.skipIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
         def test_postlex_indenter(self):
             class CustomIndenter(Indenter):
                 NL_type = 'NEWLINE'
@@ -1992,7 +2011,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @unittest.skipIf(PARSER != 'earley' or LEXER == 'standard', "Currently only Earley supports priority sum in rules")
+        @unittest.skipIf(PARSER != 'earley' or 'dynamic' not in LEXER, "Currently only Earley supports priority sum in rules")
         def test_prioritization_sum(self):
             "Tests effect of priority on result"
 
@@ -2203,9 +2222,9 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tok, text)
             self.assertEqual(tok.line, 1)
             self.assertEqual(tok.column, 1)
-            if _LEXER != 'dynamic':
-                self.assertEqual(tok.end_line, 2)
-                self.assertEqual(tok.end_column, 6)
+            # if _LEXER != 'dynamic':
+            self.assertEqual(tok.end_line, 2)
+            self.assertEqual(tok.end_column, 6)
 
         @unittest.skipIf(PARSER=='cyk', "Empty rules")
         def test_empty_end(self):
@@ -2296,7 +2315,7 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
 
 
-        @unittest.skipIf(PARSER!='lalr' or LEXER=='custom', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
+        @unittest.skipIf(PARSER!='lalr' or 'custom' in LEXER, "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -2342,7 +2361,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @unittest.skipIf(PARSER=='cyk', "match_examples() not supported for CYK")
+        @unittest.skipIf(PARSER=='cyk' or LEXER=='custom_old', "match_examples() not supported for CYK/old custom lexer")
         def test_match_examples(self):
             p = _Lark(r"""
                 start: "a" "b" "c"
@@ -2425,17 +2444,20 @@ def _make_parser_test(LEXER, PARSER):
     _TestParser.__name__ = _NAME
     _TestParser.__qualname__ = "tests.test_parser." + _NAME
     globals()[_NAME] = _TestParser
+    __all__.append(_NAME)
 
-# Note: You still have to import them in __main__ for the tests to run
 _TO_TEST = [
         ('standard', 'earley'),
         ('standard', 'cyk'),
+        ('standard', 'lalr'),
+    
         ('dynamic', 'earley'),
         ('dynamic_complete', 'earley'),
-        ('standard', 'lalr'),
+    
         ('contextual', 'lalr'),
-        ('custom', 'lalr'),
-        # (None, 'earley'),
+    
+        ('custom_new', 'lalr'),
+        ('custom_old', 'earley'),
 ]
 
 for _LEXER, _PARSER in _TO_TEST:

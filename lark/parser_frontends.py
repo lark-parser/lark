@@ -14,6 +14,18 @@ import re
 
 ###{standalone
 
+def _wrap_lexer(lexer_class):
+    future_interface = getattr(lexer_class, '__future_interface__', False)
+    if future_interface:
+        return lexer_class
+    else:
+        class CustomLexerWrapper(Lexer):
+            def __init__(self, lexer_conf):
+                self.lexer = lexer_class(lexer_conf)
+            def lex(self, lexer_state, parser_state):
+                return self.lexer.lex(lexer_state.text)
+        return CustomLexerWrapper
+
 def get_frontend(parser, lexer):
     if parser=='lalr':
         if lexer is None:
@@ -23,34 +35,28 @@ def get_frontend(parser, lexer):
         elif lexer == 'contextual':
             return LALR_ContextualLexer
         elif issubclass(lexer, Lexer):
-            class CustomLexerWrapper(Lexer):
-                def __init__(self, lexer_conf):
-                    self.lexer = lexer(lexer_conf)
-                def lex(self, lexer_state, parser_state):
-                    return self.lexer.lex(lexer_state.text)
-
+            wrapped = _wrap_lexer(lexer)
             class LALR_CustomLexerWrapper(LALR_WithLexer):
-                def __init__(self, lexer_conf, parser_conf, options=None):
-                    super(LALR_CustomLexerWrapper, self).__init__(lexer_conf, parser_conf, options=options)
                 def init_lexer(self):
-                    future_interface = getattr(lexer, '__future_interface__', False)
-                    if future_interface:
-                        self.lexer = lexer(self.lexer_conf)
-                    else:
-                        self.lexer = CustomLexerWrapper(self.lexer_conf)
-
+                    self.lexer = wrapped(self.lexer_conf)
             return LALR_CustomLexerWrapper
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser=='earley':
         if lexer=='standard':
-            return Earley
+            return Earley_Traditional
         elif lexer=='dynamic':
             return XEarley
         elif lexer=='dynamic_complete':
             return XEarley_CompleteLex
         elif lexer=='contextual':
             raise ValueError('The Earley parser does not support the contextual parser')
+        elif issubclass(lexer, Lexer):
+            wrapped = _wrap_lexer(lexer)
+            class Earley_CustomLexerWrapper(Earley_WithLexer):
+                def init_lexer(self, **kw):
+                    self.lexer = wrapped(self.lexer_conf)
+            return Earley_CustomLexerWrapper
         else:
             raise ValueError('Unknown lexer: %s' % lexer)
     elif parser == 'cyk':
@@ -163,10 +169,10 @@ class LALR_ContextualLexer(LALR_WithLexer):
 ###}
 
 
-class Earley(WithLexer):
+class Earley_WithLexer(WithLexer):
     def __init__(self, lexer_conf, parser_conf, options=None):
         WithLexer.__init__(self, lexer_conf, parser_conf, options)
-        self.init_traditional_lexer()
+        self.init_lexer()
 
         resolve_ambiguity = options.ambiguity == 'resolve'
         debug = options.debug if options else False
@@ -175,6 +181,13 @@ class Earley(WithLexer):
 
     def match(self, term, token):
         return term.name == token.type
+
+    def init_lexer(self, **kw):
+        raise NotImplementedError()
+
+class Earley_Traditional(Earley_WithLexer):
+    def init_lexer(self, **kw):
+        self.init_traditional_lexer()
 
 
 class XEarley(_ParserFrontend):

@@ -21,20 +21,7 @@ except ImportError:
 
 from .test_logger import Testlogger
 
-from .test_parser import (
-        TestLalrStandard,
-        TestEarleyStandard,
-        TestCykStandard,
-        TestLalrContextual,
-        TestEarleyDynamic,
-        TestLalrCustom,
-
-        # TestFullEarleyStandard,
-        TestFullEarleyDynamic,
-        TestFullEarleyDynamic_complete,
-
-        TestParsers,
-        )
+from .test_parser import * # We define __all__ to list which TestSuites to run
 
 logger.setLevel(logging.INFO)
 

@@ -98,6 +98,8 @@ class Tree(object):
     def find_data(self, data):
         """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
+    def __iter__(self):
+        return (child for child in self.children)
 
 ###}
 

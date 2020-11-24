@@ -7,7 +7,14 @@ class LarkError(Exception):
     pass
 
 
+class ConfigurationError(LarkError, ValueError):
+    pass
+
+
 class GrammarError(LarkError):
+    pass
+
+class GrammarError_Value(LarkError):
     pass
 
 

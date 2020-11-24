@@ -5,8 +5,9 @@ import sys
 from copy import copy, deepcopy
 from io import open
 import pkgutil
+from ast import literal_eval
 
-from .utils import bfs, eval_escaping, Py36, logger, classify_bool
+from .utils import bfs, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -403,6 +404,32 @@ class ApplyTemplates(Transformer_InPlace):
 
 def _rfind(s, choices):
     return max(s.rfind(c) for c in choices)
+
+
+def eval_escaping(s):
+    w = ''
+    i = iter(s)
+    for n in i:
+        w += n
+        if n == '\\':
+            try:
+                n2 = next(i)
+            except StopIteration:
+                raise GrammarError("Literal ended unexpectedly (bad escaping): `%r`" % s)
+            if n2 == '\\':
+                w += '\\\\'
+            elif n2 not in 'uxnftr':
+                w += '\\'
+            w += n2
+    w = w.replace('\\"', '"').replace("'", "\\'")
+
+    to_eval = "u'''%s'''" % w
+    try:
+        s = literal_eval(to_eval)
+    except SyntaxError as e:
+        raise GrammarError(s, e)
+
+    return s
 
 
 def _literal_to_pattern(literal):

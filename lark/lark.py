@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError
 
 import sys, os, pickle, hashlib
 from io import open
@@ -23,6 +23,10 @@ except ImportError:
     regex = None
 
 ###{standalone
+
+def assert_config(value, options, msg='Got %r, expected one of %s'):
+    if value not in options:
+        raise ConfigurationError(msg % (value, options))
 
 
 class LarkOptions(Serialize):
@@ -155,14 +159,15 @@ class LarkOptions(Serialize):
 
         self.__dict__['options'] = options
 
-        assert self.parser in ('earley', 'lalr', 'cyk', None)
+
+        assert_config(self.parser, ('earley', 'lalr', 'cyk', None))
 
         if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
+            raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
         if o:
-            raise ValueError("Unknown options: %s" % o.keys())
+            raise ConfigurationError("Unknown options: %s" % o.keys())
 
     def __getattr__(self, name):
         try:
@@ -171,7 +176,7 @@ class LarkOptions(Serialize):
             raise AttributeError(e)
 
     def __setattr__(self, name, value):
-        assert name in self.options
+        assert_config(name, self.options.keys(), "%r isn't a valid option. Expected one of: %s")
         self.options[name] = value
 
     def serialize(self, memo):
@@ -237,20 +242,20 @@ class Lark(Serialize):
         self.source_grammar = grammar
         if self.options.use_bytes:
             if not isascii(grammar):
-                raise ValueError("Grammar must be ascii only, when use_bytes=True")
+                raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
             if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                raise NotImplementedError("`use_bytes=True` may have issues on python2."
+                raise ConfigurationError("`use_bytes=True` may have issues on python2."
                                           "Use `use_bytes='force'` to use it at your own risk.")
 
         cache_fn = None
         if self.options.cache:
             if self.options.parser != 'lalr':
-                raise NotImplementedError("cache only works with parser='lalr' for now")
+                raise ConfigurationError("cache only works with parser='lalr' for now")
             if isinstance(self.options.cache, STRING_TYPE):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
-                    raise ValueError("cache argument must be bool or str")
+                    raise ConfigurationError("cache argument must be bool or str")
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 from . import __version__
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
@@ -277,24 +282,25 @@ class Lark(Serialize):
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete') or issubclass(lexer, Lexer)
+        if isinstance(lexer, type):
+            assert issubclass(lexer, Lexer)     # XXX Is this really important? Maybe just ensure interface compliance
+        else:
+            assert_config(lexer, ('standard', 'contextual', 'dynamic', 'dynamic_complete'))
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
                 self.options.ambiguity = 'resolve'
         else:
-            disambig_parsers = ['earley', 'cyk']
-            assert self.options.parser in disambig_parsers, (
-                'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
+            assert_config(self.options.parser, ('earley', 'cyk'), "%r doesn't support disambiguation. Use one of these parsers instead: %s")
 
         if self.options.priority == 'auto':
             self.options.priority = 'normal'
 
         if self.options.priority not in _VALID_PRIORITY_OPTIONS:
-            raise ValueError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
+            raise ConfigurationError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
-            raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
+            raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         # Parse the grammar file and compose the grammars
         self.grammar = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
@@ -401,7 +407,7 @@ class Lark(Serialize):
         memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
-            raise ValueError("Some options are not allowed when loading a Parser: {}"
+            raise ConfigurationError("Some options are not allowed when loading a Parser: {}"
                              .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
         options.update(kwargs)
         self.options = LarkOptions.deserialize(options, memo)

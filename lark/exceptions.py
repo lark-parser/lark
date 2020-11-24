@@ -14,9 +14,6 @@ class ConfigurationError(LarkError, ValueError):
 class GrammarError(LarkError):
     pass
 
-class GrammarError_Value(LarkError):
-    pass
-
 
 class ParseError(LarkError):
     pass

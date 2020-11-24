@@ -9,6 +9,10 @@ class LarkError(Exception):
     pass
 
 
+class ConfigurationError(LarkError, ValueError):
+    pass
+
+
 class GrammarError(LarkError):
     pass
 

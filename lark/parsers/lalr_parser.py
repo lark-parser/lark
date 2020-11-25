@@ -5,13 +5,14 @@
 from copy import deepcopy, copy
 from ..exceptions import UnexpectedInput, UnexpectedToken
 from ..lexer import Token
+from ..utils import Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_puppet import ParserPuppet
 
 ###{standalone
 
-class LALR_Parser(object):
+class LALR_Parser(Serialize):
     def __init__(self, parser_conf, debug=False):
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lalr()

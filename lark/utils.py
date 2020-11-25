@@ -302,4 +302,5 @@ def _serialize(value, memo):
         return list(value)  # TODO reversible?
     elif isinstance(value, dict):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
+    # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value

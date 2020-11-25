@@ -1977,7 +1977,7 @@ def _make_parser_test(LEXER, PARSER):
             %import .test_relative_import (start, WS)
             %ignore WS
             """
-            p = _Lark(grammar, import_paths=[custom_loader2])
+            p = _Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
             x = p.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 

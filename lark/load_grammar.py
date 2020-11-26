@@ -884,8 +884,8 @@ class GrammarLoader:
         import re
         lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
         parser_conf = ParserConf(rules, callback, ['start'])
-        lexer_conf.name = 'standard'
-        parser_conf.name = 'lalr'
+        lexer_conf.lexer_type = 'standard'
+        parser_conf.parser_type = 'lalr'
         self.parser = ParsingFrontend(lexer_conf, parser_conf, {})
 
         self.canonize_tree = CanonizeTree()

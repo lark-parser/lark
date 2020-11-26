@@ -28,15 +28,15 @@ def _wrap_lexer(lexer_class):
 
 
 class MakeParsingFrontend:
-    def __init__(self, parser, lexer):
-        self.parser = parser
-        self.lexer = lexer
+    def __init__(self, parser_type, lexer_type):
+        self.parser_type = parser_type
+        self.lexer_type = lexer_type
 
     def __call__(self, lexer_conf, parser_conf, options):
         assert isinstance(lexer_conf, LexerConf)
         assert isinstance(parser_conf, ParserConf)
-        parser_conf.name = self.parser
-        lexer_conf.name = self.lexer
+        parser_conf.parser_type = self.parser_type
+        lexer_conf.lexer_type = self.lexer_type
         return ParsingFrontend(lexer_conf, parser_conf, options)
 
     @classmethod
@@ -76,12 +76,14 @@ class ParsingFrontend(Serialize):
                 'lalr': create_lalr_parser,
                 'earley': create_earley_parser,
                 'cyk': CYK_FrontEnd,
-            }[parser_conf.name]
+            }[parser_conf.parser_type]
             self.parser = create_parser(lexer_conf, parser_conf, options)
 
         # Set-up lexer
+        lexer_type = lexer_conf.lexer_type
+        lexer_type = lexer_conf.lexer_type
         self.skip_lexer = False
-        if lexer_conf.name in ('dynamic', 'dynamic_complete'):
+        if lexer_type in ('dynamic', 'dynamic_complete'):
             self.skip_lexer = True
             return
 
@@ -89,10 +91,10 @@ class ParsingFrontend(Serialize):
             create_lexer = {
                 'standard': create_traditional_lexer,
                 'contextual': create_contextual_lexer,
-            }[lexer_conf.name]
+            }[lexer_type]
         except KeyError:
-            assert issubclass(lexer_conf.name, Lexer), lexer_conf.name
-            self.lexer = _wrap_lexer(lexer_conf.name)(lexer_conf)
+            assert issubclass(lexer_type, Lexer), lexer_type
+            self.lexer = _wrap_lexer(lexer_type)(lexer_conf)
         else:
             self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex)
 
@@ -100,20 +102,18 @@ class ParsingFrontend(Serialize):
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
 
 
-    def _parse(self, start, input, *args):
+    def parse(self, text, start=None):
         if start is None:
             start = self.parser_conf.start
             if len(start) > 1:
                 raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
             start ,= start
-        return self.parser.parse(input, start, *args)
 
-    def parse(self, text, start=None):
         if self.skip_lexer:
-            return self._parse(start, text)
+            return self.parser.parse(text, start)
 
-        lexer = LexerThread(self.lexer, text)
-        return self._parse(start, lexer)
+        lexer_thread = LexerThread(self.lexer, text)
+        return self.parser.parse(lexer_thread, start)
 
 
 def get_frontend(parser, lexer):
@@ -207,9 +207,9 @@ def create_earley_parser(lexer_conf, parser_conf, options):
     tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
 
     extra = {}
-    if lexer_conf.name == 'dynamic':
+    if lexer_conf.lexer_type == 'dynamic':
         f = create_earley_parser__dynamic
-    elif lexer_conf.name == 'dynamic_complete':
+    elif lexer_conf.lexer_type == 'dynamic_complete':
         extra['complete_lex'] =True
         f = create_earley_parser__dynamic
     else:
@@ -226,8 +226,8 @@ class CYK_FrontEnd:
 
         self.callbacks = parser_conf.callbacks
 
-    def parse(self, lexer, start):
-        tokens = list(lexer.lex(None))
+    def parse(self, lexer_thread, start):
+        tokens = list(lexer_thread.lex(None))
         tree = self.parser.parse(tokens, start)
         return self._transform(tree)
 

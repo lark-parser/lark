@@ -11,7 +11,7 @@ from .utils import bfs, Py36, logger, classify_bool
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import LALR_TraditionalLexer
+from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress, dedup_list, Str
@@ -883,9 +883,10 @@ class GrammarLoader:
         callback = ParseTreeBuilder(rules, ST).create_callback()
         import re
         lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
-
         parser_conf = ParserConf(rules, callback, ['start'])
-        self.parser = LALR_TraditionalLexer(lexer_conf, parser_conf)
+        lexer_conf.lexer_type = 'standard'
+        parser_conf.parser_type = 'lalr'
+        self.parser = ParsingFrontend(lexer_conf, parser_conf, {})
 
         self.canonize_tree = CanonizeTree()
         self.global_keep_all_tokens = global_keep_all_tokens

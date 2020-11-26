@@ -2471,6 +2471,7 @@ _TO_TEST = [
         ('contextual', 'lalr'),
 
         ('custom_new', 'lalr'),
+        ('custom_new', 'cyk'),
         ('custom_old', 'earley'),
 ]
 

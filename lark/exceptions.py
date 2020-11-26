@@ -11,6 +11,11 @@ class ConfigurationError(LarkError, ValueError):
     pass
 
 
+def assert_config(value, options, msg='Got %r, expected one of %s'):
+    if value not in options:
+        raise ConfigurationError(msg % (value, options))
+
+
 class GrammarError(LarkError):
     pass
 
@@ -198,4 +203,6 @@ class VisitError(LarkError):
 
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
+
+
 ###}

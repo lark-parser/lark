@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError, assert_config
 
 import sys, os, pickle, hashlib
 from io import open
@@ -23,10 +23,6 @@ except ImportError:
     regex = None
 
 ###{standalone
-
-def assert_config(value, options, msg='Got %r, expected one of %s'):
-    if value not in options:
-        raise ConfigurationError(msg % (value, options))
 
 
 class LarkOptions(Serialize):

@@ -1,4 +1,4 @@
-from .exceptions import ConfigurationError, GrammarError
+from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import LexerThread, TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
@@ -74,7 +74,7 @@ class ParsingFrontend(Serialize):
         else:
             create_parser = {
                 'lalr': create_lalr_parser,
-                'earley': make_early,
+                'earley': create_earley_parser,
                 'cyk': CYK_FrontEnd,
             }[parser_conf.name]
             self.parser = create_parser(lexer_conf, parser_conf, options)
@@ -117,19 +117,14 @@ class ParsingFrontend(Serialize):
 
 
 def get_frontend(parser, lexer):
-    if parser=='lalr':
-        if lexer is None:
-            raise ConfigurationError('The LALR parser requires use of a lexer')
-        if lexer not in ('standard' ,'contextual') and not issubclass(lexer, Lexer):
-            raise ConfigurationError('Unknown lexer: %s' % lexer)
-    elif parser=='earley':
-        if lexer=='contextual':
-            raise ConfigurationError('The Earley parser does not support the contextual parser')
-    elif parser == 'cyk':
-        if lexer != 'standard':
-            raise ConfigurationError('CYK parser requires using standard parser.')
-    else:
-        raise ConfigurationError('Unknown parser: %s' % parser)
+    assert_config(parser, ('lalr', 'earley', 'cyk'))
+    if not isinstance(lexer, type):     # not custom lexer?
+        expected = {
+            'lalr': ('standard', 'contextual'),
+            'earley': ('standard', 'dynamic', 'dynamic_complete'),
+            'cyk': ('standard', ),
+         }[parser]
+        assert_config(lexer, expected, 'Parser %r does not support lexer %%r, expected one of %%s' % parser)
 
     return MakeParsingFrontend(parser, lexer)
 
@@ -169,7 +164,7 @@ def create_lalr_parser(lexer_conf, parser_conf, options=None):
     return LALR_Parser(parser_conf, debug=debug)
 
 
-make_early = NotImplemented
+create_earley_parser = NotImplemented
 CYK_FrontEnd = NotImplemented
 ###}
 
@@ -196,29 +191,29 @@ class EarleyRegexpMatcher:
         return self.regexps[term.name].match(text, index)
 
 
-def make_xearley(lexer_conf, parser_conf, options=None, **kw):
+def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
         earley_matcher = EarleyRegexpMatcher(lexer_conf)
         return xearley.Parser(parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
 
 def _match_earley_basic(term, token):
     return term.name == token.type
 
-def make_early_basic(lexer_conf, parser_conf, options, **kw):
+def create_earley_parser__basic(lexer_conf, parser_conf, options, **kw):
     return earley.Parser(parser_conf, _match_earley_basic, **kw)
 
-def make_early(lexer_conf, parser_conf, options):
+def create_earley_parser(lexer_conf, parser_conf, options):
     resolve_ambiguity = options.ambiguity == 'resolve'
     debug = options.debug if options else False
     tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
 
     extra = {}
     if lexer_conf.name == 'dynamic':
-        f = make_xearley
+        f = create_earley_parser__dynamic
     elif lexer_conf.name == 'dynamic_complete':
         extra['complete_lex'] =True
-        f = make_xearley
+        f = create_earley_parser__dynamic
     else:
-        f = make_early_basic
+        f = create_earley_parser__basic
 
     return f(lexer_conf, parser_conf, options, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class, **extra)
 

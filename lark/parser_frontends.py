@@ -81,7 +81,6 @@ class ParsingFrontend(Serialize):
 
         # Set-up lexer
         lexer_type = lexer_conf.lexer_type
-        lexer_type = lexer_conf.lexer_type
         self.skip_lexer = False
         if lexer_type in ('dynamic', 'dynamic_complete'):
             self.skip_lexer = True

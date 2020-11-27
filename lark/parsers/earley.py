@@ -302,7 +302,7 @@ class Parser:
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
         solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if not solutions:
-            expected_terminals = [t.expect for t in to_scan]
+            expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
 
         if self.debug:

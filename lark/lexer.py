@@ -81,18 +81,23 @@ class PatternRE(Pattern):
 
 
 class TerminalDef(Serialize):
-    __serialize_fields__ = 'name', 'pattern', 'priority', 'user_repr'
+    __serialize_fields__ = 'name', 'pattern', 'priority'
     __serialize_namespace__ = PatternStr, PatternRE
 
-    def __init__(self, name, pattern, priority=1, user_repr=None):
+    def __init__(self, name, pattern, priority=1):
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
         self.priority = priority
-        self.user_repr = user_repr or name
 
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
+    
+    def user_repr(self):
+        if self.name.startswith('__'): # We represent a generated terminal
+            return self.pattern.raw or self.name
+        else:
+            return self.name
 
 
 class Token(Str):
@@ -312,6 +317,7 @@ class TraditionalLexer(Lexer):
         self.user_callbacks = conf.callbacks
         self.g_regex_flags = conf.g_regex_flags
         self.use_bytes = conf.use_bytes
+        self.terminals_by_names = conf.terminals_by_names
 
         self._mres = None
 
@@ -355,7 +361,7 @@ class TraditionalLexer(Lexer):
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
                                            allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
-                                           state=parser_state, _all_terminals=self.terminals)
+                                           state=parser_state, terminals_by_name=self.terminals_by_names)
 
             value, type_ = res
 
@@ -397,10 +403,7 @@ class ContextualLexer(Lexer):
 
     def __init__(self, conf, states, always_accept=()):
         terminals = list(conf.terminals)
-        tokens_by_name = {}
-        for t in terminals:
-            assert t.name not in tokens_by_name, t
-            tokens_by_name[t.name] = t
+        tokens_by_name = conf.terminals_by_names
 
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
@@ -437,8 +440,13 @@ class ContextualLexer(Lexer):
         except UnexpectedCharacters as e:
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
-            token = self.root_lexer.next_token(lexer_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state.position, token_history=[lexer_state.last_token], all_terminals=self.root_lexer.terminals)
+            last_token = lexer_state.last_token # self.root_lexer.next_token will change this to the wrong token
+            try:
+                token = self.root_lexer.next_token(lexer_state, parser_state)
+            except UnexpectedCharacters:
+                raise e# Don't raise the exception that the root lexer raise. It has the wrong expected set.
+            else:
+                raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_names)
 
 class LexerThread:
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""

@@ -322,7 +322,6 @@ class PrepareAnonTerminals(Transformer_InPlace):
             raise GrammarError(u'Conflicting flags for the same terminal: %s' % p)
 
         term_name = None
-        user_repr = p.raw # This will always be ok, independent of what term_name we end up using
 
         if isinstance(p, PatternStr):
             try:
@@ -354,7 +353,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
         if term_name not in self.term_set:
             assert p not in self.term_reverse
             self.term_set.add(term_name)
-            termdef = TerminalDef(term_name, p, user_repr=user_repr)
+            termdef = TerminalDef(term_name, p)
             self.term_reverse[p] = termdef
             self.terminals.append(termdef)
 

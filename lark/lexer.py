@@ -361,7 +361,7 @@ class TraditionalLexer(Lexer):
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
                                            allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
-                                           state=parser_state, _all_terminals=self.terminals_by_names)
+                                           state=parser_state, terminals_by_name=self.terminals_by_names)
 
             value, type_ = res
 
@@ -440,8 +440,13 @@ class ContextualLexer(Lexer):
         except UnexpectedCharacters as e:
             # In the contextual lexer, UnexpectedCharacters can mean that the terminal is defined, but not in the current context.
             # This tests the input against the global context, to provide a nicer error.
-            token = self.root_lexer.next_token(lexer_state, parser_state)
-            raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[lexer_state.last_token], all_terminals=self.root_lexer.terminals_by_names)
+            last_token = lexer_state.last_token # self.root_lexer.next_token will change this to the wrong token
+            try:
+                token = self.root_lexer.next_token(lexer_state, parser_state)
+            except UnexpectedCharacters:
+                raise e from None# Don't raise the exception that the root lexer raise. It has the wrong excepts set.
+            else:
+                raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_names)
 
 class LexerThread:
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""

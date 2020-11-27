@@ -118,18 +118,18 @@ class UnexpectedInput(LarkError):
 
         return candidate[0]
 
-    def _format_terminals(self, terminals):
+    def _format_excepts(self, excepts):
         if self._terminals_by_name:
             ts = []
-            for ter in terminals:
+            for ter in excepts:
                 ts.append(self._terminals_by_name[ter].user_repr())
         else:
-            ts = terminals
+            ts = excepts
         return "Expected one of: \n\t* %s\n" % '\n\t* '.join(ts)
 
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
-    def __init__(self, expected, state=None, _terminals_by_name=None):
+    def __init__(self, expected, state=None, terminals_by_name=None):
         self.expected = expected
         self.state = state
         from .lexer import Token
@@ -137,28 +137,25 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
         self.pos_in_stream = -1
         self.line = -1
         self.column = -1
-        self._terminals_by_name = _terminals_by_name
+        self._terminals_by_name = terminals_by_name
 
         super(UnexpectedEOF, self).__init__()
 
     def __str__(self):
-        # Be aware: Broken __str__ for Exceptions are terrible to debug. Make sure there is as little room as possible for errors
-        # You will get just `UnexpectedCharacters: <str() failed>` or something like that
-        # If you run into this, add an `except Exception as e: print(e); raise e` or similar.
         message = "Unexpected end-of-input. "
-        message += self._format_terminals(self.expected)
+        message += self._format_excepts(self.expected)
         return message
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
-                 _all_terminals=None):
+                 terminals_by_name=None):
         # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
         self.state = state
-        self._all_terminals = _all_terminals
+        self._terminals_by_name = terminals_by_name
 
         self.allowed = allowed
         self.considered_tokens = considered_tokens
@@ -173,17 +170,15 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         super(UnexpectedCharacters, self).__init__()
 
     def __str__(self):
-        # Be aware: Broken __str__ for Exceptions are terrible to debug. Make sure there is as little room as possible for errors
-        # You will get just `UnexpectedCharacters: <str() failed>` or something like that
-        # If you run into this, add an `except Exception as e: print(e); raise e` or similar.
         message = "No terminal defined for '%s' at line %d col %d" % (self.char, self.line, self.column)
         message += '\n\n' + self._context
         if self.allowed:
-            message += self._format_terminals(self.allowed)
+            message += self._format_excepts(self.allowed)
         if self.token_history:
             message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
         return message
 
+_not_set_marker = object()
 
 class UnexpectedToken(ParseError, UnexpectedInput):
     """When the parser throws UnexpectedToken, it instantiates a puppet
@@ -193,7 +188,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     see: :ref:`ParserPuppet`.
     """
 
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, all_terminals=None, token_history=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, terminals_by_name=None, token_history=None):
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -202,21 +197,23 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         self.token = token
         self.expected = expected  # XXX deprecate? `accepts` is better
+        self._accepts = _not_set_marker
         self.considered_rules = considered_rules
         self.puppet = puppet
-        self._all_terminals = all_terminals
+        self._terminals_by_name = terminals_by_name
         self.token_history = token_history
 
         super(UnexpectedToken, self).__init__()
 
     @property
     def accepts(self):
-        return self.puppet and self.puppet.accepts()
+        if self._accepts is _not_set_marker:
+            self._accepts =  self.puppet and self.puppet.accepts()
+        return self._accepts
 
     def __str__(self):
-        # Be aware: Broken __str__ for Exceptions are terrible to debug. Make sure there is as little room as possible for errors
         message = ("Unexpected token %r at line %s, column %s.\n%s"
-                   % (self.token, self.line, self.column, self._format_terminals(self.accepts or self.expected)))
+                   % (self.token, self.line, self.column, self._format_excepts(self.accepts or self.expected)))
         if self.token_history:
             message += "Previous tokens: %r\n" % self.token_history
 

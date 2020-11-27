@@ -69,6 +69,14 @@ def parse_rulename(s):
     return name, args
 
 
+
+class ChildrenLexer:
+    def __init__(self, children):
+        self.children = children
+
+    def lex(self, parser_state):
+        return self.children
+
 class TreeMatcher:
     """Match the elements of a tree node, based on an ontology
     provided by a Lark grammar.
@@ -173,6 +181,6 @@ class TreeMatcher:
             self._parser_cache[rulename] = parser
 
         # find a full derivation
-        unreduced_tree = parser.parse(tree.children, rulename)
+        unreduced_tree = parser.parse(ChildrenLexer(tree.children), rulename)
         assert unreduced_tree.data == rulename
         return unreduced_tree

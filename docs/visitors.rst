@@ -30,15 +30,17 @@ Example:
     ::
 
         class IncreaseAllNumbers(Visitor):
-        def number(self, tree):
-            assert tree.data == "number"
-            tree.children[0] += 1
+            def number(self, tree):
+                assert tree.data == "number"
+                tree.children[0] += 1
 
         IncreaseAllNumbers().visit(parse_tree)
 
 .. autoclass:: lark.visitors.Visitor
+    :members: visit, visit_topdown, __default__
 
 .. autoclass:: lark.visitors.Visitor_Recursive
+    :members: visit, visit_topdown, __default__
 
 Interpreter
 -----------
@@ -63,7 +65,7 @@ Transformer
 -----------
 
 .. autoclass:: lark.visitors.Transformer
-    :members: __default__, __default_token__
+    :members: transform, __default__, __default_token__, __mul__
 
 Example:
     ::
@@ -90,6 +92,11 @@ Example:
 
         T(visit_tokens=True).transform(tree)
 
+.. autoclass:: lark.visitors.Transformer_NonRecursive
+
+.. autoclass:: lark.visitors.Transformer_InPlace
+
+.. autoclass:: lark.visitors.Transformer_InPlaceRecursive
 
 v_args
 ------

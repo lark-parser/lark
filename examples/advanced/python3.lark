@@ -23,7 +23,7 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" NAME "(" parameters? ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," [ starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," "/"] ["," [starparams | kwparams]]
           | starparams
           | kwparams
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
@@ -163,22 +163,14 @@ yield_arg: "from" test | testlist
 
 number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
 string: STRING | LONG_STRING
-// Tokens
 
-NAME: /[a-zA-Z_]\w*/
-COMMENT: /#[^\n]*/
+// Import terminals from standard library (grammars/python.lark)
+%import python (NAME, COMMENT, STRING, LONG_STRING)
+%import python (DEC_NUMBER, HEX_NUMBER, OCT_NUMBER, BIN_NUMBER, FLOAT_NUMBER, IMAG_NUMBER)
+
+// Other terminals
+
 _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
-
-
-STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
-LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
-
-DEC_NUMBER: /0|[1-9]\d*/i
-HEX_NUMBER.2: /0x[\da-f]*/i
-OCT_NUMBER.2: /0o[0-7]*/i
-BIN_NUMBER.2 : /0b[0-1]*/i
-FLOAT_NUMBER.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
-IMAG_NUMBER.2: /\d+j/i | FLOAT_NUMBER "j"i
 
 %ignore /[\t \f]+/  // WS
 %ignore /\\[\t \f]*\r?\n/   // LINE_CONT

@@ -40,12 +40,10 @@ class Terminal(Symbol):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
 
 
-
 class NonTerminal(Symbol):
     __serialize_fields__ = 'name',
 
     is_term = False
-
 
 
 class RuleOptions(Serialize):
@@ -102,7 +100,6 @@ class Rule(Serialize):
         if not isinstance(other, Rule):
             return False
         return self.origin == other.origin and self.expansion == other.expansion
-
 
 
 ###}

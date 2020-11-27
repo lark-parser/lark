@@ -3,15 +3,16 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy, copy
-from ..exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
+from ..exceptions import UnexpectedInput, UnexpectedToken
 from ..lexer import Token
+from ..utils import Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_puppet import ParserPuppet
 
 ###{standalone
 
-class LALR_Parser(object):
+class LALR_Parser(Serialize):
     def __init__(self, parser_conf, debug=False):
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lalr()
@@ -62,6 +63,12 @@ class ParserState(object):
     def position(self):
         return self.state_stack[-1]
 
+    # Necessary for match_examples() to work
+    def __eq__(self, other):
+        if not isinstance(other, ParserState):
+            return False
+        return self.position == other.position
+
     def __copy__(self):
         return type(self)(
             self.parse_conf,
@@ -86,7 +93,7 @@ class ParserState(object):
                 action, arg = states[state][token.type]
             except KeyError:
                 expected = {s for s in states[state].keys() if s.isupper()}
-                raise UnexpectedToken(token, expected, state=state, puppet=None)
+                raise UnexpectedToken(token, expected, state=self, puppet=None)
 
             assert arg != end_state
 
@@ -95,7 +102,7 @@ class ParserState(object):
                 assert not is_end
                 state_stack.append(arg)
                 value_stack.append(token)
-                return arg
+                return
             else:
                 # reduce+shift as many times as necessary
                 rule = arg

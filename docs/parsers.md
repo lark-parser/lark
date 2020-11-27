@@ -25,9 +25,18 @@ Lark provides the following options to combat ambiguity:
 
 3) As an advanced feature, users may use specialized visitors to iterate the SPPF themselves.
 
-**dynamic_complete**
+**lexer="dynamic_complete"**
 
-**TODO: Add documentation on dynamic_complete**
+Earley's "dynamic" lexer uses regular expressions in order to tokenize the text. It tries every possible combination of terminals, but it matches each terminal exactly once, returning the longest possible match.
+
+That means, for example, that when `lexer="dynamic"` (which is the default), the terminal `/a+/`, when given the text `"aa"`, will return one result, `aa`, even though `a` would also be correct.
+
+This behavior was chosen because it is much faster, and it is usually what you would expect.
+
+Setting `lexer="dynamic_complete"` instructs the lexer to consider every possible regexp match. This ensures that the parser will consider and resolve every ambiguity, even inside the terminals themselves. This lexer provides the same capabilities as scannerless Earley, but with different performance tradeoffs.
+
+Warning: This lexer can be much slower, especially for open-ended terminals such as `/.*/`
+
 
 ## LALR(1)
 
@@ -37,7 +46,9 @@ Lark comes with an efficient implementation that outperforms every other parsing
 
 Lark extends the traditional YACC-based architecture with a *contextual lexer*, which automatically provides feedback from the parser to the lexer, making the LALR(1) algorithm stronger than ever.
 
-The contextual lexer communicates with the parser, and uses the parser's lookahead prediction to narrow its choice of tokens. So at each point, the lexer only matches the subgroup of terminals that are legal at that parser state, instead of all of the terminals. It’s surprisingly effective at resolving common terminal collisions, and allows one to parse languages that LALR(1) was previously incapable of parsing.
+The contextual lexer communicates with the parser, and uses the parser's lookahead prediction to narrow its choice of terminals. So at each point, the lexer only matches the subgroup of terminals that are legal at that parser state, instead of all of the terminals. It’s surprisingly effective at resolving common terminal collisions, and allows one to parse languages that LALR(1) was previously incapable of parsing.
+
+(If you're familiar with YACC, you can think of it as automatic lexer-states)
 
 This is an improvement to LALR(1) that is unique to Lark.
 

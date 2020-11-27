@@ -112,9 +112,13 @@ You can use flags on regexps and strings. For example:
 ```perl
 SELECT: "select"i     //# Will ignore case, and match SELECT or Select, etc.
 MULTILINE_TEXT: /.+/s
+SIGNED_INTEGER: /
+    [+-]?  # the sign
+    (0|[1-9][0-9]*)  # the digits
+ /x
 ```
 
-Supported flags are one of: `imslu`. See Python's regex documentation for more details on each one.
+Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
 
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 
@@ -251,7 +255,7 @@ COMMENT: "#" /[^\n]/*
 ```
 ### %import
 
-Allows to import terminals and rules from lark grammars.
+Allows one to import terminals and rules from lark grammars.
 
 When importing rules, all their dependencies will be imported into a namespace, to avoid collisions. It's not possible to override their dependencies (e.g. like you would when inheriting a class).
 
@@ -264,7 +268,7 @@ When importing rules, all their dependencies will be imported into a namespace, 
 %import <module> (<TERM1>, <TERM2>, <rule1>, <rule2>)
 ```
 
-If the module path is absolute, Lark will attempt to load it from the built-in directory (currently, only `common.lark` is available).
+If the module path is absolute, Lark will attempt to load it from the built-in directory (which currently contains `common.lark`, `python.lark`, and `unicode.lark`).
 
 If the module path is relative, such as `.path.to.file`, Lark will attempt to load it from the current working directory. Grammars must have the `.lark` extension.
 

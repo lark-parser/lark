@@ -9,6 +9,7 @@ from .test_tools import TestStandalone
 from .test_cache import TestCache
 from .test_grammar import TestGrammar
 from .test_reconstructor import TestReconstructor
+from .test_tree_forest_transformer import TestTreeForestTransformer
 
 try:
     from .test_nearley.test_nearley import TestNearley
@@ -20,20 +21,7 @@ except ImportError:
 
 from .test_logger import Testlogger
 
-from .test_parser import (
-        TestLalrStandard,
-        TestEarleyStandard,
-        TestCykStandard,
-        TestLalrContextual,
-        TestEarleyDynamic,
-        TestLalrCustom,
-
-        # TestFullEarleyStandard,
-        TestFullEarleyDynamic,
-        TestFullEarleyDynamic_complete,
-
-        TestParsers,
-        )
+from .test_parser import * # We define __all__ to list which TestSuites to run
 
 logger.setLevel(logging.INFO)
 

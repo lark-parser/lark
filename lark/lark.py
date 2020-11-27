@@ -1,12 +1,13 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError, assert_config
 
 import sys, os, pickle, hashlib
 from io import open
-
+import tempfile
+from warnings import warn
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar
+from .load_grammar import load_grammar, FromPackageLoader
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -23,6 +24,7 @@ except ImportError:
 
 ###{standalone
 
+
 class LarkOptions(Serialize):
     """Specifies the options for Lark
 
@@ -33,9 +35,10 @@ class LarkOptions(Serialize):
     start
             The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
     debug
-            Display debug information, such as warnings (default: False)
+            Display debug information and extra warnings. Use only when debugging (default: False)
+            When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
     transformer
-            Applies the transformer to every parse tree (equivlent to applying it after the parse, but faster)
+            Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
     maybe_placeholders
@@ -91,6 +94,10 @@ class LarkOptions(Serialize):
             Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
     edit_terminals
             A callback for editing the terminals before parse.
+    import_paths
+            A List of either paths or loader functions to specify from where grammars are imported
+    source_path
+            Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
 
     **=== End Options ===**
     """
@@ -125,6 +132,8 @@ class LarkOptions(Serialize):
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
+        'import_paths': [],
+        'source_path': None,
     }
 
     def __init__(self, options_dict):
@@ -146,14 +155,15 @@ class LarkOptions(Serialize):
 
         self.__dict__['options'] = options
 
-        assert self.parser in ('earley', 'lalr', 'cyk', None)
+
+        assert_config(self.parser, ('earley', 'lalr', 'cyk', None))
 
         if self.parser == 'earley' and self.transformer:
-            raise ValueError('Cannot specify an embedded transformer when using the Earley algorithm.'
+            raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
         if o:
-            raise ValueError("Unknown options: %s" % o.keys())
+            raise ConfigurationError("Unknown options: %s" % o.keys())
 
     def __getattr__(self, name):
         try:
@@ -162,7 +172,7 @@ class LarkOptions(Serialize):
             raise AttributeError(e)
 
     def __setattr__(self, name, value):
-        assert name in self.options
+        assert_config(name, self.options.keys(), "%r isn't a valid option. Expected one of: %s")
         self.options[name] = value
 
     def serialize(self, memo):
@@ -208,10 +218,13 @@ class Lark(Serialize):
             re_module = re
 
         # Some, but not all file-like objects have a 'name' attribute
-        try:
-            self.source = grammar.name
-        except AttributeError:
-            self.source = '<string>'
+        if self.options.source_path is None:
+            try:
+                self.source_path = grammar.name
+            except AttributeError:
+                self.source_path = '<string>'
+        else:
+            self.source_path = self.options.source_path
 
         # Drain file-like objects to get their contents
         try:
@@ -222,29 +235,29 @@ class Lark(Serialize):
             grammar = read()
 
         assert isinstance(grammar, STRING_TYPE)
-        self.grammar_source = grammar
+        self.source_grammar = grammar
         if self.options.use_bytes:
             if not isascii(grammar):
-                raise ValueError("Grammar must be ascii only, when use_bytes=True")
+                raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
             if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                raise NotImplementedError("`use_bytes=True` may have issues on python2."
+                raise ConfigurationError("`use_bytes=True` may have issues on python2."
                                           "Use `use_bytes='force'` to use it at your own risk.")
 
         cache_fn = None
         if self.options.cache:
             if self.options.parser != 'lalr':
-                raise NotImplementedError("cache only works with parser='lalr' for now")
+                raise ConfigurationError("cache only works with parser='lalr' for now")
             if isinstance(self.options.cache, STRING_TYPE):
                 cache_fn = self.options.cache
             else:
                 if self.options.cache is not True:
-                    raise ValueError("cache argument must be bool or str")
+                    raise ConfigurationError("cache argument must be bool or str")
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 from . import __version__
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 s = grammar + options_str + __version__
                 md5 = hashlib.md5(s.encode()).hexdigest()
-                cache_fn = '.lark_cache_%s.tmp' % md5
+                cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % md5
 
             if FS.exists(cache_fn):
                 logger.debug('Loading grammar from cache: %s', cache_fn)
@@ -265,27 +278,28 @@ class Lark(Serialize):
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        assert lexer in ('standard', 'contextual', 'dynamic', 'dynamic_complete') or issubclass(lexer, Lexer)
+        if isinstance(lexer, type):
+            assert issubclass(lexer, Lexer)     # XXX Is this really important? Maybe just ensure interface compliance
+        else:
+            assert_config(lexer, ('standard', 'contextual', 'dynamic', 'dynamic_complete'))
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
                 self.options.ambiguity = 'resolve'
         else:
-            disambig_parsers = ['earley', 'cyk']
-            assert self.options.parser in disambig_parsers, (
-                'Only %s supports disambiguation right now') % ', '.join(disambig_parsers)
+            assert_config(self.options.parser, ('earley', 'cyk'), "%r doesn't support disambiguation. Use one of these parsers instead: %s")
 
         if self.options.priority == 'auto':
             self.options.priority = 'normal'
 
         if self.options.priority not in _VALID_PRIORITY_OPTIONS:
-            raise ValueError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
+            raise ConfigurationError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
         assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
-            raise ValueError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
+            raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
-        # Parse the grammar file and compose the grammars (TODO)
-        self.grammar = load_grammar(grammar, self.source, re_module, self.options.keep_all_tokens)
+        # Parse the grammar file and compose the grammars
+        self.grammar = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
 
         if self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
@@ -310,7 +324,7 @@ class Lark(Serialize):
         # Else, if the user asked to disable priorities, strip them from the
         # rules. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
-        elif self.options.priority == None:
+        elif self.options.priority is None:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = None
@@ -350,7 +364,7 @@ class Lark(Serialize):
                     self.rules,
                     self.options.tree_class or Tree,
                     self.options.propagate_positions,
-                    self.options.parser!='lalr' and self.options.ambiguity=='explicit',
+                    self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
                     self.options.maybe_placeholders
                 )
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
@@ -389,18 +403,18 @@ class Lark(Serialize):
         memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
-            raise ValueError("Some options are not allowed when loading a Parser: {}"
+            raise ConfigurationError("Some options are not allowed when loading a Parser: {}"
                              .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
         options.update(kwargs)
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source = '<deserialized>'
+        self.source_path = '<deserialized>'
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
             data['parser'],
             memo,
             self._callbacks,
-            self.options, # Not all, but multiple attributes are used
+            self.options,  # Not all, but multiple attributes are used
         )
         self.terminals = self.parser.lexer_conf.terminals
         self._terminals_dict = {t.name: t for t in self.terminals}
@@ -429,8 +443,26 @@ class Lark(Serialize):
         with open(grammar_filename, encoding='utf8') as f:
             return cls(f, **options)
 
+    @classmethod
+    def open_from_package(cls, package, grammar_path, search_paths=("",), **options):
+        """Create an instance of Lark with the grammar loaded from within the package `package`.
+        This allows grammar loading from zipapps.
+
+        Imports in the grammar will use the `package` and `search_paths` provided, through `FromPackageLoader`
+
+        Example:
+
+            Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
+        """
+        package = FromPackageLoader(package, search_paths)
+        full_path, text = package(None, grammar_path)
+        options.setdefault('source_path', full_path)
+        options.setdefault('import_paths', [])
+        options['import_paths'].append(package)
+        return cls(text, **options)
+
     def __repr__(self):
-        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source, self.options.parser, self.options.lexer)
+        return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
 
     def lex(self, text):
@@ -489,6 +521,24 @@ class Lark(Serialize):
                     e = e2
                 except UnexpectedCharacters as e2:
                     e = e2
+
+    @property
+    def source(self):
+        warn("Lark.source attribute has been renamed to Lark.source_path", DeprecationWarning)
+        return self.source_path
+
+    @source.setter
+    def source(self, value):
+        self.source_path = value
+
+    @property
+    def grammar_source(self):
+        warn("Lark.grammar_source attribute has been renamed to Lark.source_grammar", DeprecationWarning)
+        return self.source_grammar
+
+    @grammar_source.setter
+    def grammar_source(self, value):
+        self.source_grammar = value
 
 
 ###}

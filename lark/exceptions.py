@@ -118,13 +118,13 @@ class UnexpectedInput(LarkError):
 
         return candidate[0]
 
-    def _format_excepts(self, excepts):
+    def _format_expected(self, expected):
         if self._terminals_by_name:
             ts = []
-            for ter in excepts:
+            for ter in expected:
                 ts.append(self._terminals_by_name[ter].user_repr())
         else:
-            ts = excepts
+            ts = expected
         return "Expected one of: \n\t* %s\n" % '\n\t* '.join(ts)
 
 
@@ -143,7 +143,7 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
     def __str__(self):
         message = "Unexpected end-of-input. "
-        message += self._format_excepts(self.expected)
+        message += self._format_expected(self.expected)
         return message
 
 
@@ -173,7 +173,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         message = "No terminal defined for '%s' at line %d col %d" % (self.char, self.line, self.column)
         message += '\n\n' + self._context
         if self.allowed:
-            message += self._format_excepts(self.allowed)
+            message += self._format_expected(self.allowed)
         if self.token_history:
             message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
         return message
@@ -213,7 +213,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     def __str__(self):
         message = ("Unexpected token %r at line %s, column %s.\n%s"
-                   % (self.token, self.line, self.column, self._format_excepts(self.accepts or self.expected)))
+                   % (self.token, self.line, self.column, self._format_expected(self.accepts or self.expected)))
         if self.token_history:
             message += "Previous tokens: %r\n" % self.token_history
 

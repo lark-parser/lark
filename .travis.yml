@@ -1,4 +1,7 @@
 dist: xenial
+arch:
+  - amd64
+  - ppc64le
 language: python
 python:
   - "2.7"
@@ -10,6 +13,12 @@ python:
   - "3.9-dev"
   - "pypy2.7-6.0"
   - "pypy3.5-6.0"
+jobs:
+  exclude:
+   - arch : ppc64le
+     python : "pypy2.7-6.0"
+   - arch : ppc64le
+     python : "pypy3.5-6.0"
 install: pip install tox-travis
 script:
   - tox

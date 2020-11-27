@@ -63,9 +63,10 @@ class Parser(BaseParser):
                                 t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                                 delayed_matches[i+m.end()].append( (item, i, t) )
 
-                    # Remove any items that successfully matched in this pass from the to_scan buffer.
-                    # This ensures we don't carry over tokens that already matched, if we're ignoring below.
-                    to_scan.remove(item)
+                    # XXX The following 3 lines were commented out for causing a bug. See issue #768
+                    # # Remove any items that successfully matched in this pass from the to_scan buffer.
+                    # # This ensures we don't carry over tokens that already matched, if we're ignoring below.
+                    # to_scan.remove(item)
 
             # 3) Process any ignores. This is typically used for e.g. whitespace.
             # We carry over any unmatched items from the to_scan buffer to be matched again after

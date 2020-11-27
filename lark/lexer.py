@@ -444,7 +444,7 @@ class ContextualLexer(Lexer):
             try:
                 token = self.root_lexer.next_token(lexer_state, parser_state)
             except UnexpectedCharacters:
-                raise e from None# Don't raise the exception that the root lexer raise. It has the wrong excepts set.
+                raise e# Don't raise the exception that the root lexer raise. It has the wrong excepts set.
             else:
                 raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_names)
 

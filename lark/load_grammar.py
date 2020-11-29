@@ -333,9 +333,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                     term_name = _TERMINAL_NAMES[value]
                 except KeyError:
                     if is_id_continue(value) and is_id_start(value[0]) and value.upper() not in self.term_set:
-                        with suppress(UnicodeEncodeError):
-                            value.upper().encode('ascii')  # Make sure we don't have unicode in our terminal names
-                            term_name = value.upper()
+                        term_name = value.upper()
 
                 if term_name in self.term_set:
                     term_name = None

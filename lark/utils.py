@@ -1,3 +1,4 @@
+import unicodedata
 import os
 from functools import reduce
 from collections import deque
@@ -14,6 +15,7 @@ logger.setLevel(logging.CRITICAL)
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 NO_VALUE = object()
+
 
 def classify(seq, key=None, value=None):
     d = {}
@@ -167,6 +169,29 @@ def get_regexp_width(expr):
         raise ValueError(expr)
 
 ###}
+
+
+_ID_START =    'Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc'
+_ID_CONTINUE = _ID_START + ('Nd', 'Nl',)
+
+def _test_unicode_category(s, categories):
+    if len(s) != 1:
+        return all(_test_unicode_category(char, categories) for char in s)
+    return s == '_' or unicodedata.category(s) in categories
+
+def is_id_continue(s):
+    """
+    Checks if all characters in `s` are alphanumeric characters (Unicode standard, so diacritics, indian vowels, non-latin
+    numbers, etc. all pass). Synonymous with a Python `ID_CONTINUE` identifier. See PEP 3131 for details.
+    """
+    return _test_unicode_category(s, _ID_CONTINUE)
+
+def is_id_start(s):
+    """
+    Checks if all characters in `s` are alphabetic characters (Unicode standard, so diacritics, indian vowels, non-latin
+    numbers, etc. all pass). Synonymous with a Python `ID_START` identifier. See PEP 3131 for details.
+    """
+    return _test_unicode_category(s, _ID_START)
 
 
 def dedup_list(l):

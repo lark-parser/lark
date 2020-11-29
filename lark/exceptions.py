@@ -1,4 +1,4 @@
-from .utils import STRING_TYPE, logger
+from .utils import STRING_TYPE, logger, NO_VALUE
 
 
 ###{standalone
@@ -120,12 +120,8 @@ class UnexpectedInput(LarkError):
 
     def _format_expected(self, expected):
         if self._terminals_by_name:
-            ts = []
-            for ter in expected:
-                ts.append(self._terminals_by_name[ter].user_repr())
-        else:
-            ts = expected
-        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(ts)
+            expected = [self._terminals_by_name[t_name].user_repr() for t_name in expected]
+        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(expected)
 
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
@@ -178,7 +174,6 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
             message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
         return message
 
-_not_set_marker = object()
 
 class UnexpectedToken(ParseError, UnexpectedInput):
     """When the parser throws UnexpectedToken, it instantiates a puppet
@@ -197,7 +192,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
         self.token = token
         self.expected = expected  # XXX deprecate? `accepts` is better
-        self._accepts = _not_set_marker
+        self._accepts = NO_VALUE
         self.considered_rules = considered_rules
         self.puppet = puppet
         self._terminals_by_name = terminals_by_name
@@ -207,8 +202,8 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     @property
     def accepts(self):
-        if self._accepts is _not_set_marker:
-            self._accepts =  self.puppet and self.puppet.accepts()
+        if self._accepts is NO_VALUE:
+            self._accepts = self.puppet and self.puppet.accepts()
         return self._accepts
 
     def __str__(self):

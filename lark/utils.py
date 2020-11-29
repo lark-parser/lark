@@ -13,6 +13,7 @@ logger.setLevel(logging.CRITICAL)
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
+NO_VALUE = object()
 
 def classify(seq, key=None, value=None):
     d = {}

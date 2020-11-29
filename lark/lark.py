@@ -416,7 +416,7 @@ class Lark(Serialize):
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
         )
-        self.terminals = self.parser.lexer_conf.tokens
+        self.terminals = self.parser.lexer_conf.terminals
         self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 

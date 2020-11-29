@@ -170,7 +170,7 @@ CYK_FrontEnd = NotImplemented
 class EarleyRegexpMatcher:
     def __init__(self, lexer_conf):
         self.regexps = {}
-        for t in lexer_conf.tokens:
+        for t in lexer_conf.terminals:
             if t.priority != 1:
                 raise GrammarError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()

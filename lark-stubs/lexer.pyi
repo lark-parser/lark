@@ -12,6 +12,7 @@ _T = TypeVar('_T')
 class Pattern(ABC):
     value: str
     flags: Collection[str]
+    raw: str
 
     def __init__(self, value: str, flags: Collection[str] = ...):
         ...
@@ -73,6 +74,8 @@ class TerminalDef:
 
     def __init__(self, name: str, pattern: Pattern, priority: int = ...):
         ...
+    
+    def user_repr(self) -> str: ...
 
 
 class Token(str):

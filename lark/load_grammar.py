@@ -454,9 +454,9 @@ def _literal_to_pattern(literal):
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
-        return PatternStr(s, flags)
+        return PatternStr(s, flags, raw=literal.value)
     elif literal.type == 'REGEXP':
-        return PatternRE(s, flags)
+        return PatternRE(s, flags, raw=literal.value)
     else:
         assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 

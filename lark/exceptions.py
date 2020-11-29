@@ -1,4 +1,5 @@
-from .utils import STRING_TYPE, logger
+from .utils import STRING_TYPE, logger, NO_VALUE
+
 
 ###{standalone
 
@@ -39,6 +40,7 @@ class UnexpectedInput(LarkError):
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
     pos_in_stream = None
+    _terminals_by_name = None
 
     def get_context(self, text, span=40):
         """Returns a pretty string pinpointing the error in the text,
@@ -95,7 +97,7 @@ class UnexpectedInput(LarkError):
                     if ut.state == self.state:
                         if use_accepts and hasattr(self, 'accepts') and ut.accepts != self.accepts:
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
-                                        (self.state, self.accepts, ut.accepts, i, j))
+                                         (self.state, self.accepts, ut.accepts, i, j))
                             continue
                         try:
                             if ut.token == self.token:  # Try exact match first
@@ -116,44 +118,61 @@ class UnexpectedInput(LarkError):
 
         return candidate[0]
 
+    def _format_expected(self, expected):
+        if self._terminals_by_name:
+            expected = [self._terminals_by_name[t_name].user_repr() for t_name in expected]
+        return "Expected one of: \n\t* %s\n" % '\n\t* '.join(expected)
+
+
 class UnexpectedEOF(ParseError, UnexpectedInput):
-    def __init__(self, expected, state=None):
+    def __init__(self, expected, state=None, terminals_by_name=None):
         self.expected = expected
         self.state = state
         from .lexer import Token
-        self.token = Token("<EOF>", "") #, line=-1, column=-1, pos_in_stream=-1)
+        self.token = Token("<EOF>", "")  # , line=-1, column=-1, pos_in_stream=-1)
         self.pos_in_stream = -1
         self.line = -1
         self.column = -1
+        self._terminals_by_name = terminals_by_name
 
-        message = ("Unexpected end-of-input. Expected one of: \n\t* %s\n" % '\n\t* '.join(x.name for x in self.expected))
-        super(UnexpectedEOF, self).__init__(message)
+        super(UnexpectedEOF, self).__init__()
+
+    def __str__(self):
+        message = "Unexpected end-of-input. "
+        message += self._format_expected(self.expected)
+        return message
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None):
+    def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
+                 terminals_by_name=None):
         # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
         self.pos_in_stream = lex_pos
         self.state = state
+        self._terminals_by_name = terminals_by_name
 
         self.allowed = allowed
         self.considered_tokens = considered_tokens
+        self.token_history = token_history
 
         if isinstance(seq, bytes):
-            _s = seq[lex_pos:lex_pos+1].decode("ascii", "backslashreplace")
+            self.char = seq[lex_pos:lex_pos + 1].decode("ascii", "backslashreplace")
         else:
-            _s = seq[lex_pos]
+            self.char = seq[lex_pos]
+        self._context = self.get_context(seq)
 
-        message = "No terminal defined for %r at line %d col %d" % (_s, line, column)
-        message += '\n\n' + self.get_context(seq)
-        if allowed:
-            message += '\nExpecting: %s\n' % allowed
-        if token_history:
-            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in token_history)
+        super(UnexpectedCharacters, self).__init__()
 
-        super(UnexpectedCharacters, self).__init__(message)
+    def __str__(self):
+        message = "No terminal defined for '%s' at line %d col %d" % (self.char, self.line, self.column)
+        message += '\n\n' + self._context
+        if self.allowed:
+            message += self._format_expected(self.allowed)
+        if self.token_history:
+            message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
+        return message
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
@@ -163,7 +182,8 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     see: :ref:`ParserPuppet`.
     """
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, token_history=None):
+
+    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, terminals_by_name=None, token_history=None):
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -171,23 +191,28 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.state = state
 
         self.token = token
-        self.expected = expected     # XXX deprecate? `accepts` is better
+        self.expected = expected  # XXX deprecate? `accepts` is better
+        self._accepts = NO_VALUE
         self.considered_rules = considered_rules
         self.puppet = puppet
+        self._terminals_by_name = terminals_by_name
         self.token_history = token_history
 
-        # TODO Only calculate `accepts()` when we need to display it to the user
-        # This will improve performance when doing automatic error handling
-        self.accepts = puppet and puppet.accepts()
+        super(UnexpectedToken, self).__init__()
 
-        message = ("Unexpected token %r at line %s, column %s.\n"
-                   "Expected one of: \n\t* %s\n"
-                   % (token, self.line, self.column, '\n\t* '.join(self.accepts or self.expected)))
+    @property
+    def accepts(self):
+        if self._accepts is NO_VALUE:
+            self._accepts = self.puppet and self.puppet.accepts()
+        return self._accepts
 
+    def __str__(self):
+        message = ("Unexpected token %r at line %s, column %s.\n%s"
+                   % (self.token, self.line, self.column, self._format_expected(self.accepts or self.expected)))
         if self.token_history:
-            message += "Previous tokens: %r\n" % token_history
+            message += "Previous tokens: %r\n" % self.token_history
 
-        super(UnexpectedToken, self).__init__(message)
+        return message
 
 
 class VisitError(LarkError):
@@ -197,12 +222,12 @@ class VisitError(LarkError):
     - obj: the tree node or token it was processing when the exception was raised
     - orig_exc: the exception that cause it to fail
     """
+
     def __init__(self, rule, obj, orig_exc):
         self.obj = obj
         self.orig_exc = orig_exc
 
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
-
 
 ###}

@@ -7,7 +7,7 @@ from .tree import Tree
 _T = TypeVar('_T')
 _R = TypeVar('_R')
 _FUNC = Callable[..., _T]
-_DECORED = Union[_FUNC, type]
+_DECORATED = Union[_FUNC, type]
 
 class Transformer(ABC, Generic[_T]):
 
@@ -76,7 +76,7 @@ def v_args(
     inline: bool = False,
     meta: bool = False,
     tree: bool = False
-) -> Callable[[_DECORED], _DECORED]:
+) -> Callable[[_DECORATED], _DECORATED]:
     ...
 
 

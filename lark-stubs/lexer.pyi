@@ -81,7 +81,7 @@ class TerminalDef:
 class Token(str):
     type: str
     pos_in_stream: int
-    value: str
+    value: Any
     line: int
     column: int
     end_line: int
@@ -91,11 +91,11 @@ class Token(str):
     def __init__(self, type_: str, value: Any, pos_in_stream: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None):
         ...
 
-    def update(self, type_: Optional[str] = None, value: Optional[str] = None) -> Token:
+    def update(self, type_: Optional[str] = None, value: Optional[Any] = None) -> Token:
         ...
 
     @classmethod
-    def new_borrow_pos(cls: Type[_T], type_: str, value: str, borrow_t: Token) -> _T:
+    def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: Token) -> _T:
         ...
 
 

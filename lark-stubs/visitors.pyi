@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import TypeVar, Tuple, List, Callable, Generic, Type
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union
 from abc import ABC
 from .tree import Tree
 
 _T = TypeVar('_T')
 _R = TypeVar('_R')
 _FUNC = Callable[..., _T]
-
+_DECORATED = Union[_FUNC, type]
 
 class Transformer(ABC, Generic[_T]):
 
@@ -76,7 +76,7 @@ def v_args(
     inline: bool = False,
     meta: bool = False,
     tree: bool = False
-) -> Callable[[_FUNC], _FUNC]:
+) -> Callable[[_DECORATED], _DECORATED]:
     ...
 
 

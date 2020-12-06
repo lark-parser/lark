@@ -265,7 +265,10 @@ class Lark(Serialize):
                 for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
                     del options[name]
                 with FS.open(cache_fn, 'rb') as f:
-                    self._load(f, **options)
+                    try:
+                        self._load(f, **options)
+                    except Exception:
+                        raise RuntimeError("Failed to load Lark from cache: %r. Try to delete the file and run again." % cache_fn)
                 return
 
         if self.options.lexer == 'auto':

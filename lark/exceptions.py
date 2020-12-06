@@ -120,7 +120,8 @@ class UnexpectedInput(LarkError):
 
     def _format_expected(self, expected):
         if self._terminals_by_name:
-            expected = [self._terminals_by_name[t_name].user_repr() for t_name in expected]
+            d = self._terminals_by_name
+            expected = [d[t_name].user_repr() if t_name in d else t_name for t_name in expected]
         return "Expected one of: \n\t* %s\n" % '\n\t* '.join(expected)
 
 

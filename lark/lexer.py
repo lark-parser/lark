@@ -10,6 +10,7 @@ from copy import copy
 
 
 class Pattern(Serialize):
+    raw = None
 
     def __init__(self, value, flags=(), raw=None):
         self.value = value

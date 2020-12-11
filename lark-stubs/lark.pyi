@@ -15,7 +15,7 @@ class PostLex(Protocol):
 
     def process(self, stream: Iterator[Token]) -> Iterator[Token]:
         ...
-    
+
     always_accept: Iterable[str]
 
 
@@ -42,12 +42,12 @@ class LarkOptions:
 class PackageResource(object):
     pkg_name: str
     path: str
-    
+
     def __init__(self, pkg_name: str, path: str): ...
 
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
-    
+
     def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]: ...
 
 
@@ -88,12 +88,12 @@ class Lark:
     @classmethod
     def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options) -> _T:
         ...
-    
+
     @classmethod
     def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...] = ..., **options) -> _T:
         ...
 
-    def lex(self, text: str) -> Iterator[Token]:
+    def lex(self, text: str, dont_ignore: bool = False) -> Iterator[Token]:
         ...
 
     def get_terminal(self, name: str) -> TerminalDef:

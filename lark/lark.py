@@ -11,7 +11,7 @@ from .load_grammar import load_grammar, FromPackageLoader
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer, TraditionalLexer, TerminalDef
+from .lexer import Lexer, TraditionalLexer, TerminalDef, LexerThread
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
@@ -355,8 +355,13 @@ class Lark(Serialize):
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
-    def _build_lexer(self):
-        return TraditionalLexer(self.lexer_conf)
+    def _build_lexer(self, dont_ignore=False):
+        lexer_conf = self.lexer_conf
+        if dont_ignore:
+            from copy import copy
+            lexer_conf = copy(lexer_conf)
+            lexer_conf.ignore = ()
+        return TraditionalLexer(lexer_conf)
 
     def _prepare_callbacks(self):
         self.parser_class = get_frontend(self.options.parser, self.options.lexer)
@@ -419,6 +424,7 @@ class Lark(Serialize):
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
         )
+        self.lexer_conf = self.parser.lexer_conf
         self.terminals = self.parser.lexer_conf.terminals
         self._terminals_dict = {t.name: t for t in self.terminals}
         return self
@@ -468,11 +474,17 @@ class Lark(Serialize):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
 
-    def lex(self, text):
-        "Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'"
-        if not hasattr(self, 'lexer'):
-            self.lexer = self._build_lexer()
-        stream = self.lexer.lex(text)
+    def lex(self, text, dont_ignore=False):
+        """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
+
+        When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
+        """
+        if not hasattr(self, 'lexer') or dont_ignore:
+            lexer = self._build_lexer(dont_ignore)
+        else:
+            lexer = self.lexer
+        lexer_thread = LexerThread(lexer, text)
+        stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)
         return stream

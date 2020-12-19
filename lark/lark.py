@@ -500,7 +500,7 @@ class Lark(Serialize):
             text (str): Text to be parsed.
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
-                LALR only. See examples/error_puppet.py for an example of how to use on_error.
+                LALR only. See examples/advanced/error_puppet.py for an example of how to use on_error.
 
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the

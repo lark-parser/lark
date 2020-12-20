@@ -13,21 +13,21 @@ DAY   : "0" DIGIT
       | "3" "0".."1" 
 
 // Dates
-CALENDAR_DATE : YEAR "-"? MONTH "-"? DAY
+CALENDAR_DATE : YEAR ["-"] MONTH ["-"] DAY
               | YEAR "-" MONTH
-              | "--" MONTH "-"? DAY
+              | "--" MONTH ["-"] DAY
 
 WEEK_NUMBER          : "0".."4" DIGIT
                      | "5" "0".."3"
 PREFIXED_WEEK_NUMBER : "W" WEEK_NUMBER
 WEEKDAY_NUMBER       : "1".."7"
-WEEK_DATE            : YEAR "-"? PREFIXED_WEEK_NUMBER
-                     | YEAR "-"? PREFIXED_WEEK_NUMBER "-"? WEEKDAY_NUMBER
+WEEK_DATE            : YEAR ["-"] PREFIXED_WEEK_NUMBER
+                     | YEAR ["-"] PREFIXED_WEEK_NUMBER ["-"] WEEKDAY_NUMBER
 
 DAY_NUMBER   : "1".."2" DIGIT    DIGIT
              | "3"      "0".."5" DIGIT
              | "3"      "6"      "0".."6" // leap day
-ORDINAL_DATE : YEAR "-"? DAY_NUMBER
+ORDINAL_DATE : YEAR ["-"] DAY_NUMBER
 
 DATE : ORDINAL_DATE 
      | CALENDAR_DATE 
@@ -39,13 +39,13 @@ HOUR         : "0".."1" DIGIT
 MINUTE       : "0".."5" DIGIT
 SECOND       : "0".."5" DIGIT 
              | "60" // leap second
-FRACTIONAL   : "." DIGIT+
+FRACTIONAL   : "." (DIGIT)+
 
 // Time
-TIME         : "T"? HOUR ":"? MINUTE ":"? SECOND FRACTIONAL?
-PREFIXED_TIME: "T" HOUR ":"? MINUTE ":"? SECOND FRACTIONAL?
+TIME         : ["T"] HOUR [":"] MINUTE [":"] SECOND [FRACTIONAL]
+PREFIXED_TIME: "T" HOUR [":"] MINUTE [":"] SECOND [FRACTIONAL]
 TIME_ZONE    : "Z"
-             | ("+"|"-") HOUR (":"? MINUTE)
+             | ("+"|"-") HOUR [[":"] MINUTE]
 
 // Combined
-DATETIME     : DATE PREFIXED_TIME TIME_ZONE?
+DATETIME     : DATE PREFIXED_TIME [TIME_ZONE]

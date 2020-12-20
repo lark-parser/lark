@@ -4,48 +4,48 @@
 // Could be made more robust, to not parse invalid dates
 
 // Date primitives
-year  : DIGIT DIGIT DIGIT DIGIT
-month : "0" "1".."9"
+YEAR  : DIGIT DIGIT DIGIT DIGIT
+MONTH : "0" "1".."9"
       | "1" "1".."2" 
-day   : "0" DIGIT
+DAY   : "0" DIGIT
       | "1" DIGIT 
       | "2" DIGIT
       | "3" "0".."1" 
 
 // Dates
-calendar_date : year "-"? month "-"? day
-              | year "-" month
-              | "--" month "-"? day
+CALENDAR_DATE : YEAR "-"? MONTH "-"? DAY
+              | YEAR "-" MONTH
+              | "--" MONTH "-"? DAY
 
-week_number          : "0".."4" DIGIT
+WEEK_NUMBER          : "0".."4" DIGIT
                      | "5" "0".."3"
-prefixed_week_number : "W" week_number
-weekday_number       : "1".."7"
-week_date            : year "-"? prefixed_week_number
-                     | year "-"? prefixed_week_number "-"? weekday_number
+PREFIXED_WEEK_NUMBER : "W" WEEK_NUMBER
+WEEKDAY_NUMBER       : "1".."7"
+WEEK_DATE            : YEAR "-"? PREFIXED_WEEK_NUMBER
+                     | YEAR "-"? PREFIXED_WEEK_NUMBER "-"? WEEKDAY_NUMBER
 
-day_number   : "1".."2" DIGIT    DIGIT
+DAY_NUMBER   : "1".."2" DIGIT    DIGIT
              | "3"      "0".."5" DIGIT
              | "3"      "6"      "0".."6" // leap day
-ordinal_date : year "-"? day_number
+ORDINAL_DATE : YEAR "-"? DAY_NUMBER
 
-date : ordinal_date 
-     | calendar_date 
-     | week_date
+DATE : ORDINAL_DATE 
+     | CALENDAR_DATE 
+     | WEEK_DATE
 
 // Time primitives
-hour         : "0".."1" DIGIT
+HOUR         : "0".."1" DIGIT
              | "2" "0".."4"
-minute       : "0".."5" DIGIT
-second       : "0".."5" DIGIT 
+MINUTE       : "0".."5" DIGIT
+SECOND       : "0".."5" DIGIT 
              | "60" // leap second
-fractional   : "." DIGIT+
+FRACTIONAL   : "." DIGIT+
 
 // Time
-time         : "T"? hour ":"? minute ":"? second fractional?
-prefixed_time: "T" hour ":"? minute ":"? second fractional?
-time_zone    : "Z"
-             | ("+"|"-") hour (":"? minute)
+TIME         : "T"? HOUR ":"? MINUTE ":"? SECOND FRACTIONAL?
+PREFIXED_TIME: "T" HOUR ":"? MINUTE ":"? SECOND FRACTIONAL?
+TIME_ZONE    : "Z"
+             | ("+"|"-") HOUR (":"? MINUTE)
 
 // Combined
-datetime     : date prefixed_time time_zone?
+DATETIME     : DATE PREFIXED_TIME TIME_ZONE?

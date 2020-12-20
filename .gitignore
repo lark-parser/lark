@@ -1,14 +1,20 @@
+# Python builds
+.cache
 *.pyc
 *.pyo
 /.tox
-/lark_parser.egg-info/**
-tags
-.vscode
-.idea
-.ropeproject
-.cache
-.mypy_cache
-/dist
 /build
+/dist
+/lark_parser.egg-info/**
 docs/_build
 docs/examples
+tags
+
+# Editors and tools
+.idea
+.mypy_cache
+.ropeproject
+.vscode
+
+# Virtual environments
+/env

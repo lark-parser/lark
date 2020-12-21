@@ -1,6 +1,7 @@
 %import common.DIGIT
 
 // Done from a readthrough of the https://en.wikipedia.org/wiki/ISO_8601
+// Only implements date and time at the moment, not e.g durations
 // Could be made more robust, to not parse invalid dates
 
 // Date primitives

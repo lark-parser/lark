@@ -21,6 +21,19 @@ class TestGrammar(TestCase):
                 else:
                     assert False, "example did not raise an error"
 
+    def test_override(self):
+        # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
+        # Thus extending it beyond its original capacity
+        p = Lark("""
+            %import .test_templates_import (start, sep)
+
+            %override sep{item, delim}: item (delim item)* delim?
+            %ignore " "
+        """)
+
+        a = p.parse('[1, 2, 3]')
+        b = p.parse('[1, 2, 3, ]')
+        assert a == b
 
 
 

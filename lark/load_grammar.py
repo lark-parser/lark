@@ -1015,8 +1015,10 @@ class GrammarLoader:
             term_defs += new_td
             rule_defs += new_rd
 
+        # replace rules by overridding rules, according to name
         for r in overriding_rules:
             name = r[0]
+            # remove overridden rule from rule_defs
             overridden, rule_defs = classify_bool(rule_defs, lambda r: r[0] == name)    # FIXME inefficient
             if not overridden:
                 raise GrammarError("Cannot override a nonexisting rule: %s" % name)

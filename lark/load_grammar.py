@@ -93,6 +93,7 @@ TERMINALS = {
     'COMMENT': r'\s*//[^\n]*',
     '_TO': '->',
     '_IGNORE': r'%ignore',
+    '_OVERRIDE': r'%override',
     '_DECLARE': r'%declare',
     '_IMPORT': r'%import',
     'NUMBER': r'[+-]?\d+',
@@ -148,7 +149,8 @@ RULES = {
 
     'term': ['TERMINAL _COLON expansions _NL',
              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'declare'],
+    'statement': ['ignore', 'import', 'declare', 'override_rule'],
+    'override_rule': ['_OVERRIDE rule'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT _import_path _NL',
@@ -947,6 +949,7 @@ class GrammarLoader:
 
         # Execute statements
         ignore, imports = [], {}
+        overriding_rules = []
         for (stmt,) in statements:
             if stmt.data == 'ignore':
                 t ,= stmt.children
@@ -995,6 +998,9 @@ class GrammarLoader:
             elif stmt.data == 'declare':
                 for t in stmt.children:
                     term_defs.append([t.value, (None, None)])
+            elif stmt.data == 'override_rule':
+                r ,= stmt.children
+                overriding_rules.append(options_from_rule(*r.children))
             else:
                 assert False, stmt
 
@@ -1006,6 +1012,17 @@ class GrammarLoader:
 
             term_defs += new_td
             rule_defs += new_rd
+
+        # replace rules by overridding rules, according to name
+        for r in overriding_rules:
+            name = r[0]
+            # remove overridden rule from rule_defs
+            overridden, rule_defs = classify_bool(rule_defs, lambda r: r[0] == name)    # FIXME inefficient
+            if not overridden:
+                raise GrammarError("Cannot override a nonexisting rule: %s" % name)
+            rule_defs.append(r)
+
+        ## Handle terminals
 
         # Verify correctness 1
         for name, _ in term_defs:
@@ -1043,10 +1060,10 @@ class GrammarLoader:
 
         resolve_term_references(term_defs)
 
-        rules = rule_defs
+        ## Handle rules
 
         rule_names = {}
-        for name, params, _x, option in rules:
+        for name, params, _x, option in rule_defs:
             # We can't just simply not throw away the tokens later, we need option.keep_all_tokens to correctly generate maybe_placeholders
             if self.global_keep_all_tokens:
                 option.keep_all_tokens = True
@@ -1057,7 +1074,7 @@ class GrammarLoader:
                 raise GrammarError("Rule '%s' defined more than once" % name)
             rule_names[name] = len(params)
 
-        for name, params , expansions, _o in rules:
+        for name, params , expansions, _o in rule_defs:
             for i, p in enumerate(params):
                 if p in rule_names:
                     raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
@@ -1080,7 +1097,7 @@ class GrammarLoader:
                     if sym not in rule_names and sym not in params:
                         raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, name))
 
-        return Grammar(rules, term_defs, ignore_names)
+        return Grammar(rule_defs, term_defs, ignore_names)
 
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):

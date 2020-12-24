@@ -307,7 +307,8 @@ class TraditionalLexer(Lexer):
                 if t.pattern.min_width == 0:
                     raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
 
-            assert set(conf.ignore) <= {t.name for t in terminals}
+            if not (set(conf.ignore) <= {t.name for t in terminals}):
+                raise LexError("Ignore terminals are not defined: %s" % (set(conf.ignore) - {t.name for t in terminals}))
 
         # Init
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))

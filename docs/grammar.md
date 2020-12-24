@@ -289,3 +289,16 @@ Note that `%ignore` directives cannot be imported. Imported rules will abide by 
 
 Declare a terminal without defining it. Useful for plugins.
 
+### %override
+
+Override a rule, affecting all the rules that refer to it.
+
+Useful for implementing an inheritance pattern when importing grammars.
+
+**Example:**
+```perl
+%import my_grammar (start, number, NUMBER)
+
+// Add hex support to my_grammar
+%override number: NUMBER | /0x\w+/
+```

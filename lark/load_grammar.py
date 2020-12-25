@@ -302,15 +302,6 @@ class RuleTreeToText(Transformer):
         return expansion, alias.value
 
 
-@inline_args
-class CanonizeTree(Transformer_InPlace):
-    def tokenmods(self, *args):
-        if len(args) == 1:
-            return list(args)
-        tokenmods, value = args
-        return tokenmods + [value]
-
-
 class PrepareAnonTerminals(Transformer_InPlace):
     """Create a unique list of anonymous terminals. Attempt to give meaningful names to them when we add them"""
 
@@ -871,6 +862,56 @@ def extend_expansions(tree, new):
     tree.children.insert(0, new)
 
 
+
+def _grammar_parser():
+    try:
+        return _grammar_parser.cache
+    except AttributeError:
+        terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
+    
+        rules = [options_from_rule(name, None, x) for name, x in RULES.items()]
+        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o)
+                 for r, _p, xs, o in rules for i, x in enumerate(xs)]
+        callback = ParseTreeBuilder(rules, ST).create_callback()
+        import re
+        lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
+        parser_conf = ParserConf(rules, callback, ['start'])
+        lexer_conf.lexer_type = 'standard'
+        parser_conf.parser_type = 'lalr'
+        _grammar_parser.cache = ParsingFrontend(lexer_conf, parser_conf, {})
+        return _grammar_parser.cache
+
+_GRAMMAR_ERRORS = [
+        ('Unclosed parenthesis', ['a: (\n']),
+        ('Unmatched closing parenthesis', ['a: )\n', 'a: [)\n', 'a: (]\n']),
+        ('Expecting rule or terminal definition (missing colon)', ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n']),
+        ('Illegal name for rules or terminals', ['Aa:\n']),
+        ('Alias expects lowercase name', ['a: -> "a"\n']),
+        ('Unexpected colon', ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n']),
+        ('Misplaced operator', ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n']),
+        ('Expecting option ("|") or a new rule or terminal definition', ['a:a\n()\n']),
+        ('Terminal names cannot contain dots', ['A.B\n']),
+        ('%import expects a name', ['%import "a"\n']),
+        ('%ignore expects a value', ['%ignore %import\n']),
+    ]
+
+def _parse_grammar(text, name, start='start'):
+    try:
+        return _grammar_parser().parse(text + '\n', start)
+    except UnexpectedCharacters as e:
+        context = e.get_context(text)
+        raise GrammarError("Unexpected input at line %d column %d in %s: \n\n%s" %
+                           (e.line, e.column, name, context))
+    except UnexpectedToken as e:
+        context = e.get_context(text)
+        error = e.match_examples(_grammar_parser().parse, _GRAMMAR_ERRORS, use_accepts=True)
+        if error:
+            raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
+        elif 'STRING' in e.expected:
+            raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
+        raise
+
+
 class GrammarLoader:
     ERRORS = [
         ('Unclosed parenthesis', ['a: (\n']),
@@ -886,21 +927,7 @@ class GrammarLoader:
         ('%ignore expects a value', ['%ignore %import\n']),
     ]
 
-    def __init__(self, global_keep_all_tokens):
-        terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
-
-        rules = [options_from_rule(name, None, x) for name, x in RULES.items()]
-        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o)
-                 for r, _p, xs, o in rules for i, x in enumerate(xs)]
-        callback = ParseTreeBuilder(rules, ST).create_callback()
-        import re
-        lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
-        parser_conf = ParserConf(rules, callback, ['start'])
-        lexer_conf.lexer_type = 'standard'
-        parser_conf.parser_type = 'lalr'
-        self.parser = ParsingFrontend(lexer_conf, parser_conf, {})
-
-        self.canonize_tree = CanonizeTree()
+    def __init__(self, global_keep_all_tokens=False):
         self.global_keep_all_tokens = global_keep_all_tokens
 
     def import_grammar(self, grammar_path, base_path=None, import_paths=[]):
@@ -931,21 +958,7 @@ class GrammarLoader:
     def load_grammar(self, grammar_text, grammar_name='<?>', import_paths=[]):
         """Parse grammar_text, verify, and create Grammar object. Display nice messages on error."""
 
-        try:
-            tree = self.canonize_tree.transform(self.parser.parse(grammar_text+'\n'))
-        except UnexpectedCharacters as e:
-            context = e.get_context(grammar_text)
-            raise GrammarError("Unexpected input at line %d column %d in %s: \n\n%s" %
-                               (e.line, e.column, grammar_name, context))
-        except UnexpectedToken as e:
-            context = e.get_context(grammar_text)
-            error = e.match_examples(self.parser.parse, self.ERRORS, use_accepts=True)
-            if error:
-                raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
-            elif 'STRING' in e.expected:
-                raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
-            raise
-
+        tree = _parse_grammar(grammar_text+'\n', grammar_name)
         tree = PrepareGrammar().transform(tree)
 
         # Extract grammar items
@@ -1061,7 +1074,7 @@ class GrammarLoader:
                 raise GrammarError("Cannot override a nonexisting terminal: %s" % name)
             term_defs.append(t)
         
-        # Extend the definition of rules
+        # Extend the definition of rules by adding new entries to the `expansions` node
 
         for r in extend_rules:
             name = r[0]
@@ -1161,6 +1174,125 @@ class GrammarLoader:
 
         return Grammar(rule_defs, term_defs, ignore_names)
 
+
+class GrammarBuilder:
+    def __init__(self, global_keep_all_tokens=False, import_paths=None):
+        self.global_keep_all_tokens = global_keep_all_tokens
+        self.import_paths = import_paths or []
+
+        self._term_defs = {}
+        self._rule_defs = {}
+        self._ignore_names = []
+
+    def define_term(self, name, exp, priority=1, override=False):
+        if (name in self._term_defs) ^ override:
+            if override:
+                raise GrammarError("Cannot override a nonexisting terminal" % name)
+            else:
+                raise GrammarError("Terminal '%s' defined more than once" % name)
+        if name.startswith('__'):
+            raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
+        self._term_defs[name] = (exp, priority)
+    
+    def define_rule(self, name, params, exp, options, override=False):
+        if (name in self._rule_defs) ^ override:
+            if override:
+                raise GrammarError("Cannot override a nonexisting rule: %s" % name)
+            else:
+                raise GrammarError("Rule '%s' defined more than once" % name)
+        if name.startswith('__'):
+            raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
+        self._rule_defs[name] = (params, exp, options)
+
+    def extend_term(self, name, exp, priority=1):
+        if name not in self._term_defs:
+            raise GrammarError("Can't extend terminal %s as it wasn't defined before" % name)
+        old_expansions = self._term_defs[name][0]
+        extend_expansions(old_expansions, exp)
+    
+    def extend_rule(self, name, params, exp, options):
+        if name not in self._rule_defs:
+            raise GrammarError("Can't extend rule %s as it wasn't defined before" % name)
+        if params != self._rule_defs[name][0]: 
+            raise GrammarError("Cannot extend templates with different parameters: %s" % name)
+        # TODO: think about what to do with RuleOptions
+        old_expansions = self._rule_defs[name][1]
+        extend_expansions(old_expansions, exp)
+    
+    def ignore(self, exp_or_name):
+        if isinstance(exp_or_name, str):
+            self._ignore_names.append(exp_or_name)
+        else:
+            assert isinstance(exp_or_name, Tree)
+            t = exp_or_name
+            if t.data=='expansions' and len(t.children) == 1:
+                t2 ,= t.children
+                if t2.data=='expansion' and len(t2.children) == 1:
+                    item ,= t2.children
+                    if item.data == 'value':
+                        item ,= item.children
+                        if isinstance(item, Token) and item.type == 'TERMINAL':
+                            self._ignore_names.append(item.value)
+                            return
+
+            name = '__IGNORE_%d'% len(self._ignore_names)
+            self._ignore_names.append(name)
+            self._term_defs[name] = (t, 1)
+    
+    def declare(self, *names):
+        for name in names:
+            self.define_term(name, None, None)
+    
+    def _unpack_term_def(self, tree):
+        name = tree.children[0].value
+        exp = tree.children[-1]
+        p = int(tree.children[1]) if len(tree.children) == 3 else 1
+        return name, exp, p
+    
+    def _unpack_rule_def(self, tree):
+        # FIXME: A little pointless at the moment, but I want to rework this (e.g. move the work from `options_from_rule` to here)
+        r = options_from_rule(*tree.children)
+        return r
+
+    def load_grammar(self, grammar_text, grammar_source="<?>"):
+        tree = _parse_grammar(grammar_text, grammar_source)
+        for stmt in tree.children:
+            if stmt.data == 'term':
+                self.define_term(*self._unpack_term_def(stmt))
+                continue
+            elif stmt.data == 'rule':
+                self.define_rule(*self._unpack_rule_def(stmt))
+                continue
+            assert stmt.data == 'statement', stmt.data
+            stmt ,= stmt.children
+            if stmt.data == 'ignore':
+                self.ignore(*stmt.children)
+            elif stmt.data == 'declare':
+                self.declare(*(t.value for t in stmt.children))
+            elif stmt.data == 'override':
+                r ,= stmt.children
+                if r.data == 'rule':
+                    self.define_rule(*self._unpack_rule_def(r), override=True)
+                else:
+                    assert r.data == 'term'
+                    self.define_term(*self._unpack_term_def(r), override=True)
+            elif stmt.data == 'extend':
+                r ,= stmt.children
+                if r.data == 'rule':
+                    self.extend_rule(*self._unpack_rule_def(r))
+                else:
+                    assert r.data == 'term'
+                    self.extend_term(*self._unpack_term_def(r))
+            else:
+                assert False, stmt
+    
+    def check(self):
+        pass
+    
+    def build(self) -> Grammar:
+        return Grammar([(n, *r) for n, r in self._rule_defs.items()],
+                       [(n, t) for n, t in self._term_defs],
+                       self._ignore_names)
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     return GrammarLoader(global_keep_all_tokens).load_grammar(grammar, source, import_paths)

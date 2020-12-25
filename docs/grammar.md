@@ -291,7 +291,7 @@ Declare a terminal without defining it. Useful for plugins.
 
 ### %override
 
-Override a rule, affecting all the rules that refer to it.
+Override a rule or terminals, affecting all references to it, even in imported grammars.
 
 Useful for implementing an inheritance pattern when importing grammars.
 

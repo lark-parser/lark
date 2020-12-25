@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
-from lark import Lark
+from lark import Lark, Token
 from lark.load_grammar import GrammarLoader, GrammarError
 
 
@@ -21,7 +21,7 @@ class TestGrammar(TestCase):
                 else:
                     assert False, "example did not raise an error"
 
-    def test_override(self):
+    def test_override_rule(self):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
         # Thus extending it beyond its original capacity
         p = Lark("""
@@ -29,11 +29,23 @@ class TestGrammar(TestCase):
 
             %override sep{item, delim}: item (delim item)* delim?
             %ignore " "
-        """)
+        """, source_path=__file__)
 
         a = p.parse('[1, 2, 3]')
         b = p.parse('[1, 2, 3, ]')
         assert a == b
+
+    def test_override_terminal(self):
+        p = Lark("""
+            
+            %import .grammars.ab (startab, A, B)
+            
+            %override A: "C"
+            %override B: "D"
+        """, start='startab', source_path=__file__)
+
+        a = p.parse('CD')
+        self.assertEqual(a.children[0].children, [Token('A', 'C'), Token('B', 'D')])
 
 
 

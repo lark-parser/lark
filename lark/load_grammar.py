@@ -149,8 +149,8 @@ RULES = {
 
     'term': ['TERMINAL _COLON expansions _NL',
              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'declare', 'override_rule'],
-    'override_rule': ['_OVERRIDE rule'],
+    'statement': ['ignore', 'import', 'declare', 'override'],
+    'override': ['_OVERRIDE rule', '_OVERRIDE term'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT _import_path _NL',
@@ -950,6 +950,7 @@ class GrammarLoader:
         # Execute statements
         ignore, imports = [], {}
         overriding_rules = []
+        overriding_terms = []
         for (stmt,) in statements:
             if stmt.data == 'ignore':
                 t ,= stmt.children
@@ -998,9 +999,15 @@ class GrammarLoader:
             elif stmt.data == 'declare':
                 for t in stmt.children:
                     term_defs.append([t.value, (None, None)])
-            elif stmt.data == 'override_rule':
+            elif stmt.data == 'override':
                 r ,= stmt.children
-                overriding_rules.append(options_from_rule(*r.children))
+                if r.data == 'rule':
+                    overriding_rules.append(options_from_rule(*r.children))
+                else:
+                    if len(r.children) == 2:
+                        overriding_terms.append((r.children[0].value, (r.children[1], 1)))
+                    else:
+                        overriding_terms.append((r.children[0].value, (r.children[2], int(r.children[1]))))
             else:
                 assert False, stmt
 
@@ -1021,6 +1028,16 @@ class GrammarLoader:
             if not overridden:
                 raise GrammarError("Cannot override a nonexisting rule: %s" % name)
             rule_defs.append(r)
+
+        # Same for terminals
+        for t in overriding_terms:
+            name = t[0]
+            # remove overridden rule from rule_defs
+            overridden, term_defs = classify_bool(term_defs, lambda t: t[0] == name)    # FIXME inefficient
+            if not overridden:
+                raise GrammarError("Cannot override a nonexisting terminal: %s" % name)
+            term_defs.append(t)
+
 
         ## Handle terminals
 

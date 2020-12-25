@@ -15,7 +15,8 @@ priority: "." NUMBER
 statement: "%ignore" expansions                    -> ignore
          | "%import" import_path ["->" name]       -> import
          | "%import" import_path name_list         -> multi_import
-         | "%override" rule                        -> override_rule
+         | "%override" (rule|token)                -> override
+         | "%extend" (rule|token)                  -> extend
          | "%declare" name+                        -> declare
 
 !import_path: "."? name ("." name)*

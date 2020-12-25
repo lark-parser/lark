@@ -95,6 +95,7 @@ TERMINALS = {
     '_IGNORE': r'%ignore',
     '_OVERRIDE': r'%override',
     '_DECLARE': r'%declare',
+    '_EXTEND': r'%extend',
     '_IMPORT': r'%import',
     'NUMBER': r'[+-]?\d+',
 }
@@ -149,8 +150,11 @@ RULES = {
 
     'term': ['TERMINAL _COLON expansions _NL',
              'TERMINAL _DOT NUMBER _COLON expansions _NL'],
-    'statement': ['ignore', 'import', 'declare', 'override'],
-    'override': ['_OVERRIDE rule', '_OVERRIDE term'],
+    'statement': ['ignore', 'import', 'declare', 'override', 'extend'],
+    'override': ['_OVERRIDE rule',
+                 '_OVERRIDE term'],
+    'extend': ['_EXTEND rule',
+               '_EXTEND term'],
     'ignore': ['_IGNORE expansions _NL'],
     'declare': ['_DECLARE _declare_args _NL'],
     'import': ['_IMPORT _import_path _NL',
@@ -744,8 +748,8 @@ def import_from_grammar_into_namespace(grammar, namespace, aliases):
     with a 'namespace' prefix, except for those which are aliased.
     """
 
-    imported_terms = dict(grammar.term_defs)
-    imported_rules = {n:(n,p,deepcopy(t),o) for n,p,t,o in grammar.rule_defs}
+    imported_terms = {n: (deepcopy(e), p) for n, (e, p) in grammar.term_defs}
+    imported_rules = {n: (n, p, deepcopy(t), o) for n, p, t, o in grammar.rule_defs}
 
     term_defs = []
     rule_defs = []
@@ -858,6 +862,14 @@ def _find_used_symbols(tree):
     return {t for x in tree.find_data('expansion')
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
+def extend_expansions(tree, new):
+    assert isinstance(tree, Tree) and tree.data == 'expansions'
+    assert isinstance(new, Tree) and new.data == 'expansions'
+    while len(tree.children) == 2:
+        assert isinstance(tree.children[0], Tree) and tree.children[0].data == 'expansions', tree
+        tree = tree.children[0]
+    tree.children.insert(0, new)
+
 
 class GrammarLoader:
     ERRORS = [
@@ -951,6 +963,8 @@ class GrammarLoader:
         ignore, imports = [], {}
         overriding_rules = []
         overriding_terms = []
+        extend_rules = []
+        extend_terms = []
         for (stmt,) in statements:
             if stmt.data == 'ignore':
                 t ,= stmt.children
@@ -1008,6 +1022,15 @@ class GrammarLoader:
                         overriding_terms.append((r.children[0].value, (r.children[1], 1)))
                     else:
                         overriding_terms.append((r.children[0].value, (r.children[2], int(r.children[1]))))
+            elif stmt.data == 'extend':
+                r ,= stmt.children
+                if r.data == 'rule':
+                    extend_rules.append(options_from_rule(*r.children))
+                else:
+                    if len(r.children) == 2:
+                        extend_terms.append((r.children[0].value, (r.children[1], 1)))
+                    else:
+                        extend_terms.append((r.children[0].value, (r.children[2], int(r.children[1]))))
             else:
                 assert False, stmt
 
@@ -1037,8 +1060,30 @@ class GrammarLoader:
             if not overridden:
                 raise GrammarError("Cannot override a nonexisting terminal: %s" % name)
             term_defs.append(t)
+        
+        # Extend the definition of rules
 
+        for r in extend_rules:
+            name = r[0]
+            # remove overridden rule from rule_defs
+            for old in rule_defs:
+                if old[0] == name:
+                    if len(old[1]) != len(r[1]):
+                        raise GrammarError("Cannot extend templates with different parameters: %s" % name)
+                    extend_expansions(old[2], r[2])
+                    break
+            else:
+                raise GrammarError("Can't extend rule %s as it wasn't defined before" % name)
 
+        # Same for terminals
+        
+        for name, (e, _) in extend_terms:
+            for old in term_defs:
+                if old[0] == name:
+                    extend_expansions(old[1][0], e)
+                    break
+            else:
+                raise GrammarError("Can't extend terminal %s as it wasn't defined before" % name)
         ## Handle terminals
 
         # Verify correctness 1

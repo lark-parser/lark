@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
-from lark import Lark, Token
+from lark import Lark, Token, Tree
 from lark.load_grammar import GrammarLoader, GrammarError
 
 
@@ -40,12 +40,30 @@ class TestGrammar(TestCase):
             
             %import .grammars.ab (startab, A, B)
             
-            %override A: "C"
-            %override B: "D"
+            %override A: "c"
+            %override B: "d"
         """, start='startab', source_path=__file__)
 
-        a = p.parse('CD')
-        self.assertEqual(a.children[0].children, [Token('A', 'C'), Token('B', 'D')])
+        a = p.parse('cd')
+        self.assertEqual(a.children[0].children, [Token('A', 'c'), Token('B', 'd')])
+
+    def test_extend_rule(self):
+        p = Lark("""
+            %import .grammars.ab (startab, A, B, expr)
+
+            %extend expr: B A
+        """, start='startab', source_path=__file__)
+        a = p.parse('abab')
+        self.assertEqual(a.children[0].children, ['a', Tree('expr', ['b', 'a']), 'b'])
+
+    def test_extend_term(self):
+        p = Lark("""
+            %import .grammars.ab (startab, A, B, expr)
+            
+            %extend A: "c"
+        """, start='startab', source_path=__file__)
+        a = p.parse('acbb')
+        self.assertEqual(a.children[0].children, ['a', Tree('expr', ['c', 'b']), 'b'])
 
 
 

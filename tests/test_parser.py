@@ -1961,7 +1961,7 @@ def _make_parser_test(LEXER, PARSER):
 
             p = _Lark(grammar, import_paths=[custom_loader])
             self.assertEqual(p.parse('ab'),
-                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
+                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('AB__A', 'a'), Token('AB__B', 'b')])])]))
 
             grammar = """
             start: rule_to_import

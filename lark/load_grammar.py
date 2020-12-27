@@ -881,7 +881,7 @@ def _grammar_parser():
         _grammar_parser.cache = ParsingFrontend(lexer_conf, parser_conf, {})
         return _grammar_parser.cache
 
-_GRAMMAR_ERRORS = [
+GRAMMAR_ERRORS = [
         ('Unclosed parenthesis', ['a: (\n']),
         ('Unmatched closing parenthesis', ['a: )\n', 'a: [)\n', 'a: (]\n']),
         ('Expecting rule or terminal definition (missing colon)', ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n']),
@@ -897,14 +897,14 @@ _GRAMMAR_ERRORS = [
 
 def _parse_grammar(text, name, start='start'):
     try:
-        return _grammar_parser().parse(text + '\n', start)
+        return PrepareGrammar().transform(_grammar_parser().parse(text + '\n', start))
     except UnexpectedCharacters as e:
         context = e.get_context(text)
         raise GrammarError("Unexpected input at line %d column %d in %s: \n\n%s" %
                            (e.line, e.column, name, context))
     except UnexpectedToken as e:
         context = e.get_context(text)
-        error = e.match_examples(_grammar_parser().parse, _GRAMMAR_ERRORS, use_accepts=True)
+        error = e.match_examples(_grammar_parser().parse, GRAMMAR_ERRORS, use_accepts=True)
         if error:
             raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
         elif 'STRING' in e.expected:
@@ -913,19 +913,6 @@ def _parse_grammar(text, name, start='start'):
 
 
 class GrammarLoader:
-    ERRORS = [
-        ('Unclosed parenthesis', ['a: (\n']),
-        ('Unmatched closing parenthesis', ['a: )\n', 'a: [)\n', 'a: (]\n']),
-        ('Expecting rule or terminal definition (missing colon)', ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n']),
-        ('Illegal name for rules or terminals', ['Aa:\n']),
-        ('Alias expects lowercase name', ['a: -> "a"\n']),
-        ('Unexpected colon', ['a::\n', 'a: b:\n', 'a: B:\n', 'a: "a":\n']),
-        ('Misplaced operator', ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n']),
-        ('Expecting option ("|") or a new rule or terminal definition', ['a:a\n()\n']),
-        ('Terminal names cannot contain dots', ['A.B\n']),
-        ('%import expects a name', ['%import "a"\n']),
-        ('%ignore expects a value', ['%ignore %import\n']),
-    ]
 
     def __init__(self, global_keep_all_tokens=False):
         self.global_keep_all_tokens = global_keep_all_tokens
@@ -959,7 +946,7 @@ class GrammarLoader:
         """Parse grammar_text, verify, and create Grammar object. Display nice messages on error."""
 
         tree = _parse_grammar(grammar_text+'\n', grammar_name)
-        tree = PrepareGrammar().transform(tree)
+        # tree = PrepareGrammar().transform(tree)
 
         # Extract grammar items
         defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
@@ -1167,7 +1154,7 @@ class GrammarLoader:
             for sym in _find_used_symbols(expansions):
                 if sym.type == 'TERMINAL':
                     if sym not in terminal_names:
-                        raise GrammarError("Token '%s' used but not defined (in rule %s)" % (sym, name))
+                        raise GrammarError("Terminal '%s' used but not defined (in rule %s)" % (sym, name))
                 else:
                     if sym not in rule_names and sym not in params:
                         raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, name))
@@ -1180,52 +1167,63 @@ class GrammarBuilder:
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
 
-        self._term_defs = {}
-        self._rule_defs = {}
+        self._definitions = {}
+        self._extend = {}
+        self._override = {}
         self._ignore_names = []
+        self._import_set = {}
+    
+    def _is_term(self, name):
+        return name.isupper()
 
-    def define_term(self, name, exp, priority=1, override=False):
-        if (name in self._term_defs) ^ override:
-            if override:
-                raise GrammarError("Cannot override a nonexisting terminal" % name)
-            else:
-                raise GrammarError("Terminal '%s' defined more than once" % name)
-        if name.startswith('__'):
-            raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
-        self._term_defs[name] = (exp, priority)
+    def _grammer_error(self, msg, name):
+        low_type = ("rule", "terminal")[self._is_term(name)]
+        up_type = low_type.title()
+        raise GrammarError(msg.format(name=name, type=low_type, Type=up_type))
     
-    def define_rule(self, name, params, exp, options, override=False):
-        if (name in self._rule_defs) ^ override:
-            if override:
-                raise GrammarError("Cannot override a nonexisting rule: %s" % name)
-            else:
-                raise GrammarError("Rule '%s' defined more than once" % name)
-        if name.startswith('__'):
-            raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
-        self._rule_defs[name] = (params, exp, options)
+    def _check_options(self, name, options):
+        if self._is_term(name):
+            if options is None:
+                options = 1
+            elif not isinstance(options, int):
+                raise GrammarError("Terminal require a single int as 'options' (e.g. priority)")
+        else:
+            if options is None:
+                options = RuleOptions()
+            elif not isinstance(options, RuleOptions):
+                raise GrammarError("Rules require a RuleOptions instance as 'options'")
+            if self.global_keep_all_tokens:
+                options.keep_all_tokens = True
+        return options
 
-    def extend_term(self, name, exp, priority=1):
-        if name not in self._term_defs:
-            raise GrammarError("Can't extend terminal %s as it wasn't defined before" % name)
-        old_expansions = self._term_defs[name][0]
+        
+    def define(self, name, exp, params=(), options=None, override=False):
+        if (name in self._definitions) ^ override:
+            if override:
+                self._grammer_error("Cannot override a nonexisting {type} {name}",  name)
+            else:
+                self._grammer_error("{Type} '{name}' defined more than once",  name)
+        if name.startswith('__'):
+            self._grammer_error('Names starting with double-underscore are reserved (Error at {name})', name)
+        self._definitions[name] = (params, exp, self._check_options(name, options))
+
+    def extend(self, name, exp, params=(), options=None):
+        if name not in self._definitions:
+            self._grammer_error("Can't extend {type} {name} as it wasn't defined before", name)
+        if tuple(params) != tuple(self._definitions[name][0]): 
+            print(params, self._definitions[name][0])
+            self._grammer_error("Cannot extend {type} with different parameters: {name}", name)
+        # TODO: think about what to do with 'options'
+        old_expansions = self._definitions[name][1]
         extend_expansions(old_expansions, exp)
-    
-    def extend_rule(self, name, params, exp, options):
-        if name not in self._rule_defs:
-            raise GrammarError("Can't extend rule %s as it wasn't defined before" % name)
-        if params != self._rule_defs[name][0]: 
-            raise GrammarError("Cannot extend templates with different parameters: %s" % name)
-        # TODO: think about what to do with RuleOptions
-        old_expansions = self._rule_defs[name][1]
-        extend_expansions(old_expansions, exp)
-    
+
     def ignore(self, exp_or_name):
         if isinstance(exp_or_name, str):
             self._ignore_names.append(exp_or_name)
         else:
             assert isinstance(exp_or_name, Tree)
             t = exp_or_name
-            if t.data=='expansions' and len(t.children) == 1:
+            if t.data == 'expansions' and len(t.children) == 1:
                 t2 ,= t.children
                 if t2.data=='expansion' and len(t2.children) == 1:
                     item ,= t2.children
@@ -1237,62 +1235,179 @@ class GrammarBuilder:
 
             name = '__IGNORE_%d'% len(self._ignore_names)
             self._ignore_names.append(name)
-            self._term_defs[name] = (t, 1)
+            self._definitions[name] = ((), t, 1)
     
     def declare(self, *names):
         for name in names:
-            self.define_term(name, None, None)
+            self.define(name, None)
+            # TODO: options/priority gets filled by this. We have to make sure that this doesn't break anything
     
-    def _unpack_term_def(self, tree):
-        name = tree.children[0].value
-        exp = tree.children[-1]
-        p = int(tree.children[1]) if len(tree.children) == 3 else 1
-        return name, exp, p
-    
-    def _unpack_rule_def(self, tree):
-        # FIXME: A little pointless at the moment, but I want to rework this (e.g. move the work from `options_from_rule` to here)
-        r = options_from_rule(*tree.children)
-        return r
+    def _mangle_exp(self, exp, mangle):
+        if mangle is None:
+            return exp
+        exp = deepcopy(exp) # TODO: is this needed
+        for t in exp.iter_subtrees():
+            for i, c in enumerate(t.children):
+                if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
+                    t.children[i] = Token(c.type, mangle(c.value))
+        return exp
 
-    def load_grammar(self, grammar_text, grammar_source="<?>"):
-        tree = _parse_grammar(grammar_text, grammar_source)
+    
+    def _unpack_definition(self, tree, mangle):
+        if tree.data == 'rule':
+            name, params, exp, opts = options_from_rule(*tree.children)
+        else:
+            name = tree.children[0].value
+            params = ()
+            opts = int(tree.children[1]) if len(tree.children) == 3 else 1 # priority
+            exp = tree.children[-1]
+        if mangle is not None:
+            params = tuple(mangle(p) for p in params)
+            name = mangle(name)
+        exp = self._mangle_exp(exp, mangle)
+        return name, exp, params, opts
+    
+    def _unpack_import(self, stmt, grammar_name):
+        if len(stmt.children) > 1:
+            path_node, arg1 = stmt.children
+        else:
+            path_node, = stmt.children
+            arg1 = None
+
+        if isinstance(arg1, Tree):  # Multi import
+            dotted_path = tuple(path_node.children)
+            names = arg1.children
+            aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
+        else:  # Single import
+            dotted_path = tuple(path_node.children[:-1])
+            name = path_node.children[-1]  # Get name from dotted path
+            aliases = {name.value: (arg1 or name).value}  # Aliases if exist
+
+        if path_node.data == 'import_lib':  # Import from library
+            base_path = None
+        else:  # Relative import
+            if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
+                try:
+                    base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                except AttributeError:
+                    base_file = None
+            else:
+                base_file = grammar_name  # Import relative to grammar file path if external grammar file
+            if base_file:
+                if isinstance(base_file, PackageResource):
+                    base_path = PackageResource(base_file.pkg_name, os.path.split(base_file.path)[0])
+                else:
+                    base_path = os.path.split(base_file)[0]
+            else:
+                base_path = os.path.abspath(os.path.curdir)
+        
+        return dotted_path, base_path, aliases
+
+    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None):
+        tree = _parse_grammar(grammar_text, grammar_name)
+        imports = {} # imports are collect over the whole file to prevent duplications
+        actions = [] # Some statements need to be delayed (override and extend) till after imports are handled
         for stmt in tree.children:
-            if stmt.data == 'term':
-                self.define_term(*self._unpack_term_def(stmt))
-                continue
-            elif stmt.data == 'rule':
-                self.define_rule(*self._unpack_rule_def(stmt))
+            if stmt.data in ('term', 'rule'):
+                self.define(*self._unpack_definition(stmt, mangle))
                 continue
             assert stmt.data == 'statement', stmt.data
             stmt ,= stmt.children
-            if stmt.data == 'ignore':
-                self.ignore(*stmt.children)
+            if stmt.data == 'import':
+                dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)
+                try:
+                    import_base_path, import_aliases = imports[dotted_path]
+                    assert base_path == import_base_path, 'Inconsistent base_path for %s.' % '.'.join(dotted_path)
+                    import_aliases.update(aliases)
+                except KeyError:
+                    imports[dotted_path] = base_path, aliases
+            elif stmt.data == 'ignore':
+                # if mangle is not None, we shouldn't apply ignore, since we aren't in a toplevel grammar
+                if mangle is None:
+                    self.ignore(*stmt.children)
             elif stmt.data == 'declare':
-                self.declare(*(t.value for t in stmt.children))
+                if mangle is None:
+                    self.declare(*(t.value for t in stmt.children))
+                else:
+                    self.declare(*(mangle(t.value) for t in stmt.children))
             elif stmt.data == 'override':
                 r ,= stmt.children
-                if r.data == 'rule':
-                    self.define_rule(*self._unpack_rule_def(r), override=True)
-                else:
-                    assert r.data == 'term'
-                    self.define_term(*self._unpack_term_def(r), override=True)
+                actions.append((self.define, self._unpack_definition(r, mangle)+ (True,)))
             elif stmt.data == 'extend':
                 r ,= stmt.children
-                if r.data == 'rule':
-                    self.extend_rule(*self._unpack_rule_def(r))
-                else:
-                    assert r.data == 'term'
-                    self.extend_term(*self._unpack_term_def(r))
+                actions.append((self.extend, self._unpack_definition(r, mangle)))
             else:
                 assert False, stmt
+        
+        for dotted_path, (base_path, aliases) in imports.items():
+            self.do_import(dotted_path, base_path, aliases, mangle)
+        
+        for f, args in actions:
+            f(*args)
     
+    def do_import(self, dotted_path, base_path, aliases, base_mangle=None):
+        mangle = self.get_mangle('__'.join(dotted_path), aliases, base_mangle)
+        grammar_path = os.path.join(*dotted_path) + EXT
+        to_try = self.import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
+        for source in to_try:
+            try:
+                if callable(source):
+                    joined_path, text = source(base_path, grammar_path)
+                else:
+                    joined_path = os.path.join(source, grammar_path)
+                    with open(joined_path, encoding='utf8') as f:
+                        text = f.read()
+            except IOError:
+                continue
+            else:
+                self.load_grammar(text, joined_path, mangle)
+                break
+        else:
+            # Search failed. Make Python throw a nice error.
+            open(grammar_path, encoding='utf8')
+            assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
+
+    def get_mangle(self, prefix, aliases, base_mangle=None):
+        prefixes = (prefix, prefix.upper())
+        def mangle(s):
+            if s in aliases:
+                s =  aliases[s]
+            else:
+                ns = prefixes[self._is_term(s)]
+                if s[0] == '_':
+                    s = '_%s__%s' % (ns, s[1:])
+                else:
+                    s = '%s__%s' % (ns, s)
+            if base_mangle is not None:
+                s = base_mangle(s)
+            return s
+        return mangle
+
     def check(self):
-        pass
-    
-    def build(self) -> Grammar:
-        return Grammar([(n, *r) for n, r in self._rule_defs.items()],
-                       [(n, t) for n, t in self._term_defs],
-                       self._ignore_names)
+        for name, (params, exp, options) in self._definitions.items():
+            if self._is_term(name):
+                assert isinstance(options, int)
+            if exp is not None:
+                for sym in _find_used_symbols(exp):
+                    if sym not in self._definitions and sym not in params:
+                        self._grammer_error("{Type} '{name}' used but not defined (in rule %s)" % name, sym.value)
+        if not set(self._definitions).issuperset(self._ignore_names):
+            raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))
+
+    def build(self):
+        self.check()
+        rule_defs = []
+        term_defs = []
+        for name, (params, exp, options) in self._definitions.items():
+            if self._is_term(name):
+                term_defs.append((name, (exp, options)))
+            else:
+                rule_defs.append((name, params, exp, options))
+        resolve_term_references(term_defs)
+        return Grammar(rule_defs, term_defs, self._ignore_names)
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
-    return GrammarLoader(global_keep_all_tokens).load_grammar(grammar, source, import_paths)
+    builder = GrammarBuilder(global_keep_all_tokens, import_paths)
+    builder.load_grammar(grammar, source)
+    return builder.build()
+    # return GrammarLoader(global_keep_all_tokens).load_grammar(grammar, source, import_paths)

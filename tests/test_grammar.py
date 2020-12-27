@@ -4,7 +4,7 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree
-from lark.load_grammar import GrammarLoader, GrammarError
+from lark.load_grammar import GrammarError, GRAMMAR_ERRORS
 
 
 class TestGrammar(TestCase):
@@ -12,7 +12,7 @@ class TestGrammar(TestCase):
         pass
 
     def test_errors(self):
-        for msg, examples in GrammarLoader.ERRORS:
+        for msg, examples in GRAMMAR_ERRORS:
             for example in examples:
                 try:
                     p = Lark(example)

@@ -854,15 +854,6 @@ def _find_used_symbols(tree):
     return {t for x in tree.find_data('expansion')
               for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
 
-def extend_expansions(tree, new):
-    assert isinstance(tree, Tree) and tree.data == 'expansions'
-    assert isinstance(new, Tree) and new.data == 'expansions'
-    while len(tree.children) == 2:
-        assert isinstance(tree.children[0], Tree) and tree.children[0].data == 'expansions', tree
-        tree = tree.children[0]
-    tree.children.insert(0, new)
-
-
 
 def _grammar_parser():
     try:
@@ -911,256 +902,6 @@ def _parse_grammar(text, name, start='start'):
         elif 'STRING' in e.expected:
             raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
         raise
-
-
-class GrammarLoader:
-
-    def __init__(self, global_keep_all_tokens=False):
-        self.global_keep_all_tokens = global_keep_all_tokens
-
-    def import_grammar(self, grammar_path, base_path=None, import_paths=[]):
-        if grammar_path not in _imported_grammars:
-            # import_paths take priority over base_path since they should handle relative imports and ignore everything else.
-            to_try = import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
-            for source in to_try:
-                try:
-                    if callable(source):
-                        joined_path, text = source(base_path, grammar_path)
-                    else:
-                        joined_path = os.path.join(source, grammar_path)
-                        with open(joined_path, encoding='utf8') as f:
-                            text = f.read()
-                except IOError:
-                    continue
-                else:
-                    grammar = self.load_grammar(text, joined_path, import_paths)
-                    _imported_grammars[grammar_path] = grammar
-                    break
-            else:
-                # Search failed. Make Python throw a nice error.
-                open(grammar_path, encoding='utf8')
-                assert False
-
-        return _imported_grammars[grammar_path]
-
-    def load_grammar(self, grammar_text, grammar_name='<?>', import_paths=[]):
-        """Parse grammar_text, verify, and create Grammar object. Display nice messages on error."""
-
-        tree = _parse_grammar(grammar_text+'\n', grammar_name)
-        # tree = PrepareGrammar().transform(tree)
-
-        # Extract grammar items
-        defs = classify(tree.children, lambda c: c.data, lambda c: c.children)
-        term_defs = defs.pop('term', [])
-        rule_defs = defs.pop('rule', [])
-        statements = defs.pop('statement', [])
-        assert not defs
-
-        term_defs = [td if len(td)==3 else (td[0], 1, td[1]) for td in term_defs]
-        term_defs = [(name.value, (t, int(p))) for name, p, t in term_defs]
-        rule_defs = [options_from_rule(*x) for x in rule_defs]
-
-        # Execute statements
-        ignore, imports = [], {}
-        overriding_rules = []
-        overriding_terms = []
-        extend_rules = []
-        extend_terms = []
-        for (stmt,) in statements:
-            if stmt.data == 'ignore':
-                t ,= stmt.children
-                ignore.append(t)
-            elif stmt.data == 'import':
-                if len(stmt.children) > 1:
-                    path_node, arg1 = stmt.children
-                else:
-                    path_node ,= stmt.children
-                    arg1 = None
-
-                if isinstance(arg1, Tree):  # Multi import
-                    dotted_path = tuple(path_node.children)
-                    names = arg1.children
-                    aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
-                else:  # Single import
-                    dotted_path = tuple(path_node.children[:-1])
-                    name = path_node.children[-1]  # Get name from dotted path
-                    aliases = {name: arg1 or name}  # Aliases if exist
-
-                if path_node.data == 'import_lib':  # Import from library
-                    base_path = None
-                else:  # Relative import
-                    if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
-                        try:
-                            base_file = os.path.abspath(sys.modules['__main__'].__file__)
-                        except AttributeError:
-                            base_file = None
-                    else:
-                        base_file = grammar_name  # Import relative to grammar file path if external grammar file
-                    if base_file:
-                        if isinstance(base_file, PackageResource):
-                            base_path = PackageResource(base_file.pkg_name, os.path.split(base_file.path)[0])
-                        else:
-                            base_path = os.path.split(base_file)[0]
-                    else:
-                        base_path = os.path.abspath(os.path.curdir)
-
-                try:
-                    import_base_path, import_aliases = imports[dotted_path]
-                    assert base_path == import_base_path, 'Inconsistent base_path for %s.' % '.'.join(dotted_path)
-                    import_aliases.update(aliases)
-                except KeyError:
-                    imports[dotted_path] = base_path, aliases
-
-            elif stmt.data == 'declare':
-                for t in stmt.children:
-                    term_defs.append([t.value, (None, None)])
-            elif stmt.data == 'override':
-                r ,= stmt.children
-                if r.data == 'rule':
-                    overriding_rules.append(options_from_rule(*r.children))
-                else:
-                    if len(r.children) == 2:
-                        overriding_terms.append((r.children[0].value, (r.children[1], 1)))
-                    else:
-                        overriding_terms.append((r.children[0].value, (r.children[2], int(r.children[1]))))
-            elif stmt.data == 'extend':
-                r ,= stmt.children
-                if r.data == 'rule':
-                    extend_rules.append(options_from_rule(*r.children))
-                else:
-                    if len(r.children) == 2:
-                        extend_terms.append((r.children[0].value, (r.children[1], 1)))
-                    else:
-                        extend_terms.append((r.children[0].value, (r.children[2], int(r.children[1]))))
-            else:
-                assert False, stmt
-
-        # import grammars
-        for dotted_path, (base_path, aliases) in imports.items():
-            grammar_path = os.path.join(*dotted_path) + EXT
-            g = self.import_grammar(grammar_path, base_path=base_path, import_paths=import_paths)
-            new_td, new_rd = import_from_grammar_into_namespace(g, '__'.join(dotted_path), aliases)
-
-            term_defs += new_td
-            rule_defs += new_rd
-
-        # replace rules by overridding rules, according to name
-        for r in overriding_rules:
-            name = r[0]
-            # remove overridden rule from rule_defs
-            overridden, rule_defs = classify_bool(rule_defs, lambda r: r[0] == name)    # FIXME inefficient
-            if not overridden:
-                raise GrammarError("Cannot override a nonexisting rule: %s" % name)
-            rule_defs.append(r)
-
-        # Same for terminals
-        for t in overriding_terms:
-            name = t[0]
-            # remove overridden rule from rule_defs
-            overridden, term_defs = classify_bool(term_defs, lambda t: t[0] == name)    # FIXME inefficient
-            if not overridden:
-                raise GrammarError("Cannot override a nonexisting terminal: %s" % name)
-            term_defs.append(t)
-        
-        # Extend the definition of rules by adding new entries to the `expansions` node
-
-        for r in extend_rules:
-            name = r[0]
-            # remove overridden rule from rule_defs
-            for old in rule_defs:
-                if old[0] == name:
-                    if len(old[1]) != len(r[1]):
-                        raise GrammarError("Cannot extend templates with different parameters: %s" % name)
-                    extend_expansions(old[2], r[2])
-                    break
-            else:
-                raise GrammarError("Can't extend rule %s as it wasn't defined before" % name)
-
-        # Same for terminals
-        
-        for name, (e, _) in extend_terms:
-            for old in term_defs:
-                if old[0] == name:
-                    extend_expansions(old[1][0], e)
-                    break
-            else:
-                raise GrammarError("Can't extend terminal %s as it wasn't defined before" % name)
-        ## Handle terminals
-
-        # Verify correctness 1
-        for name, _ in term_defs:
-            if name.startswith('__'):
-                raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
-
-        # Handle ignore tokens
-        # XXX A slightly hacky solution. Recognition of %ignore TERMINAL as separate comes from the lexer's
-        #     inability to handle duplicate terminals (two names, one value)
-        ignore_names = []
-        for t in ignore:
-            if t.data=='expansions' and len(t.children) == 1:
-                t2 ,= t.children
-                if t2.data=='expansion' and len(t2.children) == 1:
-                    item ,= t2.children
-                    if item.data == 'value':
-                        item ,= item.children
-                        if isinstance(item, Token) and item.type == 'TERMINAL':
-                            ignore_names.append(item.value)
-                            continue
-
-            name = '__IGNORE_%d'% len(ignore_names)
-            ignore_names.append(name)
-            term_defs.append((name, (t, 1)))
-
-        # Verify correctness 2
-        terminal_names = set()
-        for name, _ in term_defs:
-            if name in terminal_names:
-                raise GrammarError("Terminal '%s' defined more than once" % name)
-            terminal_names.add(name)
-
-        if set(ignore_names) > terminal_names:
-            raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(ignore_names) - terminal_names))
-
-        resolve_term_references(term_defs)
-
-        ## Handle rules
-
-        rule_names = {}
-        for name, params, _x, option in rule_defs:
-            # We can't just simply not throw away the tokens later, we need option.keep_all_tokens to correctly generate maybe_placeholders
-            if self.global_keep_all_tokens:
-                option.keep_all_tokens = True
-
-            if name.startswith('__'):
-                raise GrammarError('Names starting with double-underscore are reserved (Error at %s)' % name)
-            if name in rule_names:
-                raise GrammarError("Rule '%s' defined more than once" % name)
-            rule_names[name] = len(params)
-
-        for name, params , expansions, _o in rule_defs:
-            for i, p in enumerate(params):
-                if p in rule_names:
-                    raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
-                if p in params[:i]:
-                    raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
-            for temp in expansions.find_data('template_usage'):
-                sym = temp.children[0]
-                args = temp.children[1:]
-                if sym not in params:
-                    if sym not in rule_names:
-                        raise GrammarError("Template '%s' used but not defined (in rule %s)" % (sym, name))
-                    if len(args) != rule_names[sym]:
-                        raise GrammarError("Wrong number of template arguments used for %s "
-                                           "(expected %s, got %s) (in rule %s)" % (sym, rule_names[sym], len(args), name))
-            for sym in _find_used_symbols(expansions):
-                if sym.type == 'TERMINAL':
-                    if sym not in terminal_names:
-                        raise GrammarError("Terminal '%s' used but not defined (in rule %s)" % (sym, name))
-                else:
-                    if sym not in rule_names and sym not in params:
-                        raise GrammarError("Rule '%s' used but not defined (in rule %s)" % (sym, name))
-
-        return Grammar(rule_defs, term_defs, ignore_names)
 
 
 class GrammarBuilder:
@@ -1216,8 +957,12 @@ class GrammarBuilder:
         if tuple(params) != tuple(self._definitions[name][0]): 
             self._grammar_error("Cannot extend {type} with different parameters: {name}", name)
         # TODO: think about what to do with 'options'
-        old_expansions = self._definitions[name][1]
-        extend_expansions(old_expansions, exp)
+        base = self._definitions[name][1]
+
+        while len(base.children) == 2:
+            assert isinstance(base.children[0], Tree) and base.children[0].data == 'expansions', tree
+            base = base.children[0]
+        base.children.insert(0, exp)
 
     def _ignore(self, exp_or_name):
         if isinstance(exp_or_name, str):
@@ -1430,4 +1175,3 @@ def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
     builder.load_grammar(grammar, source)
     return builder.build()
-    # return GrammarLoader(global_keep_all_tokens).load_grammar(grammar, source, import_paths)

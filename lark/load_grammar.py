@@ -1168,18 +1168,19 @@ class GrammarBuilder:
         self.import_paths = import_paths or []
 
         self._definitions = {}
-        self._extend = {}
-        self._override = {}
         self._ignore_names = []
-        self._import_set = {}
     
     def _is_term(self, name):
         return name.isupper()
 
-    def _grammer_error(self, msg, name):
-        low_type = ("rule", "terminal")[self._is_term(name)]
-        up_type = low_type.title()
-        raise GrammarError(msg.format(name=name, type=low_type, Type=up_type))
+    def _grammar_error(self, msg, *names):
+        args = {}
+        for i, name in enumerate(names, start=1):
+            postfix = '' if i == 1 else str(i)
+            args['name'+ postfix] = name
+            args['type' + postfix] = lowercase_type = ("rule", "terminal")[self._is_term(name)]
+            args['Type' + postfix] = lowercase_type.title()
+        raise GrammarError(msg.format(**args))
     
     def _check_options(self, name, options):
         if self._is_term(name):
@@ -1197,27 +1198,26 @@ class GrammarBuilder:
         return options
 
         
-    def define(self, name, exp, params=(), options=None, override=False):
+    def _define(self, name, exp, params=(), options=None, override=False):
         if (name in self._definitions) ^ override:
             if override:
-                self._grammer_error("Cannot override a nonexisting {type} {name}",  name)
+                self._grammar_error("Cannot override a nonexisting {type} {name}", name)
             else:
-                self._grammer_error("{Type} '{name}' defined more than once",  name)
+                self._grammar_error("{Type} '{name}' defined more than once", name)
         if name.startswith('__'):
-            self._grammer_error('Names starting with double-underscore are reserved (Error at {name})', name)
+            self._grammar_error('Names starting with double-underscore are reserved (Error at {name})', name)
         self._definitions[name] = (params, exp, self._check_options(name, options))
 
-    def extend(self, name, exp, params=(), options=None):
+    def _extend(self, name, exp, params=(), options=None):
         if name not in self._definitions:
-            self._grammer_error("Can't extend {type} {name} as it wasn't defined before", name)
+            self._grammar_error("Can't extend {type} {name} as it wasn't defined before", name)
         if tuple(params) != tuple(self._definitions[name][0]): 
-            print(params, self._definitions[name][0])
-            self._grammer_error("Cannot extend {type} with different parameters: {name}", name)
+            self._grammar_error("Cannot extend {type} with different parameters: {name}", name)
         # TODO: think about what to do with 'options'
         old_expansions = self._definitions[name][1]
         extend_expansions(old_expansions, exp)
 
-    def ignore(self, exp_or_name):
+    def _ignore(self, exp_or_name):
         if isinstance(exp_or_name, str):
             self._ignore_names.append(exp_or_name)
         else:
@@ -1237,10 +1237,9 @@ class GrammarBuilder:
             self._ignore_names.append(name)
             self._definitions[name] = ((), t, 1)
     
-    def declare(self, *names):
+    def _declare(self, *names):
         for name in names:
-            self.define(name, None)
-            # TODO: options/priority gets filled by this. We have to make sure that this doesn't break anything
+            self._define(name, None)
     
     def _mangle_exp(self, exp, mangle):
         if mangle is None:
@@ -1309,7 +1308,7 @@ class GrammarBuilder:
         actions = [] # Some statements need to be delayed (override and extend) till after imports are handled
         for stmt in tree.children:
             if stmt.data in ('term', 'rule'):
-                self.define(*self._unpack_definition(stmt, mangle))
+                self._define(*self._unpack_definition(stmt, mangle))
                 continue
             assert stmt.data == 'statement', stmt.data
             stmt ,= stmt.children
@@ -1324,18 +1323,18 @@ class GrammarBuilder:
             elif stmt.data == 'ignore':
                 # if mangle is not None, we shouldn't apply ignore, since we aren't in a toplevel grammar
                 if mangle is None:
-                    self.ignore(*stmt.children)
+                    self._ignore(*stmt.children)
             elif stmt.data == 'declare':
                 if mangle is None:
-                    self.declare(*(t.value for t in stmt.children))
+                    self._declare(*(t.value for t in stmt.children))
                 else:
-                    self.declare(*(mangle(t.value) for t in stmt.children))
+                    self._declare(*(mangle(t.value) for t in stmt.children))
             elif stmt.data == 'override':
                 r ,= stmt.children
-                actions.append((self.define, self._unpack_definition(r, mangle)+ (True,)))
+                actions.append((self._define, self._unpack_definition(r, mangle) + (True,)))
             elif stmt.data == 'extend':
                 r ,= stmt.children
-                actions.append((self.extend, self._unpack_definition(r, mangle)))
+                actions.append((self._extend, self._unpack_definition(r, mangle)))
             else:
                 assert False, stmt
         
@@ -1387,10 +1386,31 @@ class GrammarBuilder:
         for name, (params, exp, options) in self._definitions.items():
             if self._is_term(name):
                 assert isinstance(options, int)
-            if exp is not None:
-                for sym in _find_used_symbols(exp):
-                    if sym not in self._definitions and sym not in params:
-                        self._grammer_error("{Type} '{name}' used but not defined (in rule %s)" % name, sym.value)
+
+            for i, p in enumerate(params):
+                if p in self._definitions:
+                    raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
+                if p in params[:i]:
+                    raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
+        
+            if exp is None: # Remaining checks don't work for abstract rules/terminals
+                continue
+
+            for temp in exp.find_data('template_usage'):
+                sym = temp.children[0]
+                args = temp.children[1:]
+                if sym not in params:
+                    if sym not in self._definitions:
+                        self._grammar_error("Template '%s' used but not defined (in {type} {name})" % sym, name)
+                    if len(args) != len(self._definitions[sym][0]):
+                        expected, actual = len(self._definitions[sym][0]), len(args)
+                        self._grammar_error("Wrong number of template arguments used for {name} "
+                                            "(expected %s, got %s) (in {type2} {name2})" % (expected, actual), sym, name)
+            
+            for sym in _find_used_symbols(exp):
+                if sym not in self._definitions and sym not in params:
+                    self._grammar_error("{Type} '{name}' used but not defined (in {type2} {name2})", sym, name)
+
         if not set(self._definitions).issuperset(self._ignore_names):
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))
 
@@ -1400,6 +1420,7 @@ class GrammarBuilder:
         term_defs = []
         for name, (params, exp, options) in self._definitions.items():
             if self._is_term(name):
+                assert len(params) == 0
                 term_defs.append((name, (exp, options)))
             else:
                 rule_defs.append((name, params, exp, options))

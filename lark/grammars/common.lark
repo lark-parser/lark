@@ -55,5 +55,5 @@ NEWLINE: (CR? LF)+
 // Comments
 SH_COMMENT: /#[^\n]*/
 CPP_COMMENT: /\/\/[^\n]*/
-C_COMMENT: "/*" /.*?/s "*/"
+C_COMMENT: "/*" /(.|\n)*?/ "*/"
 SQL_COMMENT: /--[^\n]*/

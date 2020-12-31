@@ -6,6 +6,7 @@ from copy import copy, deepcopy
 from io import open
 import pkgutil
 from ast import literal_eval
+from numbers import Integral
 
 from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -1177,7 +1178,7 @@ class GrammarBuilder:
         args = {}
         for i, name in enumerate(names, start=1):
             postfix = '' if i == 1 else str(i)
-            args['name'+ postfix] = name
+            args['name' + postfix] = name
             args['type' + postfix] = lowercase_type = ("rule", "terminal")[self._is_term(name)]
             args['Type' + postfix] = lowercase_type.title()
         raise GrammarError(msg.format(**args))
@@ -1186,8 +1187,9 @@ class GrammarBuilder:
         if self._is_term(name):
             if options is None:
                 options = 1
-            elif not isinstance(options, int):
-                raise GrammarError("Terminal require a single int as 'options' (e.g. priority)")
+            # if we don't use Integral here, we run into python2.7/python3 problems with long vs int
+            elif not isinstance(options, Integral): 
+                raise GrammarError("Terminal require a single int as 'options' (e.g. priority), got %s" % (type(options),))
         else:
             if options is None:
                 options = RuleOptions()
@@ -1384,9 +1386,6 @@ class GrammarBuilder:
 
     def check(self):
         for name, (params, exp, options) in self._definitions.items():
-            if self._is_term(name):
-                assert isinstance(options, int)
-
             for i, p in enumerate(params):
                 if p in self._definitions:
                     raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))

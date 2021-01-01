@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Callable
 from .lark import Lark
 from .tree import Tree
 from .visitors import Transformer_InPlace
@@ -30,7 +30,7 @@ class MakeMatchTree:
 
 class Reconstructor:
 
-    def __init__(self, parser: Lark, term_subs: Dict[str, str] = ...):
+    def __init__(self, parser: Lark, term_subs: Dict[str, Callable[[str], str]] = ...):
         ...
 
     def reconstruct(self, tree: Tree) -> str:

@@ -960,7 +960,7 @@ class GrammarBuilder:
         base = self._definitions[name][1]
 
         while len(base.children) == 2:
-            assert isinstance(base.children[0], Tree) and base.children[0].data == 'expansions', tree
+            assert isinstance(base.children[0], Tree) and base.children[0].data == 'expansions', base
             base = base.children[0]
         base.children.insert(0, exp)
 

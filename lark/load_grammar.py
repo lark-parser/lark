@@ -542,10 +542,6 @@ class PrepareSymbols(Transformer_InPlace):
         assert False
 
 
-def _choice_of_rules(rules):
-    return ST('expansions', [ST('expansion', [Token('RULE', name)]) for name in rules])
-
-
 def nr_deepcopy_tree(t):
     """Deepcopy tree `t` without recursion"""
     return Transformer_NonRecursive(False).transform(t)
@@ -732,58 +728,6 @@ class FromPackageLoader(object):
 
 stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
 
-_imported_grammars = {}
-
-
-def import_from_grammar_into_namespace(grammar, namespace, aliases):
-    """Returns all rules and terminals of grammar, prepended
-    with a 'namespace' prefix, except for those which are aliased.
-    """
-
-    imported_terms = {n: (deepcopy(e), p) for n, (e, p) in grammar.term_defs}
-    imported_rules = {n: (n, p, deepcopy(t), o) for n, p, t, o in grammar.rule_defs}
-
-    term_defs = []
-    rule_defs = []
-
-    def rule_dependencies(symbol):
-        if symbol.type != 'RULE':
-            return []
-        try:
-            _, params, tree,_ = imported_rules[symbol]
-        except KeyError:
-            raise GrammarError("Missing symbol '%s' in grammar %s" % (symbol, namespace))
-        return _find_used_symbols(tree) - set(params)
-
-    def get_namespace_name(name, params):
-        if params is not None:
-            try:
-                return params[name]
-            except KeyError:
-                pass
-        try:
-            return aliases[name].value
-        except KeyError:
-            if name[0] == '_':
-                return '_%s__%s' % (namespace, name[1:])
-            return '%s__%s' % (namespace, name)
-
-    to_import = list(bfs(aliases, rule_dependencies))
-    for symbol in to_import:
-        if symbol.type == 'TERMINAL':
-            term_defs.append([get_namespace_name(symbol, None), imported_terms[symbol]])
-        else:
-            assert symbol.type == 'RULE'
-            _, params, tree, options = imported_rules[symbol]
-            params_map = {p: ('%s__%s' if p[0]!='_' else '_%s__%s') % (namespace, p) for p in params}
-            for t in tree.iter_subtrees():
-                for i, c in enumerate(t.children):
-                    if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
-                        t.children[i] = Token(c.type, get_namespace_name(c, params_map))
-            params = [params_map[p] for p in params]  # We can not rely on ordered dictionaries
-            rule_defs.append((get_namespace_name(symbol, params_map), params, tree, options))
-
-    return term_defs, rule_defs
 
 
 def resolve_term_references(term_defs):
@@ -913,7 +857,9 @@ class GrammarBuilder:
         self._ignore_names = []
     
     def _is_term(self, name):
-        return name.isupper()
+        # Imported terminals are of the form `Path__to__Grammar__file__TERMINAL_NAME`
+        # Only the last part is the actual name, and the rest might contain mixed case
+        return name.rpartition('__')[-1].isupper()
 
     def _grammar_error(self, msg, *names):
         args = {}
@@ -1114,16 +1060,14 @@ class GrammarBuilder:
             assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
 
     def get_mangle(self, prefix, aliases, base_mangle=None):
-        prefixes = (prefix, prefix.upper())
         def mangle(s):
             if s in aliases:
                 s =  aliases[s]
             else:
-                ns = prefixes[self._is_term(s)]
                 if s[0] == '_':
-                    s = '_%s__%s' % (ns, s[1:])
+                    s = '_%s__%s' % (prefix, s[1:])
                 else:
-                    s = '%s__%s' % (ns, s)
+                    s = '%s__%s' % (prefix, s)
             if base_mangle is not None:
                 s = base_mangle(s)
             return s

@@ -23,9 +23,11 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" NAME "(" parameters? ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," "/"] ["," [starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams]]
           | starparams
           | kwparams
+
+SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
 kwparams: "**" typedparam
 
@@ -116,9 +118,10 @@ AWAIT: "await"
           | atom_expr "." NAME               -> getattr
           | atom
 
-?atom: "(" [yield_expr|testlist_comp] ")" -> tuple
+?atom: "(" [yield_expr|tuplelist_comp] ")" -> tuple
      | "[" [testlist_comp] "]"  -> list
-     | "{" [dictorsetmaker] "}" -> dict
+     | "{" [dict_comp] "}" -> dict
+     | "{" set_comp "}" -> set
      | NAME -> var
      | number | string+
      | "(" test ")"
@@ -127,13 +130,23 @@ AWAIT: "await"
      | "True"    -> const_true
      | "False"   -> const_false
 
-?testlist_comp: (test|star_expr) [comp_for | ("," (test|star_expr))+ [","] | ","]
-subscriptlist: subscript ("," subscript)* [","]
+?testlist_comp: test | tuplelist_comp
+tuplelist_comp: (test|star_expr) (comp_for | ("," (test|star_expr))+ [","] | ",")
+?subscriptlist: subscript
+              | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
 subscript: test | [test] ":" [test] [sliceop]
 sliceop: ":" [test]
-exprlist: (expr|star_expr) ("," (expr|star_expr))* [","]
-testlist: test ("," test)* [","]
-dictorsetmaker: ( ((test ":" test | "**" expr) (comp_for | ("," (test ":" test | "**" expr))* [","])) | ((test | star_expr) (comp_for | ("," (test | star_expr))* [","])) )
+exprlist: (expr|star_expr)
+        | (expr|star_expr) (("," (expr|star_expr))+ [","]|",") -> exprlist_tuple
+testlist: test | testlist_tuple
+testlist_tuple: test (("," test)+ [","] | ",")
+dict_comp: key_value comp_for 
+         | (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
+
+key_value: test ":"  test
+
+set_comp: test comp_for 
+        | (test|star_expr) ("," (test | star_expr))* [","]
 
 classdef: "class" NAME ["(" [arguments] ")"] ":" suite
 

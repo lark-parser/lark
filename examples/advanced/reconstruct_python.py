@@ -1,23 +1,32 @@
+"""
+Reconstruct Python
+==================
+
+Demonstrates how Lark's experimental text-reconstruction feature can recreate
+functional Python code from its parse-tree, using just the correct grammar and
+a small formatter.
+
+"""
+
 from lark import Token
 from lark.reconstruct import Reconstructor
 
 from python_parser import python_parser3
 
 
-test_python = open(__file__).read()
+SPACE_AFTER = set(',+-*/~@<>="|:')
+SPACE_BEFORE = (SPACE_AFTER - set(',:')) | set('\'')
+
 
 def special(sym):
     return Token('SPECIAL', sym.name)
-
-SPACE_AFTER = set(',+-*/~@<>="|:')
-SPACE_BEFORE = (SPACE_AFTER - set(',:')) | set('\'')
 
 def postproc(items):
     stack = ['\n']
     actions = []
     last_was_whitespace = True
     for item in items:
-        if isinstance(item, Token) and item.type == 'SPECIAL': 
+        if isinstance(item, Token) and item.type == 'SPECIAL':
             actions.append(item.value)
         else:
             if actions:
@@ -44,15 +53,20 @@ def postproc(items):
     yield "\n"
 
 
-tree = python_parser3.parse(test_python)
-
-
 python_reconstruct = Reconstructor(python_parser3, {'_NEWLINE': special, '_DEDENT': special, '_INDENT': special})
 
-output = python_reconstruct.reconstruct(tree, postproc)
 
-print(output)
+def test():
+    self_contents = open(__file__).read()
 
-tree_new = python_parser3.parse(output)
+    tree = python_parser3.parse(self_contents+'\n')
+    output = python_reconstruct.reconstruct(tree, postproc)
 
-assert tree == tree_new
+    tree_new = python_parser3.parse(output)
+    assert tree == tree_new
+
+    print(output)
+
+
+if __name__ == '__main__':
+    test()

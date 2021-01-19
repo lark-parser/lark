@@ -889,13 +889,15 @@ class GrammarBuilder:
 
 
     def _define(self, name, exp, params=(), options=None, override=False):
-        if (name in self._definitions) ^ override:
-            if override:
-                self._grammar_error("Cannot override a nonexisting {type} {name}", name)
-            else:
+        if name in self._definitions:
+            if not override:
                 self._grammar_error("{Type} '{name}' defined more than once", name)
+        elif override:
+            self._grammar_error("Cannot override a nonexisting {type} {name}", name)
+
         if name.startswith('__'):
             self._grammar_error('Names starting with double-underscore are reserved (Error at {name})', name)
+
         self._definitions[name] = (params, exp, self._check_options(name, options))
 
     def _extend(self, name, exp, params=(), options=None):
@@ -1002,7 +1004,6 @@ class GrammarBuilder:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports = {} # imports are collect over the whole file to prevent duplications
-
         for stmt in tree.children:
             if stmt.data == 'import':
                 dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)
@@ -1077,7 +1078,7 @@ class GrammarBuilder:
             return s
         return mangle
 
-    def check(self):
+    def validate(self):
         for name, (params, exp, options) in self._definitions.items():
             for i, p in enumerate(params):
                 if p in self._definitions:
@@ -1085,7 +1086,7 @@ class GrammarBuilder:
                 if p in params[:i]:
                     raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
 
-            if exp is None: # Remaining checks don't work for abstract rules/terminals
+            if exp is None: # Remaining checks don't apply to abstract rules/terminals
                 continue
 
             for temp in exp.find_data('template_usage'):
@@ -1107,7 +1108,7 @@ class GrammarBuilder:
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))
 
     def build(self):
-        self.check()
+        self.validate()
         rule_defs = []
         term_defs = []
         for name, (params, exp, options) in self._definitions.items():

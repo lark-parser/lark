@@ -1380,12 +1380,6 @@ def _make_parser_test(LEXER, PARSER):
         #                  A: "a"  """)
         #     self.assertRaises(LexError, g.parse, 'aab')
 
-        def test_undefined_rule(self):
-            self.assertRaises(GrammarError, _Lark, """start: a""")
-
-        def test_undefined_token(self):
-            self.assertRaises(GrammarError, _Lark, """start: A""")
-
         def test_rule_collision(self):
             g = _Lark("""start: "a"+ "b"
                              | "a"+ """)
@@ -1619,15 +1613,6 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
-        def test_token_multiline_only_works_with_x_flag(self):
-            g = r"""start: ABC
-                    ABC: /  a      b c
-                              d
-                                e f
-                            /i
-                      """
-            self.assertRaises( GrammarError, _Lark, g)
-
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?
@@ -1639,18 +1624,6 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('')
             self.assertEqual(tree.children, [])
 
-        def test_undefined_ignore(self):
-            g = """!start: "A"
-
-                %ignore B
-                """
-            self.assertRaises( GrammarError, _Lark, g)
-
-        def test_alias_in_terminal(self):
-            g = """start: TERM
-                TERM: "a" -> alias
-                """
-            self.assertRaises( GrammarError, _Lark, g)
 
         def test_line_and_column(self):
             g = r"""!start: "A" bc "D"

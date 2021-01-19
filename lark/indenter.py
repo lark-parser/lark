@@ -1,8 +1,12 @@
 "Provides Indentation services for languages with indentation similar to Python"
 
+from .exceptions import LarkError
 from .lexer import Token
 
 ###{standalone
+class DedentError(LarkError):
+    pass
+
 class Indenter:
     def __init__(self):
         self.paren_level = None
@@ -26,7 +30,8 @@ class Indenter:
                 self.indent_level.pop()
                 yield Token.new_borrow_pos(self.DEDENT_type, indent_str, token)
 
-            assert indent == self.indent_level[-1], '%s != %s' % (indent, self.indent_level[-1])
+            if indent != self.indent_level[-1]:
+                raise DedentError('Unexpected dedent to column %s. Expected dedent to %s' % (indent, self.indent_level[-1]))
 
     def _process(self, stream):
         for token in stream:

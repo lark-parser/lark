@@ -291,7 +291,7 @@ Declare a terminal without defining it. Useful for plugins.
 
 ### %override
 
-Override a rule, affecting all the rules that refer to it.
+Override a rule or terminals, affecting all references to it, even in imported grammars.
 
 Useful for implementing an inheritance pattern when importing grammars.
 
@@ -302,3 +302,22 @@ Useful for implementing an inheritance pattern when importing grammars.
 // Add hex support to my_grammar
 %override number: NUMBER | /0x\w+/
 ```
+
+### %extend
+
+Extend the definition of a rule or terminal, e.g. add a new option on what it can match, like when separated with `|`.
+
+Useful for splitting up a definition of a complex rule with many different options over multiple files.
+
+Can also be used to implement a plugin system where a core grammar is extended by others.
+
+
+**Example:**
+```perl
+%import my_grammar (start, NUMBER)
+
+// Add hex support to my_grammar
+%extend NUMBER: /0x\w+/
+```
+
+For both `%extend` and `%override`, there is not requirement for a rule/terminal to come from another file, but that is probably the most common usecase

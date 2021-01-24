@@ -729,15 +729,12 @@ stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)
 
 
 
-def resolve_term_references(term_defs):
+def resolve_term_references(term_dict):
     # TODO Solve with transitive closure (maybe)
-
-    term_dict = {k:t for k, (t,_p) in term_defs}
-    assert len(term_dict) == len(term_defs), "Same name defined twice?"
 
     while True:
         changed = False
-        for name, (token_tree, _p) in term_defs:
+        for name, token_tree in term_dict.items():
             if token_tree is None:  # Terminal added through %declare
                 continue
             for exp in token_tree.find_data('value'):
@@ -849,6 +846,32 @@ def _parse_grammar(text, name, start='start'):
     return PrepareGrammar().transform(tree)
 
 
+def _get_mangle(prefix, aliases, base_mangle=None):
+    def mangle(s):
+        if s in aliases:
+            s = aliases[s]
+        else:
+            if s[0] == '_':
+                s = '_%s__%s' % (prefix, s[1:])
+            else:
+                s = '%s__%s' % (prefix, s)
+        if base_mangle is not None:
+            s = base_mangle(s)
+        return s
+    return mangle
+
+def _mangle_exp(exp, mangle):
+    if mangle is None:
+        return exp
+    exp = deepcopy(exp) # TODO: is this needed
+    for t in exp.iter_subtrees():
+        for i, c in enumerate(t.children):
+            if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
+                t.children[i] = Token(c.type, mangle(c.value))
+    return exp
+
+
+
 class GrammarBuilder:
     def __init__(self, global_keep_all_tokens=False, import_paths=None):
         self.global_keep_all_tokens = global_keep_all_tokens
@@ -937,33 +960,6 @@ class GrammarBuilder:
         for name in names:
             self._define(name, None)
 
-    def _mangle_exp(self, exp, mangle):
-        if mangle is None:
-            return exp
-        exp = deepcopy(exp) # TODO: is this needed
-        for t in exp.iter_subtrees():
-            for i, c in enumerate(t.children):
-                if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
-                    t.children[i] = Token(c.type, mangle(c.value))
-        return exp
-
-
-    def _unpack_definition(self, tree, mangle):
-        if tree.data == 'rule':
-            name, params, exp, opts = options_from_rule(*tree.children)
-        else:
-            name = tree.children[0].value
-            params = ()     # TODO terminal templates
-            opts = int(tree.children[1]) if len(tree.children) == 3 else 1 # priority
-            exp = tree.children[-1]
-
-        if mangle is not None:
-            params = tuple(mangle(p) for p in params)
-            name = mangle(name)
-
-        exp = self._mangle_exp(exp, mangle)
-        return name, exp, params, opts
-
     def _unpack_import(self, stmt, grammar_name):
         if len(stmt.children) > 1:
             path_node, arg1 = stmt.children
@@ -1003,10 +999,27 @@ class GrammarBuilder:
 
         return dotted_path, base_path, aliases
 
-    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None):
+    def _unpack_definition(self, tree, mangle):
+        if tree.data == 'rule':
+            name, params, exp, opts = options_from_rule(*tree.children)
+        else:
+            name = tree.children[0].value
+            params = ()     # TODO terminal templates
+            opts = int(tree.children[1]) if len(tree.children) == 3 else 1 # priority
+            exp = tree.children[-1]
+
+        if mangle is not None:
+            params = tuple(mangle(p) for p in params)
+            name = mangle(name)
+
+        exp = _mangle_exp(exp, mangle)
+        return name, exp, params, opts
+
+
+    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None, dotted_path=None):
         tree = _parse_grammar(grammar_text, grammar_name)
 
-        imports = {} # imports are collect over the whole file to prevent duplications
+        imports = {}
         for stmt in tree.children:
             if stmt.data == 'import':
                 dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)
@@ -1045,8 +1058,27 @@ class GrammarBuilder:
                 assert False, stmt
 
 
+        term_defs = { name: exp
+            for name, (_params, exp, _options) in self._definitions.items()
+            if self._is_term(name)
+        }
+        resolve_term_references(term_defs)
+
+
+    def _remove_unused(self, used):
+        def rule_dependencies(symbol):
+            if self._is_term(symbol):
+                return []
+            params, tree,_ = self._definitions[symbol]
+            return _find_used_symbols(tree) - set(params)
+
+        _used = set(bfs(used, rule_dependencies))
+        self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
+
+
     def do_import(self, dotted_path, base_path, aliases, base_mangle=None):
-        mangle = self.get_mangle('__'.join(dotted_path), aliases, base_mangle)
+        assert dotted_path
+        mangle = _get_mangle('__'.join(dotted_path), aliases, base_mangle)
         grammar_path = os.path.join(*dotted_path) + EXT
         to_try = self.import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
         for source in to_try:
@@ -1060,29 +1092,23 @@ class GrammarBuilder:
             except IOError:
                 continue
             else:
-                self.load_grammar(text, joined_path, mangle)
+                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths)
+                gb.load_grammar(text, joined_path, mangle, dotted_path)
+                gb._remove_unused(map(mangle, aliases))
+                for name in gb._definitions:
+                    if name in self._definitions:
+                        raise GrammarError("Cannot import '%s' from '%s': Symbol already defined." % (name, grammar_path))
+
+                self._definitions.update(**gb._definitions)
                 break
         else:
             # Search failed. Make Python throw a nice error.
             open(grammar_path, encoding='utf8')
             assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
 
-    def get_mangle(self, prefix, aliases, base_mangle=None):
-        def mangle(s):
-            if s in aliases:
-                s = aliases[s]
-            else:
-                if s[0] == '_':
-                    s = '_%s__%s' % (prefix, s[1:])
-                else:
-                    s = '%s__%s' % (prefix, s)
-            if base_mangle is not None:
-                s = base_mangle(s)
-            return s
-        return mangle
 
     def validate(self):
-        for name, (params, exp, options) in self._definitions.items():
+        for name, (params, exp, _options) in self._definitions.items():
             for i, p in enumerate(params):
                 if p in self._definitions:
                     raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
@@ -1120,7 +1146,7 @@ class GrammarBuilder:
                 term_defs.append((name, (exp, options)))
             else:
                 rule_defs.append((name, params, exp, options))
-        resolve_term_references(term_defs)
+        # resolve_term_references(term_defs)
         return Grammar(rule_defs, term_defs, self._ignore_names)
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):

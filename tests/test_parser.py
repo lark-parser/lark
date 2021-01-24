@@ -11,7 +11,6 @@ from copy import copy, deepcopy
 from lark.utils import Py36, isascii
 
 from lark import Token
-from lark.load_grammar import FromPackageLoader
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -1923,36 +1922,6 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar, postlex=CustomIndenter())
             parser.parse("a\n    b\n")
 
-        def test_import_custom_sources(self):
-            custom_loader = FromPackageLoader('tests', ('grammars', ))
-
-            grammar = """
-            start: startab
-
-            %import ab.startab
-            """
-
-            p = _Lark(grammar, import_paths=[custom_loader])
-            self.assertEqual(p.parse('ab'),
-                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
-
-            grammar = """
-            start: rule_to_import
-
-            %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
-            """
-            p = _Lark(grammar, import_paths=[custom_loader])
-            x = p.parse('N')
-            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
-
-            custom_loader2 = FromPackageLoader('tests')
-            grammar = """
-            %import .test_relative_import (start, WS)
-            %ignore WS
-            """
-            p = _Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
-            x = p.parse('12 capybaras')
-            self.assertEqual(x.children, ['12', 'capybaras'])
 
         @unittest.skipIf(PARSER == 'cyk', "Doesn't work for CYK")
         def test_prioritization(self):

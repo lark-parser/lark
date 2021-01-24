@@ -57,12 +57,16 @@ def test_python_lib():
 
     start = time.time()
     files = glob.glob(path+'/*.py')
+    total_kb = 0
     for f in files:
-        print( f )
-        chosen_parser.parse(_read(os.path.join(path, f)) + '\n')
+        r = _read(os.path.join(path, f))
+        kb = len(r) / 1024
+        print( '%s -\t%.1f kb' % (f, kb))
+        chosen_parser.parse(r + '\n')
+        total_kb += kb
 
     end = time.time()
-    print( "test_python_lib (%d files), time: %s secs"%(len(files), end-start) )
+    print( "test_python_lib (%d files, %.1f kb), time: %.2f secs"%(len(files), total_kb, end-start) )
 
 def test_earley_equals_lalr():
     path = _get_lib_path()

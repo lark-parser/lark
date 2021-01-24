@@ -83,7 +83,7 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
 
 ![fruitflies.png](examples/fruitflies.png)
 
-[Read the code here](https://github.com/lark-parser/lark/tree/master/examples/fruitflies.py), and [more examples here](https://github.com/lark-parser/lark/tree/master/examples)
+[Read the code here](https://github.com/lark-parser/lark/tree/master/examples/fruitflies.py), and see [more examples here](https://lark-parser.readthedocs.io/en/latest/examples/index.html).
 
 
 ## List of main features

@@ -977,6 +977,9 @@ class GrammarBuilder:
             aliases = dict(zip(names, names))  # Can't have aliased multi import, so all aliases will be the same as names
         else:  # Single import
             dotted_path = tuple(path_node.children[:-1])
+            if not dotted_path:
+                name ,= path_node.children
+                raise GrammarError("Nothing was imported from grammar `%s`" % name)
             name = path_node.children[-1]  # Get name from dotted path
             aliases = {name.value: (arg1 or name).value}  # Aliases if exist
 

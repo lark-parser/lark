@@ -171,16 +171,14 @@ Lark uses the [MIT license](LICENSE).
 
 Lark is currently accepting pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
-## Donate
+## Sponsor
 
-If you like Lark and feel like donating, you can do so at my [patreon page](https://www.patreon.com/erezsh).
+If you like Lark, and want to see it grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
 
-If you wish for a specific feature to get a higher priority, you can request it in a follow-up email, and I'll consider it favorably.
+## Contact the author
 
-## Contact
+Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lobby) or in the issues.
 
-If you have any questions or want my assistance, you can email me at erezshin at gmail com.
-
-I'm also available for contract work.
+For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)

@@ -11,7 +11,6 @@ from copy import copy, deepcopy
 from lark.utils import Py36, isascii
 
 from lark import Token
-from lark.load_grammar import FromPackageLoader
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -1380,12 +1379,6 @@ def _make_parser_test(LEXER, PARSER):
         #                  A: "a"  """)
         #     self.assertRaises(LexError, g.parse, 'aab')
 
-        def test_undefined_rule(self):
-            self.assertRaises(GrammarError, _Lark, """start: a""")
-
-        def test_undefined_token(self):
-            self.assertRaises(GrammarError, _Lark, """start: A""")
-
         def test_rule_collision(self):
             g = _Lark("""start: "a"+ "b"
                              | "a"+ """)
@@ -1619,15 +1612,6 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
-        def test_token_multiline_only_works_with_x_flag(self):
-            g = r"""start: ABC
-                    ABC: /  a      b c
-                              d
-                                e f
-                            /i
-                      """
-            self.assertRaises( GrammarError, _Lark, g)
-
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?
@@ -1639,18 +1623,6 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('')
             self.assertEqual(tree.children, [])
 
-        def test_undefined_ignore(self):
-            g = """!start: "A"
-
-                %ignore B
-                """
-            self.assertRaises( GrammarError, _Lark, g)
-
-        def test_alias_in_terminal(self):
-            g = """start: TERM
-                TERM: "a" -> alias
-                """
-            self.assertRaises( GrammarError, _Lark, g)
 
         def test_line_and_column(self):
             g = r"""!start: "A" bc "D"
@@ -1950,36 +1922,6 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar, postlex=CustomIndenter())
             parser.parse("a\n    b\n")
 
-        def test_import_custom_sources(self):
-            custom_loader = FromPackageLoader('tests', ('grammars', ))
-
-            grammar = """
-            start: startab
-
-            %import ab.startab
-            """
-
-            p = _Lark(grammar, import_paths=[custom_loader])
-            self.assertEqual(p.parse('ab'),
-                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
-
-            grammar = """
-            start: rule_to_import
-
-            %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
-            """
-            p = _Lark(grammar, import_paths=[custom_loader])
-            x = p.parse('N')
-            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
-
-            custom_loader2 = FromPackageLoader('tests')
-            grammar = """
-            %import .test_relative_import (start, WS)
-            %ignore WS
-            """
-            p = _Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
-            x = p.parse('12 capybaras')
-            self.assertEqual(x.children, ['12', 'capybaras'])
 
         @unittest.skipIf(PARSER == 'cyk', "Doesn't work for CYK")
         def test_prioritization(self):

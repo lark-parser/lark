@@ -8,6 +8,7 @@ from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
 from .exceptions import UnexpectedInput
+from .load_grammar import Grammar
 
 _T = TypeVar('_T')
 
@@ -54,13 +55,14 @@ class FromPackageLoader:
 class Lark:
     source_path: str
     source_grammar: str
+    grammar: Grammar
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
 
     def __init__(
         self,
-        grammar: Union[str, IO[str]],
+        grammar: Union[Grammar, str, IO[str]],
         *,
         start: Union[None, str, List[str]] = "start",
         parser: Literal["earley", "lalr", "cyk"] = "auto",

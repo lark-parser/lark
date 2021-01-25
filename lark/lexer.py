@@ -11,6 +11,7 @@ from copy import copy
 
 class Pattern(Serialize):
     raw = None
+    type = None
 
     def __init__(self, value, flags=(), raw=None):
         self.value = value
@@ -30,6 +31,12 @@ class Pattern(Serialize):
     def to_regexp(self):
         raise NotImplementedError()
 
+    def min_width(self):
+        raise NotImplementedError()
+
+    def max_width(self):
+        raise NotImplementedError()
+
     if Py36:
         # Python 3.6 changed syntax for flags in regular expression
         def _get_flags(self, value):
@@ -42,6 +49,7 @@ class Pattern(Serialize):
             for f in self.flags:
                 value = ('(?%s)' % f) + value
             return value
+
 
 
 class PatternStr(Pattern):

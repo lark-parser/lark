@@ -36,7 +36,7 @@ class UnexpectedInput(LarkError):
     pos_in_stream: int
     state: Any
 
-    def get_context(self, text: str, span: int = ...):
+    def get_context(self, text: str, span: int = ...) -> str:
         ...
 
     def match_examples(

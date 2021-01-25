@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Callable, Iterator, Union, Optional, Literal
+from typing import List, Callable, Iterator, Union, Optional, Literal, Any
 from .lexer import TerminalDef
 
 class Meta:
@@ -25,7 +25,7 @@ class Tree:
         data: str,
         children: List[Union[str, Tree]],
         meta: Optional[Meta] = None
-    ):
+    ) -> None:
         ...
 
     def pretty(self, indent_str: str = ...) -> str:
@@ -40,7 +40,7 @@ class Tree:
     def expand_kids_by_index(self, *indices: int) -> None:
         ...
 
-    def scan_values(self, pred: Callable[[Union[str, Tree]], bool]):
+    def scan_values(self, pred: Callable[[Union[str, Tree]], bool]) -> List[str]:
         ...
 
     def iter_subtrees(self) -> Iterator[Tree]:

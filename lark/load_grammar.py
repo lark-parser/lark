@@ -1016,7 +1016,7 @@ class GrammarBuilder:
         return name, exp, params, opts
 
 
-    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None, dotted_path=None):
+    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None):
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports = {}
@@ -1093,7 +1093,7 @@ class GrammarBuilder:
                 continue
             else:
                 gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths)
-                gb.load_grammar(text, joined_path, mangle, dotted_path)
+                gb.load_grammar(text, joined_path, mangle)
                 gb._remove_unused(map(mangle, aliases))
                 for name in gb._definitions:
                     if name in self._definitions:

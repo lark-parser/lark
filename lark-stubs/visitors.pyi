@@ -11,7 +11,7 @@ _DECORATED = Union[_FUNC, type]
 
 class Transformer(ABC, Generic[_T]):
 
-    def __init__(self, visit_tokens: bool = True):
+    def __init__(self, visit_tokens: bool = True) -> None:
         ...
 
     def transform(self, tree: Tree) -> _T:
@@ -24,7 +24,7 @@ class Transformer(ABC, Generic[_T]):
 class TransformerChain(Generic[_T]):
     transformers: Tuple[Transformer[_T], ...]
 
-    def __init__(self, *transformers: Transformer[_T]):
+    def __init__(self, *transformers: Transformer[_T]) -> None:
         ...
 
     def transform(self, tree: Tree) -> _T:
@@ -75,7 +75,8 @@ _InterMethod = Callable[[Type[Interpreter], _T], _R]
 def v_args(
     inline: bool = False,
     meta: bool = False,
-    tree: bool = False
+    tree: bool = False,
+    wrapper: Callable = None
 ) -> Callable[[_DECORATED], _DECORATED]:
     ...
 

@@ -9,7 +9,7 @@ class Indenter(ABC):
     paren_level: Optional[int]
     indent_level: Optional[List[int]]
 
-    def __init__(self):
+    def __init__(self) -> None:
         ...
 
     def handle_NL(self, token: Token) -> Iterator[Token]:

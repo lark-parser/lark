@@ -187,7 +187,12 @@ class ForestVisitor(object):
     The walk is controlled by the return values of the ``visit*node_in``
     methods. Returning a node(s) will schedule them to be visited. The visitor
     will begin to backtrack if no nodes are returned.
+
+    :ivar single_visit: If ``True``, non-Token nodes will only be visited once.
     """
+
+    def __init__(self, single_visit=False):
+        self.single_visit = single_visit
 
     def visit_token_node(self, node):
         """Called when a ``Token`` is visited. ``Token`` nodes are always leaves."""
@@ -243,6 +248,9 @@ class ForestVisitor(object):
         # since the SPPF can have cycles it allows us to detect if we're trying
         # to recurse into a node that's already on the stack (infinite recursion).
         visiting = set()
+
+        # set of all nodes that have been visited
+        visited = set()
 
         # a list of nodes that are currently being visited
         # used for the `on_cycle` callback
@@ -300,7 +308,9 @@ class ForestVisitor(object):
                 input_stack.pop()
                 path.pop()
                 visiting.remove(current_id)
-                continue
+                visited.add(current_id)
+            elif self.single_visit and current_id in visited:
+                input_stack.pop()
             else:
                 visiting.add(current_id)
                 path.append(current)
@@ -321,7 +331,6 @@ class ForestVisitor(object):
                     continue
 
                 input_stack.append(next_node)
-                continue
 
 class ForestTransformer(ForestVisitor):
     """The base class for a bottom-up forest transformation. Most users will
@@ -341,6 +350,7 @@ class ForestTransformer(ForestVisitor):
     """
 
     def __init__(self):
+        super(ForestTransformer, self).__init__()
         # results of transformations
         self.data = dict()
         # used to track parent nodes
@@ -438,6 +448,9 @@ class ForestSumVisitor(ForestVisitor):
     items created during parsing than there are SPPF nodes in the
     final tree.
     """
+    def __init__(self):
+        super(ForestSumVisitor, self).__init__(single_visit=True)
+
     def visit_packed_node_in(self, node):
         yield node.left
         yield node.right
@@ -497,6 +510,11 @@ class ForestToParseTree(ForestTransformer):
         self._on_cycle_retreat = False
         self._cycle_node = None
         self._successful_visits = set()
+
+    def visit(self, root):
+        if self.prioritizer:
+            self.prioritizer.visit(root)
+        super(ForestToParseTree, self).visit(root)
 
     def on_cycle(self, node, path):
         logger.debug("Cycle encountered in the SPPF at node: %s. "
@@ -578,8 +596,6 @@ class ForestToParseTree(ForestTransformer):
         super(ForestToParseTree, self).visit_symbol_node_in(node)
         if self._on_cycle_retreat:
             return
-        if self.prioritizer and node.is_ambiguous and isinf(node.priority):
-            self.prioritizer.visit(node)
         return node.children
 
     def visit_packed_node_in(self, node):
@@ -692,6 +708,7 @@ class ForestToPyDotVisitor(ForestVisitor):
     is structured.
     """
     def __init__(self, rankdir="TB"):
+        super(ForestToPyDotVisitor, self).__init__(single_visit=True)
         self.pydot = import_module('pydot')
         self.graph = self.pydot.Dot(graph_type='digraph', rankdir=rankdir)
 

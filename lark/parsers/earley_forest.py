@@ -507,7 +507,7 @@ class ForestToParseTree(ForestTransformer):
 
     def _check_cycle(self, node):
         if self._on_cycle_retreat:
-            if id(node) == id(self._cycle_node):
+            if id(node) == id(self._cycle_node) or id(node) in self._successful_visits:
                 self._cycle_node = None
                 self._on_cycle_retreat = False
                 return
@@ -541,16 +541,16 @@ class ForestToParseTree(ForestTransformer):
     def transform_symbol_node(self, node, data):
         if id(node) not in self._successful_visits:
             raise Discard()
-        self._successful_visits.remove(id(node))
         self._check_cycle(node)
+        self._successful_visits.remove(id(node))
         data = self._collapse_ambig(data)
         return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
         if id(node) not in self._successful_visits:
             raise Discard()
-        self._successful_visits.remove(id(node))
         self._check_cycle(node)
+        self._successful_visits.remove(id(node))
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
             return self.tree_class('_iambig', children)

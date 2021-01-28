@@ -15,8 +15,15 @@ class Discard(Exception):
     """
     pass
 
-# Transformers
+class Inline(object):
+    """When returning an Inline instance in a transformer callback,
+    the node is inlined, and replaced by its children.
+    """
+    def __init__(self, *items):
+        self.items = items
 
+
+# Transformers
 
 class _Decoratable:
     "Provides support for decorating methods with @v_args"
@@ -113,11 +120,16 @@ class Transformer(_Decoratable):
         for c in children:
             try:
                 if isinstance(c, Tree):
-                    yield self._transform_tree(c)
+                    res = self._transform_tree(c)
                 elif self.__visit_tokens__ and isinstance(c, Token):
-                    yield self._call_userfunc_token(c)
+                    res = self._call_userfunc_token(c)
                 else:
-                    yield c
+                    res = c
+                if type(res) is Inline:
+                    for i in res.items:
+                        yield i
+                else:
+                    yield res
             except Discard:
                 pass
 

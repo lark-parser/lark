@@ -218,6 +218,8 @@ class Transformer_NonRecursive(Transformer):
                 else:
                     args = []
                 stack.append(self._call_userfunc(x, args))
+            elif self.__visit_tokens__ and isinstance(x, Token):
+                stack.append(self._call_userfunc_token(x))
             else:
                 stack.append(x)
 

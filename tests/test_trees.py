@@ -8,7 +8,8 @@ import functools
 
 from lark.tree import Tree
 from lark.lexer import Token
-from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard
+from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Transformer_InPlace, \
+    Transformer_InPlaceRecursive, Transformer_NonRecursive
 
 
 class TestTrees(TestCase):
@@ -232,6 +233,20 @@ class TestTrees(TestCase):
 
         x = MyTransformer().transform( t )
         self.assertEqual(x, t2)
+    
+    def test_transformer_variants(self):
+        tree = Tree('start', [Tree('add', [Token('N', '1'), Token('N', '2')]), Tree('add', [Token('N', '3'), Token('N', '4')])])
+        for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
+            class T(base):
+                def add(self, children):
+                    return sum(children)
+                
+                def N(self, token):
+                    return int(token)
+            
+            copied = copy.deepcopy(tree)
+            result = T().transform(copied)
+            self.assertEqual(result, Tree('start', [3, 7]))
 
 
 if __name__ == '__main__':

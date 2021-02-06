@@ -101,7 +101,7 @@ class ParserState(object):
                 # shift once and return
                 assert not is_end
                 state_stack.append(arg)
-                value_stack.append(token)
+                value_stack.append(token if token.type not in callbacks else callbacks[token.type](token))
                 return
             else:
                 # reduce+shift as many times as necessary

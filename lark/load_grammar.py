@@ -814,6 +814,7 @@ def _get_parser():
         return _get_parser.cache
 
 GRAMMAR_ERRORS = [
+        ('Incorrect type of value', ['a: 1\n']),
         ('Unclosed parenthesis', ['a: (\n']),
         ('Unmatched closing parenthesis', ['a: )\n', 'a: [)\n', 'a: (]\n']),
         ('Expecting rule or terminal definition (missing colon)', ['a\n', 'A\n', 'a->\n', 'A->\n', 'a A\n']),
@@ -823,6 +824,7 @@ GRAMMAR_ERRORS = [
         ('Misplaced operator', ['a: b??', 'a: b(?)', 'a:+\n', 'a:?\n', 'a:*\n', 'a:|*\n']),
         ('Expecting option ("|") or a new rule or terminal definition', ['a:a\n()\n']),
         ('Terminal names cannot contain dots', ['A.B\n']),
+        ('Expecting rule or terminal definition', ['"a"\n']),
         ('%import expects a name', ['%import "a"\n']),
         ('%ignore expects a value', ['%ignore %import\n']),
     ]

@@ -827,6 +827,13 @@ GRAMMAR_ERRORS = [
         ('%ignore expects a value', ['%ignore %import\n']),
     ]
 
+def _translate_parser_exception(parse, e):
+        error = e.match_examples(parse, GRAMMAR_ERRORS, use_accepts=True)
+        if error:
+            return error
+        elif 'STRING' in e.expected:
+            return "Expecting a value"
+
 def _parse_grammar(text, name, start='start'):
     try:
         tree = _get_parser().parse(text + '\n', start)
@@ -836,11 +843,9 @@ def _parse_grammar(text, name, start='start'):
                            (e.line, e.column, name, context))
     except UnexpectedToken as e:
         context = e.get_context(text)
-        error = e.match_examples(_get_parser().parse, GRAMMAR_ERRORS, use_accepts=True)
+        error = _translate_parser_exception(_get_parser().parse, e)
         if error:
             raise GrammarError("%s, at line %s column %s\n\n%s" % (error, e.line, e.column, context))
-        elif 'STRING' in e.expected:
-            raise GrammarError("Expecting a value at line %s column %s\n\n%s" % (e.line, e.column, context))
         raise
 
     return PrepareGrammar().transform(tree)
@@ -1069,7 +1074,10 @@ class GrammarBuilder:
         def rule_dependencies(symbol):
             if self._is_term(symbol):
                 return []
-            params, tree,_ = self._definitions[symbol]
+            try:
+                params, tree,_ = self._definitions[symbol]
+            except KeyError:
+                return []
             return _find_used_symbols(tree) - set(params)
 
         _used = set(bfs(used, rule_dependencies))

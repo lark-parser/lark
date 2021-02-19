@@ -235,6 +235,7 @@ class Lark(Serialize):
             grammar = read()
 
         cache_fn = None
+        cache_md5 = None
         if isinstance(grammar, STRING_TYPE):
             self.source_grammar = grammar
             if self.options.use_bytes:
@@ -243,33 +244,37 @@ class Lark(Serialize):
                 if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
                     raise ConfigurationError("`use_bytes=True` may have issues on python2."
                                               "Use `use_bytes='force'` to use it at your own risk.")
-    
+
             if self.options.cache:
                 if self.options.parser != 'lalr':
                     raise ConfigurationError("cache only works with parser='lalr' for now")
+
+                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+                from . import __version__
+                s = grammar + options_str + __version__
+                cache_md5 = hashlib.md5(s.encode()).hexdigest()
+
                 if isinstance(self.options.cache, STRING_TYPE):
                     cache_fn = self.options.cache
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                    unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
-                    from . import __version__
-                    options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
-                    s = grammar + options_str + __version__
-                    md5 = hashlib.md5(s.encode()).hexdigest()
-                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % md5
-    
+                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % cache_md5
+
                 if FS.exists(cache_fn):
                     logger.debug('Loading grammar from cache: %s', cache_fn)
                     # Remove options that aren't relevant for loading from cache
                     for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
                         del options[name]
                     with FS.open(cache_fn, 'rb') as f:
-                        try:
-                            self._load(f, **options)
-                        except Exception:
-                            raise RuntimeError("Failed to load Lark from cache: %r. Try to delete the file and run again." % cache_fn)
-                    return
+                        file_md5 = f.readline().rstrip(b'\n')
+                        if file_md5 == cache_md5.encode():
+                            try:
+                                self._load(f, **options)
+                            except Exception:
+                                raise RuntimeError("Failed to load Lark from cache: %r. Try to delete the file and run again." % cache_fn)
+                            return
 
 
             # Parse the grammar file and compose the grammars
@@ -277,7 +282,7 @@ class Lark(Serialize):
         else:
             assert isinstance(grammar, Grammar)
             self.grammar = grammar
-            
+
 
         if self.options.lexer == 'auto':
             if self.options.parser == 'lalr':
@@ -353,6 +358,7 @@ class Lark(Serialize):
         if cache_fn:
             logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
+                f.write(b'%s\n' % cache_md5.encode())
                 self.save(f)
 
     if __doc__:

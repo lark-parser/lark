@@ -101,18 +101,16 @@ class ParsingFrontend(Serialize):
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
 
 
-    def parse(self, text, start=None):
+    def parse(self, text, start=None, on_error=None):
         if start is None:
             start = self.parser_conf.start
             if len(start) > 1:
                 raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
             start ,= start
 
-        if self.skip_lexer:
-            return self.parser.parse(text, start)
-
-        lexer_thread = LexerThread(self.lexer, text)
-        return self.parser.parse(lexer_thread, start)
+        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        kw = {} if on_error is None else {'on_error': on_error}
+        return self.parser.parse(stream, start, **kw)
 
 
 def get_frontend(parser, lexer):

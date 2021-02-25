@@ -8,7 +8,7 @@ import pkgutil
 from ast import literal_eval
 from numbers import Integral
 
-from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start
+from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -16,7 +16,7 @@ from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, suppress, dedup_list, Str
-from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -851,6 +851,54 @@ def _parse_grammar(text, name, start='start'):
         raise
 
     return PrepareGrammar().transform(tree)
+
+
+def _error_repr(error):
+    if isinstance(error, UnexpectedToken):
+        error2 = _translate_parser_exception(_get_parser().parse, error)
+        if error2:
+            return error2
+        expected = ', '.join(error.accepts or error.expected)
+        return "Unexpected token %r. Expected one of: {%s}" % (str(error.token), expected)
+    else:
+        return str(error)
+
+def _search_puppet(puppet, predicate):
+    def expand(node):
+        path, p = node
+        for choice in p.choices():
+            t = Token(choice, '')
+            try:
+                new_p = p.feed_token(t)
+            except ParseError:    # Illegal
+                pass
+            else:
+                yield path + (choice,), new_p
+
+    for path, p in bfs_all_unique([((), puppet)], expand):
+        if predicate(p):
+            return path, p
+
+def find_grammar_errors(text, start='start'):
+    errors = []
+    def on_error(e):
+        errors.append((e, _error_repr(e)))
+
+        # recover to a new line
+        token_path, _ = _search_puppet(e.puppet.as_immutable(), lambda p: '_NL' in p.choices())
+        for token_type in token_path:
+            e.puppet.feed_token(Token(token_type, ''))
+        e.puppet.feed_token(Token('_NL', '\n'))
+        return True
+
+    _tree = _get_parser().parse(text + '\n', start, on_error=on_error)
+
+    errors_by_line = classify(errors, lambda e: e[0].line)
+    errors = [el[0] for el in errors_by_line.values()]      # already sorted
+
+    for e in errors:
+        e[0].puppet = None
+    return errors
 
 
 def _get_mangle(prefix, aliases, base_mangle=None):

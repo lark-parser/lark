@@ -318,6 +318,14 @@ def bfs(initial, expand):
                 visited.add(next_node)
                 open_q.append(next_node)
 
+def bfs_all_unique(initial, expand):
+    "bfs, but doesn't keep track of visited (aka seen), because there can be no repetitions"
+    open_q = deque(list(initial))
+    while open_q:
+        node = open_q.popleft()
+        yield node
+        open_q += expand(node)
+
 
 def _serialize(value, memo):
     if isinstance(value, Serialize):

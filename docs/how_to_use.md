@@ -24,7 +24,7 @@ Browse the [Examples](https://github.com/lark-parser/lark/tree/master/examples) 
 
 Read the tutorials to get a better understanding of how everything works. (links in the [main page](/index))
 
-Use the [Cheatsheet (PDF)](/_static/lark_cheatsheet.pdf) for quick reference.
+Use the [Cheatsheet (PDF)](_static/lark_cheatsheet.pdf) for quick reference.
 
 Use the reference pages for more in-depth explanations. (links in the [main page](/index)]
 

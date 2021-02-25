@@ -859,7 +859,7 @@ def _error_repr(error):
         if error2:
             return error2
         expected = ', '.join(error.accepts or error.expected)
-        return f"Unexpected token {str(error.token)!r}. Expected one of:\n{{{expected}}}"
+        return "Unexpected token %r. Expected one of: {%s}" % (str(error.token), expected)
     else:
         return str(error)
 

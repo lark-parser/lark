@@ -28,7 +28,21 @@ Use the [Cheatsheet (PDF)](https://lark-parser.readthedocs.io/en/latest/_static/
 
 Use the reference pages for more in-depth explanations. (links in the [main page](/index)]
 
-## LALR usage
+## Debug
+
+Grammars may contain non-obvious bugs, usually caused by rules or terminals interfering with each other in subtle ways.
+
+When trying to debug a misbehaving grammar, the following methodology is recommended:
+
+1. Create a copy of the grammar, so you can change the parser/grammar without any worries
+2. Find the minimal input that creates the error
+3. Slowly remove rules from the grammar, while making sure the error still occurs.
+
+Usually, by the time you get to a minimal grammar, the problem becomes clear.
+
+But if it doesn't, feel free to ask us on gitter, or even open an issue. Post a reproducing code, with the minimal grammar and input, and we'll do our best to help.
+
+### LALR
 
 By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `logger` beforehand. For example:
 

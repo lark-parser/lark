@@ -881,7 +881,7 @@ def _search_puppet(puppet, predicate):
 
 def find_grammar_errors(text, start='start'):
     errors = []
-    def on_error(e: UnexpectedToken):
+    def on_error(e):
         errors.append((e.line, e.column, _error_repr(e)))
 
         # recover to a new line

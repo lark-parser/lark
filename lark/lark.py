@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken, ConfigurationError, assert_config
+from lark.exceptions import ConfigurationError, assert_config
 
 import sys, os, pickle, hashlib
 from io import open
@@ -518,35 +518,7 @@ class Lark(Serialize):
             result of the transformation. Otherwise, returns a Tree instance.
 
         """
-
-        try:
-            return self.parser.parse(text, start=start)
-        except UnexpectedInput as e:
-            if on_error is None:
-                raise
-
-            while True:
-                if isinstance(e, UnexpectedCharacters):
-                    s = e.puppet.lexer_state.state
-                    p = s.line_ctr.char_pos
-
-                if not on_error(e):
-                    raise e
-
-                if isinstance(e, UnexpectedCharacters):
-                    # If user didn't change the character position, then we should
-                    if p == s.line_ctr.char_pos:
-                        s.line_ctr.feed(s.text[p:p+1])
-
-                try:
-                    return e.puppet.resume_parse()
-                except UnexpectedToken as e2:
-                    if isinstance(e, UnexpectedToken) and e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
-                        # Prevent infinite loop
-                        raise e2
-                    e = e2
-                except UnexpectedCharacters as e2:
-                    e = e2
+        return self.parser.parse(text, start=start, on_error=on_error)
 
     @property
     def source(self):

@@ -9,6 +9,7 @@ from ..utils import Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_puppet import ParserPuppet
+from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 ###{standalone
 
@@ -32,8 +33,35 @@ class LALR_Parser(Serialize):
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
 
-    def parse(self, *args):
-        return self.parser.parse(*args)
+    def parse(self, lexer, start, on_error=None):
+        try:
+            return self.parser.parse(lexer, start)
+        except UnexpectedInput as e:
+            if on_error is None:
+                raise
+
+            while True:
+                if isinstance(e, UnexpectedCharacters):
+                    s = e.puppet.lexer_state.state
+                    p = s.line_ctr.char_pos
+
+                if not on_error(e):
+                    raise e
+
+                if isinstance(e, UnexpectedCharacters):
+                    # If user didn't change the character position, then we should
+                    if p == s.line_ctr.char_pos:
+                        s.line_ctr.feed(s.text[p:p+1])
+
+                try:
+                    return e.puppet.resume_parse()
+                except UnexpectedToken as e2:
+                    if isinstance(e, UnexpectedToken) and e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
+                        # Prevent infinite loop
+                        raise e2
+                    e = e2
+                except UnexpectedCharacters as e2:
+                    e = e2
 
 
 class ParseConf(object):

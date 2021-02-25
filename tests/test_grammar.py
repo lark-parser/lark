@@ -4,7 +4,7 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree
-from lark.load_grammar import GrammarError, GRAMMAR_ERRORS
+from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors
 from lark.load_grammar import FromPackageLoader
 
 
@@ -159,6 +159,29 @@ class TestGrammar(TestCase):
         p = Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
         x = p.parse('12 capybaras')
         self.assertEqual(x.children, ['12', 'capybaras'])
+
+    def test_find_grammar_errors(self):
+        text = """
+        a: rule
+        b rule
+        c: rule
+        B.: "hello" f
+        D: "okay"
+        """
+
+        assert {line for line, _col, _s in find_grammar_errors(text)} == {3, 5}
+
+        text = """
+        a: rule
+        b rule
+        | ok
+        c: rule
+        B.: "hello" f
+        D: "okay"
+        """
+
+        assert {line for line, _col, _s in find_grammar_errors(text)} == {3, 4, 6}
+
 
 
 if __name__ == '__main__':

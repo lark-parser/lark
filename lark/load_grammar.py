@@ -892,6 +892,10 @@ def find_grammar_errors(text, start='start'):
         return True
 
     _tree = _get_parser().parse(text + '\n', start, on_error=on_error)
+
+    errors_by_line = classify(errors, lambda e: e[0].line)
+    errors = [el[0] for el in errors_by_line.values()]      # already sorted
+
     for e in errors:
         e[0].puppet = None
     return errors

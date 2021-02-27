@@ -169,7 +169,7 @@ class TestGrammar(TestCase):
         D: "okay"
         """
 
-        assert {line for line, _col, _s in find_grammar_errors(text)} == {3, 5}
+        assert {e.line for e, _s in find_grammar_errors(text)} == {3, 5}
 
         text = """
         a: rule
@@ -180,7 +180,19 @@ class TestGrammar(TestCase):
         D: "okay"
         """
 
-        assert {line for line, _col, _s in find_grammar_errors(text)} == {3, 4, 6}
+        assert {e.line for e, _s in find_grammar_errors(text)} == {3, 4, 6}
+
+        text = """
+        a: rule @#$#@$@&&
+        b: rule
+        | ok
+        c: rule
+        B: "hello" f @
+        D: "okay"
+        """
+
+        x = find_grammar_errors(text)
+        assert {e.line for e, _s in find_grammar_errors(text)} == {2, 6}
 
 
 

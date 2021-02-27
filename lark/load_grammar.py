@@ -882,7 +882,7 @@ def _search_puppet(puppet, predicate):
 def find_grammar_errors(text, start='start'):
     errors = []
     def on_error(e):
-        errors.append((e.line, e.column, _error_repr(e)))
+        errors.append((e, _error_repr(e)))
 
         # recover to a new line
         token_path, _ = _search_puppet(e.puppet.as_immutable(), lambda p: '_NL' in p.choices())
@@ -892,6 +892,8 @@ def find_grammar_errors(text, start='start'):
         return True
 
     _tree = _get_parser().parse(text + '\n', start, on_error=on_error)
+    for e in errors:
+        e[0].puppet = None
     return errors
 
 

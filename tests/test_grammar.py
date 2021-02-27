@@ -180,7 +180,6 @@ class TestGrammar(TestCase):
         D: "okay"
         """
 
-        breakpoint()
         assert [e.line for e, _s in find_grammar_errors(text)] == [3, 4, 6]
 
         text = """

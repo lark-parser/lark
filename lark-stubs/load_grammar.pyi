@@ -2,6 +2,7 @@ from typing import List, Tuple, Union, Callable, Dict, Optional
 
 from lark import Tree
 from lark.grammar import RuleOptions
+from lark.exceptions import UnexpectedInput
 
 
 class Grammar:
@@ -26,4 +27,4 @@ class GrammarBuilder:
     def build(self) -> Grammar: ...
 
 
-def find_grammar_errors(text: str, start: str='start'): ...
+def find_grammar_errors(text: str, start: str='start') -> List[UnexpectedInput, str]: ...

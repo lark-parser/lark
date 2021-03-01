@@ -167,7 +167,7 @@ class LarkOptions(Serialize):
 
     def __getattr__(self, name):
         try:
-            return self.options[name]
+            return self.__dict__['options'][name]
         except KeyError as e:
             raise AttributeError(e)
 

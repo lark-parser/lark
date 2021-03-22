@@ -11,8 +11,7 @@ from .lexer import TerminalDef
 
 class WriteTokensTransformer(Transformer_InPlace):
 
-    def __init__(self, tokens: Dict[str, TerminalDef], Dict[str, Callable[[Symbol], str]] = ...):
-        ...
+    def __init__(self, tokens: Dict[str, TerminalDef], term_subs: Dict[str, Callable[[Symbol], str]] = ...): ...
 
 
 class MatchTree(Tree):

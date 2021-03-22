@@ -1,8 +1,8 @@
 from typing import List, Tuple, Union, Callable, Dict, Optional
 
-from lark import Tree
-from lark.grammar import RuleOptions
-from lark.exceptions import UnexpectedInput
+from .tree import Tree
+from .grammar import RuleOptions
+from .exceptions import UnexpectedInput
 
 
 class Grammar:

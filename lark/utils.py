@@ -12,6 +12,15 @@ logger.addHandler(logging.StreamHandler())
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
 
+if sys.version_info[0]>2:
+    from abc import ABC, abstractmethod
+else:
+    from abc import ABCMeta, abstractmethod
+    class ABC(object): # Provide Python27 compatibility
+        __slots__ = ()
+        __metclass__ = ABCMeta
+
+
 Py36 = (sys.version_info[:2] >= (3, 6))
 
 NO_VALUE = object()

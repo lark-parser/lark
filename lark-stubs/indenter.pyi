@@ -3,9 +3,10 @@
 from typing import Tuple, List, Iterator, Optional
 from abc import ABC, abstractmethod
 from .lexer import Token
+from .lark import PostLex
 
 
-class Indenter(ABC):
+class Indenter(PostLex, ABC):
     paren_level: Optional[int]
     indent_level: Optional[List[int]]
 
@@ -13,13 +14,6 @@ class Indenter(ABC):
         ...
 
     def handle_NL(self, token: Token) -> Iterator[Token]:
-        ...
-
-    def process(self, stream: Iterator[Token]) -> Iterator[Token]:
-        ...
-
-    @property
-    def always_accept(self) -> Tuple[str]:
         ...
 
     @property

@@ -1,13 +1,14 @@
 "Provides Indentation services for languages with indentation similar to Python"
 
 from .exceptions import LarkError
+from .lark import PostLex
 from .lexer import Token
 
 ###{standalone
 class DedentError(LarkError):
     pass
 
-class Indenter:
+class Indenter(PostLex):
     def __init__(self):
         self.paren_level = None
         self.indent_level = None

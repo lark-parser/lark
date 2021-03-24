@@ -174,7 +174,7 @@ class TestParsers(unittest.TestCase):
         for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
             class T(base):
                 def add(self, children):
-                    return sum(children)
+                    return sum(children if isinstance(children, list) else children.children)
                 
                 def NUM(self, token):
                     return int(token)

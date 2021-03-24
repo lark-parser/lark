@@ -367,7 +367,6 @@ class Lark(Serialize):
         return TraditionalLexer(lexer_conf)
 
     def _prepare_callbacks(self):
-        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self._callbacks = {}
         # we don't need these callbacks if we aren't building a tree
         if self.options.ambiguity != 'forest':
@@ -382,6 +381,7 @@ class Lark(Serialize):
         self._callbacks.update(_get_lexer_callbacks(self.options.transformer, self.terminals))
 
     def _build_parser(self):
+        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self._prepare_callbacks()
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
@@ -421,16 +421,21 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
+        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
+        self.lexer_conf = self.parser_class.deserialize_lexer_conf( # We need the terminals list to for _prepare_callbacks
+            data['parser'], 
+            memo, 
+            self.options)
+        self.terminals = self.lexer_conf.terminals
+        self._terminals_dict = {t.name: t for t in self.terminals}
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
             data['parser'],
             memo,
+            self.lexer_conf,
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
         )
-        self.lexer_conf = self.parser.lexer_conf
-        self.terminals = self.parser.lexer_conf.terminals
-        self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 
     @classmethod

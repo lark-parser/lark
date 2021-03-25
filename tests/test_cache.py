@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
-from lark import Lark, Tree
+from lark import Lark, Tree, Transformer
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
@@ -13,6 +13,13 @@ except ImportError:
     from io import BytesIO as StringIO
 
 import tempfile, os
+
+class TestT(Transformer):
+    def add(self, children):
+        return sum(children if isinstance(children, list) else children.children)
+
+    def NUM(self, token):
+        return int(token)
 
 
 class MockFile(StringIO):
@@ -92,6 +99,25 @@ class TestCache(TestCase):
             Lark(g, parser="lalr", debug=True, cache=True)
             parser = Lark(g, parser="lalr", debug=True, cache=True)
             assert parser.options.options['debug']
+
+            # Test inline transformer (tree-less)
+            mock_fs.files = {}
+            g = """
+            start: add+
+            add: NUM "+" NUM
+            NUM: /\d+/
+            %ignore " "
+            """
+            text = "1+2 3+4"
+            expected = Tree('start', [3, 7])
+
+            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True)
+            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True)
+            assert len(mock_fs.files) == 1
+            res1 = parser.parse(text)
+            res2 = TestT().transform( Lark(g, parser="lalr", cache=True).parse(text) )
+            assert res1 == res2
+
         finally:
             lark_module.FS = fs
 

@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import sys
 from unittest import TestCase, main
 
 from lark import Lark, Tree, Transformer
@@ -11,15 +10,6 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import BytesIO as StringIO
-
-import tempfile, os
-
-class TestT(Transformer):
-    def add(self, children):
-        return sum(children if isinstance(children, list) else children.children)
-
-    def NUM(self, token):
-        return int(token)
 
 
 class MockFile(StringIO):

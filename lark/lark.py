@@ -343,10 +343,10 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = {}
-        lexer_callbacks.update(self.options.lexer_callbacks)
-
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
+        self.lexer_conf = LexerConf(
+                self.terminals, re_module, self.ignore_tokens, self.options.postlex,
+                self.options.lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes
+            )
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -383,14 +383,14 @@ class Lark(Serialize):
                     self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
                     self.options.maybe_placeholders
                 )
-            self._callbacks.update(self._parse_tree_builder.create_callback(self.options.transformer))
+            self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
         self._callbacks.update(_get_lexer_callbacks(self.options.transformer, self.terminals))
 
     def _build_parser(self):
-        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self._prepare_callbacks()
+        parser_class = get_frontend(self.options.parser, self.options.lexer)
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
-        return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+        return parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
         """Saves the instance into the given file object
@@ -408,6 +408,16 @@ class Lark(Serialize):
         """
         inst = cls.__new__(cls)
         return inst._load(f)
+
+    def _deserialize_lexer_conf(self, data, memo, options):
+        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
+        lexer_conf.callbacks = options.lexer_callbacks or {}
+        lexer_conf.re_module = regex if options.regex else re
+        lexer_conf.use_bytes = options.use_bytes
+        lexer_conf.g_regex_flags = options.g_regex_flags
+        lexer_conf.skip_validation = True
+        lexer_conf.postlex = options.postlex
+        return lexer_conf
 
     def _load(self, f, **kwargs):
         if isinstance(f, dict):
@@ -427,15 +437,12 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
-        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self.lexer_conf = self.parser_class.deserialize_lexer_conf( # We need the terminals list to for _prepare_callbacks
-            data['parser'], 
-            memo, 
-            self.options)
+        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
         self.terminals = self.lexer_conf.terminals
-        self._terminals_dict = {t.name: t for t in self.terminals}
         self._prepare_callbacks()
-        self.parser = self.parser_class.deserialize(
+        self._terminals_dict = {t.name: t for t in self.terminals}
+        self.parser = parser_class.deserialize(
             data['parser'],
             memo,
             self.lexer_conf,

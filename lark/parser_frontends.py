@@ -38,19 +38,6 @@ class MakeParsingFrontend:
         parser_conf.parser_type = self.parser_type
         lexer_conf.lexer_type = self.lexer_type
         return ParsingFrontend(lexer_conf, parser_conf, options)
-    
-    @classmethod
-    def deserialize_lexer_conf(cls, data, memo, options):
-        # We need lexer_conf earley to have the terminals that we need to produce the callback list for paser_conf
-        # So we split deserialize into two methods
-        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
-        lexer_conf.callbacks = options.lexer_callbacks or {}
-        lexer_conf.re_module = regex if options.regex else re
-        lexer_conf.use_bytes = options.use_bytes
-        lexer_conf.g_regex_flags = options.g_regex_flags
-        lexer_conf.skip_validation = True
-        lexer_conf.postlex = options.postlex
-        return lexer_conf
 
     @classmethod
     def deserialize(cls, data, memo, lexer_conf, callbacks, options):

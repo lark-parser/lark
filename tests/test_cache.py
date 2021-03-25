@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
-from lark import Lark, Tree
+from lark import Lark, Tree, Transformer
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
@@ -48,6 +48,18 @@ class CustomLexer(Lexer):
             yield Token('A', obj)
 
 
+class TestT(Transformer):
+    def add(self, children):
+        return sum(children if isinstance(children, list) else children.children)
+
+    def NUM(self, token):
+        return int(token)
+
+
+def append_zero(t):
+    return t.update(value=t.value + '0')
+
+
 class TestCache(TestCase):
     def setUp(self):
         pass
@@ -73,7 +85,7 @@ class TestCache(TestCase):
             parser = Lark(g, parser='lalr', cache=True)
             assert parser.parse('a') == Tree('start', [])
 
-            parser = Lark(g+' "b"', parser='lalr', cache=True)
+            parser = Lark(g + ' "b"', parser='lalr', cache=True)
             assert len(mock_fs.files) == 2
             assert parser.parse('ab') == Tree('start', [])
 
@@ -92,9 +104,30 @@ class TestCache(TestCase):
             Lark(g, parser="lalr", debug=True, cache=True)
             parser = Lark(g, parser="lalr", debug=True, cache=True)
             assert parser.options.options['debug']
+
+            # Test inline transformer (tree-less) & lexer_callbacks
+            mock_fs.files = {}
+            g = """
+            start: add+
+            add: NUM "+" NUM
+            NUM: /\d+/
+            %ignore " "
+            """
+            text = "1+2 3+4"
+            expected = Tree('start', [30, 70])
+
+            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+            res0 = parser.parse(text)
+            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+            assert len(mock_fs.files) == 1
+            res1 = parser.parse(text)
+            res2 = TestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
+            assert res0 == res1 == res2 == expected
+
+
+
         finally:
             lark_module.FS = fs
-
 
 
 if __name__ == '__main__':

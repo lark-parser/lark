@@ -56,7 +56,6 @@ EXTRACT_STANDALONE_FILES = [
     'utils.py',
     'tree.py',
     'visitors.py',
-    'indenter.py',
     'grammar.py',
     'lexer.py',
     'common.py',
@@ -65,6 +64,7 @@ EXTRACT_STANDALONE_FILES = [
     'parsers/lalr_analysis.py',
     'parser_frontends.py',
     'lark.py',
+    'indenter.py',
 ]
 
 def extract_sections(lines):

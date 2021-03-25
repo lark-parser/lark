@@ -72,6 +72,7 @@ class ParsingFrontend(Serialize):
         lexer_type = lexer_conf.lexer_type
         self.skip_lexer = False
         if lexer_type in ('dynamic', 'dynamic_complete'):
+            assert lexer_conf.postlex is None
             self.skip_lexer = True
             return
 

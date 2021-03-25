@@ -7,3 +7,8 @@ class RuleOptions:
     priority: int
     template_source: Optional[str]
     empty_indices: Tuple[bool, ...]
+
+
+class Symbol:
+    name: str
+    is_term: bool

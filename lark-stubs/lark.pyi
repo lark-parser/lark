@@ -65,7 +65,7 @@ class Lark:
         grammar: Union[Grammar, str, IO[str]],
         *,
         start: Union[None, str, List[str]] = "start",
-        parser: Literal["earley", "lalr", "cyk"] = "auto",
+        parser: Literal["earley", "lalr", "cyk", "auto"] = "auto",
         lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]] = "auto",
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,

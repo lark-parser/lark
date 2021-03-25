@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+
+
 from lark.exceptions import ConfigurationError, assert_config
 
 import sys, os, pickle, hashlib
@@ -6,7 +8,7 @@ from io import open
 import tempfile
 from warnings import warn
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod
 from .load_grammar import load_grammar, FromPackageLoader, Grammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -191,6 +193,14 @@ _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
+class PostLex(ABC):
+    @abstractmethod
+    def process(self, stream):
+        return stream
+
+    always_accept = ()
+
+
 class Lark(Serialize):
     """Main interface for the library.
 
@@ -288,7 +298,12 @@ class Lark(Serialize):
             if self.options.parser == 'lalr':
                 self.options.lexer = 'contextual'
             elif self.options.parser == 'earley':
-                self.options.lexer = 'dynamic'
+                if self.options.postlex is not None:
+                    logger.info("postlex can't be used with the dynamic lexer, so we use standard instead. "
+                                "Consider using lalr with contextual instead of earley")
+                    self.options.lexer = 'standard'
+                else:
+                    self.options.lexer = 'dynamic'
             elif self.options.parser == 'cyk':
                 self.options.lexer = 'standard'
             else:
@@ -298,6 +313,8 @@ class Lark(Serialize):
             assert issubclass(lexer, Lexer)     # XXX Is this really important? Maybe just ensure interface compliance
         else:
             assert_config(lexer, ('standard', 'contextual', 'dynamic', 'dynamic_complete'))
+            if self.options.postlex is not None and 'dynamic' in lexer:
+                raise ConfigurationError("Can't use postlex with a dynamic lexer. Use standard or contextual instead")
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':

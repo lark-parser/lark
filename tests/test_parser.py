@@ -10,7 +10,7 @@ from copy import copy, deepcopy
 
 from lark.utils import Py36, isascii
 
-from lark import Token
+from lark import Token, Transformer_NonRecursive
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -34,7 +34,7 @@ from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
-from lark.visitors import Transformer, Transformer_InPlace, v_args
+from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 from lark.indenter import Indenter
@@ -161,6 +161,28 @@ class TestParsers(unittest.TestCase):
         p = Lark(g, parser='lalr', transformer=T())
         r = p.parse("x")
         self.assertEqual( r.children, ["X!"] )
+
+    def test_visit_tokens2(self):
+        g = """
+        start: add+
+        add: NUM "+" NUM
+        NUM: /\d+/
+        %ignore " "
+        """
+        text = "1+2 3+4"
+        expected = Tree('start', [3, 7])
+        for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
+            class T(base):
+                def add(self, children):
+                    return sum(children if isinstance(children, list) else children.children)
+                
+                def NUM(self, token):
+                    return int(token)
+                
+            
+            parser = Lark(g, parser='lalr', transformer=T())
+            result = parser.parse(text)
+            self.assertEqual(result, expected)
 
     def test_vargs_meta(self):
 

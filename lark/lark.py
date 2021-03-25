@@ -343,9 +343,7 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
-                           if self.options.transformer
-                           else {})
+        lexer_callbacks = {}
         lexer_callbacks.update(self.options.lexer_callbacks)
 
         self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
@@ -375,8 +373,7 @@ class Lark(Serialize):
         return TraditionalLexer(lexer_conf)
 
     def _prepare_callbacks(self):
-        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self._callbacks = None
+        self._callbacks = {}
         # we don't need these callbacks if we aren't building a tree
         if self.options.ambiguity != 'forest':
             self._parse_tree_builder = ParseTreeBuilder(
@@ -386,9 +383,11 @@ class Lark(Serialize):
                     self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
                     self.options.maybe_placeholders
                 )
-            self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
+            self._callbacks.update(self._parse_tree_builder.create_callback(self.options.transformer))
+        self._callbacks.update(_get_lexer_callbacks(self.options.transformer, self.terminals))
 
     def _build_parser(self):
+        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
         self._prepare_callbacks()
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
@@ -428,16 +427,21 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
+        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
+        self.lexer_conf = self.parser_class.deserialize_lexer_conf( # We need the terminals list to for _prepare_callbacks
+            data['parser'], 
+            memo, 
+            self.options)
+        self.terminals = self.lexer_conf.terminals
+        self._terminals_dict = {t.name: t for t in self.terminals}
         self._prepare_callbacks()
         self.parser = self.parser_class.deserialize(
             data['parser'],
             memo,
+            self.lexer_conf,
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
         )
-        self.lexer_conf = self.parser.lexer_conf
-        self.terminals = self.parser.lexer_conf.terminals
-        self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 
     @classmethod

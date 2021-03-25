@@ -743,7 +743,10 @@ def resolve_term_references(term_dict):
                     if item.type == 'RULE':
                         raise GrammarError("Rules aren't allowed inside terminals (%s in %s)" % (item, name))
                     if item.type == 'TERMINAL':
-                        term_value = term_dict[item]
+                        try:
+                            term_value = term_dict[item]
+                        except KeyError:
+                            raise GrammarError("Terminal used but not defined: %s" % item)
                         assert term_value is not None
                         exp.children[0] = term_value
                         changed = True

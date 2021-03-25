@@ -185,7 +185,7 @@ class LarkOptions(Serialize):
 
 # Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
 # These option are only used outside of `load_grammar`.
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
 
 _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')

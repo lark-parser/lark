@@ -40,21 +40,10 @@ class MakeParsingFrontend:
         return ParsingFrontend(lexer_conf, parser_conf, options)
 
     @classmethod
-    def deserialize(cls, data, memo, callbacks, options):
-        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
+    def deserialize(cls, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
         parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks
-
-        terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
-
-        lexer_conf.callbacks = _get_lexer_callbacks(options.transformer, terminals)
-        lexer_conf.re_module = regex if options.regex else re
-        lexer_conf.use_bytes = options.use_bytes
-        lexer_conf.g_regex_flags = options.g_regex_flags
-        lexer_conf.skip_validation = True
-        lexer_conf.postlex = options.postlex
-
         return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
 

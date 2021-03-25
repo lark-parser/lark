@@ -185,7 +185,7 @@ class LarkOptions(Serialize):
 
 # Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
 # These option are only used outside of `load_grammar`.
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
 
 _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
@@ -343,12 +343,10 @@ class Lark(Serialize):
                     rule.options.priority = None
 
         # TODO Deprecate lexer_callbacks?
-        lexer_callbacks = (_get_lexer_callbacks(self.options.transformer, self.terminals)
-                           if self.options.transformer
-                           else {})
-        lexer_callbacks.update(self.options.lexer_callbacks)
-
-        self.lexer_conf = LexerConf(self.terminals, re_module, self.ignore_tokens, self.options.postlex, lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes)
+        self.lexer_conf = LexerConf(
+                self.terminals, re_module, self.ignore_tokens, self.options.postlex,
+                self.options.lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes
+            )
 
         if self.options.parser:
             self.parser = self._build_parser()
@@ -375,8 +373,7 @@ class Lark(Serialize):
         return TraditionalLexer(lexer_conf)
 
     def _prepare_callbacks(self):
-        self.parser_class = get_frontend(self.options.parser, self.options.lexer)
-        self._callbacks = None
+        self._callbacks = {}
         # we don't need these callbacks if we aren't building a tree
         if self.options.ambiguity != 'forest':
             self._parse_tree_builder = ParseTreeBuilder(
@@ -387,11 +384,13 @@ class Lark(Serialize):
                     self.options.maybe_placeholders
                 )
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
+        self._callbacks.update(_get_lexer_callbacks(self.options.transformer, self.terminals))
 
     def _build_parser(self):
         self._prepare_callbacks()
+        parser_class = get_frontend(self.options.parser, self.options.lexer)
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
-        return self.parser_class(self.lexer_conf, parser_conf, options=self.options)
+        return parser_class(self.lexer_conf, parser_conf, options=self.options)
 
     def save(self, f):
         """Saves the instance into the given file object
@@ -409,6 +408,16 @@ class Lark(Serialize):
         """
         inst = cls.__new__(cls)
         return inst._load(f)
+
+    def _deserialize_lexer_conf(self, data, memo, options):
+        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
+        lexer_conf.callbacks = options.lexer_callbacks or {}
+        lexer_conf.re_module = regex if options.regex else re
+        lexer_conf.use_bytes = options.use_bytes
+        lexer_conf.g_regex_flags = options.g_regex_flags
+        lexer_conf.skip_validation = True
+        lexer_conf.postlex = options.postlex
+        return lexer_conf
 
     def _load(self, f, **kwargs):
         if isinstance(f, dict):
@@ -428,16 +437,18 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
+        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
+        self.terminals = self.lexer_conf.terminals
         self._prepare_callbacks()
-        self.parser = self.parser_class.deserialize(
+        self._terminals_dict = {t.name: t for t in self.terminals}
+        self.parser = parser_class.deserialize(
             data['parser'],
             memo,
+            self.lexer_conf,
             self._callbacks,
             self.options,  # Not all, but multiple attributes are used
         )
-        self.lexer_conf = self.parser.lexer_conf
-        self.terminals = self.parser.lexer_conf.terminals
-        self._terminals_dict = {t.name: t for t in self.terminals}
         return self
 
     @classmethod

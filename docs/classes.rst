@@ -38,7 +38,7 @@ Tree
 ----
 
 .. autoclass:: lark.Tree
-    :members: pretty, find_pred, find_data, iter_subtrees,
+    :members: pretty, find_pred, find_data, iter_subtrees, scan_values,
         iter_subtrees_topdown
 
 Token

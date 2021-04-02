@@ -470,7 +470,7 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-class LexerThread:
+class LexerThread(object):
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
 
     def __init__(self, lexer, text):

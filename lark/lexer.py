@@ -186,6 +186,13 @@ class LineCounter:
         self.column = 1
         self.line_start_pos = 0
 
+    def __eq__(self, other):
+        if not isinstance(other, LineCounter):
+            return False
+        return (self.newline_char == other.newline_char and self.char_pos == other.char_pos
+            and self.line == other.line and self.column == other.column
+            and self.line_start_pos == other.line_start_pos)
+
     def feed(self, token, test_newline=True):
         """Consume a token and calculate the new line & column.
 
@@ -405,6 +412,13 @@ class LexerState:
         self.line_ctr = line_ctr
         self.last_token = last_token
 
+    def __eq__(self, other):
+        if not isinstance(other, LexerState):
+            return False
+
+        return (self.text == other.text and self.line_ctr == other.line_ctr
+            and self.last_token == other.last_token)
+
     def __copy__(self):
         return type(self)(self.text, copy(self.line_ctr), self.last_token)
 
@@ -465,4 +479,12 @@ class LexerThread:
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
+
+    def __copy__(self):
+        copied = type(self)(
+            self.lexer,
+            ''
+        )
+        copied.state = copy(self.state)
+        return copied
 ###}

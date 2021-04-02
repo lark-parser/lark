@@ -2408,9 +2408,18 @@ def _make_parser_test(LEXER, PARSER):
                     # Skip comma
                     return True
                 elif e.token.type == 'SIGNED_NUMBER':
+                    # Make a copy and ensure it is properly made
+                    puppet_copy = e.puppet.copy()
+                    assert puppet_copy.parser_state == e.puppet.parser_state
+                    assert puppet_copy.lexer_state.state == e.puppet.lexer_state.state
+                    assert puppet_copy.parser_state is not e.puppet.parser_state
+                    assert puppet_copy.lexer_state.state is not e.puppet.lexer_state.state
+                    assert puppet_copy.lexer_state.state.line_ctr is not e.puppet.lexer_state.state.line_ctr
+
                     # Try to feed a comma and retry the number
                     e.puppet.feed_token(Token('COMMA', ','))
                     e.puppet.feed_token(e.token)
+
                     return True
 
                 # Unhandled error. Will stop parse and raise exception

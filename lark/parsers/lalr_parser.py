@@ -95,7 +95,7 @@ class ParserState(object):
     def __eq__(self, other):
         if not isinstance(other, ParserState):
             return False
-        return self.position == other.position
+        return len(self.state_stack) == len(other.state_stack) and self.position == other.position
 
     def __copy__(self):
         return type(self)(

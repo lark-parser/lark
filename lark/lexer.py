@@ -404,7 +404,7 @@ class TraditionalLexer(Lexer):
         raise EOFError(self)
 
 
-class LexerState:
+class LexerState(object):
     __slots__ = 'text', 'line_ctr', 'last_token'
 
     def __init__(self, text, line_ctr, last_token=None):

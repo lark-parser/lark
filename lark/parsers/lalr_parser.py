@@ -94,8 +94,8 @@ class ParserState(object):
     # Necessary for match_examples() to work
     def __eq__(self, other):
         if not isinstance(other, ParserState):
-            return False
-        return self.position == other.position
+            return NotImplemented
+        return len(self.state_stack) == len(other.state_stack) and self.position == other.position
 
     def __copy__(self):
         return type(self)(

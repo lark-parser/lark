@@ -186,6 +186,12 @@ class LineCounter:
         self.column = 1
         self.line_start_pos = 0
 
+    def __eq__(self, other):
+        if not isinstance(other, LineCounter):
+            return NotImplemented
+
+        return self.char_pos == other.char_pos and self.newline_char == other.newline_char
+
     def feed(self, token, test_newline=True):
         """Consume a token and calculate the new line & column.
 
@@ -397,13 +403,19 @@ class TraditionalLexer(Lexer):
         raise EOFError(self)
 
 
-class LexerState:
+class LexerState(object):
     __slots__ = 'text', 'line_ctr', 'last_token'
 
     def __init__(self, text, line_ctr, last_token=None):
         self.text = text
         self.line_ctr = line_ctr
         self.last_token = last_token
+
+    def __eq__(self, other):
+        if not isinstance(other, LexerState):
+            return NotImplemented
+
+        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
 
     def __copy__(self):
         return type(self)(self.text, copy(self.line_ctr), self.last_token)
@@ -456,7 +468,7 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-class LexerThread:
+class LexerThread(object):
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
 
     def __init__(self, lexer, text):
@@ -465,4 +477,10 @@ class LexerThread:
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
+
+    def __copy__(self):
+        copied = object.__new__(LexerThread)
+        copied.lexer = self.lexer
+        copied.state = copy(self.state)
+        return copied
 ###}

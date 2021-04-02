@@ -188,7 +188,7 @@ class LineCounter:
 
     def __eq__(self, other):
         if not isinstance(other, LineCounter):
-            return False
+            return NotImplemented
         return (self.newline_char == other.newline_char and self.char_pos == other.char_pos
             and self.line == other.line and self.column == other.column
             and self.line_start_pos == other.line_start_pos)
@@ -414,7 +414,7 @@ class LexerState(object):
 
     def __eq__(self, other):
         if not isinstance(other, LexerState):
-            return False
+            return NotImplemented
 
         return (self.text == other.text and self.line_ctr == other.line_ctr
             and self.last_token == other.last_token)
@@ -481,10 +481,8 @@ class LexerThread(object):
         return self.lexer.lex(self.state, parser_state)
 
     def __copy__(self):
-        copied = type(self)(
-            self.lexer,
-            ''
-        )
+        copied = object.__new__(LexerThread)
+        copied.lexer = self.lexer
         copied.state = copy(self.state)
         return copied
 ###}

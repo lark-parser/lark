@@ -189,9 +189,8 @@ class LineCounter:
     def __eq__(self, other):
         if not isinstance(other, LineCounter):
             return NotImplemented
-        return (self.newline_char == other.newline_char and self.char_pos == other.char_pos
-            and self.line == other.line and self.column == other.column
-            and self.line_start_pos == other.line_start_pos)
+
+        return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
     def feed(self, token, test_newline=True):
         """Consume a token and calculate the new line & column.
@@ -416,8 +415,7 @@ class LexerState(object):
         if not isinstance(other, LexerState):
             return NotImplemented
 
-        return (self.text == other.text and self.line_ctr == other.line_ctr
-            and self.last_token == other.last_token)
+        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
 
     def __copy__(self):
         return type(self)(self.text, copy(self.line_ctr), self.last_token)

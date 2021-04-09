@@ -281,9 +281,20 @@ def combine_alternatives(lists):
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
 
 
+try:
+    import atomicwrites
+except ImportError:
+    atomicwrites = None
+
 class FS:
-    open = open
     exists = os.path.exists
+    
+    @staticmethod
+    def open(name, mode="r", **kwargs):
+        if atomicwrites and "w" in mode:
+            return atomicwrites.atomic_write(name, mode=mode, override=True, **kwargs)
+        else:
+            return open(name, mode, **kwargs)
 
 
 def isascii(s):

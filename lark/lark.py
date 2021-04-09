@@ -23,6 +23,11 @@ try:
     import regex
 except ImportError:
     regex = None
+try:
+    import atomicwrites
+except ImportError:
+    atomicwrites = None
+
 
 ###{standalone
 
@@ -100,7 +105,11 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
-
+    safe_cache
+            Controls how exactly the cache is saved & verified
+            - False: simple read/write, no extend file checking
+            - True: use atomicwrites if available and check if any of the imported files were modified
+            - "atomic": same as True, but require atomicwrites to be installed
     **=== End Options ===**
     """
     if __doc__:
@@ -136,6 +145,7 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
+        'safe_cache': True,
     }
 
     def __init__(self, options_dict):
@@ -145,7 +155,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes', 'safe_cache'):
                     value = bool(value)
             else:
                 value = default
@@ -258,11 +268,15 @@ class Lark(Serialize):
             if self.options.cache:
                 if self.options.parser != 'lalr':
                     raise ConfigurationError("cache only works with parser='lalr' for now")
+                
+                if self.options.safe_cache == "atomic":
+                    if not atomicwrites:
+                        raise ConfigurationError("safe_cache='atomic' requires atomicwrites to be installed")
 
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
-                s = grammar + options_str + __version__
+                s = grammar + options_str + __version__ + str(sys.version_info[:2])
                 cache_md5 = hashlib.md5(s.encode()).hexdigest()
 
                 if isinstance(self.options.cache, STRING_TYPE):
@@ -270,7 +284,7 @@ class Lark(Serialize):
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % cache_md5
+                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s_%s_%s.tmp' % (cache_md5, *sys.version_info[:2])
 
                 if FS.exists(cache_fn):
                     logger.debug('Loading grammar from cache: %s', cache_fn)

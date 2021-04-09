@@ -1,5 +1,5 @@
 """Parses and creates Grammar objects"""
-
+import hashlib
 import os.path
 import sys
 from copy import copy, deepcopy
@@ -931,9 +931,10 @@ def _mangle_exp(exp, mangle):
 
 
 class GrammarBuilder:
-    def __init__(self, global_keep_all_tokens=False, import_paths=None):
+    def __init__(self, global_keep_all_tokens=False, import_paths=None, used_files=None):
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
+        self.used_files = used_files or {}
 
         self._definitions = {}
         self._ignore_names = []
@@ -1150,10 +1151,14 @@ class GrammarBuilder:
                     joined_path = os.path.join(source, grammar_path)
                     with open(joined_path, encoding='utf8') as f:
                         text = f.read()
+                    h = hashlib.md5(text.encode('utf8')).hexdigest()
+                    if self.used_files.get(joined_path, h) != h:
+                        raise RuntimeError("Grammar file was changed during importing")
+                    self.used_files[joined_path] = h
             except IOError:
                 continue
             else:
-                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths)
+                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
                 gb.load_grammar(text, joined_path, mangle)
                 gb._remove_unused(map(mangle, aliases))
                 for name in gb._definitions:
@@ -1213,4 +1218,4 @@ class GrammarBuilder:
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
     builder.load_grammar(grammar, source)
-    return builder.build()
+    return builder.build(), builder.used_files

@@ -14,8 +14,9 @@ class Grammar:
 class GrammarBuilder:
     global_keep_all_tokens: bool
     import_paths: List[Union[str, Callable]]
+    used_files: Dict[str, str]
 
-    def __init__(self, global_keep_all_tokens: bool = False, import_paths: List[Union[str, Callable]] = None) -> None: ...
+    def __init__(self, global_keep_all_tokens: bool = False, import_paths: List[Union[str, Callable]] = None, used_files: Dict[str, str]=None) -> None: ...
 
     def load_grammar(self, grammar_text: str, grammar_name: str = ..., mangle: Callable[[str], str] = None) -> None: ...
 

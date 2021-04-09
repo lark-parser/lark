@@ -58,71 +58,84 @@ def append_zero(t):
 
 
 class TestCache(TestCase):
+    g = '''start: "a"'''
+
+    
     def setUp(self):
-        pass
+        self.fs = lark_module.FS
+        self.mock_fs = MockFS()
+        lark_module.FS = self.mock_fs
+        
+    def tearDown(self):
+        self.mock_fs.files = {}
+        lark_module.FS = self.fs
 
     def test_simple(self):
-        g = '''start: "a"'''
-
         fn = "bla"
 
-        fs = lark_module.FS
-        mock_fs = MockFS()
-        try:
-            lark_module.FS = mock_fs
-            Lark(g, parser='lalr', cache=fn)
-            assert fn in mock_fs.files
-            parser = Lark(g, parser='lalr', cache=fn)
-            assert parser.parse('a') == Tree('start', [])
+        Lark(self.g, parser='lalr', cache=fn)
+        assert fn in self.mock_fs.files
+        parser = Lark(self.g, parser='lalr', cache=fn)
+        assert parser.parse('a') == Tree('start', [])
+    
+    def test_automatic_naming(self):
+        assert len(self.mock_fs.files) == 0
+        Lark(self.g, parser='lalr', cache=True)
+        assert len(self.mock_fs.files) == 1
+        parser = Lark(self.g, parser='lalr', cache=True)
+        assert parser.parse('a') == Tree('start', [])
 
-            mock_fs.files = {}
-            assert len(mock_fs.files) == 0
-            Lark(g, parser='lalr', cache=True)
-            assert len(mock_fs.files) == 1
-            parser = Lark(g, parser='lalr', cache=True)
-            assert parser.parse('a') == Tree('start', [])
+        parser = Lark(self.g + ' "b"', parser='lalr', cache=True)
+        assert len(self.mock_fs.files) == 2
+        assert parser.parse('ab') == Tree('start', [])
 
-            parser = Lark(g + ' "b"', parser='lalr', cache=True)
-            assert len(mock_fs.files) == 2
-            assert parser.parse('ab') == Tree('start', [])
+        parser = Lark(self.g, parser='lalr', cache=True)
+        assert parser.parse('a') == Tree('start', [])
+    
+    def test_custom_lexer(self):
 
-            parser = Lark(g, parser='lalr', cache=True)
-            assert parser.parse('a') == Tree('start', [])
+        parser = Lark(self.g, parser='lalr', lexer=CustomLexer, cache=True)
+        parser = Lark(self.g, parser='lalr', lexer=CustomLexer, cache=True)
+        assert len(self.mock_fs.files) == 1
+        assert parser.parse('a') == Tree('start', [])
 
-            # Test with custom lexer
-            mock_fs.files = {}
-            parser = Lark(g, parser='lalr', lexer=CustomLexer, cache=True)
-            parser = Lark(g, parser='lalr', lexer=CustomLexer, cache=True)
-            assert len(mock_fs.files) == 1
-            assert parser.parse('a') == Tree('start', [])
+    def test_options(self):
+        # Test options persistence
+        Lark(self.g, parser="lalr", debug=True, cache=True)
+        parser = Lark(self.g, parser="lalr", debug=True, cache=True)
+        assert parser.options.options['debug']
+    
+    def test_inline(self):
+        # Test inline transformer (tree-less) & lexer_callbacks
+        g = """
+        start: add+
+        add: NUM "+" NUM
+        NUM: /\d+/
+        %ignore " "
+        """
+        text = "1+2 3+4"
+        expected = Tree('start', [30, 70])
 
-            # Test options persistence
-            mock_fs.files = {}
-            Lark(g, parser="lalr", debug=True, cache=True)
-            parser = Lark(g, parser="lalr", debug=True, cache=True)
-            assert parser.options.options['debug']
-
-            # Test inline transformer (tree-less) & lexer_callbacks
-            mock_fs.files = {}
-            g = """
-            start: add+
-            add: NUM "+" NUM
-            NUM: /\d+/
-            %ignore " "
-            """
-            text = "1+2 3+4"
-            expected = Tree('start', [30, 70])
-
-            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
-            res0 = parser.parse(text)
-            parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
-            assert len(mock_fs.files) == 1
-            res1 = parser.parse(text)
-            res2 = TestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
-            assert res0 == res1 == res2 == expected
-
-        finally:
-            lark_module.FS = fs
+        parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+        res0 = parser.parse(text)
+        parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+        assert len(self.mock_fs.files) == 1
+        res1 = parser.parse(text)
+        res2 = TestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
+        assert res0 == res1 == res2 == expected
+    
+    def test_imports(self):
+        g = """
+        %import .grammars.ab (startab, expr)
+        """
+        parser = Lark(g, parser='lalr', start='startab', cache=True)
+        assert len(self.mock_fs.files) == 1
+        parser = Lark(g, parser='lalr', start='startab', cache=True)
+        assert len(self.mock_fs.files) == 1
+        res = parser.parse("ab")
+        self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
+        
+        
 
 
 if __name__ == '__main__':

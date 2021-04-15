@@ -2404,32 +2404,32 @@ def _make_parser_test(LEXER, PARSER):
                 B: "b"
             ''')
             
-            puppet = g.get_puppet()
+            ip = g.parse_interactive()
 
-            self.assertRaises(UnexpectedToken, puppet.feed_eof)
-            self.assertRaises(TypeError, puppet.exhaust_lexer)
-            puppet.feed_token(Token('A', 'a'))
-            res = puppet.feed_eof()
+            self.assertRaises(UnexpectedToken, ip.feed_eof)
+            self.assertRaises(TypeError, ip.exhaust_lexer)
+            ip.feed_token(Token('A', 'a'))
+            res = ip.feed_eof()
             self.assertEqual(res, Tree('start', ['a']))
 
-            puppet = g.get_puppet("ab")
+            ip = g.parse_interactive("ab")
 
-            puppet.exhaust_lexer()
+            ip.exhaust_lexer()
 
-            puppet_copy = puppet.copy()
-            self.assertEqual(puppet_copy.parser_state, puppet.parser_state)
-            self.assertEqual(puppet_copy.lexer_state.state, puppet.lexer_state.state)
-            self.assertIsNot(puppet_copy.parser_state, puppet.parser_state)
-            self.assertIsNot(puppet_copy.lexer_state.state, puppet.lexer_state.state)
-            self.assertIsNot(puppet_copy.lexer_state.state.line_ctr, puppet.lexer_state.state.line_ctr)
+            ip_copy = ip.copy()
+            self.assertEqual(ip_copy.parser_state, ip.parser_state)
+            self.assertEqual(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.parser_state, ip.parser_state)
+            self.assertIsNot(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.lexer_state.state.line_ctr, ip.lexer_state.state.line_ctr)
 
-            res = puppet.feed_eof(puppet.lexer_state.state.last_token)
+            res = ip.feed_eof(ip.lexer_state.state.last_token)
             self.assertEqual(res, Tree('start', ['a', 'b']))
-            self.assertRaises(UnexpectedToken ,puppet.feed_eof)
+            self.assertRaises(UnexpectedToken ,ip.feed_eof)
             
-            self.assertRaises(UnexpectedToken, puppet_copy.feed_token, Token('A', 'a'))
-            puppet_copy.feed_token(Token('B', 'b'))
-            res = puppet_copy.feed_eof()
+            self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
+            ip_copy.feed_token(Token('B', 'b'))
+            res = ip_copy.feed_eof()
             self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
         @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")

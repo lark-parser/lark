@@ -91,7 +91,7 @@ class Lark:
     def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
         ...
 
-    def get_puppet(self, text: str = None, start: Optional[str] = None) -> ParserPuppet:
+    def parse_interactive(self, text: str = None, start: Optional[str] = None) -> ParserPuppet:
         ...
 
     @classmethod

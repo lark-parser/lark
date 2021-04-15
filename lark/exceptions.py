@@ -1,3 +1,5 @@
+from warnings import warn
+
 from .utils import STRING_TYPE, logger, NO_VALUE
 
 
@@ -177,14 +179,16 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
 
 class UnexpectedToken(ParseError, UnexpectedInput):
-    """When the parser throws UnexpectedToken, it instantiates a puppet
-    with its internal state. Users can then interactively set the puppet to
-    the desired puppet state, and resume regular parsing.
+    """An exception that is raised by the parser, when the token it received
+    doesn't match any valid step forward.
 
-    see: :ref:`ParserPuppet`.
+    The parser provides an interactive instance through `interactive_parser`,
+    which is initialized to the point of failture, and can be used for debugging and error handling.
+
+    see: :ref:`InteractiveParser`.
     """
 
-    def __init__(self, token, expected, considered_rules=None, state=None, puppet=None, terminals_by_name=None, token_history=None):
+    def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -195,7 +199,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self.expected = expected  # XXX deprecate? `accepts` is better
         self._accepts = NO_VALUE
         self.considered_rules = considered_rules
-        self.puppet = puppet
+        self.interactive_parser = interactive_parser
         self._terminals_by_name = terminals_by_name
         self.token_history = token_history
 
@@ -204,7 +208,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     @property
     def accepts(self):
         if self._accepts is NO_VALUE:
-            self._accepts = self.puppet and self.puppet.accepts()
+            self._accepts = self.interactive_parser and self.interactive_parser.accepts()
         return self._accepts
 
     def __str__(self):
@@ -214,6 +218,12 @@ class UnexpectedToken(ParseError, UnexpectedInput):
             message += "Previous tokens: %r\n" % self.token_history
 
         return message
+
+    @property
+    def puppet(self):
+        warn("UnexpectedToken.puppet attribute has been renamed to interactive_parser", DeprecationWarning)
+        return self.interactive_parser
+    
 
 
 class VisitError(LarkError):

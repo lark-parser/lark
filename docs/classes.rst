@@ -66,10 +66,11 @@ UnexpectedInput
 
 .. autoclass:: lark.exceptions.UnexpectedCharacters
 
-.. _parserpuppet:
+InteractiveParser
+-----------------
 
-ParserPuppet
-------------
+.. autoclass:: lark.parsers.lalr_puppet.InteractiveParser
+    :members: choices, feed_token, copy, pretty, resume_parse, exhaust_lexer, accepts
 
-.. autoclass:: lark.parsers.lalr_puppet.ParserPuppet
-    :members: choices, feed_token, copy, pretty, resume_parse
+.. autoclass:: lark.parsers.lalr_puppet.ImmutableInteractiveParser
+    :members: choices, feed_token, copy, pretty, resume_parse, exhaust_lexer, accepts

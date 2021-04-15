@@ -106,12 +106,12 @@ class ParsingFrontend(Serialize):
         kw = {} if on_error is None else {'on_error': on_error}
         return self.parser.parse(stream, start, **kw)
     
-    def get_puppet(self, text=None, start=None):
+    def parse_interactive(self, text=None, start=None):
         start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
-            raise ConfigurationError("Can only create a Puppet for parser='lalr' at the moment.")
+            raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
-        return self.parser.get_puppet(stream, start)
+        return self.parser.parse_interactive(stream, start)
 
 
 def get_frontend(parser, lexer):

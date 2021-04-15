@@ -866,7 +866,7 @@ def _error_repr(error):
     else:
         return str(error)
 
-def _search_puppet(puppet, predicate):
+def _search_interactive_parser(interactive_parser, predicate):
     def expand(node):
         path, p = node
         for choice in p.choices():
@@ -878,7 +878,7 @@ def _search_puppet(puppet, predicate):
             else:
                 yield path + (choice,), new_p
 
-    for path, p in bfs_all_unique([((), puppet)], expand):
+    for path, p in bfs_all_unique([((), interactive_parser)], expand):
         if predicate(p):
             return path, p
 
@@ -888,10 +888,10 @@ def find_grammar_errors(text, start='start'):
         errors.append((e, _error_repr(e)))
 
         # recover to a new line
-        token_path, _ = _search_puppet(e.puppet.as_immutable(), lambda p: '_NL' in p.choices())
+        token_path, _ = _search_interactive_parser(e.interactive_parser.as_immutable(), lambda p: '_NL' in p.choices())
         for token_type in token_path:
-            e.puppet.feed_token(Token(token_type, ''))
-        e.puppet.feed_token(Token('_NL', '\n'))
+            e.interactive_parser.feed_token(Token(token_type, ''))
+        e.interactive_parser.feed_token(Token('_NL', '\n'))
         return True
 
     _tree = _get_parser().parse(text + '\n', start, on_error=on_error)
@@ -900,7 +900,7 @@ def find_grammar_errors(text, start='start'):
     errors = [el[0] for el in errors_by_line.values()]      # already sorted
 
     for e in errors:
-        e[0].puppet = None
+        e[0].interactive_parser = None
     return errors
 
 

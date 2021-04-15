@@ -532,8 +532,8 @@ class Lark(Serialize):
         "Get information about a terminal"
         return self._terminals_dict[name]
     
-    def get_puppet(self, text=None, start=None):
-        return self.parser.get_puppet(text, start=start)
+    def parse_interactive(self, text=None, start=None):
+        return self.parser.parse_interactive(text, start=start)
 
     def parse(self, text, start=None, on_error=None):
         """Parse the given text, according to the options provided.

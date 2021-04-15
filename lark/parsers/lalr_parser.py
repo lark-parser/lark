@@ -8,7 +8,7 @@ from ..lexer import Token
 from ..utils import Serialize
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
-from .lalr_puppet import ParserPuppet
+from .lalr_puppet import InteractiveParser
 from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 ###{standalone
@@ -33,9 +33,8 @@ class LALR_Parser(Serialize):
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
     
-    def get_puppet(self, lexer, start):
-        return self.parser.get_puppet(lexer, start)
-        
+    def parse_interactive(self, lexer, start):
+        return self.parser.parse(lexer, start, start_interactive=True)
 
     def parse(self, lexer, start, on_error=None):
         try:
@@ -46,7 +45,7 @@ class LALR_Parser(Serialize):
 
             while True:
                 if isinstance(e, UnexpectedCharacters):
-                    s = e.puppet.lexer_state.state
+                    s = e.interactive_parser.lexer_state.state
                     p = s.line_ctr.char_pos
 
                 if not on_error(e):
@@ -58,9 +57,11 @@ class LALR_Parser(Serialize):
                         s.line_ctr.feed(s.text[p:p+1])
 
                 try:
-                    return e.puppet.resume_parse()
+                    return e.interactive_parser.resume_parse()
                 except UnexpectedToken as e2:
-                    if isinstance(e, UnexpectedToken) and e.token.type == e2.token.type == '$END' and e.puppet == e2.puppet:
+                    if (isinstance(e, UnexpectedToken)
+                        and e.token.type == e2.token.type == '$END'
+                        and e.interactive_parser == e2.interactive_parser):
                         # Prevent infinite loop
                         raise e2
                     e = e2
@@ -125,7 +126,7 @@ class ParserState(object):
                 action, arg = states[state][token.type]
             except KeyError:
                 expected = {s for s in states[state].keys() if s.isupper()}
-                raise UnexpectedToken(token, expected, state=self, puppet=None)
+                raise UnexpectedToken(token, expected, state=self, interactive_parser=None)
 
             assert arg != end_state
 
@@ -162,14 +163,11 @@ class _Parser(object):
         self.callbacks = callbacks
         self.debug = debug
 
-    def get_puppet(self, lexer, start, value_stack=None, state_stack=None):
+    def parse(self, lexer, start, value_stack=None, state_stack=None, start_interactive=False):
         parse_conf = ParseConf(self.parse_table, self.callbacks, start)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
-        return ParserPuppet(self, parser_state, parser_state.lexer)
-        
-    def parse(self, lexer, start, value_stack=None, state_stack=None):
-        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
-        parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
+        if start_interactive:
+            return InteractiveParser(self, parser_state, parser_state.lexer)
         return self.parse_from_state(parser_state)
     
 
@@ -184,7 +182,7 @@ class _Parser(object):
             return state.feed_token(token, True)
         except UnexpectedInput as e:
             try:
-                e.puppet = ParserPuppet(self, state, state.lexer)
+                e.interactive_parser = InteractiveParser(self, state, state.lexer)
             except NameError:
                 pass
             raise e

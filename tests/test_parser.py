@@ -2395,6 +2395,42 @@ def _make_parser_test(LEXER, PARSER):
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
+        @unittest.skipIf(PARSER!='lalr', "Puppet is only implemented for LALR at the moment")
+        def test_parser_puppet(self):
+
+            g = _Lark(r'''
+                start: A+ B*
+                A: "a"
+                B: "b"
+            ''')
+            
+            puppet = g.get_puppet()
+
+            self.assertRaises(UnexpectedToken, puppet.feed_eof)
+            self.assertRaises(TypeError, puppet.exhaust_lexer)
+            puppet.feed_token(Token('A', 'a'))
+            res = puppet.feed_eof()
+            self.assertEqual(res, Tree('start', ['a']))
+
+            puppet = g.get_puppet("ab")
+
+            puppet.exhaust_lexer()
+
+            puppet_copy = puppet.copy()
+            self.assertEqual(puppet_copy.parser_state, puppet.parser_state)
+            self.assertEqual(puppet_copy.lexer_state.state, puppet.lexer_state.state)
+            self.assertIsNot(puppet_copy.parser_state, puppet.parser_state)
+            self.assertIsNot(puppet_copy.lexer_state.state, puppet.lexer_state.state)
+            self.assertIsNot(puppet_copy.lexer_state.state.line_ctr, puppet.lexer_state.state.line_ctr)
+
+            res = puppet.feed_eof(puppet.lexer_state.state.last_token)
+            self.assertEqual(res, Tree('start', ['a', 'b']))
+            self.assertRaises(UnexpectedToken ,puppet.feed_eof)
+            
+            self.assertRaises(UnexpectedToken, puppet_copy.feed_token, Token('A', 'a'))
+            puppet_copy.feed_token(Token('B', 'b'))
+            res = puppet_copy.feed_eof()
+            self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
         @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
         def test_error_with_puppet(self):
@@ -2408,14 +2444,6 @@ def _make_parser_test(LEXER, PARSER):
                     # Skip comma
                     return True
                 elif e.token.type == 'SIGNED_NUMBER':
-                    # Make a copy and ensure it is properly made
-                    puppet_copy = e.puppet.copy()
-                    assert puppet_copy.parser_state == e.puppet.parser_state
-                    assert puppet_copy.lexer_state.state == e.puppet.lexer_state.state
-                    assert puppet_copy.parser_state is not e.puppet.parser_state
-                    assert puppet_copy.lexer_state.state is not e.puppet.lexer_state.state
-                    assert puppet_copy.lexer_state.state.line_ctr is not e.puppet.lexer_state.state.line_ctr
-
                     # Try to feed a comma and retry the number
                     e.puppet.feed_token(Token('COMMA', ','))
                     e.puppet.feed_token(e.token)

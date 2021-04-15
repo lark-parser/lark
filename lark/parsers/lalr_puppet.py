@@ -23,6 +23,19 @@ class ParserPuppet(object):
         Note that ``token`` has to be an instance of ``Token``.
         """
         return self.parser_state.feed_token(token, token.type == '$END')
+    
+    def exhaust_lexer(self):
+        """Try to feed the rest of the lexer state into the puppet.
+        
+        Note that this modifies the puppet in place and does not feed an '$END' Token"""
+        for token in self.lexer_state.lex(self.parser_state):
+            self.parser_state.feed_token(token)
+    
+    def feed_eof(self, last_token=None):
+        """Feed a '$END' Token. Borrows from 'last_token' if given."""
+        eof = Token.new_borrow_pos('$END', '', last_token) if last_token is not None else Token('$END', '', 0, 1, 1)
+        return self.feed_token(eof)
+
 
     def __copy__(self):
         """Create a new puppet with a separate state.
@@ -94,3 +107,12 @@ class ImmutableParserPuppet(ParserPuppet):
         c = copy(self)
         c.result = ParserPuppet.feed_token(c, token)
         return c
+
+    def exhaust_lexer(self):
+        """Try to feed the rest of the lexer state into the puppet.
+
+        Note that this returns a new ImmutableParserPuppet and does not feed an '$END' Token"""
+        res = copy(self)
+        for token in res.lexer_state.lex(res.parser_state):
+            res = res.parser_state.feed_token(token)
+        return res

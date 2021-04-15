@@ -32,6 +32,10 @@ class LALR_Parser(Serialize):
 
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
+    
+    def get_puppet(self, lexer, start):
+        return self.parser.get_puppet(lexer, start)
+        
 
     def parse(self, lexer, start, on_error=None):
         try:
@@ -158,10 +162,16 @@ class _Parser(object):
         self.callbacks = callbacks
         self.debug = debug
 
+    def get_puppet(self, lexer, start, value_stack=None, state_stack=None):
+        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
+        parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
+        return ParserPuppet(self, parser_state, parser_state.lexer)
+        
     def parse(self, lexer, start, value_stack=None, state_stack=None):
         parse_conf = ParseConf(self.parse_table, self.callbacks, start)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         return self.parse_from_state(parser_state)
+    
 
     def parse_from_state(self, state):
         # Main LALR-parser loop

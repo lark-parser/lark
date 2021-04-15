@@ -2,8 +2,10 @@
 
 from typing import (
     TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
-    Literal, Protocol, Tuple,  Iterable,
+    Literal, Protocol, Tuple, Iterable,
 )
+
+from .parsers.lalr_puppet import ParserPuppet
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
@@ -11,6 +13,7 @@ from .exceptions import UnexpectedInput
 from .load_grammar import Grammar
 
 _T = TypeVar('_T')
+
 
 class PostLex(Protocol):
 
@@ -45,6 +48,7 @@ class PackageResource(object):
     path: str
 
     def __init__(self, pkg_name: str, path: str): ...
+
 
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
@@ -85,6 +89,9 @@ class Lark:
         ...
 
     def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
+        ...
+
+    def get_puppet(self, text: str = None, start: Optional[str] = None) -> ParserPuppet:
         ...
 
     @classmethod

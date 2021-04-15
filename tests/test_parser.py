@@ -2395,8 +2395,8 @@ def _make_parser_test(LEXER, PARSER):
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @unittest.skipIf(PARSER!='lalr', "Puppet is only implemented for LALR at the moment")
-        def test_parser_puppet(self):
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser is only implemented for LALR at the moment")
+        def test_parser_interactive_parser(self):
 
             g = _Lark(r'''
                 start: A+ B*
@@ -2432,8 +2432,8 @@ def _make_parser_test(LEXER, PARSER):
             res = ip_copy.feed_eof()
             self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
-        @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
-        def test_error_with_puppet(self):
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser error handling only works with LALR for now")
+        def test_error_with_interactive_parser(self):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):
                     # Skip bad character
@@ -2445,8 +2445,8 @@ def _make_parser_test(LEXER, PARSER):
                     return True
                 elif e.token.type == 'SIGNED_NUMBER':
                     # Try to feed a comma and retry the number
-                    e.puppet.feed_token(Token('COMMA', ','))
-                    e.puppet.feed_token(e.token)
+                    e.interactive_parser.feed_token(Token('COMMA', ','))
+                    e.interactive_parser.feed_token(e.token)
 
                     return True
 

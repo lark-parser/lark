@@ -5,7 +5,7 @@ from typing import (
     Literal, Protocol, Tuple, Iterable,
 )
 
-from .parsers.lalr_puppet import ParserPuppet
+from .parsers.lalr_interactive_parser import InteractiveParser
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
@@ -91,7 +91,7 @@ class Lark:
     def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
         ...
 
-    def parse_interactive(self, text: str = None, start: Optional[str] = None) -> ParserPuppet:
+    def parse_interactive(self, text: str = None, start: Optional[str] = None) -> InteractiveParser:
         ...
 
     @classmethod

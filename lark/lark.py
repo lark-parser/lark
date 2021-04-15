@@ -531,6 +531,9 @@ class Lark(Serialize):
     def get_terminal(self, name):
         "Get information about a terminal"
         return self._terminals_dict[name]
+    
+    def parse_interactive(self, text=None, start=None):
+        return self.parser.parse_interactive(text, start=start)
 
     def parse(self, text, start=None, on_error=None):
         """Parse the given text, according to the options provided.
@@ -539,7 +542,7 @@ class Lark(Serialize):
             text (str): Text to be parsed.
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
-                LALR only. See examples/advanced/error_puppet.py for an example of how to use on_error.
+                LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
 
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the

@@ -2395,9 +2395,45 @@ def _make_parser_test(LEXER, PARSER):
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser is only implemented for LALR at the moment")
+        def test_parser_interactive_parser(self):
 
-        @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
-        def test_error_with_puppet(self):
+            g = _Lark(r'''
+                start: A+ B*
+                A: "a"
+                B: "b"
+            ''')
+            
+            ip = g.parse_interactive()
+
+            self.assertRaises(UnexpectedToken, ip.feed_eof)
+            self.assertRaises(TypeError, ip.exhaust_lexer)
+            ip.feed_token(Token('A', 'a'))
+            res = ip.feed_eof()
+            self.assertEqual(res, Tree('start', ['a']))
+
+            ip = g.parse_interactive("ab")
+
+            ip.exhaust_lexer()
+
+            ip_copy = ip.copy()
+            self.assertEqual(ip_copy.parser_state, ip.parser_state)
+            self.assertEqual(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.parser_state, ip.parser_state)
+            self.assertIsNot(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.lexer_state.state.line_ctr, ip.lexer_state.state.line_ctr)
+
+            res = ip.feed_eof(ip.lexer_state.state.last_token)
+            self.assertEqual(res, Tree('start', ['a', 'b']))
+            self.assertRaises(UnexpectedToken ,ip.feed_eof)
+            
+            self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
+            ip_copy.feed_token(Token('B', 'b'))
+            res = ip_copy.feed_eof()
+            self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
+
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser error handling only works with LALR for now")
+        def test_error_with_interactive_parser(self):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):
                     # Skip bad character
@@ -2408,17 +2444,9 @@ def _make_parser_test(LEXER, PARSER):
                     # Skip comma
                     return True
                 elif e.token.type == 'SIGNED_NUMBER':
-                    # Make a copy and ensure it is properly made
-                    puppet_copy = e.puppet.copy()
-                    assert puppet_copy.parser_state == e.puppet.parser_state
-                    assert puppet_copy.lexer_state.state == e.puppet.lexer_state.state
-                    assert puppet_copy.parser_state is not e.puppet.parser_state
-                    assert puppet_copy.lexer_state.state is not e.puppet.lexer_state.state
-                    assert puppet_copy.lexer_state.state.line_ctr is not e.puppet.lexer_state.state.line_ctr
-
                     # Try to feed a comma and retry the number
-                    e.puppet.feed_token(Token('COMMA', ','))
-                    e.puppet.feed_token(e.token)
+                    e.interactive_parser.feed_token(Token('COMMA', ','))
+                    e.interactive_parser.feed_token(e.token)
 
                     return True
 

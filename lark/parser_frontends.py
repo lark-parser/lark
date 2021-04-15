@@ -89,18 +89,29 @@ class ParsingFrontend(Serialize):
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
-
-
-    def parse(self, text, start=None, on_error=None):
+    
+    def _verify_start(self, start=None):
         if start is None:
             start = self.parser_conf.start
             if len(start) > 1:
                 raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
             start ,= start
+        elif start not in self.parser_conf.start:
+            raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
+        return start
 
+    def parse(self, text, start=None, on_error=None):
+        start = self._verify_start(start)
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
         kw = {} if on_error is None else {'on_error': on_error}
         return self.parser.parse(stream, start, **kw)
+    
+    def parse_interactive(self, text=None, start=None):
+        start = self._verify_start(start)
+        if self.parser_conf.parser_type != 'lalr':
+            raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
+        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        return self.parser.parse_interactive(stream, start)
 
 
 def get_frontend(parser, lexer):

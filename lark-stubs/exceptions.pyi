@@ -3,7 +3,7 @@
 from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
 from .tree import Tree
 from .lexer import Token
-from .parsers.lalr_puppet import ParserPuppet
+from .parsers.lalr_interactive_parser import InteractiveParser
 
 class LarkError(Exception):
     pass
@@ -52,7 +52,7 @@ class UnexpectedInput(LarkError):
 class UnexpectedToken(ParseError, UnexpectedInput):
     expected: Set[str]
     considered_rules: Set[str]
-    puppet: ParserPuppet
+    interactive_parser: InteractiveParser
     accepts: Set[str]
 
 class UnexpectedCharacters(LexError, UnexpectedInput):

@@ -185,7 +185,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     The parser provides an interactive instance through `interactive_parser`,
     which is initialized to the point of failture, and can be used for debugging and error handling.
 
-    see: :ref:`InteractiveParser`.
+    see: ``InteractiveParser``.
     """
 
     def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):

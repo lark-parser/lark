@@ -8,8 +8,8 @@ from io import open
 import tempfile
 from warnings import warn
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod, verify_used_files
-from .load_grammar import load_grammar, FromPackageLoader, Grammar
+from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files
 from .tree import Tree
 from .common import LexerConf, ParserConf
 

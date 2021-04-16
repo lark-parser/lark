@@ -298,15 +298,6 @@ class FS:
         else:
             return open(name, mode, **kwargs)
 
-def verify_used_files(file_hashes):
-    for path, old in file_hashes.items():
-        with open(path, encoding='utf8') as f:
-            text = f.read()
-        current = hashlib.md5(text.encode()).hexdigest()
-        if old != current:
-            logger.info("File %r changed, rebuilding Parser" % path)
-            return False
-    return True
 
 
 def isascii(s):

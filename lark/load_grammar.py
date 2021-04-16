@@ -2,6 +2,7 @@
 import hashlib
 import os.path
 import sys
+from collections import namedtuple
 from copy import copy, deepcopy
 from io import open
 import pkgutil
@@ -673,19 +674,7 @@ class Grammar:
         return terminals, compiled_rules, self.ignore
 
 
-class PackageResource(object):
-    """
-    Represents a path inside a Package. Used by `FromPackageLoader`
-    """
-    def __init__(self, pkg_name, path):
-        self.pkg_name = pkg_name
-        self.path = path
-
-    def __str__(self):
-        return "<%s: %s>" % (self.pkg_name, self.path)
-
-    def __repr__(self):
-        return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.path)
+PackageResource = namedtuple('PackageResource', 'pkg_name path')
 
 
 class FromPackageLoader(object):
@@ -1151,13 +1140,14 @@ class GrammarBuilder:
                     joined_path = os.path.join(source, grammar_path)
                     with open(joined_path, encoding='utf8') as f:
                         text = f.read()
-                    h = hashlib.md5(text.encode('utf8')).hexdigest()
-                    if self.used_files.get(joined_path, h) != h:
-                        raise RuntimeError("Grammar file was changed during importing")
-                    self.used_files[joined_path] = h
             except IOError:
                 continue
             else:
+                h = hashlib.md5(text.encode('utf8')).hexdigest()
+                if self.used_files.get(joined_path, h) != h:
+                    raise RuntimeError("Grammar file was changed during importing")
+                self.used_files[joined_path] = h
+                    
                 gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
                 gb.load_grammar(text, joined_path, mangle)
                 gb._remove_unused(map(mangle, aliases))
@@ -1214,6 +1204,25 @@ class GrammarBuilder:
                 rule_defs.append((name, params, exp, options))
         # resolve_term_references(term_defs)
         return Grammar(rule_defs, term_defs, self._ignore_names)
+
+
+def verify_used_files(file_hashes):
+    for path, old in file_hashes.items():
+        text = None
+        if isinstance(path, str) and os.path.exists(path):
+            with open(path, encoding='utf8') as f:
+                text = f.read()
+        elif isinstance(path, PackageResource):
+            with suppress(IOError):
+                text = pkgutil.get_data(*path).decode('utf-8')
+        if text is None: # We don't know how to load the path. ignore it.
+            continue
+            
+        current = hashlib.md5(text.encode()).hexdigest()
+        if old != current:
+            logger.info("File %r changed, rebuilding Parser" % path)
+            return False
+    return True
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)

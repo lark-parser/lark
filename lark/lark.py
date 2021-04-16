@@ -105,11 +105,6 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
-    safe_cache
-            Controls how exactly the cache is saved & verified
-            - False: simple read/write, no extend file checking
-            - True: use atomicwrites if available and check if any of the imported files were modified
-            - "atomic": same as True, but require atomicwrites to be installed
     **=== End Options ===**
     """
     if __doc__:
@@ -145,7 +140,6 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
-        'safe_cache': True,
     }
 
     def __init__(self, options_dict):
@@ -155,7 +149,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes', 'safe_cache'):
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
                     value = bool(value)
             else:
                 value = default
@@ -268,10 +262,6 @@ class Lark(Serialize):
             if self.options.cache:
                 if self.options.parser != 'lalr':
                     raise ConfigurationError("cache only works with parser='lalr' for now")
-                
-                if self.options.safe_cache == "atomic":
-                    if not atomicwrites:
-                        raise ConfigurationError("safe_cache='atomic' requires atomicwrites to be installed")
 
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
@@ -294,19 +284,18 @@ class Lark(Serialize):
                         del options[name]
                     with FS.open(cache_fn, 'rb') as f:
                         file_md5 = f.readline().rstrip(b'\n')
-                        if file_md5 == cache_md5.encode('utf8'):
-                            if (not self.options.safe_cache) or verify_used_files(pickle.load(f)):
-                                old_options = self.options
-                                try:
-                                    self._load(f, **options)
-                                except Exception: # We should probably narrow done which errors we catch here.
-                                    logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
-                                    
-                                    # In theory, the Lark instance might have been messed up by the call to `_load`.
-                                    # In practice the only relevant thing that might have been overriden should be `options`
-                                    self.options = old_options
-                                else:
-                                    return
+                        if file_md5 == cache_md5.encode('utf8') and verify_used_files(pickle.load(f)):
+                            old_options = self.options
+                            try:
+                                self._load(f, **options)
+                            except Exception: # We should probably narrow done which errors we catch here.
+                                logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
+                                
+                                # In theory, the Lark instance might have been messed up by the call to `_load`.
+                                # In practice the only relevant thing that might have been overriden should be `options`
+                                self.options = old_options
+                            else:
+                                return
 
 
             # Parse the grammar file and compose the grammars
@@ -396,8 +385,7 @@ class Lark(Serialize):
             logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
                 f.write(b'%s\n' % cache_md5.encode('utf8'))
-                if self.options.safe_cache:
-                    pickle.dump(used_files, f)
+                pickle.dump(used_files, f)
                 self.save(f)
 
     if __doc__:

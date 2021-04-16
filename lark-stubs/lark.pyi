@@ -38,7 +38,6 @@ class LarkOptions:
     use_bytes: bool
     import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]
     source_path: Optional[str]
-    safe_cache: Literal[False, True, "atomic"]
 
 
 class PackageResource(object):
@@ -82,7 +81,6 @@ class Lark:
         use_bytes: bool = False,
         import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]] = ...,
         source_path: Optional[str]=None,
-        safe_cache: Literal[False, True, "atomic"]=True,
     ):
         ...
 

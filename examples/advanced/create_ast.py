@@ -1,6 +1,9 @@
 """
     This example demonstrates how to transform a parse-tree into an AST using `lark.ast_utils`.
 
+    create_transformer() collects every subclass of `Ast` subclass from the module,
+    and creates a Lark transformer that builds the AST with no extra code.
+
     This example only works with Python 3.
 """
 
@@ -17,9 +20,11 @@ this_module = sys.modules[__name__]
 #   Define AST
 #
 class _Ast(ast_utils.Ast):
+    # This will be skipped by create_transformer(), because it starts with an underscore
     pass
 
 class _Statement(_Ast):
+    # This will be skipped by create_transformer(), because it starts with an underscore
     pass
 
 @dataclass
@@ -32,6 +37,7 @@ class Name(_Ast):
 
 @dataclass
 class CodeBlock(_Ast, ast_utils.AsList):
+    # Corresponds to code_block in the grammar
     statements: List[_Statement]
 
 @dataclass
@@ -41,6 +47,7 @@ class If(_Statement):
 
 @dataclass
 class SetVar(_Statement):
+    # Corresponds to set_var in the grammar
     name: str
     value: Value
 
@@ -50,6 +57,8 @@ class Print(_Statement):
 
 
 class ToAst(Transformer):
+    # Define extra transformation functions, for rules that don't correspond to an AST class.
+
     def STRING(self, s):
         # Remove quotation marks
         return s[1:-1]
@@ -89,7 +98,8 @@ parser = Lark("""
 transformer = ast_utils.create_transformer(this_module, ToAst())
 
 def parse(text):
-    return transformer.transform(parser.parse(text))
+    tree = parser.parse(text)
+    return transformer.transform(tree)
 
 #
 #   Test

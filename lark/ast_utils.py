@@ -33,9 +33,10 @@ def create_transformer(ast_module, transformer=None):
     For each class, we create a corresponding rule in the transformer, with a matching name.
     CamelCase names will be converted into snake_case. Example: "CodeBlock" -> "code_block".
 
+    Classes starting with an underscore (`_`) will be skipped.
+
     Parameters:
         ast_module - A Python module containing all the subclasses of `ast_utils.Ast`
-                     Classes starting with an underscore (`_`) will be skipped.
         transformer (Optional[Transformer]) - An initial transformer. Its attributes may be overwritten.
     """
     t = transformer or Transformer()

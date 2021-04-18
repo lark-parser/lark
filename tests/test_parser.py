@@ -2467,6 +2467,43 @@ def _make_parser_test(LEXER, PARSER):
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
 
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol(self):
+            grammar = """
+                start: a b?
+                a: "a" $
+                b: "b"
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('a'), Tree('start', [Tree('a', [])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
+
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol2(self):
+            grammar = """
+                start: (a|b)+
+                a: "a" ("x"|$)
+                b: "b"
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('axa'), Tree('start', [Tree('a', []),Tree('a', [])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')
+
+        @unittest.skipIf(PARSER!='lalr', "Using the end symbol currently works for LALR only")
+        def test_end_symbol3(self):
+            grammar = """
+                start: (a|b)+
+                a: "a" (e|"x")
+                b: "b"
+                e: $
+            """
+            parser = _Lark(grammar)
+
+            self.assertEqual(parser.parse('axa'), Tree('start', [Tree('a', []),Tree('a', [Tree('e', [])])]))
+            self.assertRaises(UnexpectedInput, parser.parse, 'ab')            
+
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME

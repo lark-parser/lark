@@ -1,6 +1,7 @@
 from .utils import Serialize
 
 ###{standalone
+END = '__$END$__'
 
 class Symbol(Serialize):
     __slots__ = ('name',)

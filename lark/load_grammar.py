@@ -14,7 +14,7 @@ from .lexer import Token, TerminalDef, PatternStr, PatternRE
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, END
 from .utils import classify, suppress, dedup_list, Str
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError
 
@@ -99,6 +99,7 @@ TERMINALS = {
     '_EXTEND': r'%extend',
     '_IMPORT': r'%import',
     'NUMBER': r'[+-]?\d+',
+    '_END': r'\$',
 }
 
 RULES = {
@@ -135,6 +136,7 @@ RULES = {
               'nonterminal',
               'literal',
               'range',
+              'end',
               'template_usage'],
 
     'terminal': ['TERMINAL'],
@@ -144,6 +146,7 @@ RULES = {
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
+    'end': ['_END'],
 
     'template_usage': ['RULE _LBRACE _template_args _RBRACE'],
     '_template_args': ['value',
@@ -791,6 +794,9 @@ class PrepareGrammar(Transformer_InPlace):
     def nonterminal(self, name):
         return name
 
+    def end(self):
+        return Token('TERMINAL', END)
+
 
 def _find_used_symbols(tree):
     assert tree.data == 'expansions'
@@ -937,6 +943,8 @@ class GrammarBuilder:
 
         self._definitions = {}
         self._ignore_names = []
+
+        self._definitions[END] = ((), Tree('expansions', []), self._check_options(END, None))
 
     def _is_term(self, name):
         # Imported terminals are of the form `Path__to__Grammar__file__TERMINAL_NAME`

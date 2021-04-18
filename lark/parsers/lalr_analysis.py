@@ -12,7 +12,7 @@ from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
-from ..grammar import Rule
+from ..grammar import Rule, END
 
 ###{standalone
 
@@ -177,7 +177,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             assert(len(root.kernel) == 1)
             for rp in root.kernel:
                 assert(rp.index == 0)
-                self.directly_reads[(root, rp.next)] = set([ Terminal('$END') ])
+                self.directly_reads[(root, rp.next)] = set([ Terminal(END) ])
 
         for state in self.lr0_states:
             seen = set()

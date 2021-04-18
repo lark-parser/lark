@@ -4,6 +4,7 @@ from copy import copy
 
 from .. import Token
 from ..exceptions import UnexpectedToken
+from ..grammar import END
 
 
 class InteractiveParser(object):
@@ -21,18 +22,18 @@ class InteractiveParser(object):
 
         Note that ``token`` has to be an instance of ``Token``.
         """
-        return self.parser_state.feed_token(token, token.type == '$END')
+        return self.parser_state.feed_token(token, token.type == END)
     
     def exhaust_lexer(self):
         """Try to feed the rest of the lexer state into the interactive parser.
         
-        Note that this modifies the instance in place and does not feed an '$END' Token"""
+        Note that this modifies the instance in place and does not feed an END Token"""
         for token in self.lexer_state.lex(self.parser_state):
             self.parser_state.feed_token(token)
     
     def feed_eof(self, last_token=None):
-        """Feed a '$END' Token. Borrows from 'last_token' if given."""
-        eof = Token.new_borrow_pos('$END', '', last_token) if last_token is not None else Token('$END', '', 0, 1, 1)
+        """Feed a END Token. Borrows from 'last_token' if given."""
+        eof = Token.new_borrow_pos(END, '', last_token) if last_token is not None else Token(END, '', 0, 1, 1)
         return self.feed_token(eof)
 
 
@@ -116,7 +117,7 @@ class ImmutableInteractiveParser(InteractiveParser):
     def exhaust_lexer(self):
         """Try to feed the rest of the lexer state into the parser.
 
-        Note that this returns a new ImmutableInteractiveParser and does not feed an '$END' Token"""
+        Note that this returns a new ImmutableInteractiveParser and does not feed an END Token"""
         cursor = self.as_mutable()
         cursor.exhaust_lexer()
         return cursor.as_immutable()

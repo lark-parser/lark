@@ -136,7 +136,11 @@ class ParserState(object):
                 # assert not is_end
                 state_stack.append(arg)
                 value_stack.append(token if token.type not in callbacks else callbacks[token.type](token))
-                return
+                if not is_end:
+                    return
+
+                 # If it's the end, keep feeding the same token until we get to a reduce
+                assert token.type == END
             else:
                 # reduce+shift as many times as necessary
                 rule = arg
@@ -180,10 +184,7 @@ class _Parser(object):
                 state.feed_token(token)
 
             token = Token.new_borrow_pos(END, '', token) if token else Token(END, '', 0, 1, 1)
-            while True:
-                x = state.feed_token(token, True)
-                if x is not None:
-                    return x
+            return state.feed_token(token, True)
         except UnexpectedInput as e:
             try:
                 e.interactive_parser = InteractiveParser(self, state, state.lexer)

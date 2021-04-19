@@ -17,7 +17,7 @@ setup(
     extras_require = {
         "regex": ["regex"],
         "nearley": ["js2py"],
-        "atomicwrites": ["atomicwrites"],
+        "atomic_cache": ["atomicwrites"],
     },
 
     package_data = {'': ['*.md', '*.lark'], 'lark-stubs': ['*.pyi']},

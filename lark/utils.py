@@ -294,7 +294,7 @@ class FS:
     @staticmethod
     def open(name, mode="r", **kwargs):
         if atomicwrites and "w" in mode:
-            return atomicwrites.atomic_write(name, mode=mode, override=True, **kwargs)
+            return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
         else:
             return open(name, mode, **kwargs)
 

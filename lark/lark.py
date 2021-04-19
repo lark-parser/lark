@@ -23,10 +23,6 @@ try:
     import regex
 except ImportError:
     regex = None
-try:
-    import atomicwrites
-except ImportError:
-    atomicwrites = None
 
 
 ###{standalone
@@ -283,19 +279,20 @@ class Lark(Serialize):
                     for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
                         del options[name]
                     with FS.open(cache_fn, 'rb') as f:
-                        file_md5 = f.readline().rstrip(b'\n')
-                        if file_md5 == cache_md5.encode('utf8') and verify_used_files(pickle.load(f)):
-                            old_options = self.options
-                            try:
-                                self._load(f, **options)
-                            except Exception: # We should probably narrow done which errors we catch here.
-                                logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
-                                
-                                # In theory, the Lark instance might have been messed up by the call to `_load`.
-                                # In practice the only relevant thing that might have been overriden should be `options`
-                                self.options = old_options
-                            else:
+                        old_options = self.options
+                        try:
+                            file_md5 = f.readline().rstrip(b'\n')
+                            cached_used_files = pickle.load(f)
+                            if file_md5 == cache_md5.encode('utf8') and verify_used_files(cached_used_files):
+                                cached_parser_data = pickle.load(f)
+                                self._load(cached_parser_data, **options)
                                 return
+                        except Exception: # We should probably narrow done which errors we catch here.
+                            logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
+                            
+                            # In theory, the Lark instance might have been messed up by the call to `_load`.
+                            # In practice the only relevant thing that might have been overriden should be `options`
+                            self.options = old_options
 
 
             # Parse the grammar file and compose the grammars

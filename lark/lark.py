@@ -9,7 +9,7 @@ import tempfile
 from warnings import warn
 
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod
-from .load_grammar import load_grammar, FromPackageLoader, Grammar
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -23,6 +23,11 @@ try:
     import regex
 except ImportError:
     regex = None
+try:
+    import atomicwrites
+except ImportError:
+    atomicwrites = None
+
 
 ###{standalone
 
@@ -100,7 +105,6 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
-
     **=== End Options ===**
     """
     if __doc__:
@@ -262,15 +266,16 @@ class Lark(Serialize):
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
-                s = grammar + options_str + __version__
-                cache_md5 = hashlib.md5(s.encode()).hexdigest()
+                s = grammar + options_str + __version__ + str(sys.version_info[:2])
+                cache_md5 = hashlib.md5(s.encode('utf8')).hexdigest()
 
                 if isinstance(self.options.cache, STRING_TYPE):
                     cache_fn = self.options.cache
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s.tmp' % cache_md5
+                    # Python2.7 doesn't support * syntax in tuples
+                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s_%s_%s.tmp' % ((cache_md5,) + sys.version_info[:2])
 
                 if FS.exists(cache_fn):
                     logger.debug('Loading grammar from cache: %s', cache_fn)
@@ -279,16 +284,22 @@ class Lark(Serialize):
                         del options[name]
                     with FS.open(cache_fn, 'rb') as f:
                         file_md5 = f.readline().rstrip(b'\n')
-                        if file_md5 == cache_md5.encode():
+                        if file_md5 == cache_md5.encode('utf8') and verify_used_files(pickle.load(f)):
+                            old_options = self.options
                             try:
                                 self._load(f, **options)
-                            except Exception:
-                                raise RuntimeError("Failed to load Lark from cache: %r. Try to delete the file and run again." % cache_fn)
-                            return
+                            except Exception: # We should probably narrow done which errors we catch here.
+                                logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
+                                
+                                # In theory, the Lark instance might have been messed up by the call to `_load`.
+                                # In practice the only relevant thing that might have been overriden should be `options`
+                                self.options = old_options
+                            else:
+                                return
 
 
             # Parse the grammar file and compose the grammars
-            self.grammar = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
         else:
             assert isinstance(grammar, Grammar)
             self.grammar = grammar
@@ -373,7 +384,8 @@ class Lark(Serialize):
         if cache_fn:
             logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
-                f.write(b'%s\n' % cache_md5.encode())
+                f.write(b'%s\n' % cache_md5.encode('utf8'))
+                pickle.dump(used_files, f)
                 self.save(f)
 
     if __doc__:

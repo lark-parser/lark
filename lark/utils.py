@@ -1,3 +1,4 @@
+import hashlib
 import unicodedata
 import os
 from functools import reduce
@@ -6,6 +7,7 @@ from collections import deque
 ###{standalone
 import sys, re
 import logging
+from io import open
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
@@ -281,9 +283,21 @@ def combine_alternatives(lists):
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
 
 
+try:
+    import atomicwrites
+except ImportError:
+    atomicwrites = None
+
 class FS:
-    open = open
     exists = os.path.exists
+    
+    @staticmethod
+    def open(name, mode="r", **kwargs):
+        if atomicwrites and "w" in mode:
+            return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
+        else:
+            return open(name, mode, **kwargs)
+
 
 
 def isascii(s):

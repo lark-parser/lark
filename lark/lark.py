@@ -381,7 +381,7 @@ class Lark(Serialize):
         if cache_fn:
             logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
-                f.write(b'%s\n' % cache_md5.encode('utf8'))
+                f.write(cache_md5.encode('utf8') + b'\n')
                 pickle.dump(used_files, f)
                 self.save(f)
 

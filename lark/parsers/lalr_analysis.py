@@ -261,11 +261,12 @@ class LALR_Analyzer(GrammarAnalyzer):
                         rules = [best[1]]
                     else:
                         reduce_reduce.append((state, la, rules))
-                if la in actions:
+                if la in actions and la.name != END:
                     if self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
                         logger.warning(' * %s', list(rules)[0])
                 else:
+                    # No shift found for la, or it's End Of Input, in which case Reduce should come before Shift.
                     actions[la] = (Reduce, list(rules)[0])
             m[state] = { k.name: v for k, v in actions.items() }
 

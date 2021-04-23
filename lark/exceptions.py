@@ -148,7 +148,7 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
-                 terminals_by_name=None):
+                 terminals_by_name=None, considered_rules=None):
         # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
@@ -158,6 +158,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
 
         self.allowed = allowed
         self.considered_tokens = considered_tokens
+        self.considered_rules = considered_rules
         self.token_history = token_history
 
         if isinstance(seq, bytes):
@@ -169,7 +170,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         super(UnexpectedCharacters, self).__init__()
 
     def __str__(self):
-        message = "No terminal defined for '%s' at line %d col %d" % (self.char, self.line, self.column)
+        message = "No terminal matches '%s' in the current parser context, at line %d col %d" % (self.char, self.line, self.column)
         message += '\n\n' + self._context
         if self.allowed:
             message += self._format_expected(self.allowed)

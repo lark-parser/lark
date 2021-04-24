@@ -1,4 +1,4 @@
-from .tool import standalone
+from .tools import standalone
 
 if __name__ == "__main__":
     standalone.main()

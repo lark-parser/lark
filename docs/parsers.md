@@ -42,15 +42,37 @@ Warning: This lexer can be much slower, especially for open-ended terminals such
 
 [LALR(1)](https://www.wikiwand.com/en/LALR_parser) is a very efficient, true-and-tested parsing algorithm. It's incredibly fast and requires very little memory. It can parse most programming languages (For example: Python and Java).
 
+LALR(1) stands for:
+
+- Left-to-right parsing order
+
+- Rightmost derivation, bottom-up
+
+- Lookahead of 1 token
+
 Lark comes with an efficient implementation that outperforms every other parsing library for Python (including PLY)
 
-Lark extends the traditional YACC-based architecture with a *contextual lexer*, which automatically provides feedback from the parser to the lexer, making the LALR(1) algorithm stronger than ever.
+Lark extends the traditional YACC-based architecture with a *contextual lexer*, which processes feedback from the parser, making the LALR(1) algorithm stronger than ever.
 
 The contextual lexer communicates with the parser, and uses the parser's lookahead prediction to narrow its choice of terminals. So at each point, the lexer only matches the subgroup of terminals that are legal at that parser state, instead of all of the terminals. It’s surprisingly effective at resolving common terminal collisions, and allows one to parse languages that LALR(1) was previously incapable of parsing.
 
 (If you're familiar with YACC, you can think of it as automatic lexer-states)
 
 This is an improvement to LALR(1) that is unique to Lark.
+
+### Grammar constraints in LALR(1)
+
+Due to having only a lookahead of one token, LALR is limited in its ability to choose between rules, when they both match the input.
+
+Tips for writing a conforming grammar:
+
+- Try to avoid writing different rules that can match the same sequence of characters.
+
+- For the best performance, prefer left-recursion over right-recursion.
+
+- Consider setting terminal priority only as a last resort.
+
+For a better understanding of these constraints, it's recommended to learn how a SLR parser works. SLR is very similar to LALR but much simpler.
 
 ## CYK Parser
 

@@ -37,7 +37,7 @@ Welcome to Lark's documentation!
    classes
    visitors
    forest
-   nearley
+   tools
 
 
 
@@ -102,7 +102,7 @@ Resources
    -  :doc:`visitors`
    -  :doc:`forest`
    -  :doc:`classes`
-   -  :doc:`nearley`
+   -  :doc:`tools`
    -  `Cheatsheet (PDF)`_
 
 -  Discussion

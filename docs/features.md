@@ -7,7 +7,7 @@
    - Implements a parse-aware lexer that provides a better power of expression than traditional LALR implementations (such as ply).
  - EBNF-inspired grammar, with extra features (See: [Grammar Reference](grammar.md))
  - Builds a parse-tree (AST) automagically based on the grammar
- - Stand-alone parser generator - create a small independent parser to embed in your project.
+ - Stand-alone parser generator - create a small independent parser to embed in your project. ([read more](tools.md))
  - Flexible error handling by using an interactive parser interface (LALR only)
  - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
@@ -24,7 +24,7 @@
 
   - Import rules and tokens from other Lark grammars, for code reuse and modularity.
   - Support for external regex module ([see here](classes.html#using-unicode-character-classes-with-regex))
-  - Import grammars from Nearley.js ([read more](nearley.md))
+  - Import grammars from Nearley.js ([read more](tools.md))
   - CYK parser
   - Visualize your parse trees as dot or png files ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
 

@@ -53,6 +53,8 @@ The Earley algorithm can accept *any* context-free grammar you throw at it (i.e.
 
 As the users grow to understand the structure of their grammar, the scope of their target language, and their performance requirements, they may choose to switch over to LALR(1) to gain a huge performance boost, possibly at the cost of some language features.
 
+Both Earley and LALR(1) can use the same grammar, as long as all constraints are satisfied.
+
 In short, "Premature optimization is the root of all evil."
 
 ### Other design features

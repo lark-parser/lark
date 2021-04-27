@@ -26,7 +26,7 @@ Read the tutorials to get a better understanding of how everything works. (links
 
 Use the [Cheatsheet (PDF)](https://lark-parser.readthedocs.io/en/latest/_static/lark_cheatsheet.pdf) for quick reference.
 
-Use the reference pages for more in-depth explanations. (links in the [main page](/index)]
+Use the reference pages for more in-depth explanations. (links in the [main page](/index))
 
 ## Debug
 
@@ -59,3 +59,25 @@ a: "a"
 '''
 p = Lark(collision_grammar, parser='lalr', debug=True)
 ```
+
+## Tools
+
+### Stand-alone parser
+
+Lark can generate a stand-alone LALR(1) parser from a grammar.
+
+The resulting module provides the same interface as Lark, but with a fixed grammar, and reduced functionality.
+
+Run using:
+
+```bash
+python -m lark.tools.standalone
+```
+
+For a play-by-play, read the [tutorial](http://blog.erezsh.com/create-a-stand-alone-lalr1-parser-in-python/)
+
+### Import Nearley.js grammars
+
+It is possible to import Nearley grammars into Lark. The Javascript code is translated using Js2Py.
+
+Read the [reference page](nearley.md)

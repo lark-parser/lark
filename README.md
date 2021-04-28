@@ -94,14 +94,14 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
     - Full support for ambiguous grammars
  - **LALR(1)** parser
     - Fast and light, competitive with PLY
-    - Can generate a stand-alone parser
+    - Can generate a stand-alone parser ([read more](docs/tools.md#stand-alone-parser))
  - **CYK** parser, for highly ambiguous grammars
  - **EBNF** grammar
  - **Unicode** fully supported
  - **Python 2 & 3** compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
- - Import grammars from Nearley.js ([read more](/docs/nearley.md))
+ - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
  - Extensive test suite [![codecov](https://codecov.io/gh/erezsh/lark/branch/master/graph/badge.svg)](https://codecov.io/gh/erezsh/lark)
  - MyPy support using type stubs
  - And much more!

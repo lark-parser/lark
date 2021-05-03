@@ -5,7 +5,7 @@ Lark
 ----
 
 .. autoclass:: lark.Lark
-    :members: open, parse, save, load
+    :members: open, parse, parse_interactive, lex, save, load, get_terminal, open_from_package
 
 
 Using Unicode character classes with ``regex``

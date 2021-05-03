@@ -538,10 +538,21 @@ class Lark(Serialize):
         return stream
 
     def get_terminal(self, name):
-        "Get information about a terminal"
+        """Get information about a terminal"""
         return self._terminals_dict[name]
     
     def parse_interactive(self, text=None, start=None):
+        """Start an interactive parsing session.
+
+        Parameters:
+            text (str, optional): Text to be parsed. Required for ``resume_parse()``.
+            start (str, optional): Start symbol
+
+        Returns:
+            A new InteractiveParser instance.
+
+        See Also: ``Lark.parse()``
+        """
         return self.parser.parse_interactive(text, start=start)
 
     def parse(self, text, start=None, on_error=None):

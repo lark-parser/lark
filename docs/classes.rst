@@ -74,3 +74,17 @@ InteractiveParser
 
 .. autoclass:: lark.parsers.lalr_interactive_parser.ImmutableInteractiveParser
     :members: choices, feed_token, copy, pretty, resume_parse, exhaust_lexer, accepts
+
+
+ast_utils
+---------
+
+For an example of using ``ast_utils``, see `/examples/advanced/create_ast.py`_ 
+
+.. autoclass:: lark.ast_utils.Ast
+
+.. autoclass:: lark.ast_utils.AsList
+
+.. autofunction:: lark.ast_utils.create_transformer
+
+.. _/examples/advanced/create_ast.py: examples/advanced/create_ast.html

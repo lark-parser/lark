@@ -129,8 +129,10 @@ AWAIT: "await"
      | "(" comprehension{test_or_star_expr} ")" -> tuple_comprehension
      | "[" [testlist_comp] "]"  -> list
      | "[" comprehension{test_or_star_expr} "]"  -> list_comprehension
-     | "{" [dict_comp] "}" -> dict
-     | "{" set_comp "}" -> set
+     | "{" [dict_exprlist] "}" -> dict
+     | "{" comprehension{key_value} "}" -> dict_comprehension
+     | "{" set_exprlist "}" -> set
+     | "{" comprehension{test} "}" -> set_comprehension
      | NAME -> var
      | number | string+
      | "(" test ")"
@@ -154,13 +156,11 @@ sliceop: ":" [test]
         | (expr|star_expr) (("," (expr|star_expr))+ [","]|",") -> exprlist_tuple
 ?testlist: test | testlist_tuple
 testlist_tuple: test (("," test)+ [","] | ",")
-dict_comp: comprehension{key_value}
-         | (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
+dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
 
 key_value: test ":"  test
 
-set_comp: comprehension{test}
-        | test_or_star_expr (","  test_or_star_expr)* [","]
+set_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
 
 classdef: "class" NAME ["(" [arguments] ")"] ":" suite
 

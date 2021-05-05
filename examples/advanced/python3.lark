@@ -31,8 +31,9 @@ SLASH: "/" // Otherwise the it will completely disappear and it will be undisgui
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
 kwparams: "**" typedparam
 
-?paramvalue: typedparam ["=" test]
-?typedparam: NAME [":" test]
+?paramvalue: typedparam ("=" test)?
+?typedparam: NAME (":" test)?
+
 
 varargslist: (vfpdef ["=" test] ("," vfpdef ["=" test])* ["," [ "*" [vfpdef] ("," vfpdef ["=" test])* ["," ["**" vfpdef [","]]] | "**" vfpdef [","]]]
   | "*" [vfpdef] ("," vfpdef ["=" test])* ["," ["**" vfpdef [","]]]
@@ -137,7 +138,11 @@ AWAIT: "await"
      | "False"   -> const_false
 
 ?testlist_comp: test | tuplelist_comp
-tuplelist_comp: (test|star_expr) (comp_for | ("," (test|star_expr))+ [","] | ",")
+tuplelist_comp: comprehension{test_or_star_expr}
+              | test_or_star_expr (("," (test|star_expr))+ [","] | ",")
+test_or_star_expr: test
+                 | star_expr
+
 ?subscriptlist: subscript
               | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
 subscript: test | ([test] ":" [test] [sliceop]) -> slice
@@ -146,20 +151,22 @@ exprlist: (expr|star_expr)
         | (expr|star_expr) (("," (expr|star_expr))+ [","]|",") -> exprlist_tuple
 testlist: test | testlist_tuple
 testlist_tuple: test (("," test)+ [","] | ",")
-dict_comp: key_value comp_for 
+dict_comp: comprehension{key_value}
          | (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
 
 key_value: test ":"  test
 
-set_comp: test comp_for 
-        | (test|star_expr) ("," (test | star_expr))* [","]
+set_comp: comprehension{test}
+        | test_or_star_expr (","  test_or_star_expr)* [","]
 
 classdef: "class" NAME ["(" [arguments] ")"] ":" suite
+
+
 
 arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
          | starargs
          | kwargs
-         | test comp_for
+         | comprehension{test}
 
 starargs: "*" test ("," "*" test)* ("," argvalue)* ["," kwargs]
 kwargs: "**" test
@@ -167,11 +174,9 @@ kwargs: "**" test
 ?argvalue: test ("=" test)?
 
 
-
-comp_iter: comp_for | comp_if | async_for
-async_for: "async" "for" exprlist "in" or_test [comp_iter]
-comp_for: "for" exprlist "in" or_test [comp_iter]
-comp_if: "if" test_nocond [comp_iter]
+comprehension{comp_result}: comp_result comp_for+ [comp_if]
+comp_for: "async"? "for" exprlist "in" or_test
+comp_if: "if" test_nocond
 
 // not used in grammar, but may appear in "node" passed from Parser to Compiler
 encoding_decl: NAME

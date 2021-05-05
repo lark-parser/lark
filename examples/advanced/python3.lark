@@ -42,12 +42,16 @@ vfpdef: NAME
 
 ?stmt: simple_stmt | compound_stmt
 ?simple_stmt: small_stmt (";" small_stmt)* [";"] _NEWLINE
-?small_stmt: (expr_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt)
-?expr_stmt: testlist_star_expr (annassign | augassign (yield_expr|testlist)
-         | ("=" (yield_expr|testlist_star_expr))*)
-annassign: ":" test ["=" test]
+?small_stmt: (expr_stmt | assign_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt)
+expr_stmt: testlist_star_expr 
+assign_stmt: annassign | augassign | assign
+
+annassign: testlist_star_expr ":" test ["=" test]
+assign: testlist_star_expr ("=" (yield_expr|testlist_star_expr))+
+augassign: testlist_star_expr augassign_op (yield_expr|testlist)
+!augassign_op: "+=" | "-=" | "*=" | "@=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "//="
 ?testlist_star_expr: (test|star_expr) ("," (test|star_expr))* [","]
-!augassign: ("+=" | "-=" | "*=" | "@=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "//=")
+
 // For normal and annotated assignments, additional restrictions enforced by the interpreter
 del_stmt: "del" exprlist
 pass_stmt: "pass"
@@ -71,9 +75,11 @@ global_stmt: "global" NAME ("," NAME)*
 nonlocal_stmt: "nonlocal" NAME ("," NAME)*
 assert_stmt: "assert" test ["," test]
 
-compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated | async_stmt
+?compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated | async_stmt
 async_stmt: "async" (funcdef | with_stmt | for_stmt)
-if_stmt: "if" test ":" suite ("elif" test ":" suite)* ["else" ":" suite]
+if_stmt: "if" test ":" suite elifs ["else" ":" suite]
+elifs: elif_*
+elif_: "elif" test ":" suite
 while_stmt: "while" test ":" suite ["else" ":" suite]
 for_stmt: "for" exprlist "in" testlist ":" suite ["else" ":" suite]
 try_stmt: ("try" ":" suite ((except_clause ":" suite)+ ["else" ":" suite] ["finally" ":" suite] | "finally" ":" suite))

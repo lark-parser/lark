@@ -1074,6 +1074,14 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
+        def test_unicode4(self):
+            g = _Lark(r"""start: UNIA UNIB UNIA UNIC
+                        UNIA: /\xa3/
+                        UNIB: "\U0010FFFF"
+                        UNIC: /\U00100000/ /\n/
+                        """)
+            g.parse(u'\xa3\U0010FFFF\u00a3\U00100000\n')
+
         def test_hex_escape(self):
             g = _Lark(r"""start: A B C
                           A: "\x01"
@@ -1087,6 +1095,13 @@ def _make_parser_test(LEXER, PARSER):
                           A: "\u0061".."\u0063"
                           """)
             g.parse('abc')
+
+        @unittest.skipIf(sys.version_info < (3, 3), "re package did not support 32bit unicode escape sequence before Python 3.3")
+        def test_unicode_literal_range_escape2(self):
+            g = _Lark(r"""start: A+
+                          A: "\U0000FFFF".."\U00010002"
+                          """)
+            g.parse('\U0000FFFF\U00010000\U00010001\U00010002')
 
         def test_hex_literal_range_escape(self):
             g = _Lark(r"""start: A+

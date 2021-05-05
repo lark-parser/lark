@@ -29,12 +29,20 @@ parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams
 
 SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
-kwparams: "**" typedparam
+kwparams: "**" typedparam ","?
 
 ?paramvalue: typedparam ("=" test)?
 ?typedparam: NAME (":" test)?
 
 
+lambdef: "lambda" [lambda_params] ":" test
+lambdef_nocond: "lambda" [lambda_params] ":" test_nocond
+lambda_params: lambda_paramvalue ("," lambda_paramvalue)* ["," [lambda_starparams | lambda_kwparams]]
+          | lambda_starparams
+          | lambda_kwparams
+?lambda_paramvalue: NAME ("=" test)?
+lambda_starparams: "*" [NAME]  ("," lambda_paramvalue)* ["," [lambda_kwparams]]
+lambda_kwparams: "**" NAME ","?
 
 
 ?stmt: simple_stmt | compound_stmt
@@ -88,15 +96,6 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
 ?test: or_test ("if" or_test "else" test)? | lambdef
 ?test_nocond: or_test | lambdef_nocond
-
-lambdef: "lambda" [lambda_args] ":" test
-lambdef_nocond: "lambda" [lambda_args] ":" test_nocond
-lambda_args: lambda_kwarg ("," lambda_kwarg)* ["," [lambda_stararg ("," lambda_kwarg)* ["," [lambda_kwargs]] | lambda_kwargs]]
-          | lambda_stararg ("," lambda_kwarg)* ["," [lambda_kwargs]]
-          | lambda_kwargs
-?lambda_kwarg: NAME ("=" test)?
-lambda_stararg: "*" [NAME]
-lambda_kwargs: "**" NAME [","]
 
 ?or_test: and_test ("or" and_test)*
 ?and_test: not_test ("and" not_test)*

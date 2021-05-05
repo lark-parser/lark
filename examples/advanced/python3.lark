@@ -125,8 +125,10 @@ AWAIT: "await"
           | atom_expr "." NAME               -> getattr
           | atom
 
-?atom: "(" [yield_expr|tuplelist_comp] ")" -> tuple
+?atom: "(" [yield_expr|tuplelist_expr] ")" -> tuple
+     | "(" comprehension{test_or_star_expr} ")" -> tuple_comprehension
      | "[" [testlist_comp] "]"  -> list
+     | "[" comprehension{test_or_star_expr} "]"  -> list_comprehension
      | "{" [dict_comp] "}" -> dict
      | "{" set_comp "}" -> set
      | NAME -> var
@@ -137,9 +139,10 @@ AWAIT: "await"
      | "True"    -> const_true
      | "False"   -> const_false
 
-?testlist_comp: test | tuplelist_comp
-tuplelist_comp: comprehension{test_or_star_expr}
-              | test_or_star_expr (("," (test|star_expr))+ [","] | ",")
+?testlist_comp: test | tuplelist_expr
+tuplelist_expr: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
+            
+
 test_or_star_expr: test
                  | star_expr
 
@@ -147,9 +150,9 @@ test_or_star_expr: test
               | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
 subscript: test | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
-exprlist: (expr|star_expr)
+?exprlist: (expr|star_expr)
         | (expr|star_expr) (("," (expr|star_expr))+ [","]|",") -> exprlist_tuple
-testlist: test | testlist_tuple
+?testlist: test | testlist_tuple
 testlist_tuple: test (("," test)+ [","] | ",")
 dict_comp: comprehension{key_value}
          | (key_value | "**" expr) ("," (key_value | "**" expr))* [","]

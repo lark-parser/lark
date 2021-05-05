@@ -414,7 +414,7 @@ def eval_escaping(s):
                 raise GrammarError("Literal ended unexpectedly (bad escaping): `%r`" % s)
             if n2 == '\\':
                 w += '\\\\'
-            elif n2 not in 'uxnftr':
+            elif n2 not in 'Uuxnftr':
                 w += '\\'
             w += n2
     w = w.replace('\\"', '"').replace("'", "\\'")

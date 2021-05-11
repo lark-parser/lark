@@ -1,4 +1,4 @@
-name: Push to Codecov
+name: Compute coverage and push to Codecov
 on: [push]
 jobs:
   run:

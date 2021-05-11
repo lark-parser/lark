@@ -45,7 +45,7 @@ class CustomLexer(Lexer):
             yield Token('A', obj)
 
 
-class TestT(Transformer):
+class InlineTestT(Transformer):
     def add(self, children):
         return sum(children if isinstance(children, list) else children.children)
 
@@ -116,21 +116,21 @@ class TestCache(TestCase):
         text = "1+2 3+4"
         expected = Tree('start', [30, 70])
 
-        parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+        parser = Lark(g, parser='lalr', transformer=InlineTestT(), cache=True, lexer_callbacks={'NUM': append_zero})
         res0 = parser.parse(text)
-        parser = Lark(g, parser='lalr', transformer=TestT(), cache=True, lexer_callbacks={'NUM': append_zero})
+        parser = Lark(g, parser='lalr', transformer=InlineTestT(), cache=True, lexer_callbacks={'NUM': append_zero})
         assert len(self.mock_fs.files) == 1
         res1 = parser.parse(text)
-        res2 = TestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
+        res2 = InlineTestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
         assert res0 == res1 == res2 == expected
     
     def test_imports(self):
         g = """
         %import .grammars.ab (startab, expr)
         """
-        parser = Lark(g, parser='lalr', start='startab', cache=True)
+        parser = Lark(g, parser='lalr', start='startab', cache=True, source_path=__file__)
         assert len(self.mock_fs.files) == 1
-        parser = Lark(g, parser='lalr', start='startab', cache=True)
+        parser = Lark(g, parser='lalr', start='startab', cache=True, source_path=__file__)
         assert len(self.mock_fs.files) == 1
         res = parser.parse("ab")
         self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))

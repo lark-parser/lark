@@ -40,11 +40,11 @@ class TestGrammar(TestCase):
             %import .test_templates_import (start, sep)
 
             %override sep{item}: item (delim item)* delim?
-        """)
+        """, source_path=__file__)
 
         self.assertRaises(GrammarError, Lark, """
             %override sep{item}: item (delim item)* delim?
-        """)
+        """, source_path=__file__)
 
     def test_override_terminal(self):
         p = Lark("""

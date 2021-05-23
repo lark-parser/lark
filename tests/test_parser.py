@@ -10,7 +10,7 @@ from copy import copy, deepcopy
 
 from lark.utils import Py36, isascii
 
-from lark import Token, Transformer_NonRecursive
+from lark import Token, Transformer_NonRecursive, LexError
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -2409,6 +2409,22 @@ def _make_parser_test(LEXER, PARSER):
                            NAME: /[\w]+/
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
+        
+        @unittest.skipIf(not regex, "regex not installed")
+        def test_regex_width_fallback(self):
+            g = r"""
+                start: NAME NAME?
+                NAME: /(?(?=\d)\d+|\w+)/
+            """
+            self.assertRaises((GrammarError, LexError, re.error), _Lark, g)
+            p = _Lark(g, regex=True)
+            self.assertEqual(p.parse("123abc"), Tree('start', ['123', 'abc']))
+            
+            g = r"""
+                start: NAME NAME?
+                NAME: /(?(?=\d)\d+|\w*)/
+            """
+            self.assertRaises((GrammarError, LexError, re.error), _Lark, g, regex=True)
 
         @unittest.skipIf(PARSER!='lalr', "interactive_parser is only implemented for LALR at the moment")
         def test_parser_interactive_parser(self):

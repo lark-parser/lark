@@ -177,8 +177,17 @@ def get_regexp_width(expr):
     try:
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
-        raise ValueError(expr)
-
+        if not regex:
+            raise ValueError(expr)
+        else:
+            # sre_parse does not support the new features in regex. To not completely fail in that case,
+            # we manually test for the most important info (whether the empty string is matched)
+            c = regex.compile(regexp_final)
+            if c.match('') is None:
+                return 1, sre_constants.MAXREPEAT
+            else:
+                return 0, sre_constants.MAXREPEAT
+            
 ###}
 
 

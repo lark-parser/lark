@@ -12,7 +12,6 @@ is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/spp
 from collections import deque
 
 from ..tree import Tree
-from ..visitors import Transformer_InPlace, v_args
 from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
@@ -325,11 +324,3 @@ class Parser:
 
         # return the root of the SPPF
         return solutions[0]
-
-class ApplyCallbacks(Transformer_InPlace):
-    def __init__(self, postprocess):
-        self.postprocess = postprocess
-
-    @v_args(meta=True)
-    def drv(self, children, meta):
-        return self.postprocess[meta.rule](children)

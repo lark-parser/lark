@@ -80,4 +80,4 @@ For a play-by-play, read the [tutorial](http://blog.erezsh.com/create-a-stand-al
 
 It is possible to import Nearley grammars into Lark. The Javascript code is translated using Js2Py.
 
-Read the [reference page](nearley.md)
+See the [tools page](tools.md) for more information.

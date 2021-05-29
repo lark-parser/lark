@@ -3,7 +3,7 @@
 To initialize, cd to this folder, and run:
 
 
-````bash
+```bash
 	 ./create_standalone.sh
 ```
 

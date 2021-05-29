@@ -1,4 +1,7 @@
 """
+Creating an AST from the parse tree
+===================================
+
     This example demonstrates how to transform a parse-tree into an AST using `lark.ast_utils`.
 
     create_transformer() collects every subclass of `Ast` subclass from the module,

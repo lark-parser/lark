@@ -145,7 +145,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes', 'propagate_positions'):
                     value = bool(value)
             else:
                 value = default

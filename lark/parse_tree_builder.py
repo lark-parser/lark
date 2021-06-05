@@ -1,4 +1,4 @@
-from .exceptions import GrammarError
+from .exceptions import GrammarError, ConfigurationError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer  # XXX Deprecated
@@ -22,15 +22,6 @@ class ExpandSingleChild:
 
 
 
-def _pp_get_meta(children):
-    for c in children:
-        if isinstance(c, Tree):
-            if not c.meta.empty:
-                return c.meta
-        elif isinstance(c, Token):
-            if c and not c.isspace():     # Disregard whitespace-only tokens
-                return c
-
 class PropagatePositions:
     def __init__(self, node_builder):
         self.node_builder = node_builder
@@ -42,14 +33,14 @@ class PropagatePositions:
         if isinstance(res, Tree):
             res_meta = res.meta
 
-            src_meta = _pp_get_meta(children)
+            src_meta = self._pp_get_meta(children)
             if src_meta is not None:
                 res_meta.line = src_meta.line
                 res_meta.column = src_meta.column
                 res_meta.start_pos = src_meta.start_pos
                 res_meta.empty = False
 
-            src_meta = _pp_get_meta(reversed(children))
+            src_meta = self._pp_get_meta(reversed(children))
             if src_meta is not None:
                 res_meta.end_line = src_meta.end_line
                 res_meta.end_column = src_meta.end_column
@@ -57,6 +48,35 @@ class PropagatePositions:
                 res_meta.empty = False
 
         return res
+
+    def _pp_get_meta(self, children):
+        for c in children:
+            if isinstance(c, Tree):
+                if not c.meta.empty:
+                    return c.meta
+            elif isinstance(c, Token):
+                return c
+
+class PropagatePositions_IgnoreWs(PropagatePositions):
+    def _pp_get_meta(self, children):
+        for c in children:
+            if isinstance(c, Tree):
+                if not c.meta.empty:
+                    return c.meta
+            elif isinstance(c, Token):
+                if c and not c.isspace():     # Disregard whitespace-only tokens
+                    return c
+
+
+def make_propagate_positions(option):
+    if option == "ignore_ws":
+        return PropagatePositions_IgnoreWs
+    elif option is True:
+        return PropagatePositions
+    elif option is False:
+        return None
+
+    raise ConfigurationError('Invalid option for propagate_positions: %r' % option)
 
 
 class ChildFilter:
@@ -313,6 +333,8 @@ class ParseTreeBuilder:
         self.rule_builders = list(self._init_builders(rules))
 
     def _init_builders(self, rules):
+        propagate_positions = make_propagate_positions(self.propagate_positions)
+
         for rule in rules:
             options = rule.options
             keep_all_tokens = options.keep_all_tokens
@@ -321,7 +343,7 @@ class ParseTreeBuilder:
             wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
-                self.propagate_positions and PropagatePositions,
+                propagate_positions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
                 self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class)
             ]))

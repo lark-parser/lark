@@ -44,8 +44,9 @@ class LarkOptions(Serialize):
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
+            Accepts ``False``, ``True``, or "ignore_ws", which will trim the whitespace around your trees. 
     maybe_placeholders
-            When True, the ``[]`` operator returns ``None`` when not matched.
+            When ``True``, the ``[]`` operator returns ``None`` when not matched.
 
             When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
             (default= ``False``. Recommended to set to ``True``)

@@ -57,6 +57,8 @@ class PropagatePositions:
                         res_meta.empty = False
                         break
                 elif isinstance(c, Token):
+                    if not c or c.isspace():    # Don't use trailing space/newlines
+                        continue
                     res_meta.end_line = c.end_line
                     res_meta.end_column = c.end_column
                     res_meta.end_pos = c.end_pos

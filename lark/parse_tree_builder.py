@@ -28,7 +28,8 @@ def _pp_get_meta(children):
             if not c.meta.empty:
                 return c.meta
         elif isinstance(c, Token):
-            return c
+            if not c.isspace():     # Don't regard whitespace-only tokens
+                return c
 
 class PropagatePositions:
     def __init__(self, node_builder):

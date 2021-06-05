@@ -573,7 +573,7 @@ class Lark(Serialize):
 
     @property
     def source(self):
-        warn("Lark.source attribute has been renamed to Lark.source_path", DeprecationWarning)
+        warn("Attribute Lark.source was renamed to Lark.source_path", DeprecationWarning)
         return self.source_path
 
     @source.setter
@@ -582,7 +582,7 @@ class Lark(Serialize):
 
     @property
     def grammar_source(self):
-        warn("Lark.grammar_source attribute has been renamed to Lark.source_grammar", DeprecationWarning)
+        warn("Attribute Lark.grammar_source was renamed to Lark.source_grammar", DeprecationWarning)
         return self.source_grammar
 
     @grammar_source.setter

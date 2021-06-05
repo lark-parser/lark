@@ -28,7 +28,7 @@ def _pp_get_meta(children):
             if not c.meta.empty:
                 return c.meta
         elif isinstance(c, Token):
-            if not c.isspace():     # Don't regard whitespace-only tokens
+            if c and not c.isspace():     # Disregard whitespace-only tokens
                 return c
 
 class PropagatePositions:
@@ -43,14 +43,14 @@ class PropagatePositions:
             res_meta = res.meta
 
             src_meta = _pp_get_meta(children)
-            if src_meta:
+            if src_meta is not None:
                 res_meta.line = src_meta.line
                 res_meta.column = src_meta.column
                 res_meta.start_pos = src_meta.start_pos
                 res_meta.empty = False
 
             src_meta = _pp_get_meta(reversed(children))
-            if src_meta:
+            if src_meta is not None:
                 res_meta.end_line = src_meta.end_line
                 res_meta.end_column = src_meta.end_column
                 res_meta.end_pos = src_meta.end_pos

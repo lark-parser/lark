@@ -76,7 +76,7 @@ class TerminalDef:
 
 class Token(str):
     type: str
-    pos_in_stream: int
+    start_pos: int
     value: Any
     line: int
     column: int
@@ -84,7 +84,7 @@ class Token(str):
     end_column: int
     end_pos: int
 
-    def __init__(self, type_: str, value: Any, pos_in_stream: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None) -> None:
+    def __init__(self, type_: str, value: Any, start_pos: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None) -> None:
         ...
 
     def update(self, type_: Optional[str] = None, value: Optional[Any] = None) -> Token:

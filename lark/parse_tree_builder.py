@@ -1,4 +1,4 @@
-from .exceptions import GrammarError
+from .exceptions import GrammarError, ConfigurationError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer  # XXX Deprecated
@@ -21,6 +21,7 @@ class ExpandSingleChild:
             return self.node_builder(children)
 
 
+
 class PropagatePositions:
     def __init__(self, node_builder):
         self.node_builder = node_builder
@@ -31,39 +32,51 @@ class PropagatePositions:
         # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
             res_meta = res.meta
-            for c in children:
-                if isinstance(c, Tree):
-                    child_meta = c.meta
-                    if not child_meta.empty:
-                        res_meta.line = child_meta.line
-                        res_meta.column = child_meta.column
-                        res_meta.start_pos = child_meta.start_pos
-                        res_meta.empty = False
-                        break
-                elif isinstance(c, Token):
-                    res_meta.line = c.line
-                    res_meta.column = c.column
-                    res_meta.start_pos = c.pos_in_stream
-                    res_meta.empty = False
-                    break
 
-            for c in reversed(children):
-                if isinstance(c, Tree):
-                    child_meta = c.meta
-                    if not child_meta.empty:
-                        res_meta.end_line = child_meta.end_line
-                        res_meta.end_column = child_meta.end_column
-                        res_meta.end_pos = child_meta.end_pos
-                        res_meta.empty = False
-                        break
-                elif isinstance(c, Token):
-                    res_meta.end_line = c.end_line
-                    res_meta.end_column = c.end_column
-                    res_meta.end_pos = c.end_pos
-                    res_meta.empty = False
-                    break
+            src_meta = self._pp_get_meta(children)
+            if src_meta is not None:
+                res_meta.line = src_meta.line
+                res_meta.column = src_meta.column
+                res_meta.start_pos = src_meta.start_pos
+                res_meta.empty = False
+
+            src_meta = self._pp_get_meta(reversed(children))
+            if src_meta is not None:
+                res_meta.end_line = src_meta.end_line
+                res_meta.end_column = src_meta.end_column
+                res_meta.end_pos = src_meta.end_pos
+                res_meta.empty = False
 
         return res
+
+    def _pp_get_meta(self, children):
+        for c in children:
+            if isinstance(c, Tree):
+                if not c.meta.empty:
+                    return c.meta
+            elif isinstance(c, Token):
+                return c
+
+class PropagatePositions_IgnoreWs(PropagatePositions):
+    def _pp_get_meta(self, children):
+        for c in children:
+            if isinstance(c, Tree):
+                if not c.meta.empty:
+                    return c.meta
+            elif isinstance(c, Token):
+                if c and not c.isspace():     # Disregard whitespace-only tokens
+                    return c
+
+
+def make_propagate_positions(option):
+    if option == "ignore_ws":
+        return PropagatePositions_IgnoreWs
+    elif option is True:
+        return PropagatePositions
+    elif option is False:
+        return None
+
+    raise ConfigurationError('Invalid option for propagate_positions: %r' % option)
 
 
 class ChildFilter:
@@ -320,6 +333,8 @@ class ParseTreeBuilder:
         self.rule_builders = list(self._init_builders(rules))
 
     def _init_builders(self, rules):
+        propagate_positions = make_propagate_positions(self.propagate_positions)
+
         for rule in rules:
             options = rule.options
             keep_all_tokens = options.keep_all_tokens
@@ -328,7 +343,7 @@ class ParseTreeBuilder:
             wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
-                self.propagate_positions and PropagatePositions,
+                propagate_positions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
                 self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class)
             ]))

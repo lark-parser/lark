@@ -44,8 +44,9 @@ class LarkOptions(Serialize):
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
+            Accepts ``False``, ``True``, or "ignore_ws", which will trim the whitespace around your trees. 
     maybe_placeholders
-            When True, the ``[]`` operator returns ``None`` when not matched.
+            When ``True``, the ``[]`` operator returns ``None`` when not matched.
 
             When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
             (default= ``False``. Recommended to set to ``True``)
@@ -145,7 +146,7 @@ class LarkOptions(Serialize):
         for name, default in self._defaults.items():
             if name in o:
                 value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes'):
+                if isinstance(default, bool) and name not in ('cache', 'use_bytes', 'propagate_positions'):
                     value = bool(value)
             else:
                 value = default
@@ -573,7 +574,7 @@ class Lark(Serialize):
 
     @property
     def source(self):
-        warn("Lark.source attribute has been renamed to Lark.source_path", DeprecationWarning)
+        warn("Attribute Lark.source was renamed to Lark.source_path", DeprecationWarning)
         return self.source_path
 
     @source.setter
@@ -582,7 +583,7 @@ class Lark(Serialize):
 
     @property
     def grammar_source(self):
-        warn("Lark.grammar_source attribute has been renamed to Lark.source_grammar", DeprecationWarning)
+        warn("Attribute Lark.grammar_source was renamed to Lark.source_grammar", DeprecationWarning)
         return self.source_grammar
 
     @grammar_source.setter

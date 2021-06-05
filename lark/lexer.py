@@ -6,6 +6,7 @@ from .utils import Str, classify, get_regexp_width, Py36, Serialize, suppress
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
+from warnings import warn
 from copy import copy
 
 
@@ -128,9 +129,9 @@ class Token(Str):
             end_column will be 5.
         end_pos: the index where the token ends (basically ``pos_in_stream + len(token)``)
     """
-    __slots__ = ('type', 'pos_in_stream', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
+    __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
-    def __new__(cls, type_, value, pos_in_stream=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None, pos_in_stream=None):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
@@ -138,7 +139,7 @@ class Token(Str):
             self = super(Token, cls).__new__(cls, value)
 
         self.type = type_
-        self.pos_in_stream = pos_in_stream
+        self.start_pos = start_pos if start_pos is not None else pos_in_stream
         self.value = value
         self.line = line
         self.column = column
@@ -146,6 +147,11 @@ class Token(Str):
         self.end_column = end_column
         self.end_pos = end_pos
         return self
+
+    @property
+    def pos_in_stream(self):
+        warn("Attribute Token.pos_in_stream was renamed to Token.start_pos", DeprecationWarning)
+        return self.start_pos
 
     def update(self, type_=None, value=None):
         return Token.new_borrow_pos(
@@ -156,16 +162,16 @@ class Token(Str):
 
     @classmethod
     def new_borrow_pos(cls, type_, value, borrow_t):
-        return cls(type_, value, borrow_t.pos_in_stream, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
+        return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.pos_in_stream, self.line, self.column))
+        return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
 
     def __repr__(self):
         return 'Token(%r, %r)' % (self.type, self.value)
 
     def __deepcopy__(self, memo):
-        return Token(self.type, self.value, self.pos_in_stream, self.line, self.column)
+        return Token(self.type, self.value, self.start_pos, self.line, self.column)
 
     def __eq__(self, other):
         if isinstance(other, Token) and self.type != other.type:

@@ -33,7 +33,7 @@ class LarkOptions:
     regex: bool
     debug: bool
     keep_all_tokens: bool
-    propagate_positions: bool
+    propagate_positions: Union[bool, str]
     maybe_placeholders: bool
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
@@ -77,7 +77,7 @@ class Lark:
         regex: bool = False,
         debug: bool = False,
         keep_all_tokens: bool = False,
-        propagate_positions: bool = False,
+        propagate_positions: Union[bool, str] = False,
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
         cache: Union[bool, str] = False,

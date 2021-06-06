@@ -127,7 +127,7 @@ class Token(Str):
         end_column: The next column after the end of the token. For example,
             if the token is a single character with a column value of 4,
             end_column will be 5.
-        end_pos: the index where the token ends (basically ``pos_in_stream + len(token)``)
+        end_pos: the index where the token ends (basically ``start_pos + len(token)``)
     """
     __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
@@ -214,15 +214,13 @@ class LineCounter:
 
 
 class UnlessCallback:
-    def __init__(self, mres):
-        self.mres = mres
+    def __init__(self, scanner):
+        self.scanner = scanner
 
     def __call__(self, t):
-        for mre, type_from_index in self.mres:
-            m = mre.match(t.value)
-            if m:
-                t.type = type_from_index[m.lastindex]
-                break
+        res = self.scanner.match(t.value, 0)
+        if res:
+            _value, t.type = res
         return t
 
 
@@ -254,34 +252,51 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(build_mres(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
+            callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
 
     terminals = [t for t in terminals if t not in embedded_strs]
     return terminals, callback
 
 
-def _build_mres(terminals, max_size, g_regex_flags, match_whole, re_, use_bytes):
-    # Python sets an unreasonable group limit (currently 100) in its re module
-    # Worse, the only way to know we reached it is by catching an AssertionError!
-    # This function recursively tries less and less groups until it's successful.
-    postfix = '$' if match_whole else ''
-    mres = []
-    while terminals:
-        pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
-        if use_bytes:
-            pattern = pattern.encode('latin-1')
-        try:
-            mre = re_.compile(pattern, g_regex_flags)
-        except AssertionError:  # Yes, this is what Python provides us.. :/
-            return _build_mres(terminals, max_size//2, g_regex_flags, match_whole, re_, use_bytes)
 
-        mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
-        terminals = terminals[max_size:]
-    return mres
+class Scanner:
+    def __init__(self, terminals, g_regex_flags, re_, use_bytes, match_whole=False):
+        self.terminals = terminals
+        self.g_regex_flags = g_regex_flags
+        self.re_ = re_
+        self.use_bytes = use_bytes
+        self.match_whole = match_whole
 
+        self._mres = self._build_mres(terminals, len(terminals))
 
-def build_mres(terminals, g_regex_flags, re_, use_bytes, match_whole=False):
-    return _build_mres(terminals, len(terminals), g_regex_flags, match_whole, re_, use_bytes)
+    def _build_mres(self, terminals, max_size):
+        # Python sets an unreasonable group limit (currently 100) in its re module
+        # Worse, the only way to know we reached it is by catching an AssertionError!
+        # This function recursively tries less and less groups until it's successful.
+        postfix = '$' if self.match_whole else ''
+        mres = []
+        while terminals:
+            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+            if self.use_bytes:
+                pattern = pattern.encode('latin-1')
+            try:
+                mre = self.re_.compile(pattern, self.g_regex_flags)
+            except AssertionError:  # Yes, this is what Python provides us.. :/
+                return self._build_mres(terminals, max_size//2)
+
+            mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
+            terminals = terminals[max_size:]
+        return mres
+
+    def match(self, text, pos):
+        for mre, type_from_index in self._mres:
+            m = mre.match(text, pos)
+            if m:
+                return m.group(0), type_from_index[m.lastindex]
+
+    @property
+    def allowed_types(self):
+        return {v for m, tfi in self._mres for v in tfi.values()}
 
 
 def _regexp_has_newline(r):
@@ -341,9 +356,9 @@ class TraditionalLexer(Lexer):
         self.use_bytes = conf.use_bytes
         self.terminals_by_name = conf.terminals_by_name
 
-        self._mres = None
+        self._scanner = None
 
-    def _build(self):
+    def _build_scanner(self):
         terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
         assert all(self.callback.values())
 
@@ -354,19 +369,16 @@ class TraditionalLexer(Lexer):
             else:
                 self.callback[type_] = f
 
-        self._mres = build_mres(terminals, self.g_regex_flags, self.re, self.use_bytes)
+        self._scanner = Scanner(terminals, self.g_regex_flags, self.re, self.use_bytes)
 
     @property
-    def mres(self):
-        if self._mres is None:
-            self._build()
-        return self._mres
+    def scanner(self):
+        if self._scanner is None:
+            self._build_scanner()
+        return self._scanner
 
     def match(self, text, pos):
-        for mre, type_from_index in self.mres:
-            m = mre.match(text, pos)
-            if m:
-                return m.group(0), type_from_index[m.lastindex]
+        return self.scanner.match(text, pos)
 
     def lex(self, state, parser_state):
         with suppress(EOFError):
@@ -378,7 +390,7 @@ class TraditionalLexer(Lexer):
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
             if not res:
-                allowed = {v for m, tfi in self.mres for v in tfi.values()} - self.ignore_types
+                allowed = self.scanner.allowed_types - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
                 raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,

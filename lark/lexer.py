@@ -235,6 +235,11 @@ class CallChain:
         return self.callback2(t) if self.cond(t2) else t2
 
 
+def _get_match(re_, regexp, s, flags):
+    m = re_.match(regexp, s, flags)
+    if m:
+        return m.group(0)
+
 def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     tokens_by_type = classify(terminals, lambda t: type(t.pattern))
     assert len(tokens_by_type) <= 2, tokens_by_type.keys()
@@ -246,8 +251,7 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
             if strtok.priority > retok.priority:
                 continue
             s = strtok.pattern.value
-            m = re_.match(retok.pattern.to_regexp(), s, g_regex_flags)
-            if m and m.group(0) == s:
+            if s == _get_match(re_, retok.pattern.to_regexp(), s, g_regex_flags):
                 unless.append(strtok)
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)

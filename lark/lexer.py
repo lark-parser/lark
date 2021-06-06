@@ -271,6 +271,8 @@ class Scanner:
         self.use_bytes = use_bytes
         self.match_whole = match_whole
 
+        self.allowed_types = {t.name for t in self.terminals}
+
         self._mres = self._build_mres(terminals, len(terminals))
 
     def _build_mres(self, terminals, max_size):
@@ -297,10 +299,6 @@ class Scanner:
             m = mre.match(text, pos)
             if m:
                 return m.group(0), type_from_index[m.lastindex]
-
-    @property
-    def allowed_types(self):
-        return {v for m, tfi in self._mres for v in tfi.values()}
 
 
 def _regexp_has_newline(r):

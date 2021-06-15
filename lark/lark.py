@@ -44,7 +44,7 @@ class LarkOptions(Serialize):
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates (line, column, end_line, end_column) attributes into all tree branches.
-            Accepts ``False``, ``True``, or "ignore_ws", which will trim the whitespace around your trees. 
+            Accepts ``False``, ``True``, or a callable, which will filter which nodes to ignore when propagating.
     maybe_placeholders
             When ``True``, the ``[]`` operator returns ``None`` when not matched.
 
@@ -162,7 +162,7 @@ class LarkOptions(Serialize):
         assert_config(self.parser, ('earley', 'lalr', 'cyk', None))
 
         if self.parser == 'earley' and self.transformer:
-            raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm.'
+            raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm. '
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
         if o:

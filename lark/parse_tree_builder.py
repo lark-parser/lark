@@ -23,8 +23,9 @@ class ExpandSingleChild:
 
 
 class PropagatePositions:
-    def __init__(self, node_builder):
+    def __init__(self, node_builder, node_filter=None):
         self.node_builder = node_builder
+        self.node_filter = node_filter
 
     def __call__(self, children):
         res = self.node_builder(children)
@@ -33,44 +34,35 @@ class PropagatePositions:
         if isinstance(res, Tree):
             res_meta = res.meta
 
-            src_meta = self._pp_get_meta(children)
-            if src_meta is not None:
-                res_meta.line = src_meta.line
-                res_meta.column = src_meta.column
-                res_meta.start_pos = src_meta.start_pos
+            first_meta = self._pp_get_meta(children)
+            if first_meta is not None:
+                res_meta.line = first_meta.line
+                res_meta.column = first_meta.column
+                res_meta.start_pos = first_meta.start_pos
                 res_meta.empty = False
 
-            src_meta = self._pp_get_meta(reversed(children))
-            if src_meta is not None:
-                res_meta.end_line = src_meta.end_line
-                res_meta.end_column = src_meta.end_column
-                res_meta.end_pos = src_meta.end_pos
+            last_meta = self._pp_get_meta(reversed(children))
+            if last_meta is not None:
+                res_meta.end_line = last_meta.end_line
+                res_meta.end_column = last_meta.end_column
+                res_meta.end_pos = last_meta.end_pos
                 res_meta.empty = False
 
         return res
 
     def _pp_get_meta(self, children):
         for c in children:
+            if self.node_filter is not None and not self.node_filter(c):
+                continue
             if isinstance(c, Tree):
                 if not c.meta.empty:
                     return c.meta
             elif isinstance(c, Token):
                 return c
 
-class PropagatePositions_IgnoreWs(PropagatePositions):
-    def _pp_get_meta(self, children):
-        for c in children:
-            if isinstance(c, Tree):
-                if not c.meta.empty:
-                    return c.meta
-            elif isinstance(c, Token):
-                if c and not c.isspace():     # Disregard whitespace-only tokens
-                    return c
-
-
 def make_propagate_positions(option):
-    if option == "ignore_ws":
-        return PropagatePositions_IgnoreWs
+    if callable(option):
+        return partial(PropagatePositions, node_filter=option)
     elif option is True:
         return PropagatePositions
     elif option is False:

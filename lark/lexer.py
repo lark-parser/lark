@@ -133,20 +133,20 @@ class Token(Str):
 
     def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None, pos_in_stream=None):
         try:
-            self = super(Token, cls).__new__(cls, value)
+            inst = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
             value = value.decode('latin1')
-            self = super(Token, cls).__new__(cls, value)
+            inst = super(Token, cls).__new__(cls, value)
 
-        self.type = type_
-        self.start_pos = start_pos if start_pos is not None else pos_in_stream
-        self.value = value
-        self.line = line
-        self.column = column
-        self.end_line = end_line
-        self.end_column = end_column
-        self.end_pos = end_pos
-        return self
+        inst.type = type_
+        inst.start_pos = start_pos if start_pos is not None else pos_in_stream
+        inst.value = value
+        inst.line = line
+        inst.column = column
+        inst.end_line = end_line
+        inst.end_column = end_column
+        inst.end_pos = end_pos
+        return inst
 
     @property
     def pos_in_stream(self):
@@ -258,8 +258,8 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
         if unless:
             callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
 
-    terminals = [t for t in terminals if t not in embedded_strs]
-    return terminals, callback
+    new_terminals = [t for t in terminals if t not in embedded_strs]
+    return new_terminals, callback
 
 
 

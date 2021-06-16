@@ -14,7 +14,7 @@ class ExpandSingleChild:
     def __init__(self, node_builder):
         self.node_builder = node_builder
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         if len(children) == 1:
             return children[0]
         else:

@@ -17,8 +17,9 @@ class ExpandSingleChild:
     def __call__(self, children, context=None):
         if len(children) == 1:
             return children[0]
-        else:
-            return self.node_builder(children)
+
+        kw = {} if context is None else {"context": context}
+        return self.node_builder(children, **kw)
 
 
 
@@ -27,7 +28,8 @@ class PropagatePositions:
         self.node_builder = node_builder
 
     def __call__(self, children, context=None):
-        res = self.node_builder(children)
+        kw = {} if context is None else {"context": context}
+        res = self.node_builder(children, **kw)
 
         # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
@@ -99,7 +101,8 @@ class ChildFilter:
         if self.append_none:
             filtered += [None] * self.append_none
 
-        return self.node_builder(filtered)
+        kw = {} if context is None else {"context": context}
+        return self.node_builder(filtered, **kw)
 
 
 class ChildFilterLALR(ChildFilter):
@@ -121,7 +124,8 @@ class ChildFilterLALR(ChildFilter):
         if self.append_none:
             filtered += [None] * self.append_none
 
-        return self.node_builder(filtered)
+        kw = {} if context is None else {"context": context}
+        return self.node_builder(filtered, **kw)
 
 
 class ChildFilterLALR_NoPlaceholders(ChildFilter):
@@ -140,7 +144,13 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
                     filtered = children[i].children
             else:
                 filtered.append(children[i])
-        return self.node_builder(filtered)
+
+        kw = {} if context is None else {"context": context}
+
+        if context is None:
+            return self.node_builder(filtered, **kw)
+
+        return self.node_builder(filtered, **kw)
 
 
 def _should_expand(sym):
@@ -202,11 +212,13 @@ class AmbiguousExpander:
                 to_expand = [j for j, grandchild in enumerate(child.children) if _is_ambig_tree(grandchild)]
                 child.expand_kids_by_index(*to_expand)
 
+        kw = {} if context is None else {"context": context}
+
         if not ambiguous:
-            return self.node_builder(children)
+            return self.node_builder(children, **kw)
 
         expand = [iter(child.children) if i in ambiguous else repeat(child) for i, child in enumerate(children)]
-        return self.tree_class('_ambig', [self.node_builder(list(f[0])) for f in product(zip(*expand))])
+        return self.tree_class('_ambig', [self.node_builder(list(f[0]), **kw) for f in product(zip(*expand))])
 
 
 def maybe_create_ambiguous_expander(tree_class, expansion, keep_all_tokens):
@@ -290,11 +302,13 @@ class AmbiguousIntermediateExpander:
                 return result
 
         collapsed = _collapse_iambig(children)
+        kw = {} if context is None else {"context": context}
+
         if collapsed:
-            processed_nodes = [self.node_builder(c.children) for c in collapsed]
+            processed_nodes = [self.node_builder(c.children, **kw) for c in collapsed]
             return self.tree_class('_ambig', processed_nodes)
 
-        return self.node_builder(children)
+        return self.node_builder(children, **kw)
 
 
 def ptb_inline_args(func):

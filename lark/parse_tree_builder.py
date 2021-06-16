@@ -26,7 +26,7 @@ class PropagatePositions:
     def __init__(self, node_builder):
         self.node_builder = node_builder
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         res = self.node_builder(children)
 
         # local reference to Tree.meta reduces number of presence checks
@@ -85,7 +85,7 @@ class ChildFilter:
         self.to_include = to_include
         self.append_none = append_none
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         filtered = []
 
         for i, to_expand, add_none in self.to_include:
@@ -105,7 +105,7 @@ class ChildFilter:
 class ChildFilterLALR(ChildFilter):
     """Optimized childfilter for LALR (assumes no duplication in parse tree, so it's safe to change it)"""
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         filtered = []
         for i, to_expand, add_none in self.to_include:
             if add_none:
@@ -130,7 +130,7 @@ class ChildFilterLALR_NoPlaceholders(ChildFilter):
         self.node_builder = node_builder
         self.to_include = to_include
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         filtered = []
         for i, to_expand in self.to_include:
             if to_expand:
@@ -185,7 +185,7 @@ class AmbiguousExpander:
         self.tree_class = tree_class
         self.to_expand = to_expand
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         def _is_ambig_tree(t):
             return hasattr(t, 'data') and t.data == '_ambig'
 
@@ -261,7 +261,7 @@ class AmbiguousIntermediateExpander:
         self.node_builder = node_builder
         self.tree_class = tree_class
 
-    def __call__(self, children):
+    def __call__(self, children, context=None):
         def _is_iambig_tree(child):
             return hasattr(child, 'data') and child.data == '_iambig'
 

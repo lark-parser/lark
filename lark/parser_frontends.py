@@ -100,18 +100,25 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
-    def parse(self, text, start=None, on_error=None):
+    def parse(self, text, start=None, on_error=None, context=None):
         start = self._verify_start(start)
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
-        kw = {} if on_error is None else {'on_error': on_error}
+        kw = {}
+
+        if on_error is not None:
+            kw["on_error"] = on_error
+
+        if context is not None:
+            kw["context"] = context
+
         return self.parser.parse(stream, start, **kw)
     
-    def parse_interactive(self, text=None, start=None):
+    def parse_interactive(self, text=None, start=None, context=None):
         start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
-        return self.parser.parse_interactive(stream, start)
+        return self.parser.parse_interactive(stream, start, context)
 
 
 def get_frontend(parser, lexer):

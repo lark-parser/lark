@@ -94,7 +94,7 @@ class InteractiveParser(object):
 
     def resume_parse(self):
         """Resume automated parsing from the current state."""
-        return self.parser.parse_from_state(self.parser_state)
+        return self.parser.parse_from_state(self.parser_state, None)
 
 
 

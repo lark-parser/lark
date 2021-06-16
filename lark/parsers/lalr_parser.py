@@ -33,12 +33,12 @@ class LALR_Parser(Serialize):
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
     
-    def parse_interactive(self, lexer, start):
-        return self.parser.parse(lexer, start, start_interactive=True)
+    def parse_interactive(self, lexer, start, context=None):
+        return self.parser.parse(lexer, start, context, start_interactive=True)
 
-    def parse(self, lexer, start, on_error=None):
+    def parse(self, lexer, start, on_error=None, context=None):
         try:
-            return self.parser.parse(lexer, start)
+            return self.parser.parse(lexer, start, context)
         except UnexpectedInput as e:
             if on_error is None:
                 raise
@@ -113,7 +113,7 @@ class ParserState(object):
     def copy(self):
         return copy(self)
 
-    def feed_token(self, token, is_end=False):
+    def feed_token(self, token, context, is_end=False):
         state_stack = self.state_stack
         value_stack = self.value_stack
         states = self.parse_conf.states
@@ -134,7 +134,16 @@ class ParserState(object):
                 # shift once and return
                 assert not is_end
                 state_stack.append(arg)
-                value_stack.append(token if token.type not in callbacks else callbacks[token.type](token))
+
+                if token.type not in callbacks:
+                    value_stack.append(token)
+                    return
+
+                if context is not None:
+                    value_stack.append(callbacks[token.type](token, context))
+                    return
+
+                value_stack.append(callbacks[token.type](token))
                 return
             else:
                 # reduce+shift as many times as necessary
@@ -163,23 +172,23 @@ class _Parser(object):
         self.callbacks = callbacks
         self.debug = debug
 
-    def parse(self, lexer, start, value_stack=None, state_stack=None, start_interactive=False):
+    def parse(self, lexer, start, context, value_stack=None, state_stack=None, start_interactive=False):
         parse_conf = ParseConf(self.parse_table, self.callbacks, start)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         if start_interactive:
             return InteractiveParser(self, parser_state, parser_state.lexer)
-        return self.parse_from_state(parser_state)
+        return self.parse_from_state(parser_state, context)
     
 
-    def parse_from_state(self, state):
+    def parse_from_state(self, state, context):
         # Main LALR-parser loop
         try:
             token = None
             for token in state.lexer.lex(state):
-                state.feed_token(token)
+                state.feed_token(token, context)
 
             token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
-            return state.feed_token(token, True)
+            return state.feed_token(token, context, True)
         except UnexpectedInput as e:
             try:
                 e.interactive_parser = InteractiveParser(self, state, state.lexer)

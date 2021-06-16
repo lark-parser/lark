@@ -542,21 +542,22 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
     
-    def parse_interactive(self, text=None, start=None):
+    def parse_interactive(self, text=None, start=None, context=None):
         """Start an interactive parsing session.
 
         Parameters:
             text (str, optional): Text to be parsed. Required for ``resume_parse()``.
             start (str, optional): Start symbol
+            context (Any, optional): Parse context
 
         Returns:
             A new InteractiveParser instance.
 
         See Also: ``Lark.parse()``
         """
-        return self.parser.parse_interactive(text, start=start)
+        return self.parser.parse_interactive(text, start=start, context=context)
 
-    def parse(self, text, start=None, on_error=None):
+    def parse(self, text, start=None, on_error=None, context=None):
         """Parse the given text, according to the options provided.
 
         Parameters:
@@ -564,13 +565,14 @@ class Lark(Serialize):
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
                 LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
+            context (Any, optional): Parse context
 
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the
             result of the transformation. Otherwise, returns a Tree instance.
 
         """
-        return self.parser.parse(text, start=start, on_error=on_error)
+        return self.parser.parse(text, start=start, on_error=on_error, context=context)
 
     @property
     def source(self):

@@ -156,7 +156,10 @@ class ParserState(object):
                 else:
                     s = []
 
-                value = callbacks[rule](s)
+                if context is not None:
+                    value = callbacks[rule](s, context)
+                else:
+                    value = callbacks[rule](s)
 
                 _action, new_state = states[state_stack[-1]][rule.origin.name]
                 assert _action is Shift

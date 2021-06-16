@@ -129,6 +129,8 @@ class UnexpectedInput(LarkError):
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
     def __init__(self, expected, state=None, terminals_by_name=None):
+        super(UnexpectedEOF, self).__init__()
+
         self.expected = expected
         self.state = state
         from .lexer import Token
@@ -138,7 +140,6 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
         self.column = -1
         self._terminals_by_name = terminals_by_name
 
-        super(UnexpectedEOF, self).__init__()
 
     def __str__(self):
         message = "Unexpected end-of-input. "
@@ -149,6 +150,8 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 class UnexpectedCharacters(LexError, UnexpectedInput):
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
                  terminals_by_name=None, considered_rules=None):
+        super(UnexpectedCharacters, self).__init__()
+
         # TODO considered_tokens and allowed can be figured out using state
         self.line = line
         self.column = column
@@ -167,7 +170,6 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
             self.char = seq[lex_pos]
         self._context = self.get_context(seq)
 
-        super(UnexpectedCharacters, self).__init__()
 
     def __str__(self):
         message = "No terminal matches '%s' in the current parser context, at line %d col %d" % (self.char, self.line, self.column)
@@ -190,6 +192,8 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     """
 
     def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):
+        super(UnexpectedToken, self).__init__()
+        
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
@@ -204,7 +208,6 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         self._terminals_by_name = terminals_by_name
         self.token_history = token_history
 
-        super(UnexpectedToken, self).__init__()
 
     @property
     def accepts(self):
@@ -236,10 +239,10 @@ class VisitError(LarkError):
     """
 
     def __init__(self, rule, obj, orig_exc):
-        self.obj = obj
-        self.orig_exc = orig_exc
-
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
+
+        self.obj = obj
+        self.orig_exc = orig_exc
 
 ###}

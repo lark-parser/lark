@@ -451,11 +451,11 @@ class Lark(Serialize):
             d = f
         else:
             d = pickle.load(f)
-        memo = d['memo']
+        memo_json = d['memo']
         data = d['data']
 
-        assert memo
-        memo = SerializeMemoizer.deserialize(memo, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
+        assert memo_json
+        memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ConfigurationError("Some options are not allowed when loading a Parser: {}"
@@ -512,11 +512,11 @@ class Lark(Serialize):
 
             Lark.open_from_package(__name__, "example.lark", ("grammars",), parser=...)
         """
-        package = FromPackageLoader(package, search_paths)
-        full_path, text = package(None, grammar_path)
+        package_loader = FromPackageLoader(package, search_paths)
+        full_path, text = package_loader(None, grammar_path)
         options.setdefault('source_path', full_path)
         options.setdefault('import_paths', [])
-        options['import_paths'].append(package)
+        options['import_paths'].append(package_loader)
         return cls(text, **options)
 
     def __repr__(self):

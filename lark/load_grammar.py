@@ -448,6 +448,9 @@ def _literal_to_pattern(literal):
 
     s = eval_escaping(x)
 
+    if s == "":
+        raise GrammarError("Can't have empty terminals (offending literal: %s)" % literal.value)
+
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')
         return PatternStr(s, flags, raw=literal.value)

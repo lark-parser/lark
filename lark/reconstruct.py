@@ -87,14 +87,14 @@ class Reconstructor(TreeMatcher):
             else:
                 yield item
 
-    def reconstruct(self, tree, postproc=None):
+    def reconstruct(self, tree, postproc=None, insert_spaces=True):
         x = self._reconstruct(tree)
         if postproc:
             x = postproc(x)
         y = []
         prev_item = ''
         for item in x:
-            if prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
+            if insert_spaces and prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
                 y.append(' ')
             y.append(item)
             prev_item = item

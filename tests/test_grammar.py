@@ -22,6 +22,10 @@ class TestGrammar(TestCase):
                 else:
                     assert False, "example did not raise an error"
 
+    def test_empty_literal(self):
+        # Issues #888
+        self.assertRaises(GrammarError, Lark, "start: \"\"")
+
     def test_override_rule(self):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
         # Thus extending it beyond its original capacity

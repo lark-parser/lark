@@ -34,5 +34,6 @@ class Reconstructor:
     def __init__(self, parser: Lark, term_subs: Dict[str, Callable[[Symbol], str]] = ...):
         ...
 
-    def reconstruct(self, tree: Tree, postproc: Callable[[Iterable[str]], Iterable[str]]) -> str:
+    def reconstruct(self, tree: Tree, postproc: Callable[[Iterable[str]], Iterable[str]]=None,
+                    insert_spaces: bool = True) -> str:
         ...

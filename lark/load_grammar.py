@@ -330,7 +330,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
                 try:
                     term_name = _TERMINAL_NAMES[value]
                 except KeyError:
-                    if is_id_continue(value) and is_id_start(value[0]) and value.upper() not in self.term_set:
+                    if value and is_id_continue(value) and is_id_start(value[0]) and value.upper() not in self.term_set:
                         term_name = value.upper()
 
                 if term_name in self.term_set:
@@ -449,7 +449,7 @@ def _literal_to_pattern(literal):
     s = eval_escaping(x)
 
     if s == "":
-        raise GrammarError("Can't have empty terminals (offending literal: %s)" % literal.value)
+        raise GrammarError("Empty terminals are not allowed (%s)" % literal)
 
     if literal.type == 'STRING':
         s = s.replace('\\\\', '\\')

@@ -40,7 +40,7 @@ class Tree:
     def expand_kids_by_index(self, *indices: int) -> None:
         ...
 
-    def scan_values(self, pred: Callable[[Union[str, Tree]], bool]) -> List[str]:
+    def scan_values(self, pred: Callable[[Union[str, Tree]], bool]) -> Iterator[str]:
         ...
 
     def iter_subtrees(self) -> Iterator[Tree]:

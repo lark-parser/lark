@@ -48,7 +48,7 @@ Main Features:
  - CYK parser, for highly ambiguous grammars
  - EBNF grammar
  - Unicode fully supported
- - Python 2 & 3 compatible
+ - Python 3 compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js
@@ -59,7 +59,6 @@ Main Features:
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Text Processing :: General",

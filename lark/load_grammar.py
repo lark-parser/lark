@@ -231,7 +231,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 return not sym.name.startswith('_')
             if isinstance(sym, Terminal):
                 return keep_all_tokens or not sym.filter_out
-            if isinstance(sym, Symbol):
+            if sym is _EMPTY:
                 return False
             assert False, sym
 

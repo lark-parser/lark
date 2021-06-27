@@ -1,6 +1,6 @@
 from warnings import warn
 
-from .utils import STRING_TYPE, logger, NO_VALUE
+from .utils import logger, NO_VALUE
 
 
 ###{standalone
@@ -90,7 +90,7 @@ class UnexpectedInput(LarkError):
 
         candidate = (None, False)
         for i, (label, example) in enumerate(examples):
-            assert not isinstance(example, STRING_TYPE)
+            assert not isinstance(example, str), "Expecting a list"
 
             for j, malformed in enumerate(example):
                 try:

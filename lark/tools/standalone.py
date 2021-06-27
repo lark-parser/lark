@@ -27,6 +27,7 @@ from __future__ import print_function
 #
 
 from io import open
+from abc import ABC, abstractmethod
 ###}
 
 import sys

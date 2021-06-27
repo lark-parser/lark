@@ -1,8 +1,9 @@
 # Lexer Implementation
 
 import re
+from contextlib import suppress
 
-from .utils import Str, classify, get_regexp_width, Py36, Serialize, suppress
+from .utils import classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
@@ -110,7 +111,7 @@ class TerminalDef(Serialize):
             return self.name
 
 
-class Token(Str):
+class Token(str):
     """A string with meta-information, that is produced by the lexer.
 
     When parsing text, the resulting chunks of the input that haven't been discarded,
@@ -177,9 +178,9 @@ class Token(Str):
         if isinstance(other, Token) and self.type != other.type:
             return False
 
-        return Str.__eq__(self, other)
+        return str.__eq__(self, other)
 
-    __hash__ = Str.__hash__
+    __hash__ = str.__hash__
 
 
 class LineCounter:

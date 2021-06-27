@@ -8,6 +8,7 @@ from io import open
 import pkgutil
 from ast import literal_eval
 from numbers import Integral
+from contextlib import suppress
 
 from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -16,7 +17,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress, dedup_list, Str
+from .utils import classify, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError
 
 from .tree import Tree, SlottedTree as ST
@@ -539,9 +540,9 @@ class PrepareSymbols(Transformer_InPlace):
         if isinstance(v, Tree):
             return v
         elif v.type == 'RULE':
-            return NonTerminal(Str(v.value))
+            return NonTerminal(str(v.value))
         elif v.type == 'TERMINAL':
-            return Terminal(Str(v.value), filter_out=v.startswith('_'))
+            return Terminal(str(v.value), filter_out=v.startswith('_'))
         assert False
 
 

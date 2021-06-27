@@ -1,14 +1,13 @@
 from __future__ import absolute_import
 
-
-from lark.exceptions import ConfigurationError, assert_config
-
+from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 from io import open
 import tempfile
 from warnings import warn
 
-from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod
+from .exceptions import ConfigurationError, assert_config
+from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files
 from .tree import Tree
 from .common import LexerConf, ParserConf
@@ -153,7 +152,7 @@ class LarkOptions(Serialize):
 
             options[name] = value
 
-        if isinstance(options['start'], STRING_TYPE):
+        if isinstance(options['start'], str):
             options['start'] = [options['start']]
 
         self.__dict__['options'] = options
@@ -247,14 +246,11 @@ class Lark(Serialize):
 
         cache_fn = None
         cache_md5 = None
-        if isinstance(grammar, STRING_TYPE):
+        if isinstance(grammar, str):
             self.source_grammar = grammar
             if self.options.use_bytes:
                 if not isascii(grammar):
                     raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
-                if sys.version_info[0] == 2 and self.options.use_bytes != 'force':
-                    raise ConfigurationError("`use_bytes=True` may have issues on python2."
-                                              "Use `use_bytes='force'` to use it at your own risk.")
 
             if self.options.cache:
                 if self.options.parser != 'lalr':
@@ -266,7 +262,7 @@ class Lark(Serialize):
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
                 cache_md5 = hashlib.md5(s.encode('utf8')).hexdigest()
 
-                if isinstance(self.options.cache, STRING_TYPE):
+                if isinstance(self.options.cache, str):
                     cache_fn = self.options.cache
                 else:
                     if self.options.cache is not True:

@@ -147,22 +147,6 @@ class Tree(object):
         self.data = data
         self.children = children
 
-    # XXX Deprecated! Here for backwards compatibility <0.6.0
-    @property
-    def line(self):
-        return self.meta.line
-
-    @property
-    def column(self):
-        return self.meta.column
-
-    @property
-    def end_line(self):
-        return self.meta.end_line
-
-    @property
-    def end_column(self):
-        return self.meta.end_column
 
 
 class SlottedTree(Tree):

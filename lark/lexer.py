@@ -7,7 +7,6 @@ from .utils import classify, get_regexp_width, Py36, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
-from warnings import warn
 from copy import copy
 
 
@@ -121,18 +120,18 @@ class Token(str):
     Attributes:
         type: Name of the token (as specified in grammar)
         value: Value of the token (redundant, as ``token.value == token`` will always be true)
-        pos_in_stream: The index of the token in the text
+        start_pos: The index of the token in the text
         line: The line of the token in the text (starting with 1)
         column: The column of the token in the text (starting with 1)
         end_line: The line where the token ends
         end_column: The next column after the end of the token. For example,
             if the token is a single character with a column value of 4,
             end_column will be 5.
-        end_pos: the index where the token ends (basically ``pos_in_stream + len(token)``)
+        end_pos: the index where the token ends (basically ``start_pos + len(token)``)
     """
     __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
-    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None, pos_in_stream=None):
+    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         try:
             self = super(Token, cls).__new__(cls, value)
         except UnicodeDecodeError:
@@ -140,7 +139,7 @@ class Token(str):
             self = super(Token, cls).__new__(cls, value)
 
         self.type = type_
-        self.start_pos = start_pos if start_pos is not None else pos_in_stream
+        self.start_pos = start_pos
         self.value = value
         self.line = line
         self.column = column
@@ -148,11 +147,6 @@ class Token(str):
         self.end_column = end_column
         self.end_pos = end_pos
         return self
-
-    @property
-    def pos_in_stream(self):
-        warn("Attribute Token.pos_in_stream was renamed to Token.start_pos", DeprecationWarning)
-        return self.start_pos
 
     def update(self, type_=None, value=None):
         return Token.new_borrow_pos(

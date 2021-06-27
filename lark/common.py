@@ -1,5 +1,3 @@
-from warnings import warn
-
 from .utils import Serialize
 from .lexer import TerminalDef
 
@@ -22,11 +20,6 @@ class LexerConf(Serialize):
         self.skip_validation = skip_validation
         self.use_bytes = use_bytes
         self.lexer_type = None
-
-    @property
-    def tokens(self):
-        warn("LexerConf.tokens is deprecated. Use LexerConf.terminals instead", DeprecationWarning)
-        return self.terminals
 
     def _deserialize(self):
         self.terminals_by_name = {t.name: t for t in self.terminals}

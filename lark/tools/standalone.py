@@ -37,7 +37,6 @@ from os import path
 from collections import defaultdict
 from functools import partial
 from argparse import ArgumentParser, SUPPRESS
-from warnings import warn
 
 import lark
 from lark import Lark
@@ -119,11 +118,6 @@ def strip_docstrings(line_gen):
     return ''.join(res)
 
 
-def main(fobj, start, print=print):
-    warn('`lark.tools.standalone.main` is being redesigned. Use `gen_standalone`', DeprecationWarning)
-    lark_inst = Lark(fobj, parser="lalr", lexer="contextual", start=start)
-    gen_standalone(lark_inst, print)
-
 def gen_standalone(lark_inst, output=None, out=sys.stdout, compress=False):
     if output is None:
         output = partial(print, file=out)
@@ -186,9 +180,6 @@ def main():
         parser.print_help(sys.stderr)
         sys.exit(1)
     ns = parser.parse_args()
-    if ns.old_start is not None:
-        warn('The syntax `python -m lark.tools.standalone <grammar-file> <start>` is deprecated. Use the -s option')
-        ns.start.append(ns.old_start)
 
     lark_inst, out = build_lalr(ns)
     gen_standalone(lark_inst, out=out, compress=ns.compress)

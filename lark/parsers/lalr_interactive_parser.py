@@ -126,7 +126,3 @@ class ImmutableInteractiveParser(InteractiveParser):
         p = copy(self)
         return InteractiveParser(p.parser, p.parser_state, p.lexer_state)
 
-
-# Deprecated class names for the interactive parser
-ParserPuppet = InteractiveParser
-ImmutableParserPuppet = ImmutableInteractiveParser

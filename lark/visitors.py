@@ -149,18 +149,6 @@ class Transformer(_Decoratable):
         return token
 
 
-class InlineTransformer(Transformer):   # XXX Deprecated
-    def _call_userfunc(self, tree, new_children=None):
-        # Assumes tree is already transformed
-        children = new_children if new_children is not None else tree.children
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
-            return self.__default__(tree.data, children, tree.meta)
-        else:
-            return f(*children)
-
-
 class TransformerChain(object):
     def __init__(self, *transformers):
         self.transformers = transformers
@@ -361,10 +349,6 @@ def _inline_args__func(func):
         return f
 
     return smart_decorator(func, create_decorator)
-
-
-def inline_args(obj):   # XXX Deprecated
-    return _apply_decorator(obj, _inline_args__func)
 
 
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):

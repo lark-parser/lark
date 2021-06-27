@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 from io import open
 import tempfile
-from warnings import warn
 
 from .exceptions import ConfigurationError, assert_config
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
@@ -567,24 +566,6 @@ class Lark(Serialize):
 
         """
         return self.parser.parse(text, start=start, on_error=on_error)
-
-    @property
-    def source(self):
-        warn("Attribute Lark.source was renamed to Lark.source_path", DeprecationWarning)
-        return self.source_path
-
-    @source.setter
-    def source(self, value):
-        self.source_path = value
-
-    @property
-    def grammar_source(self):
-        warn("Attribute Lark.grammar_source was renamed to Lark.source_grammar", DeprecationWarning)
-        return self.source_grammar
-
-    @grammar_source.setter
-    def grammar_source(self, value):
-        self.source_grammar = value
 
 
 ###}

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 ###{standalone
 #
 #
@@ -26,7 +24,6 @@ from __future__ import print_function
 #
 #
 
-from io import open
 from abc import ABC, abstractmethod
 ###}
 
@@ -36,14 +33,13 @@ import os
 from os import path
 from collections import defaultdict
 from functools import partial
-from argparse import ArgumentParser, SUPPRESS
+from argparse import ArgumentParser
 
 import lark
-from lark import Lark
 from lark.tools import lalr_argparser, build_lalr, make_warnings_comments
 
 
-from lark.grammar import RuleOptions, Rule
+from lark.grammar import Rule
 from lark.lexer import TerminalDef
 
 _dir = path.dirname(__file__)
@@ -174,7 +170,6 @@ def main():
     make_warnings_comments()
     parser = ArgumentParser(prog="prog='python -m lark.tools.standalone'", description="Lark Stand-alone Generator Tool",
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
-    parser.add_argument("old_start", nargs='?', help=SUPPRESS)
     parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)

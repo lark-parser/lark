@@ -1,8 +1,5 @@
-from __future__ import absolute_import
-
 from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
-from io import open
 import tempfile
 
 from .exceptions import ConfigurationError, assert_config

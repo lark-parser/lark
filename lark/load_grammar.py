@@ -4,7 +4,6 @@ import os.path
 import sys
 from collections import namedtuple
 from copy import copy, deepcopy
-from io import open
 import pkgutil
 from ast import literal_eval
 from numbers import Integral

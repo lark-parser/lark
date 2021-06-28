@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 from .utils import Serialize
 
 ###{standalone
@@ -5,10 +7,10 @@ from .utils import Serialize
 class Symbol(Serialize):
     __slots__ = ('name',)
 
-    is_term = NotImplemented
+    is_term: bool = NotImplemented
 
     def __init__(self, name):
-        self.name = name
+        self.name: str = name
 
     def __eq__(self, other):
         assert isinstance(other, Symbol), other
@@ -50,11 +52,11 @@ class RuleOptions(Serialize):
     __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
 
     def __init__(self, keep_all_tokens=False, expand1=False, priority=None, template_source=None, empty_indices=()):
-        self.keep_all_tokens = keep_all_tokens
-        self.expand1 = expand1
-        self.priority = priority
-        self.template_source = template_source
-        self.empty_indices = empty_indices
+        self.keep_all_tokens: bool = keep_all_tokens
+        self.expand1: bool = expand1
+        self.priority: int = priority
+        self.template_source: Optional[str] = template_source
+        self.empty_indices: Tuple[bool, ...] = empty_indices
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r, %r)' % (

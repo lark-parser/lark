@@ -1,5 +1,8 @@
 "Provides Indentation services for languages with indentation similar to Python"
 
+from abc import ABC, abstractmethod
+from typing import Tuple, List, Iterator, Optional
+
 from .exceptions import LarkError
 from .lark import PostLex
 from .lexer import Token
@@ -8,13 +11,13 @@ from .lexer import Token
 class DedentError(LarkError):
     pass
 
-class Indenter(PostLex):
-    def __init__(self):
-        self.paren_level = None
-        self.indent_level = None
+class Indenter(PostLex, ABC):
+    def __init__(self) -> None:
+        self.paren_level: Optional[int] = None
+        self.indent_level: Optional[List[int]] = None
         assert self.tab_len > 0
 
-    def handle_NL(self, token):
+    def handle_NL(self, token: Token) -> Iterator[Token]:
         if self.paren_level > 0:
             return
 
@@ -63,5 +66,35 @@ class Indenter(PostLex):
     @property
     def always_accept(self):
         return (self.NL_type,)
+
+    @property
+    @abstractmethod
+    def NL_type(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def OPEN_PAREN_types(self) -> List[str]:
+        ...
+
+    @property
+    @abstractmethod
+    def CLOSE_PAREN_types(self) -> List[str]:
+        ...
+
+    @property
+    @abstractmethod
+    def INDENT_type(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def DEDENT_type(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def tab_len(self) -> int:
+        ...
 
 ###}

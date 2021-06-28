@@ -3,7 +3,7 @@
 import re
 from contextlib import suppress
 
-from .utils import classify, get_regexp_width, Py36, Serialize
+from .utils import classify, get_regexp_width, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 
 ###{standalone
@@ -38,19 +38,10 @@ class Pattern(Serialize):
     def max_width(self):
         raise NotImplementedError()
 
-    if Py36:
-        # Python 3.6 changed syntax for flags in regular expression
-        def _get_flags(self, value):
-            for f in self.flags:
-                value = ('(?%s:%s)' % (f, value))
-            return value
-
-    else:
-        def _get_flags(self, value):
-            for f in self.flags:
-                value = ('(?%s)' % f) + value
-            return value
-
+    def _get_flags(self, value):
+        for f in self.flags:
+            value = ('(?%s:%s)' % (f, value))
+        return value
 
 
 class PatternStr(Pattern):

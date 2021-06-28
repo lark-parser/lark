@@ -9,7 +9,7 @@ from ast import literal_eval
 from numbers import Integral
 from contextlib import suppress
 
-from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
+from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -475,18 +475,7 @@ class PrepareLiterals(Transformer_InPlace):
 
 
 def _make_joined_pattern(regexp, flags_set):
-    # In Python 3.6, a new syntax for flags was introduced, that allows us to restrict the scope
-    # of flags to a specific regexp group. We are already using it in `lexer.Pattern._get_flags`
-    # However, for prior Python versions, we still need to use global flags, so we have to make sure
-    # that there are no flag collisions when we merge several terminals.
-    flags = ()
-    if not Py36:
-        if len(flags_set) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
-        elif len(flags_set) == 1:
-            flags ,= flags_set
-
-    return PatternRE(regexp, flags)
+    return PatternRE(regexp, ())
 
 
 class TerminalTreeToPattern(Transformer):

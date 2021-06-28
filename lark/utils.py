@@ -13,8 +13,6 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.CRITICAL)
 
 
-Py36 = (sys.version_info[:2] >= (3, 6))
-
 NO_VALUE = object()
 
 

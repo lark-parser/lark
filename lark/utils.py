@@ -241,17 +241,6 @@ except ImportError:
             pass
 
 
-try:
-    compare = cmp
-except NameError:
-    def compare(a, b):
-        if a == b:
-            return 0
-        elif a > b:
-            return 1
-        return -1
-
-
 class Enumerator(Serialize):
     def __init__(self):
         self.enums = {}

@@ -120,7 +120,7 @@ class Token(Str):
     Attributes:
         type: Name of the token (as specified in grammar)
         value: Value of the token (redundant, as ``token.value == token`` will always be true)
-        pos_in_stream: The index of the token in the text
+        start_pos: The index of the token in the text
         line: The line of the token in the text (starting with 1)
         column: The column of the token in the text (starting with 1)
         end_line: The line where the token ends

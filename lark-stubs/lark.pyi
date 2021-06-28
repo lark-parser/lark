@@ -1,19 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from typing import (
-    TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
+    Type, List, Dict, IO, Iterator, Callable, Union, Optional,
     Literal, Protocol, Tuple, Iterable,
 )
 
-from .parsers.lalr_interactive_parser import InteractiveParser
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
-from .tree import Tree
-from .exceptions import UnexpectedInput
-from .load_grammar import Grammar
-
-_T = TypeVar('_T')
-
+from .load_grammar import Grammar, PackageResource
 
 class PostLex(Protocol):
 
@@ -22,39 +16,8 @@ class PostLex(Protocol):
 
     always_accept: Iterable[str]
 
-
 class LarkOptions:
-    start: List[str]
-    parser: str
-    lexer: str
-    transformer: Optional[Transformer]
-    postlex: Optional[PostLex]
-    ambiguity: str
-    regex: bool
-    debug: bool
-    keep_all_tokens: bool
-    propagate_positions: Union[bool, str]
-    maybe_placeholders: bool
-    lexer_callbacks: Dict[str, Callable[[Token], Token]]
-    cache: Union[bool, str]
-    g_regex_flags: int
-    use_bytes: bool
-    import_paths: List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]
-    source_path: Optional[str]
-
-
-class PackageResource(object):
-    pkg_name: str
-    path: str
-
-    def __init__(self, pkg_name: str, path: str): ...
-
-
-class FromPackageLoader:
-    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
-
-    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]: ...
-
+    ...
 
 class Lark:
     source_path: str
@@ -88,22 +51,3 @@ class Lark:
     ):
         ...
 
-    def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
-        ...
-
-    def parse_interactive(self, text: str = None, start: Optional[str] = None) -> InteractiveParser:
-        ...
-
-    @classmethod
-    def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str] = None, **options) -> _T:
-        ...
-
-    @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...] = ..., **options) -> _T:
-        ...
-
-    def lex(self, text: str, dont_ignore: bool = False) -> Iterator[Token]:
-        ...
-
-    def get_terminal(self, name: str) -> TerminalDef:
-        ...

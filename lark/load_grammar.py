@@ -691,14 +691,18 @@ class FromPackageLoader(object):
     pkg_name: The name of the package. You can probably provide `__name__` most of the time
     search_paths: All the path that will be search on absolute imports.
     """
-    def __init__(self, pkg_name, search_paths=("", )):
+
+    pkg_name: str
+    search_paths: Tuple[str, ...]
+
+    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...]=("", )) -> None:
         self.pkg_name = pkg_name
         self.search_paths = search_paths
 
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_path, grammar_path):
+    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]:
         if base_path is None:
             to_try = self.search_paths
         else:

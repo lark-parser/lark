@@ -8,9 +8,23 @@ from copy import deepcopy
 
 ###{standalone
 from collections import OrderedDict
+from typing import List, Callable, Iterator, Union, Optional, Any, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .lexer import TerminalDef
 
 class Meta:
+
+    empty: bool
+    line: int
+    column: int
+    start_pos: int
+    end_line: int
+    end_column: int
+    end_pos: int
+    orig_expansion: 'List[TerminalDef]'
+    match_tree: bool
+
     def __init__(self):
         self.empty = True
 
@@ -27,13 +41,17 @@ class Tree(object):
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
             meta attributes: line, column, start_pos, end_line, end_column, end_pos
     """
-    def __init__(self, data, children, meta=None):
+
+    data: str
+    children: 'List[Union[str, Tree]]'
+
+    def __init__(self, data: str, children: 'List[Union[str, Tree]]', meta: Meta=None) -> None:
         self.data = data
         self.children = children
         self._meta = meta
 
     @property
-    def meta(self):
+    def meta(self) -> Meta:
         if self._meta is None:
             self._meta = Meta()
         return self._meta
@@ -57,7 +75,7 @@ class Tree(object):
 
         return l
 
-    def pretty(self, indent_str='  '):
+    def pretty(self, indent_str: str='  ') -> str:
         """Returns an indented string representation of the tree.
 
         Great for debugging.
@@ -73,10 +91,10 @@ class Tree(object):
     def __ne__(self, other):
         return not (self == other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.data, tuple(self.children)))
 
-    def iter_subtrees(self):
+    def iter_subtrees(self) -> 'Iterator[Tree]':
         """Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
@@ -91,23 +109,23 @@ class Tree(object):
         del queue
         return reversed(list(subtrees.values()))
 
-    def find_pred(self, pred):
+    def find_pred(self, pred: 'Callable[[Tree], bool]') -> 'Iterator[Tree]':
         """Returns all nodes of the tree that evaluate pred(node) as true."""
         return filter(pred, self.iter_subtrees())
 
-    def find_data(self, data):
+    def find_data(self, data: str) -> 'Iterator[Tree]':
         """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
 
 ###}
 
-    def expand_kids_by_index(self, *indices):
+    def expand_kids_by_index(self, *indices: int) -> None:
         """Expand (inline) children at the given indices"""
         for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
             kid = self.children[i]
             self.children[i:i+1] = kid.children
 
-    def scan_values(self, pred):
+    def scan_values(self, pred: 'Callable[[Union[str, Tree]], bool]') -> Iterator[str]:
         """Return all values in the tree that evaluate pred(value) as true.
 
         This can be used to find all the tokens in the tree.
@@ -140,10 +158,10 @@ class Tree(object):
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
 
-    def copy(self):
+    def copy(self) -> 'Tree':
         return type(self)(self.data, self.children)
 
-    def set(self, data, children):
+    def set(self, data: str, children: 'List[Union[str, Tree]]') -> None:
         self.data = data
         self.children = children
 

@@ -12,6 +12,10 @@ from typing import List, Callable, Iterator, Union, Optional, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import TerminalDef
+    if sys.version_info >= (3, 8):
+        from typing import Literal
+    else:
+        from typing_extensions import Literal
 
 class Meta:
 
@@ -171,7 +175,7 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree, filename, rankdir="LR", **kwargs):
+def pydot__tree_to_png(tree: Tree, filename: str, rankdir: 'Literal["TB", "LR", "BT", "RL"]'="LR", **kwargs) -> None:
     graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
     graph.write_png(filename)
 

@@ -1,14 +1,10 @@
 from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
-from typing import (
-    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
-    Tuple, Iterable, TYPE_CHECKING
-)
 
-from .exceptions import ConfigurationError, assert_config
+from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -23,20 +19,27 @@ try:
 except ImportError:
     regex = None
 
-if TYPE_CHECKING:
-    from .load_grammar import PackageResource
-    from .exceptions import UnexpectedInput
-    from .parsers.lalr_interactive_parser import InteractiveParser
-    from .visitors import Transformer
 
 ###{standalone
+from typing import (
+    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
+    Tuple, Iterable, IO, Any, TYPE_CHECKING
+)
+
+if TYPE_CHECKING:
+    from .parsers.lalr_interactive_parser import InteractiveParser
+    from .visitors import Transformer
+    if sys.version_info >= (3, 8):
+        from typing import Literal
+    else:
+        from typing_extensions import Literal
 
 class PostLex(ABC):
     @abstractmethod
-    def process(self, stream):
+    def process(self, stream: Iterator[Token]) -> Iterator[Token]:
         return stream
 
-    always_accept = ()
+    always_accept: Iterable[str] = ()
 
 class LarkOptions(Serialize):
     """Specifies the options for Lark
@@ -44,20 +47,23 @@ class LarkOptions(Serialize):
     """
 
     start: List[str]
-    parser: str
-    lexer: str
-    transformer: 'Optional[Transformer]'
-    postlex: Optional[PostLex]
-    ambiguity: str
-    regex: bool
     debug: bool
-    keep_all_tokens: bool
+    transformer: 'Optional[Transformer]'
     propagate_positions: Union[bool, str]
     maybe_placeholders: bool
-    lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
+    regex: bool
     g_regex_flags: int
+    keep_all_tokens: bool
+    tree_class: Any
+    parser: 'Literal["earley", "lalr", "cyk", "auto"]'
+    lexer: 'Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
+    ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
+    postlex: Optional[PostLex]
+    priority: 'Optional[Literal["auto", "normal", "invert"]]'
+    lexer_callbacks: Dict[str, Callable[[Token], Token]]
     use_bytes: bool
+    edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
     import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
     source_path: Optional[str]
 
@@ -140,9 +146,7 @@ class LarkOptions(Serialize):
     # Adding a new option needs to be done in multiple places:
     # - In the dictionary below. This is the primary truth of which options `Lark.__init__` accepts
     # - In the docstring above. It is used both for the docstring of `LarkOptions` and `Lark`, and in readthedocs
-    # - In `lark-stubs/lark.pyi`:
-    #   - As attribute to `LarkOptions`
-    #   - As parameter to `Lark.__init__`
+    # - As an attribute of `LarkOptions` above
     # - Potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
     # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
     _defaults = {
@@ -238,7 +242,15 @@ class Lark(Serialize):
         >>> Lark(r'''start: "foo" ''')
         Lark(...)
     """
-    def __init__(self, grammar, **options):
+
+    source_path: str
+    source_grammar: str
+    grammar: 'Grammar'
+    options: LarkOptions
+    lexer: Lexer
+    terminals: List[TerminalDef]
+
+    def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
 
         # Set regex or re module

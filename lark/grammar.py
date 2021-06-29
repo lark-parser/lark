@@ -8,10 +8,11 @@ from typing import Optional, Tuple
 class Symbol(Serialize):
     __slots__ = ('name',)
 
+    name: str
     is_term: bool = NotImplemented
 
-    def __init__(self, name):
-        self.name: str = name
+    def __init__(self, name: str) -> None:
+        self.name = name
 
     def __eq__(self, other):
         assert isinstance(other, Symbol), other
@@ -52,12 +53,18 @@ class NonTerminal(Symbol):
 class RuleOptions(Serialize):
     __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
 
-    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, template_source=None, empty_indices=()):
-        self.keep_all_tokens: bool = keep_all_tokens
-        self.expand1: bool = expand1
-        self.priority: int = priority
-        self.template_source: Optional[str] = template_source
-        self.empty_indices: Tuple[bool, ...] = empty_indices
+    keep_all_tokens: bool
+    expand1: bool
+    priority: Optional[int]
+    template_source: Optional[str]
+    empty_indices: Tuple[bool, ...]
+
+    def __init__(self, keep_all_tokens: bool=False, expand1: bool=False, priority: Optional[int]=None, template_source: Optional[str]=None, empty_indices: Tuple[bool, ...]=()) -> None:
+        self.keep_all_tokens = keep_all_tokens
+        self.expand1 = expand1
+        self.priority = priority
+        self.template_source = template_source
+        self.empty_indices = empty_indices
 
     def __repr__(self):
         return 'RuleOptions(%r, %r, %r, %r)' % (

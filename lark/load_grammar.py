@@ -552,10 +552,15 @@ def nr_deepcopy_tree(t):
 
 
 class Grammar:
-    def __init__(self, rule_defs, term_defs, ignore):
-        self.term_defs: List[Tuple[str, Tuple[Tree, int]]] = term_defs
-        self.rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]] = rule_defs
-        self.ignore: List[str] = ignore
+
+    term_defs: List[Tuple[str, Tuple[Tree, int]]]
+    rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]]
+    ignore: List[str]
+
+    def __init__(self, rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]], term_defs: List[Tuple[str, Tuple[Tree, int]]], ignore: List[str]) -> None:
+        self.term_defs = term_defs
+        self.rule_defs = rule_defs
+        self.ignore = ignore
 
     def compile(self, start, terminals_to_keep):
         # We change the trees in-place (to support huge grammars)
@@ -928,10 +933,15 @@ def _mangle_exp(exp, mangle):
 
 
 class GrammarBuilder:
-    def __init__(self, global_keep_all_tokens: bool=False, import_paths: List[Union[str, Callable]]=None, used_files: Dict[str, str]=None) -> None:
-        self.global_keep_all_tokens: bool = global_keep_all_tokens
-        self.import_paths: List[Union[str, Callable]] = import_paths or []
-        self.used_files: Dict[str, str] = used_files or {}
+
+    global_keep_all_tokens: bool
+    import_paths: List[Union[str, Callable]]
+    used_files: Dict[str, str]
+
+    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
+        self.global_keep_all_tokens = global_keep_all_tokens
+        self.import_paths = import_paths or []
+        self.used_files = used_files or {}
 
         self._definitions = {}
         self._ignore_names = []
@@ -1072,7 +1082,7 @@ class GrammarBuilder:
         return name, exp, params, opts
 
 
-    def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Callable[[str], str]=None) -> None:
+    def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports = {}
@@ -1135,7 +1145,7 @@ class GrammarBuilder:
         self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
 
 
-    def do_import(self, dotted_path: Tuple[str, ...], base_path: Optional[str], aliases: Dict[str, str], base_mangle: Callable[[str], str]=None) -> None:
+    def do_import(self, dotted_path: Tuple[str, ...], base_path: Optional[str], aliases: Dict[str, str], base_mangle: Optional[Callable[[str], str]]=None) -> None:
         assert dotted_path
         mangle = _get_mangle('__'.join(dotted_path), aliases, base_mangle)
         grammar_path = os.path.join(*dotted_path) + EXT

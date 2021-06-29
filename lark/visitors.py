@@ -8,7 +8,7 @@ from .lexer import Token
 
 ###{standalone
 from inspect import getmembers, getmro
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
 
 _T = TypeVar('_T')
 _R = TypeVar('_R')
@@ -156,8 +156,11 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
 
 
 class TransformerChain(Generic[_T]):
-    def __init__(self, *transformers):
-        self.transformers: Tuple[Transformer[_T], ...] = transformers
+
+    transformers: Tuple[Transformer[_T], ...]
+
+    def __init__(self, *transformers: Transformer[_T]) -> None:
+        self.transformers = transformers
 
     def transform(self, tree: Tree) -> _T:
         for t in self.transformers:
@@ -387,7 +390,7 @@ def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
 
-def v_args(inline: bool=False, meta: bool=False, tree: bool=False, wrapper: Callable[[_DECORATED], _DECORATED]=None) -> Callable[[_DECORATED], _DECORATED]:
+def v_args(inline: bool=False, meta: bool=False, tree: bool=False, wrapper: Optional[Callable]=None) -> Callable[[_DECORATED], _DECORATED]:
     """A convenience decorator factory for modifying the behavior of user-supplied visitor methods.
 
     By default, callback methods of transformers/visitors accept one argument - a list of the node's children.

@@ -21,3 +21,10 @@ class Ambiguity(enum.Enum):
   resolve = enum.auto()
   explicit = enum.auto()
   forest = enum.auto()
+
+@enum.unique
+class Priority(enum.Enum):
+  auto = enum.auto()
+  none = enum.auto()
+  normal = enum.auto()
+  invert = enum.auto()

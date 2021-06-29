@@ -18,6 +18,7 @@ class Lexer(enum.Enum):
 
 @enum.unique
 class Ambiguity(enum.Enum):
+  auto = enum.auto()
   resolve = enum.auto()
   explicit = enum.auto()
   forest = enum.auto()

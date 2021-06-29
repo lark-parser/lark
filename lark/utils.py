@@ -6,7 +6,7 @@ from collections import deque
 ###{standalone
 import sys, re
 import logging
-logger = logging.getLogger("lark")
+logger: logging.Logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages

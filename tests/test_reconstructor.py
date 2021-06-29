@@ -3,6 +3,7 @@
 import json
 import sys
 import unittest
+from itertools import product
 from unittest import TestCase
 
 from lark import Lark
@@ -20,8 +21,8 @@ def _remove_ws(s):
 
 class TestReconstructor(TestCase):
 
-    def assert_reconstruct(self, grammar, code):
-        parser = Lark(grammar, parser='lalr', maybe_placeholders=False)
+    def assert_reconstruct(self, grammar, code, **options):
+        parser = Lark(grammar, parser='lalr', maybe_placeholders=False, **options)
         tree = parser.parse(code)
         new = Reconstructor(parser).reconstruct(tree)
         self.assertEqual(_remove_ws(code), _remove_ws(new))
@@ -141,6 +142,17 @@ class TestReconstructor(TestCase):
 
         new_json = Reconstructor(json_parser).reconstruct(tree)
         self.assertEqual(json.loads(new_json), json.loads(test_json))
+
+    def test_keep_all_tokens(self):
+        g = """
+        start: "a"? _B? c? _d?
+        _B: "b"
+        c: "c"
+        _d: "d"
+        """
+        examples = list(map(''.join, product(('', 'a'), ('', 'b'), ('', 'c'), ('', 'd'), )))
+        for code in examples:
+            self.assert_reconstruct(g, code, keep_all_tokens=True)
 
     @unittest.skipIf(sys.version_info < (3, 0), "Python 2 does not play well with Unicode.")
     def test_switch_grammar_unicode_terminal(self):

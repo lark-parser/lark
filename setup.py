@@ -48,12 +48,13 @@ Main Features:
  - CYK parser, for highly ambiguous grammars
  - EBNF grammar
  - Unicode fully supported
- - Python 3 compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js
  - Extensive test suite
  - And much more!
+
+Since version 1.0, only Python versions 3.6 and up are supported.
 ''',
 
     classifiers=[

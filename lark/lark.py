@@ -8,6 +8,7 @@ from io import open
 import tempfile
 from warnings import warn
 
+from . import enums
 from .utils import STRING_TYPE, Serialize, SerializeMemoizer, FS, isascii, logger, ABC, abstractmethod
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files
 from .tree import Tree
@@ -122,12 +123,12 @@ class LarkOptions(Serialize):
         'tree_class': None,
         'cache': False,
         'postlex': None,
-        'parser': 'earley',
-        'lexer': 'auto',
+        'parser': enums.Parser.earley,
+        'lexer': enums.Lexer.auto,
         'transformer': None,
         'start': 'start',
-        'priority': 'auto',
-        'ambiguity': 'auto',
+        'priority': enums.Priority.auto,
+        'ambiguity': enums.Ambiguity.auto,
         'regex': False,
         'propagate_positions': False,
         'lexer_callbacks': {},
@@ -159,9 +160,8 @@ class LarkOptions(Serialize):
         self.__dict__['options'] = options
 
 
-        assert_config(self.parser, ('earley', 'lalr', 'cyk', None))
 
-        if self.parser == 'earley' and self.transformer:
+        if self.parser == enums.Parser.earley and self.transformer:
             raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm.'
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
 
@@ -190,8 +190,6 @@ class LarkOptions(Serialize):
 # These option are only used outside of `load_grammar`.
 _LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
 
-_VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
-_VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
 class PostLex(ABC):
@@ -257,7 +255,7 @@ class Lark(Serialize):
                                               "Use `use_bytes='force'` to use it at your own risk.")
 
             if self.options.cache:
-                if self.options.parser != 'lalr':
+                if self.options.parser != enums.Parser.lalr:
                     raise ConfigurationError("cache only works with parser='lalr' for now")
 
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
@@ -303,42 +301,34 @@ class Lark(Serialize):
             self.grammar = grammar
 
 
-        if self.options.lexer == 'auto':
-            if self.options.parser == 'lalr':
-                self.options.lexer = 'contextual'
-            elif self.options.parser == 'earley':
+        if self.options.lexer == enums.Lexer.auto:
+            if self.options.parser == enums.Parser.lalr:
+                self.options.lexer = enums.Lexer.contextual
+            elif self.options.parser == enums.Parser.earley:
                 if self.options.postlex is not None:
                     logger.info("postlex can't be used with the dynamic lexer, so we use standard instead. "
                                 "Consider using lalr with contextual instead of earley")
-                    self.options.lexer = 'standard'
+                    self.options.lexer = enums.Lexer.standard
                 else:
-                    self.options.lexer = 'dynamic'
-            elif self.options.parser == 'cyk':
-                self.options.lexer = 'standard'
+                    self.options.lexer = enums.Lexer.dynamic
+            elif self.options.parser == enums.Parser.cyk:
+                self.options.lexer = enums.Lexer.standard
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
-        if isinstance(lexer, type):
-            assert issubclass(lexer, Lexer)     # XXX Is this really important? Maybe just ensure interface compliance
-        else:
-            assert_config(lexer, ('standard', 'contextual', 'dynamic', 'dynamic_complete'))
-            if self.options.postlex is not None and 'dynamic' in lexer:
-                raise ConfigurationError("Can't use postlex with a dynamic lexer. Use standard or contextual instead")
 
-        if self.options.ambiguity == 'auto':
-            if self.options.parser == 'earley':
-                self.options.ambiguity = 'resolve'
+        if self.options.postlex is not None and enums.Lexer.dynamic in lexer:
+            raise ConfigurationError("Can't use postlex with a dynamic lexer. Use standard or contextual instead")
+
+        if self.options.ambiguity == enums.Ambiguity.auto:
+            if self.options.parser == enums.Parser.earley:
+                self.options.ambiguity = enums.Ambiguity.resolve
         else:
-            assert_config(self.options.parser, ('earley', 'cyk'), "%r doesn't support disambiguation. Use one of these parsers instead: %s")
+            assert_config(self.options.parser, (enums.Parser.earley, enums.Parser.cyk), "%r doesn't support disambiguation. Use one of these parsers instead: %s")
 
         if self.options.priority == 'auto':
             self.options.priority = 'normal'
 
-        if self.options.priority not in _VALID_PRIORITY_OPTIONS:
-            raise ConfigurationError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
-        assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
-        if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
-            raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         if self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
@@ -356,7 +346,7 @@ class Lark(Serialize):
 
         # If the user asked to invert the priorities, negate them all here.
         # This replaces the old 'resolve__antiscore_sum' option.
-        if self.options.priority == 'invert':
+        if self.options.priority == enums.Priority.invert:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
@@ -407,7 +397,7 @@ class Lark(Serialize):
                     self.rules,
                     self.options.tree_class or Tree,
                     self.options.propagate_positions,
-                    self.options.parser != 'lalr' and self.options.ambiguity == 'explicit',
+                    self.options.parser != enums.Parser.lalr and self.options.ambiguity == enums.Ambiguity.explicit,
                     self.options.maybe_placeholders
                 )
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
@@ -464,7 +454,7 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
-        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        parser_class = get_frontend(self.options.parser.name, self.options.lexer.name)
         self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
         self.terminals = self.lexer_conf.terminals
         self._prepare_callbacks()

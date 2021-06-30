@@ -17,12 +17,12 @@ class LexerConf(Serialize):
 
     terminals: Collection[TerminalDef]
     re_module: ModuleType
-    ignore: Collection[str] = ()
-    postlex: 'Optional[PostLex]' = None
-    callbacks: Dict[str, _Callback] = {}
-    g_regex_flags: int = 0
-    skip_validation: bool = False
-    use_bytes: bool = False
+    ignore: Collection[str]
+    postlex: 'Optional[PostLex]'
+    callbacks: Dict[str, _Callback]
+    g_regex_flags: int
+    skip_validation: bool
+    use_bytes: bool
 
     def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
         self.terminals = terminals

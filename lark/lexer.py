@@ -13,7 +13,7 @@ from copy import copy
 from types import ModuleType
 from typing import (
     TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Pattern as REPattern, TYPE_CHECKING
+    Pattern as REPattern, ClassVar, TYPE_CHECKING
 )
 
 if TYPE_CHECKING:
@@ -23,8 +23,8 @@ class Pattern(Serialize, ABC):
 
     value: str
     flags: Collection[str]
-    raw: Optional[str] = None
-    type: Optional[str] = None
+    raw: Optional[str]
+    type: ClassVar[str]
 
     def __init__(self, value: str, flags: Collection[str]=(), raw: Optional[str]=None) -> None:
         self.value = value
@@ -73,7 +73,7 @@ class Pattern(Serialize, ABC):
 class PatternStr(Pattern):
     __serialize_fields__ = 'value', 'flags'
 
-    type: str = "str"
+    type: ClassVar[str] = "str"
 
     def to_regexp(self) -> str:
         return self._get_flags(re.escape(self.value))
@@ -90,7 +90,7 @@ class PatternStr(Pattern):
 class PatternRE(Pattern):
     __serialize_fields__ = 'value', 'flags', '_width'
 
-    type: str = "re"
+    type: ClassVar[str] = "re"
 
     def to_regexp(self) -> str:
         return self._get_flags(self.value)

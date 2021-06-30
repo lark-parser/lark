@@ -3,13 +3,13 @@ from .utils import Serialize
 
 ###{standalone
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, ClassVar
 
 class Symbol(Serialize):
     __slots__ = ('name',)
 
     name: str
-    is_term: bool = NotImplemented
+    is_term: ClassVar[bool] = NotImplemented
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -33,7 +33,7 @@ class Symbol(Serialize):
 class Terminal(Symbol):
     __serialize_fields__ = 'name', 'filter_out'
 
-    is_term = True
+    is_term: ClassVar[bool] = True
 
     def __init__(self, name, filter_out=False):
         self.name = name
@@ -47,7 +47,7 @@ class Terminal(Symbol):
 class NonTerminal(Symbol):
     __serialize_fields__ = 'name',
 
-    is_term = False
+    is_term: ClassVar[bool] = False
 
 
 class RuleOptions(Serialize):

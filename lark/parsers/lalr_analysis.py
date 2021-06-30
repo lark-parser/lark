@@ -12,7 +12,7 @@ from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet
-from ..grammar import Rule
+from ..grammar import Rule, END
 
 ###{standalone
 
@@ -177,7 +177,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             assert(len(root.kernel) == 1)
             for rp in root.kernel:
                 assert(rp.index == 0)
-                self.directly_reads[(root, rp.next)] = set([ Terminal('$END') ])
+                self.directly_reads[(root, rp.next)] = set([ Terminal(END) ])
 
         for state in self.lr0_states:
             seen = set()
@@ -261,11 +261,12 @@ class LALR_Analyzer(GrammarAnalyzer):
                         rules = [best[1]]
                     else:
                         reduce_reduce.append((state, la, rules))
-                if la in actions:
+                if la in actions and la.name != END:
                     if self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
                         logger.warning(' * %s', list(rules)[0])
                 else:
+                    # No shift found for la, or it's End Of Input, in which case Reduce should come before Shift.
                     actions[la] = (Reduce, list(rules)[0])
             m[state] = { k.name: v for k, v in actions.items() }
 

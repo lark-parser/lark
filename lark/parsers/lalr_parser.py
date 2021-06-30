@@ -10,6 +10,7 @@ from ..utils import Serialize
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_interactive_parser import InteractiveParser
 from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
+from ..grammar import END
 
 ###{standalone
 
@@ -60,7 +61,7 @@ class LALR_Parser(Serialize):
                     return e.interactive_parser.resume_parse()
                 except UnexpectedToken as e2:
                     if (isinstance(e, UnexpectedToken)
-                        and e.token.type == e2.token.type == '$END'
+                        and e.token.type == e2.token.type == END
                         and e.interactive_parser == e2.interactive_parser):
                         # Prevent infinite loop
                         raise e2
@@ -132,10 +133,14 @@ class ParserState(object):
 
             if action is Shift:
                 # shift once and return
-                assert not is_end
+                # assert not is_end
                 state_stack.append(arg)
                 value_stack.append(token if token.type not in callbacks else callbacks[token.type](token))
-                return
+                if not is_end:
+                    return
+
+                 # If it's the end, keep feeding the same token until we get to a reduce
+                assert token.type == END
             else:
                 # reduce+shift as many times as necessary
                 rule = arg
@@ -178,7 +183,7 @@ class _Parser(object):
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 
-            token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            token = Token.new_borrow_pos(END, '', token) if token else Token(END, '', 0, 1, 1)
             return state.feed_token(token, True)
         except UnexpectedInput as e:
             try:

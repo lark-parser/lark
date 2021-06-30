@@ -15,7 +15,7 @@ from .grammar import Rule
 
 import re
 try:
-    import regex
+    import regex  # type: ignore
 except ImportError:
     regex = None
 
@@ -149,7 +149,7 @@ class LarkOptions(Serialize):
     # - As an attribute of `LarkOptions` above
     # - Potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
     # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
-    _defaults = {
+    _defaults: Dict[str, Any] = {
         'debug': False,
         'keep_all_tokens': False,
         'tree_class': None,
@@ -414,6 +414,7 @@ class Lark(Serialize):
         if cache_fn:
             logger.debug('Saving grammar to cache: %s', cache_fn)
             with FS.open(cache_fn, 'wb') as f:
+                assert cache_md5 is not None
                 f.write(cache_md5.encode('utf8') + b'\n')
                 pickle.dump(used_files, f)
                 self.save(f)
@@ -574,7 +575,7 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
     
-    def parse_interactive(self, text: str=None, start: Optional[str]=None) -> 'InteractiveParser':
+    def parse_interactive(self, text: Optional[str]=None, start: Optional[str]=None) -> 'InteractiveParser':
         """Start an interactive parsing session.
 
         Parameters:
@@ -588,7 +589,7 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Callable[[UnexpectedInput], bool]'=None) -> Tree:
+    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> Tree:
         """Parse the given text, according to the options provided.
 
         Parameters:

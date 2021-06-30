@@ -23,10 +23,10 @@ class Pattern(Serialize, ABC):
 
     value: str
     flags: Collection[str]
-    raw: str = None
-    type: str = None
+    raw: Optional[str] = None
+    type: Optional[str] = None
 
-    def __init__(self, value: str, flags: Collection[str]=(), raw: str=None) -> None:
+    def __init__(self, value: str, flags: Collection[str]=(), raw: Optional[str]=None) -> None:
         self.value = value
         self.flags = frozenset(flags)
         self.raw = raw
@@ -81,7 +81,10 @@ class PatternStr(Pattern):
     @property
     def min_width(self) -> int:
         return len(self.value)
-    max_width = min_width
+
+    @property
+    def max_width(self) -> int:
+        return len(self.value)
 
 
 class PatternRE(Pattern):
@@ -320,15 +323,36 @@ def _regexp_has_newline(r):
     """
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
+
+class LexerState(object):
+    __slots__ = 'text', 'line_ctr', 'last_token'
+
+    def __init__(self, text, line_ctr, last_token=None):
+        self.text = text
+        self.line_ctr = line_ctr
+        self.last_token = last_token
+
+    def __eq__(self, other):
+        if not isinstance(other, LexerState):
+            return NotImplemented
+
+        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
+
+    def __copy__(self):
+        return type(self)(self.text, copy(self.line_ctr), self.last_token)
+
+
 _Callback = Callable[[Token], Token]
 
 class Lexer(ABC):
     """Lexer interface
 
     Method Signatures:
-        lex(self, text) -> Iterator[Token]
+        lex(self, lexer_state, parser_state) -> Iterator[Token]
     """
-    lex: Callable[..., Iterator[Token]] = NotImplemented
+    @abstractmethod
+    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
+        ...
 
     def make_lexer_state(self, text):
         line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')
@@ -394,6 +418,7 @@ class TraditionalLexer(Lexer):
     def mres(self) -> List[Tuple[REPattern, Dict[int, str]]]:
         if self._mres is None:
             self._build()
+            assert self._mres is not None
         return self._mres
 
     def match(self, text: str, pos: int) -> Optional[Tuple[str, str]]:
@@ -402,12 +427,12 @@ class TraditionalLexer(Lexer):
             if m:
                 return m.group(0), type_from_index[m.lastindex]
 
-    def lex(self, state: Any, parser_state: Any) -> Iterator[Token]:
+    def lex(self, state: LexerState, parser_state: Any) -> Iterator[Token]:
         with suppress(EOFError):
             while True:
                 yield self.next_token(state, parser_state)
 
-    def next_token(self, lex_state: Any, parser_state: Any=None) -> Token:
+    def next_token(self, lex_state: LexerState, parser_state: Any=None) -> Token:
         line_ctr = lex_state.line_ctr
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
@@ -443,24 +468,6 @@ class TraditionalLexer(Lexer):
         raise EOFError(self)
 
 
-class LexerState(object):
-    __slots__ = 'text', 'line_ctr', 'last_token'
-
-    def __init__(self, text, line_ctr, last_token=None):
-        self.text = text
-        self.line_ctr = line_ctr
-        self.last_token = last_token
-
-    def __eq__(self, other):
-        if not isinstance(other, LexerState):
-            return NotImplemented
-
-        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
-
-    def __copy__(self):
-        return type(self)(self.text, copy(self.line_ctr), self.last_token)
-
-
 class ContextualLexer(Lexer):
 
     lexers: Dict[str, TraditionalLexer]
@@ -494,7 +501,7 @@ class ContextualLexer(Lexer):
     def make_lexer_state(self, text):
         return self.root_lexer.make_lexer_state(text)
 
-    def lex(self, lexer_state: Any, parser_state: Any) -> Iterator[Token]:
+    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:
             while True:
                 lexer = self.lexers[parser_state.position]

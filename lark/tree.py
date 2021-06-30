@@ -1,8 +1,9 @@
 try:
-    from future_builtins import filter
+    from future_builtins import filter  # type: ignore
 except ImportError:
     pass
 
+import sys
 from copy import deepcopy
 
 
@@ -49,7 +50,7 @@ class Tree(object):
     data: str
     children: 'List[Union[str, Tree]]'
 
-    def __init__(self, data: str, children: 'List[Union[str, Tree]]', meta: Meta=None) -> None:
+    def __init__(self, data: str, children: 'List[Union[str, Tree]]', meta: Optional[Meta]=None) -> None:
         self.data = data
         self.children = children
         self._meta = meta
@@ -196,7 +197,7 @@ def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
     possible attributes, see https://www.graphviz.org/doc/info/attrs.html.
     """
 
-    import pydot
+    import pydot  # type: ignore
     graph = pydot.Dot(graph_type='digraph', rankdir=rankdir, **kwargs)
 
     i = [0]

@@ -14,12 +14,12 @@ class DedentError(LarkError):
 
 class Indenter(PostLex, ABC):
 
-    paren_level: Optional[int]
-    indent_level: Optional[List[int]]
+    paren_level: int
+    indent_level: List[int]
 
     def __init__(self) -> None:
-        self.paren_level = None
-        self.indent_level = None
+        self.paren_level = 0
+        self.indent_level = [0]
         assert self.tab_len > 0
 
     def handle_NL(self, token: Token) -> Iterator[Token]:

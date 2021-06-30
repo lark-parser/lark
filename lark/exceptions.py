@@ -3,7 +3,7 @@ from .utils import logger, NO_VALUE
 
 ###{standalone
 
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, TYPE_CHECKING
+from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import Token
@@ -73,7 +73,7 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn: 'Callable[[str], Tree]', examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]], token_type_match_fallback: bool=False, use_accepts: bool=False) -> T:
+    def match_examples(self, parse_fn: 'Callable[[str], Tree]', examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]], token_type_match_fallback: bool=False, use_accepts: bool=False) -> Optional[T]:
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
 

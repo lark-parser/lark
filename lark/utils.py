@@ -134,7 +134,7 @@ def smart_decorator(f, create_decorator):
 
 
 try:
-    import regex
+    import regex  # type: ignore
 except ImportError:
     regex = None
 

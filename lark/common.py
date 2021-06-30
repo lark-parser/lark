@@ -1,8 +1,9 @@
+from types import ModuleType
+
 from .utils import Serialize
 from .lexer import TerminalDef, Token
 
 ###{standalone
-from types import ModuleType
 from typing import Any, Callable, Collection, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,13 +18,13 @@ class LexerConf(Serialize):
     terminals: Collection[TerminalDef]
     re_module: ModuleType
     ignore: Collection[str] = ()
-    postlex: 'PostLex' = None
-    callbacks: Optional[Dict[str, _Callback]] = None
+    postlex: 'Optional[PostLex]' = None
+    callbacks: Dict[str, _Callback] = {}
     g_regex_flags: int = 0
     skip_validation: bool = False
     use_bytes: bool = False
 
-    def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'PostLex'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
+    def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
         self.terminals = terminals
         self.terminals_by_name = {t.name: t for t in self.terminals}
         assert len(self.terminals) == len(self.terminals_by_name)

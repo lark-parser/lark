@@ -94,6 +94,26 @@ class TestParsers(unittest.TestCase):
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
 
+    def test_propagate_positions2(self):
+        g = Lark("""start: a
+                    a: b
+                    ?b: "(" t ")"
+                    !t: "t"
+                 """, propagate_positions=True)
+
+        start = g.parse("(t)")
+        a ,= start.children
+        t ,= a.children
+        assert t.children[0] == "t"
+
+        assert t.meta.column == 2
+        assert t.meta.end_column == 3
+
+        assert start.meta.column == a.meta.column == 1
+        assert start.meta.end_column == a.meta.end_column == 4
+
+
+
     def test_expand1(self):
 
         g = Lark("""start: a

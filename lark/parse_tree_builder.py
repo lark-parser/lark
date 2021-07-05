@@ -30,23 +30,36 @@ class PropagatePositions:
     def __call__(self, children):
         res = self.node_builder(children)
 
-        # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
+            # Calculate positions while the tree is streaming, according to the rule:
+            # - nodes start at the start of their first child's container,
+            #   and end at the end of their last child's container.
+            # Containers are nodes that take up space in text, but have been inlined in the tree.
+
             res_meta = res.meta
 
             first_meta = self._pp_get_meta(children)
             if first_meta is not None:
-                res_meta.line = first_meta.line
-                res_meta.column = first_meta.column
-                res_meta.start_pos = first_meta.start_pos
-                res_meta.empty = False
+                # meta was already set, probably because the rule has been inlined (e.g. `?rule`)
+                if not hasattr(res_meta, 'line'):
+                    res_meta.line = getattr(first_meta, 'container_line', first_meta.line)
+                    res_meta.column = getattr(first_meta, 'container_column', first_meta.column)
+                    res_meta.start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)
+                    res_meta.empty = False
+
+                res_meta.container_line = getattr(first_meta, 'container_line', first_meta.line)
+                res_meta.container_column = getattr(first_meta, 'container_column', first_meta.column)
 
             last_meta = self._pp_get_meta(reversed(children))
             if last_meta is not None:
-                res_meta.end_line = last_meta.end_line
-                res_meta.end_column = last_meta.end_column
-                res_meta.end_pos = last_meta.end_pos
-                res_meta.empty = False
+                if not hasattr(res_meta, 'end_line'):
+                    res_meta.end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                    res_meta.end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
+                    res_meta.end_pos = getattr(last_meta, 'container_end_pos', last_meta.end_pos)
+                    res_meta.empty = False
+
+                res_meta.container_end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                res_meta.container_end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
 
         return res
 

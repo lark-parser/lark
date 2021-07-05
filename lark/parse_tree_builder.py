@@ -40,8 +40,8 @@ class PropagatePositions:
 
             first_meta = self._pp_get_meta(children)
             if first_meta is not None:
-                # meta was already set, probably because the rule has been inlined (e.g. `?rule`)
                 if not hasattr(res_meta, 'line'):
+                    # meta was already set, probably because the rule has been inlined (e.g. `?rule`)
                     res_meta.line = getattr(first_meta, 'container_line', first_meta.line)
                     res_meta.column = getattr(first_meta, 'container_column', first_meta.column)
                     res_meta.start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)

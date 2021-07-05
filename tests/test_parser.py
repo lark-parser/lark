@@ -109,8 +109,8 @@ class TestParsers(unittest.TestCase):
         assert t.meta.column == 2
         assert t.meta.end_column == 3
 
-        assert start.column == a.column == 1
-        assert start.end_column == a.end_column == 4
+        assert start.meta.column == a.meta.column == 1
+        assert start.meta.end_column == a.meta.end_column == 4
 
 
 

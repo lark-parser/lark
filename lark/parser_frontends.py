@@ -39,8 +39,7 @@ class MakeParsingFrontend:
         lexer_conf.lexer_type = self.lexer_type
         return ParsingFrontend(lexer_conf, parser_conf, options)
 
-    @classmethod
-    def deserialize(cls, data, memo, lexer_conf, callbacks, options):
+    def deserialize(self, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
         parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks

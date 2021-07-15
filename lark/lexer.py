@@ -130,7 +130,7 @@ class Token(str):
             inst = super(Token, cls).__new__(cls, value)
 
         inst.type = type_
-        inst.start_pos = start_pos if start_pos is not None else pos_in_stream
+        inst.start_pos = start_pos
         inst.value = value
         inst.line = line
         inst.column = column
@@ -287,7 +287,7 @@ class Scanner:
                 return m.group(0), type_from_index[m.lastindex]
 
 
-def _regexp_has_newline(r):
+def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)

@@ -12,7 +12,7 @@ class ConfigurationError(LarkError, ValueError):
     pass
 
 
-def assert_config(value, options, msg='Got %r, expected one of %s'):
+def assert_config(value, options: list, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 

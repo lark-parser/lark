@@ -1,9 +1,8 @@
-from collections.abc import Sequence
-
 from .utils import logger, NO_VALUE
 
 
 ###{standalone
+from collections.abc import Sequence
 
 
 class LarkError(Exception):

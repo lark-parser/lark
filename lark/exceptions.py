@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from .utils import logger, NO_VALUE
 
 
@@ -12,7 +14,7 @@ class ConfigurationError(LarkError, ValueError):
     pass
 
 
-def assert_config(value, options: list, msg='Got %r, expected one of %s'):
+def assert_config(value, options: Sequence, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 

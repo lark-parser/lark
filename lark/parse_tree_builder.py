@@ -23,54 +23,59 @@ class ExpandSingleChild:
 
 
 class PropagatePositions:
-    def __init__(self, node_builder):
+    def __init__(self, node_builder, node_filter=None):
         self.node_builder = node_builder
+        self.node_filter = node_filter
 
     def __call__(self, children):
         res = self.node_builder(children)
 
-        # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
+            # Calculate positions while the tree is streaming, according to the rule:
+            # - nodes start at the start of their first child's container,
+            #   and end at the end of their last child's container.
+            # Containers are nodes that take up space in text, but have been inlined in the tree.
+
             res_meta = res.meta
 
-            src_meta = self._pp_get_meta(children)
-            if src_meta is not None:
-                res_meta.line = src_meta.line
-                res_meta.column = src_meta.column
-                res_meta.start_pos = src_meta.start_pos
-                res_meta.empty = False
+            first_meta = self._pp_get_meta(children)
+            if first_meta is not None:
+                if not hasattr(res_meta, 'line'):
+                    # meta was already set, probably because the rule has been inlined (e.g. `?rule`)
+                    res_meta.line = getattr(first_meta, 'container_line', first_meta.line)
+                    res_meta.column = getattr(first_meta, 'container_column', first_meta.column)
+                    res_meta.start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)
+                    res_meta.empty = False
 
-            src_meta = self._pp_get_meta(reversed(children))
-            if src_meta is not None:
-                res_meta.end_line = src_meta.end_line
-                res_meta.end_column = src_meta.end_column
-                res_meta.end_pos = src_meta.end_pos
-                res_meta.empty = False
+                res_meta.container_line = getattr(first_meta, 'container_line', first_meta.line)
+                res_meta.container_column = getattr(first_meta, 'container_column', first_meta.column)
+
+            last_meta = self._pp_get_meta(reversed(children))
+            if last_meta is not None:
+                if not hasattr(res_meta, 'end_line'):
+                    res_meta.end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                    res_meta.end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
+                    res_meta.end_pos = getattr(last_meta, 'container_end_pos', last_meta.end_pos)
+                    res_meta.empty = False
+
+                res_meta.container_end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                res_meta.container_end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
 
         return res
 
     def _pp_get_meta(self, children):
         for c in children:
+            if self.node_filter is not None and not self.node_filter(c):
+                continue
             if isinstance(c, Tree):
                 if not c.meta.empty:
                     return c.meta
             elif isinstance(c, Token):
                 return c
 
-class PropagatePositions_IgnoreWs(PropagatePositions):
-    def _pp_get_meta(self, children):
-        for c in children:
-            if isinstance(c, Tree):
-                if not c.meta.empty:
-                    return c.meta
-            elif isinstance(c, Token):
-                if c and not c.isspace():     # Disregard whitespace-only tokens
-                    return c
-
-
 def make_propagate_positions(option):
-    if option == "ignore_ws":
-        return PropagatePositions_IgnoreWs
+    if callable(option):
+        return partial(PropagatePositions, node_filter=option)
     elif option is True:
         return PropagatePositions
     elif option is False:

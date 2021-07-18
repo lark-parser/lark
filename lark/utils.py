@@ -73,14 +73,13 @@ class Serialize(object):
         fields = getattr(self, '__serialize_fields__')
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
         res['__type__'] = type(self).__name__
-        postprocess = getattr(self, '_serialize', None)
-        if postprocess:
-            postprocess(res, memo)
+        if hasattr(self, '_serialize'):
+            self._serialize(res, memo)
         return res
 
     @classmethod
     def deserialize(cls, data, memo):
-        namespace = getattr(cls, '__serialize_namespace__', {})
+        namespace = getattr(cls, '__serialize_namespace__', [])
         namespace = {c.__name__:c for c in namespace}
 
         fields = getattr(cls, '__serialize_fields__')
@@ -94,9 +93,10 @@ class Serialize(object):
                 setattr(inst, f, _deserialize(data[f], namespace, memo))
             except KeyError as e:
                 raise KeyError("Cannot find key for class", cls, e)
-        postprocess = getattr(inst, '_deserialize', None)
-        if postprocess:
-            postprocess()
+
+        if hasattr(inst, '_deserialize'):
+            inst._deserialize()
+
         return inst
 
 
@@ -239,17 +239,6 @@ except ImportError:
             yield
         except excs:
             pass
-
-
-try:
-    compare = cmp
-except NameError:
-    def compare(a, b):
-        if a == b:
-            return 0
-        elif a > b:
-            return 1
-        return -1
 
 
 class Enumerator(Serialize):

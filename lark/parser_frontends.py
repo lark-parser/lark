@@ -32,20 +32,13 @@ class MakeParsingFrontend:
         self.parser_type = parser_type
         self.lexer_type = lexer_type
 
-    def __call__(self, lexer_conf, parser_conf, options):
-        assert isinstance(lexer_conf, LexerConf)
-        assert isinstance(parser_conf, ParserConf)
-        parser_conf.parser_type = self.parser_type
-        lexer_conf.lexer_type = self.lexer_type
-        return ParsingFrontend(lexer_conf, parser_conf, options)
-
     def deserialize(self, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
         parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks
         return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
-
+    # ... Continued later in the module
 
 
 class ParsingFrontend(Serialize):
@@ -237,3 +230,12 @@ class CYK_FrontEnd:
 
     def _apply_callback(self, tree):
         return self.callbacks[tree.rule](tree.children)
+
+
+class MakeParsingFrontend(MakeParsingFrontend):
+    def __call__(self, lexer_conf, parser_conf, options):
+        assert isinstance(lexer_conf, LexerConf)
+        assert isinstance(parser_conf, ParserConf)
+        parser_conf.parser_type = self.parser_type
+        lexer_conf.lexer_type = self.lexer_type
+        return ParsingFrontend(lexer_conf, parser_conf, options)

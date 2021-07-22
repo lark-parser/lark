@@ -107,3 +107,8 @@ Discard
 -------
 
 .. autoclass:: lark.visitors.Discard
+
+VisitError
+-------
+
+.. autoclass:: lark.exceptions.VisitError

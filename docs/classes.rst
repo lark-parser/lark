@@ -66,6 +66,8 @@ UnexpectedInput
 
 .. autoclass:: lark.exceptions.UnexpectedCharacters
 
+.. autoclass:: lark.exceptions.UnexpectedEOF
+
 InteractiveParser
 -----------------
 

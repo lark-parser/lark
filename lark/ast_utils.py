@@ -36,8 +36,8 @@ def create_transformer(ast_module, transformer=None):
     Classes starting with an underscore (`_`) will be skipped.
 
     Parameters:
-        ast_module - A Python module containing all the subclasses of `ast_utils.Ast`
-        transformer (Optional[Transformer]) - An initial transformer. Its attributes may be overwritten.
+        ast_module: A Python module containing all the subclasses of ``ast_utils.Ast``
+        transformer (Optional[Transformer]): An initial transformer. Its attributes may be overwritten.
     """
     t = transformer or Transformer()
 

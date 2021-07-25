@@ -373,7 +373,7 @@ def small_factors(n):
 
     Currently, we also keep a + b <= 10, but that might change
     """
-    assert n > 0
+    assert n >= 0
     if n < 10:
         return [(n, 0)]
     # TODO: Think of better algorithms (Prime factors should minimize the number of steps)

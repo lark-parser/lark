@@ -359,3 +359,33 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
+
+
+def small_factors(n):
+    """
+    Splits n up into smaller factors and summands <= 10.
+    Returns a list of [(a, b), ...]
+    so that the following code returns n:
+
+    n = 1
+    for a, b in values:
+        n = n * a + b
+
+    Currently, we also keep a + b <= 10, but that might change
+    """
+    assert n > 0
+    if n < 10:
+        return [(n, 0)]
+    # TODO: Think of better algorithms (Prime factors should minimize the number of steps)
+    for a in range(10, 1, -1):
+        b = n % a
+        if a + b > 10:
+            continue
+        r = n // a
+        assert r * a + b == n  # Sanity check
+        if r <= 10:
+            return [(r, 0), (a, b)]
+        else:
+            return [*small_factors(r), (a, b)]
+    # This should be unreachable, since 2 + 1 <= 10
+    assert False, "Failed to factorize %s" % n

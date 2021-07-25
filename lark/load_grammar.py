@@ -9,7 +9,7 @@ import pkgutil
 from ast import literal_eval
 from numbers import Integral
 
-from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
+from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -196,6 +196,26 @@ class EBNF_to_BNF(Transformer_InPlace):
         self.rules_by_expr[expr] = t
         return t
 
+    def _add_repeat_rule(self, a, b, target, atom):
+        if (a, b, target, atom) in self.rules_by_expr:
+            return self.rules_by_expr[(a, b, target, atom)]
+        new_name = '__%s_a%d_b%d_%d' % (self.prefix, a, b, self.i)
+        self.i += 1
+        t = NonTerminal(new_name)
+        tree = ST('expansions', [ST('expansion', [target] * a + [atom] * b)])
+        self.new_rules.append((new_name, tree, self.rule_options))
+        self.rules_by_expr[(a, b, target, atom)] = t
+        return t
+
+    def _generate_repeats(self, rule, mn, mx):
+        factors = small_factors(mn)
+        target = rule
+        for a, b in factors:
+            target = self._add_repeat_rule(a, b, target, rule)
+
+        # return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx + 1)])
+        return ST('expansions', [ST('expansion', [target] + [rule] * n) for n in range(0, mx - mn + 1)])
+
     def expr(self, rule, op, *args):
         if op.value == '?':
             empty = ST('expansion', [])
@@ -220,7 +240,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 mn, mx = map(int, args)
                 if mx < mn or mn < 0:
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
-            return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx+1)])
+            return self._generate_repeats(rule, mn, mx)
         assert False, op
 
     def maybe(self, rule):

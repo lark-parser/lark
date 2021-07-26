@@ -187,7 +187,7 @@ def get_regexp_width(expr):
                 return 1, sre_constants.MAXREPEAT
             else:
                 return 0, sre_constants.MAXREPEAT
-            
+
 ###}
 
 
@@ -288,7 +288,7 @@ except ImportError:
 
 class FS:
     exists = os.path.exists
-    
+
     @staticmethod
     def open(name, mode="r", **kwargs):
         if atomicwrites and "w" in mode:
@@ -361,9 +361,13 @@ def _serialize(value, memo):
     return value
 
 
+# 10 is arbitrarily chosen
+SMALL_FACTOR_THRESHOLD = 10
+
+
 def small_factors(n):
     """
-    Splits n up into smaller factors and summands <= 10.
+    Splits n up into smaller factors and summands <= SMALL_FACTOR_THRESHOLD.
     Returns a list of [(a, b), ...]
     so that the following code returns n:
 
@@ -371,21 +375,20 @@ def small_factors(n):
     for a, b in values:
         n = n * a + b
 
-    Currently, we also keep a + b <= 10, but that might change
+    Currently, we also keep a + b <= SMALL_FACTOR_THRESHOLD, but that might change
     """
     assert n >= 0
-    if n < 10:
+    if n < SMALL_FACTOR_THRESHOLD:
         return [(n, 0)]
     # TODO: Think of better algorithms (Prime factors should minimize the number of steps)
-    for a in range(10, 1, -1):
+    for a in range(SMALL_FACTOR_THRESHOLD, 1, -1):
         b = n % a
-        if a + b > 10:
+        if a + b > SMALL_FACTOR_THRESHOLD:
             continue
         r = n // a
         assert r * a + b == n  # Sanity check
-        if r <= 10:
+        if r <= SMALL_FACTOR_THRESHOLD:
             return [(r, 0), (a, b)]
         else:
-            return [*small_factors(r), (a, b)]
-    # This should be unreachable, since 2 + 1 <= 10
+            return small_factors(r) + [(a, b)]
     assert False, "Failed to factorize %s" % n

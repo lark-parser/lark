@@ -174,6 +174,10 @@ RULES = {
     'literal': ['REGEXP', 'STRING'],
 }
 
+REPEAT_BREAK_THRESHOLD = 20
+# The Threshold whether repeat via ~ are split up into different rules
+# For the moment 20 is arbitrarily chosen
+
 
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
@@ -211,25 +215,50 @@ class EBNF_to_BNF(Transformer_InPlace):
         """
         When target matches n times atom
         This builds a rule that matches atom (a*n + b) times
+
+        The rule is of the form:
+
+        The rules are of the form: (Example a = 3, b = 4)
+
+        new_rule: target target target atom atom atom atom
+
+        e.g. we use target * a and atom * b
         """
         key = (a, b, target, atom)
         try:
             return self.rules_cache[key]
         except KeyError:
-            new_name = self._name_rule('a%d_b%d' % (a, b))
+            new_name = self._name_rule('repeat_a%d_b%d' % (a, b))
             tree = ST('expansions', [ST('expansion', [target] * a + [atom] * b)])
             return self._add_rule(key, new_name, tree)
 
     def _add_repeat_opt_rule(self, a, b, target, target_opt, atom):
         """
         When target matches n times atom, and target_opt 0 to n-1 times target_opt,
-        This builds a rule that matches atom 0 to (a*n+b)-1 times
+        This builds a rule that matches atom 0 to (a*n+b)-1 times.
+        The created rule will not have any shift/reduce conflicts so that it can be used with lalr
+
+        The rules are of the form: (Example a = 3, b = 4)
+
+        new_rule: target_opt
+                | target target_opt
+                | target target target_opt
+
+                | target target target atom
+                | target target target atom atom
+                | target target target atom atom atom
+
+        First we generate target * i followed by target_opt for i from 0 to a-1
+        These match 0 to n*a - 1 times atom
+
+        Then we generate target * a followed by atom * i for i from 1 to b-1
+        These match n*a to n*a + b-1 times atom
         """
         key = (a, b, target, atom, "opt")
         try:
             return self.rules_cache[key]
         except KeyError:
-            new_name = self._name_rule('a%d_b%d_opt' % (a, b))
+            new_name = self._name_rule('repeat_a%d_b%d_opt' % (a, b))
             tree = ST('expansions', [
                 ST('expansion', [target] * i + [target_opt])
                 for i in range(a)
@@ -240,13 +269,19 @@ class EBNF_to_BNF(Transformer_InPlace):
             return self._add_rule(key, new_name, tree)
 
     def _generate_repeats(self, rule, mn, mx):
+        """
+        We treat rule~mn..mx as rule~mn rule~0..(diff=mx-mn).
+        We then use small_factors to split up mn and diff up into values [(a, b), ...]
+        This values are used with the help of _add_repeat_rule and _add_repeat_rule_opt
+        to generate a complete rule/expression that matches the corresponding number of repeats
+        """
         mn_factors = small_factors(mn)
         mn_target = rule
         for a, b in mn_factors:
             mn_target = self._add_repeat_rule(a, b, mn_target, rule)
         if mx == mn:
             return mn_target
-        diff = mx - mn + 1  # We add one because _add_repeat_opt_rule needs it.
+        diff = mx - mn + 1  # We add one because _add_repeat_opt_rule generates rules that match one less
         diff_factors = small_factors(diff)
         diff_target = rule
         diff_opt_target = ST('expansion', [])  # match rule 0 times (e.g. 1-1 times)
@@ -257,8 +292,6 @@ class EBNF_to_BNF(Transformer_InPlace):
         a, b = diff_factors[-1]
         diff_opt_target = self._add_repeat_opt_rule(a, b, diff_target, diff_opt_target, rule)
 
-        # return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx + 1)])
-        # return ST('expansions', [ST('expansion', [mn_target] + [rule] * n) for n in range(0, mx - mn + 1)])
         return ST('expansions', [ST('expansion', [mn_target] + [diff_opt_target])])
 
     def expr(self, rule, op, *args):
@@ -286,8 +319,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 if mx < mn or mn < 0:
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
             # For small number of repeats, we don't need to build new rules.
-            # Value 20 is arbitrarily chosen
-            if mx > 20:
+            if mx > REPEAT_BREAK_THRESHOLD:
                 return self._generate_repeats(rule, mn, mx)
             else:
                 return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx + 1)])

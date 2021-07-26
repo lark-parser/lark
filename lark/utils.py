@@ -361,8 +361,9 @@ def _serialize(value, memo):
     return value
 
 
-# 10 is arbitrarily chosen
-SMALL_FACTOR_THRESHOLD = 10
+# Value 5 keeps the number of states in the lalr parser somewhat minimal
+# It isn't optimal, but close to it. See PR #949
+SMALL_FACTOR_THRESHOLD = 5
 
 
 def small_factors(n):
@@ -380,7 +381,8 @@ def small_factors(n):
     assert n >= 0
     if n < SMALL_FACTOR_THRESHOLD:
         return [(n, 0)]
-    # TODO: Think of better algorithms (Prime factors should minimize the number of steps)
+    # While this does not provide an optimal solution, it produces a pretty good one.
+    # See above comment and PR #949
     for a in range(SMALL_FACTOR_THRESHOLD, 1, -1):
         b = n % a
         if a + b > SMALL_FACTOR_THRESHOLD:

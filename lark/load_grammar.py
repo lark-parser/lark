@@ -174,9 +174,21 @@ RULES = {
     'literal': ['REGEXP', 'STRING'],
 }
 
-REPEAT_BREAK_THRESHOLD = 20
+REPEAT_BREAK_THRESHOLD = 50
 # The Threshold whether repeat via ~ are split up into different rules
-# For the moment 20 is arbitrarily chosen
+# 50 is chosen since it keeps the number of states low and therefore lalr analysis time low,
+# while not being to overaggressive and unnecessarily creating rules that might create shift/reduce conflicts.
+# For a grammar  of the form start: "A"~0..N, these are the timing stats:
+#  N  t
+# 10 0.000
+# 20 0.004
+# 30 0.016
+# 40 0.049
+# 50 0.109
+# 60 0.215
+# 70 0.383
+# 80 0.631
+# (See PR #949)
 
 
 @inline_args
@@ -244,6 +256,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 | target target_opt
                 | target target target_opt
 
+                | target target target
                 | target target target atom
                 | target target target atom atom
                 | target target target atom atom atom
@@ -251,7 +264,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         First we generate target * i followed by target_opt for i from 0 to a-1
         These match 0 to n*a - 1 times atom
 
-        Then we generate target * a followed by atom * i for i from 1 to b-1
+        Then we generate target * a followed by atom * i for i from 0 to b-1
         These match n*a to n*a + b-1 times atom
         """
         key = (a, b, target, atom, "opt")
@@ -264,7 +277,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 for i in range(a)
             ] + [
                 ST('expansion', [target] * a + [atom] * i)
-                for i in range(1, b)
+                for i in range(b)
             ])
             return self._add_rule(key, new_name, tree)
 
@@ -281,15 +294,17 @@ class EBNF_to_BNF(Transformer_InPlace):
             mn_target = self._add_repeat_rule(a, b, mn_target, rule)
         if mx == mn:
             return mn_target
+
         diff = mx - mn + 1  # We add one because _add_repeat_opt_rule generates rules that match one less
         diff_factors = small_factors(diff)
-        diff_target = rule
-        diff_opt_target = ST('expansion', [])  # match rule 0 times (e.g. 1-1 times)
+        diff_target = rule  # Match rule 1 times
+        diff_opt_target = ST('expansion', [])  # match rule 0 times (e.g. up to 1 -1 times)
         for a, b in diff_factors[:-1]:
             new_diff_target = self._add_repeat_rule(a, b, diff_target, rule)
             diff_opt_target = self._add_repeat_opt_rule(a, b, diff_target, diff_opt_target, rule)
             diff_target = new_diff_target
-        a, b = diff_factors[-1]
+
+        a, b = diff_factors[-1]  # We do the last on separately since we don't need to call self._add_repeat_rule
         diff_opt_target = self._add_repeat_opt_rule(a, b, diff_target, diff_opt_target, rule)
 
         return ST('expansions', [ST('expansion', [mn_target] + [diff_opt_target])])

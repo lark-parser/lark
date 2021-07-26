@@ -148,7 +148,6 @@ AWAIT: "await"
      | "{" _set_exprlist "}" -> set
      | "{" comprehension{test} "}" -> set_comprehension
      | NAME -> var
-     | TEMPLATE_NAME -> template_var
      | number 
      | string_concat
      | "(" test ")"

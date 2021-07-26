@@ -379,18 +379,12 @@ def small_factors(n):
     Currently, we also keep a + b <= SMALL_FACTOR_THRESHOLD, but that might change
     """
     assert n >= 0
-    if n < SMALL_FACTOR_THRESHOLD:
+    if n <= SMALL_FACTOR_THRESHOLD:
         return [(n, 0)]
     # While this does not provide an optimal solution, it produces a pretty good one.
     # See above comment and PR #949
     for a in range(SMALL_FACTOR_THRESHOLD, 1, -1):
-        b = n % a
-        if a + b > SMALL_FACTOR_THRESHOLD:
-            continue
-        r = n // a
-        assert r * a + b == n  # Sanity check
-        if r <= SMALL_FACTOR_THRESHOLD:
-            return [(r, 0), (a, b)]
-        else:
+        r, b = divmod(n, a)
+        if a + b <= SMALL_FACTOR_THRESHOLD:
             return small_factors(r) + [(a, b)]
     assert False, "Failed to factorize %s" % n

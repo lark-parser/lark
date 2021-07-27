@@ -361,14 +361,11 @@ def _serialize(value, memo):
     return value
 
 
-# Value 5 keeps the number of states in the lalr parser somewhat minimal
-# It isn't optimal, but close to it. See PR #949
-SMALL_FACTOR_THRESHOLD = 5
 
 
-def small_factors(n):
+def small_factors(n, max_factor):
     """
-    Splits n up into smaller factors and summands <= SMALL_FACTOR_THRESHOLD.
+    Splits n up into smaller factors and summands <= max_factor.
     Returns a list of [(a, b), ...]
     so that the following code returns n:
 
@@ -376,15 +373,15 @@ def small_factors(n):
     for a, b in values:
         n = n * a + b
 
-    Currently, we also keep a + b <= SMALL_FACTOR_THRESHOLD, but that might change
+    Currently, we also keep a + b <= max_factor, but that might change
     """
     assert n >= 0
-    if n <= SMALL_FACTOR_THRESHOLD:
+    assert max_factor > 2
+    if n <= max_factor:
         return [(n, 0)]
-    # While this does not provide an optimal solution, it produces a pretty good one.
-    # See above comment and PR #949
-    for a in range(SMALL_FACTOR_THRESHOLD, 1, -1):
+
+    for a in range(max_factor, 1, -1):
         r, b = divmod(n, a)
-        if a + b <= SMALL_FACTOR_THRESHOLD:
-            return small_factors(r) + [(a, b)]
+        if a + b <= max_factor:
+            return small_factors(r, max_factor) + [(a, b)]
     assert False, "Failed to factorize %s" % n

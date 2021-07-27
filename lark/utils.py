@@ -187,7 +187,7 @@ def get_regexp_width(expr):
                 return 1, sre_constants.MAXREPEAT
             else:
                 return 0, sre_constants.MAXREPEAT
-            
+
 ###}
 
 
@@ -288,7 +288,7 @@ except ImportError:
 
 class FS:
     exists = os.path.exists
-    
+
     @staticmethod
     def open(name, mode="r", **kwargs):
         if atomicwrites and "w" in mode:
@@ -359,3 +359,32 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
+
+
+# Value 5 keeps the number of states in the lalr parser somewhat minimal
+# It isn't optimal, but close to it. See PR #949
+SMALL_FACTOR_THRESHOLD = 5
+
+
+def small_factors(n):
+    """
+    Splits n up into smaller factors and summands <= SMALL_FACTOR_THRESHOLD.
+    Returns a list of [(a, b), ...]
+    so that the following code returns n:
+
+    n = 1
+    for a, b in values:
+        n = n * a + b
+
+    Currently, we also keep a + b <= SMALL_FACTOR_THRESHOLD, but that might change
+    """
+    assert n >= 0
+    if n <= SMALL_FACTOR_THRESHOLD:
+        return [(n, 0)]
+    # While this does not provide an optimal solution, it produces a pretty good one.
+    # See above comment and PR #949
+    for a in range(SMALL_FACTOR_THRESHOLD, 1, -1):
+        r, b = divmod(n, a)
+        if a + b <= SMALL_FACTOR_THRESHOLD:
+            return small_factors(r) + [(a, b)]
+    assert False, "Failed to factorize %s" % n

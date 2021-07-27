@@ -2226,6 +2226,35 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
+        @unittest.skipIf(PARSER == 'cyk', "For large number of repeats, empty rules might be generated")
+        def test_ranged_repeat_large(self):
+            # Large is currently arbitrarily chosen to be large than 20
+            g = u"""!start: "A"~60
+                """
+            l = _Lark(g)
+            self.assertGreater(len(l.rules), 1, "Expected that more than one rule will be generated")
+            self.assertEqual(l.parse(u'A' * 60), Tree('start', ["A"] * 60))
+            self.assertRaises(ParseError, l.parse, u'A' * 59)
+            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'A' * 61)
+
+            g = u"""!start: "A"~15..100
+                """
+            l = _Lark(g)
+            for i in range(0, 110):
+                if 15 <= i <= 100:
+                    self.assertEqual(l.parse(u'A' * i), Tree('start', ['A']*i))
+                else:
+                    self.assertRaises((UnexpectedToken, UnexpectedInput), l.parse, u'A' * i)
+
+            # 8191 is a Mersenne prime
+            g = u"""start: "A"~8191
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse(u'A' * 8191), Tree('start', []))
+            self.assertRaises((UnexpectedToken, UnexpectedInput), l.parse, u'A' * 8190)
+            self.assertRaises((UnexpectedToken, UnexpectedInput), l.parse, u'A' * 8192)
+
+
         @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX
         def test_priority_vs_embedded(self):
             g = """

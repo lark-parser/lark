@@ -102,7 +102,7 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
-    **=== End Options ===**
+    **=== End of Options ===**
     """
     if __doc__:
         __doc__ += OPTIONS_DOC
@@ -527,6 +527,8 @@ class Lark(Serialize):
         """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
+
+        :raises UnexpectedCharacters: In case the lexer cannot find a suitable match.
         """
         if not hasattr(self, 'lexer') or dont_ignore:
             lexer = self._build_lexer(dont_ignore)
@@ -568,6 +570,10 @@ class Lark(Serialize):
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the
             result of the transformation. Otherwise, returns a Tree instance.
+
+        :raises UnexpectedInput: On a parse error, one of these sub-exceptions will rise:
+                ``UnexpectedCharacters``, ``UnexpectedToken``, or ``UnexpectedEOF``.
+                For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
         """
         return self.parser.parse(text, start=start, on_error=on_error)

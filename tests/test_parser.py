@@ -2204,55 +2204,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
 
-        def test_ranged_repeat_terms(self):
-            g = u"""!start: AAA
-                    AAA: "A"~3
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AAA'), Tree('start', ["AAA"]))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AA')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
-
-            g = u"""!start: AABB CC
-                    AABB: "A"~0..2 "B"~2
-                    CC: "C"~1..2
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AABBCC'), Tree('start', ['AABB', 'CC']))
-            self.assertEqual(l.parse(u'BBC'), Tree('start', ['BB', 'C']))
-            self.assertEqual(l.parse(u'ABBCC'), Tree('start', ['ABB', 'CC']))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
-
-        @unittest.skipIf(PARSER != 'lalr', "We only need to test rule generation, we know BNF is solid on all parsers")
-        def test_ranged_repeat_large(self):
-            # Large is currently arbitrarily chosen to be large than 20
-            g = u"""!start: "A"~60
-                """
-            l = _Lark(g)
-            self.assertGreater(len(l.rules), 1, "Expected that more than one rule will be generated")
-            self.assertEqual(l.parse(u'A' * 60), Tree('start', ["A"] * 60))
-            self.assertRaises(ParseError, l.parse, u'A' * 59)
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'A' * 61)
-
-            g = u"""!start: "A"~15..100
-                """
-            l = _Lark(g)
-            for i in range(0, 110):
-                if 15 <= i <= 100:
-                    self.assertEqual(l.parse(u'A' * i), Tree('start', ['A']*i))
-                else:
-                    self.assertRaises(UnexpectedInput, l.parse, u'A' * i)
-
-            # 8191 is a Mersenne prime
-            g = u"""start: "A"~8191
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'A' * 8191), Tree('start', []))
-            self.assertRaises(UnexpectedInput, l.parse, u'A' * 8190)
-            self.assertRaises(UnexpectedInput, l.parse, u'A' * 8192)
 
 
         @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX

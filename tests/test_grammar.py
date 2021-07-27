@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from unittest import TestCase, main
 
-from lark import Lark, Token, Tree
+from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors
 from lark.load_grammar import FromPackageLoader
 
@@ -198,6 +198,53 @@ class TestGrammar(TestCase):
         x = find_grammar_errors(text)
         assert [e.line for e, _s in find_grammar_errors(text)] == [2, 6]
 
+    def test_ranged_repeat_terms(self):
+        g = u"""!start: AAA
+                AAA: "A"~3
+            """
+        l = Lark(g, parser='lalr')
+        self.assertEqual(l.parse(u'AAA'), Tree('start', ["AAA"]))
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AA')
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
+
+        g = u"""!start: AABB CC
+                AABB: "A"~0..2 "B"~2
+                CC: "C"~1..2
+            """
+        l = Lark(g, parser='lalr')
+        self.assertEqual(l.parse(u'AABBCC'), Tree('start', ['AABB', 'CC']))
+        self.assertEqual(l.parse(u'BBC'), Tree('start', ['BB', 'C']))
+        self.assertEqual(l.parse(u'ABBCC'), Tree('start', ['ABB', 'CC']))
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAB')
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
+
+    def test_ranged_repeat_large(self):
+        g = u"""!start: "A"~60
+            """
+        l = Lark(g, parser='lalr')
+        self.assertGreater(len(l.rules), 1, "Expected that more than one rule will be generated")
+        self.assertEqual(l.parse(u'A' * 60), Tree('start', ["A"] * 60))
+        self.assertRaises(ParseError, l.parse, u'A' * 59)
+        self.assertRaises((ParseError, UnexpectedInput), l.parse, u'A' * 61)
+
+        g = u"""!start: "A"~15..100
+            """
+        l = Lark(g, parser='lalr')
+        for i in range(0, 110):
+            if 15 <= i <= 100:
+                self.assertEqual(l.parse(u'A' * i), Tree('start', ['A']*i))
+            else:
+                self.assertRaises(UnexpectedInput, l.parse, u'A' * i)
+
+        # 8191 is a Mersenne prime
+        g = u"""start: "A"~8191
+            """
+        l = Lark(g, parser='lalr')
+        self.assertEqual(l.parse(u'A' * 8191), Tree('start', []))
+        self.assertRaises(UnexpectedInput, l.parse, u'A' * 8190)
+        self.assertRaises(UnexpectedInput, l.parse, u'A' * 8192)
 
 
 if __name__ == '__main__':

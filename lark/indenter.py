@@ -9,6 +9,10 @@ class DedentError(LarkError):
     pass
 
 class Indenter(PostLex):
+    OPEN_PAREN_types: list
+    CLOSE_PAREN_types: list
+    DEDENT_type: str
+
     def __init__(self):
         self.paren_level = None
         self.indent_level = None

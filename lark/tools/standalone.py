@@ -56,7 +56,6 @@ EXTRACT_STANDALONE_FILES = [
     'utils.py',
     'tree.py',
     'visitors.py',
-    'indenter.py',
     'grammar.py',
     'lexer.py',
     'common.py',
@@ -65,6 +64,7 @@ EXTRACT_STANDALONE_FILES = [
     'parsers/lalr_analysis.py',
     'parser_frontends.py',
     'lark.py',
+    'indenter.py',
 ]
 
 def extract_sections(lines):
@@ -181,6 +181,9 @@ def main():
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
     parser.add_argument("old_start", nargs='?', help=SUPPRESS)
     parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
     ns = parser.parse_args()
     if ns.old_start is not None:
         warn('The syntax `python -m lark.tools.standalone <grammar-file> <start>` is deprecated. Use the -s option')

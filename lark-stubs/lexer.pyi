@@ -13,13 +13,9 @@ class Pattern(ABC):
     value: str
     flags: Collection[str]
     raw: str
+    type: str
 
-    def __init__(self, value: str, flags: Collection[str] = ...):
-        ...
-
-    @property
-    @abstractmethod
-    def type(self) -> str:
+    def __init__(self, value: str, flags: Collection[str] = (), raw: str = None) -> None:
         ...
 
     @abstractmethod
@@ -72,15 +68,15 @@ class TerminalDef:
     pattern: Pattern
     priority: int
 
-    def __init__(self, name: str, pattern: Pattern, priority: int = ...):
+    def __init__(self, name: str, pattern: Pattern, priority: int = ...) -> None:
         ...
-    
+
     def user_repr(self) -> str: ...
 
 
 class Token(str):
     type: str
-    pos_in_stream: int
+    start_pos: int
     value: Any
     line: int
     column: int
@@ -88,7 +84,7 @@ class Token(str):
     end_column: int
     end_pos: int
 
-    def __init__(self, type_: str, value: Any, pos_in_stream: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None):
+    def __init__(self, type_: str, value: Any, start_pos: int = None, line: int = None, column: int = None, end_line: int = None, end_column: int = None, end_pos: int = None) -> None:
         ...
 
     def update(self, type_: Optional[str] = None, value: Optional[Any] = None) -> Token:
@@ -130,7 +126,7 @@ class TraditionalLexer(Lexer):
     def __init__(
         self,
         conf: LexerConf
-    ):
+    ) -> None:
         ...
 
     def build(self) -> None:
@@ -158,7 +154,7 @@ class ContextualLexer(Lexer):
         always_accept: Collection[str] = ...,
         user_callbacks: Dict[str, _Callback] = ...,
         g_regex_flags: int = ...
-    ):
+    ) -> None:
         ...
 
     def lex(self, stream: str, get_parser_state: Callable[[], str]) -> Iterator[Token]:

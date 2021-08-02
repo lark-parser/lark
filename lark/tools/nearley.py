@@ -194,5 +194,8 @@ def get_arg_parser():
 
 if __name__ == '__main__':
     parser = get_arg_parser()
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
     args = parser.parse_args()
     print(main(fn=args.nearley_grammar, start=args.start_rule, nearley_lib=args.nearley_lib, es6=args.es6))

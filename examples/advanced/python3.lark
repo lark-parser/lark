@@ -21,31 +21,44 @@ decorators: decorator+
 decorated: decorators (classdef | funcdef | async_funcdef)
 
 async_funcdef: "async" funcdef
-funcdef: "def" NAME "(" parameters? ")" ["->" test] ":" suite
+funcdef: "def" NAME "(" [parameters] ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," "/"] ["," [starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams]]
           | starparams
           | kwparams
+
+SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
 starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
-kwparams: "**" typedparam
+kwparams: "**" typedparam ","?
 
-?paramvalue: typedparam ["=" test]
-?typedparam: NAME [":" test]
+?paramvalue: typedparam ("=" test)?
+?typedparam: NAME (":" test)?
 
-varargslist: (vfpdef ["=" test] ("," vfpdef ["=" test])* ["," [ "*" [vfpdef] ("," vfpdef ["=" test])* ["," ["**" vfpdef [","]]] | "**" vfpdef [","]]]
-  | "*" [vfpdef] ("," vfpdef ["=" test])* ["," ["**" vfpdef [","]]]
-  | "**" vfpdef [","])
 
-vfpdef: NAME
+lambdef: "lambda" [lambda_params] ":" test
+lambdef_nocond: "lambda" [lambda_params] ":" test_nocond
+lambda_params: lambda_paramvalue ("," lambda_paramvalue)* ["," [lambda_starparams | lambda_kwparams]]
+          | lambda_starparams
+          | lambda_kwparams
+?lambda_paramvalue: NAME ("=" test)?
+lambda_starparams: "*" [NAME]  ("," lambda_paramvalue)* ["," [lambda_kwparams]]
+lambda_kwparams: "**" NAME ","?
+
 
 ?stmt: simple_stmt | compound_stmt
 ?simple_stmt: small_stmt (";" small_stmt)* [";"] _NEWLINE
-?small_stmt: (expr_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt)
-?expr_stmt: testlist_star_expr (annassign | augassign (yield_expr|testlist)
-         | ("=" (yield_expr|testlist_star_expr))*)
-annassign: ":" test ["=" test]
-?testlist_star_expr: (test|star_expr) ("," (test|star_expr))* [","]
-!augassign: ("+=" | "-=" | "*=" | "@=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "//=")
+?small_stmt: (expr_stmt | assign_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt)
+expr_stmt: testlist_star_expr 
+assign_stmt: annassign | augassign | assign
+
+annassign: testlist_star_expr ":" test ["=" test]
+assign: testlist_star_expr ("=" (yield_expr|testlist_star_expr))+
+augassign: testlist_star_expr augassign_op (yield_expr|testlist)
+!augassign_op: "+=" | "-=" | "*=" | "@=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "//="
+?testlist_star_expr: test_or_star_expr 
+                   | test_or_star_expr ("," test_or_star_expr)+ ","?  -> tuple
+                   | test_or_star_expr ","  -> tuple
+
 // For normal and annotated assignments, additional restrictions enforced by the interpreter
 del_stmt: "del" exprlist
 pass_stmt: "pass"
@@ -69,43 +82,52 @@ global_stmt: "global" NAME ("," NAME)*
 nonlocal_stmt: "nonlocal" NAME ("," NAME)*
 assert_stmt: "assert" test ["," test]
 
-compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated | async_stmt
+?compound_stmt: if_stmt | while_stmt | for_stmt | try_stmt | with_stmt | funcdef | classdef | decorated | async_stmt
 async_stmt: "async" (funcdef | with_stmt | for_stmt)
-if_stmt: "if" test ":" suite ("elif" test ":" suite)* ["else" ":" suite]
+if_stmt: "if" test ":" suite elifs ["else" ":" suite]
+elifs: elif_*
+elif_: "elif" test ":" suite
 while_stmt: "while" test ":" suite ["else" ":" suite]
 for_stmt: "for" exprlist "in" testlist ":" suite ["else" ":" suite]
-try_stmt: ("try" ":" suite ((except_clause ":" suite)+ ["else" ":" suite] ["finally" ":" suite] | "finally" ":" suite))
-with_stmt: "with" with_item ("," with_item)*  ":" suite
+try_stmt: "try" ":" suite except_clauses ["else" ":" suite] [finally]
+        | "try" ":" suite finally   -> try_finally
+finally: "finally" ":" suite
+except_clauses: except_clause+ 
+except_clause: "except" [test ["as" NAME]] ":" suite
+
+with_stmt: "with" with_items ":" suite
+with_items: with_item ("," with_item)* 
 with_item: test ["as" expr]
 // NB compile.c makes sure that the default except clause is last
-except_clause: "except" [test ["as" NAME]]
 suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
-?test: or_test ("if" or_test "else" test)? | lambdef
+?test: or_test ("if" or_test "else" test)?
+     | lambdef
 ?test_nocond: or_test | lambdef_nocond
-lambdef: "lambda" [varargslist] ":" test
-lambdef_nocond: "lambda" [varargslist] ":" test_nocond
+
 ?or_test: and_test ("or" and_test)*
 ?and_test: not_test ("and" not_test)*
-?not_test: "not" not_test -> not
+?not_test: "not" not_test -> not_test
          | comparison
-?comparison: expr (_comp_op expr)*
+?comparison: expr (comp_op expr)*
 star_expr: "*" expr
-?expr: xor_expr ("|" xor_expr)*
+
+?expr: or_expr
+?or_expr: xor_expr ("|" xor_expr)*
 ?xor_expr: and_expr ("^" and_expr)*
 ?and_expr: shift_expr ("&" shift_expr)*
 ?shift_expr: arith_expr (_shift_op arith_expr)*
 ?arith_expr: term (_add_op term)*
 ?term: factor (_mul_op factor)*
-?factor: _factor_op factor | power
+?factor: _unary_op factor | power
 
-!_factor_op: "+"|"-"|"~"
+!_unary_op: "+"|"-"|"~"
 !_add_op: "+"|"-"
 !_shift_op: "<<"|">>"
 !_mul_op: "*"|"@"|"/"|"%"|"//"
 // <> isn't actually a valid comparison operator in Python. It's here for the
 // sake of a __future__ import described in PEP 401 (which really works :-)
-!_comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
+!comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="|"in"|"not" "in"|"is"|"is" "not"
 
 ?power: await_expr ("**" factor)?
 ?await_expr: AWAIT? atom_expr
@@ -116,50 +138,75 @@ AWAIT: "await"
           | atom_expr "." NAME               -> getattr
           | atom
 
-?atom: "(" [yield_expr|testlist_comp] ")" -> tuple
-     | "[" [testlist_comp] "]"  -> list
-     | "{" [dictorsetmaker] "}" -> dict
+?atom: "(" yield_expr ")"
+     | "(" _tuple_inner? ")" -> tuple
+     | "(" comprehension{test_or_star_expr} ")" -> tuple_comprehension
+     | "[" _testlist_comp? "]"  -> list
+     | "[" comprehension{test_or_star_expr} "]"  -> list_comprehension
+     | "{" _dict_exprlist? "}" -> dict
+     | "{" comprehension{key_value} "}" -> dict_comprehension
+     | "{" _set_exprlist "}" -> set
+     | "{" comprehension{test} "}" -> set_comprehension
      | NAME -> var
-     | number | string+
+     | number 
+     | string_concat
      | "(" test ")"
      | "..." -> ellipsis
      | "None"    -> const_none
      | "True"    -> const_true
      | "False"   -> const_false
 
-?testlist_comp: (test|star_expr) [comp_for | ("," (test|star_expr))+ [","] | ","]
-subscriptlist: subscript ("," subscript)* [","]
-subscript: test | [test] ":" [test] [sliceop]
+
+?string_concat: string+
+
+_testlist_comp: test | _tuple_inner
+_tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
+            
+
+?test_or_star_expr: test
+                 | star_expr
+
+?subscriptlist: subscript
+              | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
+?subscript: test | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
-exprlist: (expr|star_expr) ("," (expr|star_expr))* [","]
-testlist: test ("," test)* [","]
-dictorsetmaker: ( ((test ":" test | "**" expr) (comp_for | ("," (test ":" test | "**" expr))* [","])) | ((test | star_expr) (comp_for | ("," (test | star_expr))* [","])) )
+?exprlist: (expr|star_expr)
+         | (expr|star_expr) (("," (expr|star_expr))+ [","]|",")
+?testlist: test | testlist_tuple
+testlist_tuple: test (("," test)+ [","] | ",")
+_dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
+
+key_value: test ":"  test
+
+_set_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
 
 classdef: "class" NAME ["(" [arguments] ")"] ":" suite
+
+
 
 arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
          | starargs
          | kwargs
-         | test comp_for
+         | comprehension{test}
 
-starargs: "*" test ("," "*" test)* ("," argvalue)* ["," kwargs]
+starargs: stararg ("," stararg)* ("," argvalue)* ["," kwargs]
+stararg: "*" test
 kwargs: "**" test
 
 ?argvalue: test ("=" test)?
 
 
-
-comp_iter: comp_for | comp_if | async_for
-async_for: "async" "for" exprlist "in" or_test [comp_iter]
-comp_for: "for" exprlist "in" or_test [comp_iter]
-comp_if: "if" test_nocond [comp_iter]
+comprehension{comp_result}: comp_result comp_fors [comp_if]
+comp_fors: comp_for+ 
+comp_for: [ASYNC] "for" exprlist "in" or_test
+ASYNC: "async"
+?comp_if: "if" test_nocond
 
 // not used in grammar, but may appear in "node" passed from Parser to Compiler
 encoding_decl: NAME
 
-yield_expr: "yield" [yield_arg]
-yield_arg: "from" test | testlist
-
+yield_expr: "yield" [testlist]
+          | "yield" "from" test -> yield_from
 
 number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
 string: STRING | LONG_STRING
@@ -167,6 +214,7 @@ string: STRING | LONG_STRING
 // Import terminals from standard library (grammars/python.lark)
 %import python (NAME, COMMENT, STRING, LONG_STRING)
 %import python (DEC_NUMBER, HEX_NUMBER, OCT_NUMBER, BIN_NUMBER, FLOAT_NUMBER, IMAG_NUMBER)
+
 
 // Other terminals
 

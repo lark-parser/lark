@@ -145,3 +145,30 @@ class Parent(Visitor):
                 assert not hasattr(subtree, 'parent')
                 subtree.parent = tree
 ```
+
+
+## Unwinding VisitError after a transformer/visitor exception
+
+Errors that happen inside visitors and transformers get wrapped inside a `VisitError` exception.
+
+This can often be inconvenient, if you wish the actual error to propagate upwards, or if you want to catch it.
+
+But, it's easy to unwrap it at the point of calling the transformer, by catching it and raising the `VisitError.orig_exc` attribute.
+
+For example:
+```python
+from lark import Lark, Transformer
+from lark.visitors import VisitError
+
+tree = Lark('start: "a"').parse('a')
+
+class T(Transformer):
+    def start(self, x):
+        raise KeyError("Original Exception")
+
+t = T()
+try:
+    print( t.transform(tree))
+except VisitError as e:
+    raise e.orig_exc
+```

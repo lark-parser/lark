@@ -5,7 +5,7 @@ Lark
 ----
 
 .. autoclass:: lark.Lark
-    :members: open, parse, save, load
+    :members: open, parse, parse_interactive, lex, save, load, get_terminal, open_from_package
 
 
 Using Unicode character classes with ``regex``
@@ -38,7 +38,7 @@ Tree
 ----
 
 .. autoclass:: lark.Tree
-    :members: pretty, find_pred, find_data, iter_subtrees,
+    :members: pretty, find_pred, find_data, iter_subtrees, scan_values,
         iter_subtrees_topdown
 
 Token
@@ -66,10 +66,27 @@ UnexpectedInput
 
 .. autoclass:: lark.exceptions.UnexpectedCharacters
 
-.. _parserpuppet:
+.. autoclass:: lark.exceptions.UnexpectedEOF
 
-ParserPuppet
-------------
+InteractiveParser
+-----------------
 
-.. autoclass:: lark.parsers.lalr_puppet.ParserPuppet
-    :members: choices, feed_token, copy, pretty, resume_parse
+.. autoclass:: lark.parsers.lalr_interactive_parser.InteractiveParser
+    :members: choices, feed_token, copy, pretty, resume_parse, exhaust_lexer, accepts, as_immutable
+
+.. autoclass:: lark.parsers.lalr_interactive_parser.ImmutableInteractiveParser
+    :members: choices, feed_token, copy, pretty, resume_parse, exhaust_lexer, accepts, as_mutable
+
+
+ast_utils
+---------
+
+For an example of using ``ast_utils``, see `/examples/advanced/create_ast.py`_ 
+
+.. autoclass:: lark.ast_utils.Ast
+
+.. autoclass:: lark.ast_utils.AsList
+
+.. autofunction:: lark.ast_utils.create_transformer
+
+.. _/examples/advanced/create_ast.py: examples/advanced/create_ast.html

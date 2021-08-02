@@ -49,15 +49,15 @@ class _Decoratable:
 class Transformer(_Decoratable):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
-    Calls its methods (provided by the user via inheritance) according to ``tree.data``.
-    The returned value replaces the old one in the structure.
+    Methods are provided by the user via inheritance, and called according to ``tree.data``.
+    The returned value from each method replaces the node in the tree structure.
 
-    They work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
+    Transformers work bottom-up (or depth-first), starting with the leaves and ending at the root of the tree.
     Transformers can be used to implement map & reduce patterns. Because nodes are reduced from leaf to root,
     at any point the callbacks may assume the children have already been transformed (if applicable).
 
     ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
-    it is slightly less efficient. It can be used to implement map or reduce patterns.
+    it is slightly less efficient.
 
     All these classes implement the transformer interface:
 
@@ -70,7 +70,7 @@ class Transformer(_Decoratable):
                                        Setting this to ``False`` is slightly faster. Defaults to ``True``.
                                        (For processing ignored tokens, use the ``lexer_callbacks`` options)
 
-    NOTE: A transformer without methods essentially performs a non-memoized deepcopy.
+    NOTE: A transformer without methods essentially performs a non-memoized partial deepcopy.
     """
     __visit_tokens__ = True   # For backwards compatibility
 
@@ -218,6 +218,8 @@ class Transformer_NonRecursive(Transformer):
                 else:
                     args = []
                 stack.append(self._call_userfunc(x, args))
+            elif self.__visit_tokens__ and isinstance(x, Token):
+                stack.append(self._call_userfunc_token(x))
             else:
                 stack.append(x)
 

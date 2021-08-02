@@ -23,6 +23,9 @@ def serialize(lark_inst, outfile):
 
 
 def main():
+    if len(sys.argv)==1:
+        argparser.print_help(sys.stderr)
+        sys.exit(1)
     ns = argparser.parse_args()
     serialize(*build_lalr(ns))
 

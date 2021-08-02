@@ -1,3 +1,4 @@
+import hashlib
 import unicodedata
 import os
 from functools import reduce
@@ -6,11 +7,21 @@ from collections import deque
 ###{standalone
 import sys, re
 import logging
+from io import open
 logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
+
+if sys.version_info[0]>2:
+    from abc import ABC, abstractmethod
+else:
+    from abc import ABCMeta, abstractmethod
+    class ABC(object): # Provide Python27 compatibility
+        __slots__ = ()
+        __metclass__ = ABCMeta
+
 
 Py36 = (sys.version_info[:2] >= (3, 6))
 
@@ -62,14 +73,13 @@ class Serialize(object):
         fields = getattr(self, '__serialize_fields__')
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
         res['__type__'] = type(self).__name__
-        postprocess = getattr(self, '_serialize', None)
-        if postprocess:
-            postprocess(res, memo)
+        if hasattr(self, '_serialize'):
+            self._serialize(res, memo)
         return res
 
     @classmethod
     def deserialize(cls, data, memo):
-        namespace = getattr(cls, '__serialize_namespace__', {})
+        namespace = getattr(cls, '__serialize_namespace__', [])
         namespace = {c.__name__:c for c in namespace}
 
         fields = getattr(cls, '__serialize_fields__')
@@ -83,9 +93,10 @@ class Serialize(object):
                 setattr(inst, f, _deserialize(data[f], namespace, memo))
             except KeyError as e:
                 raise KeyError("Cannot find key for class", cls, e)
-        postprocess = getattr(inst, '_deserialize', None)
-        if postprocess:
-            postprocess()
+
+        if hasattr(inst, '_deserialize'):
+            inst._deserialize()
+
         return inst
 
 
@@ -166,7 +177,16 @@ def get_regexp_width(expr):
     try:
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
-        raise ValueError(expr)
+        if not regex:
+            raise ValueError(expr)
+        else:
+            # sre_parse does not support the new features in regex. To not completely fail in that case,
+            # we manually test for the most important info (whether the empty string is matched)
+            c = regex.compile(regexp_final)
+            if c.match('') is None:
+                return 1, sre_constants.MAXREPEAT
+            else:
+                return 0, sre_constants.MAXREPEAT
 
 ###}
 
@@ -221,17 +241,6 @@ except ImportError:
             pass
 
 
-try:
-    compare = cmp
-except NameError:
-    def compare(a, b):
-        if a == b:
-            return 0
-        elif a > b:
-            return 1
-        return -1
-
-
 class Enumerator(Serialize):
     def __init__(self):
         self.enums = {}
@@ -272,9 +281,21 @@ def combine_alternatives(lists):
     return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
 
 
+try:
+    import atomicwrites
+except ImportError:
+    atomicwrites = None
+
 class FS:
-    open = open
     exists = os.path.exists
+
+    @staticmethod
+    def open(name, mode="r", **kwargs):
+        if atomicwrites and "w" in mode:
+            return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
+        else:
+            return open(name, mode, **kwargs)
+
 
 
 def isascii(s):
@@ -318,6 +339,14 @@ def bfs(initial, expand):
                 visited.add(next_node)
                 open_q.append(next_node)
 
+def bfs_all_unique(initial, expand):
+    "bfs, but doesn't keep track of visited (aka seen), because there can be no repetitions"
+    open_q = deque(list(initial))
+    while open_q:
+        node = open_q.popleft()
+        yield node
+        open_q += expand(node)
+
 
 def _serialize(value, memo):
     if isinstance(value, Serialize):
@@ -330,3 +359,29 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
+
+
+
+
+def small_factors(n, max_factor):
+    """
+    Splits n up into smaller factors and summands <= max_factor.
+    Returns a list of [(a, b), ...]
+    so that the following code returns n:
+
+    n = 1
+    for a, b in values:
+        n = n * a + b
+
+    Currently, we also keep a + b <= max_factor, but that might change
+    """
+    assert n >= 0
+    assert max_factor > 2
+    if n <= max_factor:
+        return [(n, 0)]
+
+    for a in range(max_factor, 1, -1):
+        r, b = divmod(n, a)
+        if a + b <= max_factor:
+            return small_factors(r, max_factor) + [(a, b)]
+    assert False, "Failed to factorize %s" % n

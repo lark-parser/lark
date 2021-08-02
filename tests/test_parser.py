@@ -10,8 +10,7 @@ from copy import copy, deepcopy
 
 from lark.utils import Py36, isascii
 
-from lark import Token
-from lark.load_grammar import FromPackageLoader
+from lark import Token, Transformer_NonRecursive, LexError
 
 try:
     from cStringIO import StringIO as cStringIO
@@ -35,7 +34,7 @@ from lark import logger
 from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
-from lark.visitors import Transformer, Transformer_InPlace, v_args
+from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
 from lark.grammar import Rule
 from lark.lexer import TerminalDef, Lexer, TraditionalLexer
 from lark.indenter import Indenter
@@ -94,6 +93,26 @@ class TestParsers(unittest.TestCase):
 
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
+
+    def test_propagate_positions2(self):
+        g = Lark("""start: a
+                    a: b
+                    ?b: "(" t ")"
+                    !t: "t"
+                 """, propagate_positions=True)
+
+        start = g.parse("(t)")
+        a ,= start.children
+        t ,= a.children
+        assert t.children[0] == "t"
+
+        assert t.meta.column == 2
+        assert t.meta.end_column == 3
+
+        assert start.meta.column == a.meta.column == 1
+        assert start.meta.end_column == a.meta.end_column == 4
+
+
 
     def test_expand1(self):
 
@@ -162,6 +181,28 @@ class TestParsers(unittest.TestCase):
         p = Lark(g, parser='lalr', transformer=T())
         r = p.parse("x")
         self.assertEqual( r.children, ["X!"] )
+
+    def test_visit_tokens2(self):
+        g = """
+        start: add+
+        add: NUM "+" NUM
+        NUM: /\d+/
+        %ignore " "
+        """
+        text = "1+2 3+4"
+        expected = Tree('start', [3, 7])
+        for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
+            class T(base):
+                def add(self, children):
+                    return sum(children if isinstance(children, list) else children.children)
+                
+                def NUM(self, token):
+                    return int(token)
+                
+            
+            parser = Lark(g, parser='lalr', transformer=T())
+            result = parser.parse(text)
+            self.assertEqual(result, expected)
 
     def test_vargs_meta(self):
 
@@ -776,6 +817,19 @@ def _make_full_earley_test(LEXER):
             tree = l.parse('')
             self.assertEqual(tree, Tree('start', []))
 
+        def test_cycle2(self):
+            grammar = """
+            start: _operation
+            _operation:  value
+            value: "b"
+                  | "a" value
+                  | _operation
+            """
+
+            l = Lark(grammar, ambiguity="explicit", lexer=LEXER)
+            tree = l.parse("ab")
+            self.assertEqual(tree, Tree('start', [Tree('value', [Tree('value', [])])]))
+
         def test_cycles(self):
             grammar = """
             a: b
@@ -1040,6 +1094,14 @@ def _make_parser_test(LEXER, PARSER):
                         """)
             g.parse(u'\xa3\u0101\u00a3\u0203\n')
 
+        def test_unicode4(self):
+            g = _Lark(r"""start: UNIA UNIB UNIA UNIC
+                        UNIA: /\xa3/
+                        UNIB: "\U0010FFFF"
+                        UNIC: /\U00100000/ /\n/
+                        """)
+            g.parse(u'\xa3\U0010FFFF\u00a3\U00100000\n')
+
         def test_hex_escape(self):
             g = _Lark(r"""start: A B C
                           A: "\x01"
@@ -1053,6 +1115,13 @@ def _make_parser_test(LEXER, PARSER):
                           A: "\u0061".."\u0063"
                           """)
             g.parse('abc')
+
+        @unittest.skipIf(sys.version_info < (3, 3), "re package did not support 32bit unicode escape sequence before Python 3.3")
+        def test_unicode_literal_range_escape2(self):
+            g = _Lark(r"""start: A+
+                          A: "\U0000FFFF".."\U00010002"
+                          """)
+            g.parse('\U0000FFFF\U00010000\U00010001\U00010002')
 
         def test_hex_literal_range_escape(self):
             g = _Lark(r"""start: A+
@@ -1380,12 +1449,6 @@ def _make_parser_test(LEXER, PARSER):
         #                  A: "a"  """)
         #     self.assertRaises(LexError, g.parse, 'aab')
 
-        def test_undefined_rule(self):
-            self.assertRaises(GrammarError, _Lark, """start: a""")
-
-        def test_undefined_token(self):
-            self.assertRaises(GrammarError, _Lark, """start: A""")
-
         def test_rule_collision(self):
             g = _Lark("""start: "a"+ "b"
                              | "a"+ """)
@@ -1619,15 +1682,6 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
-        def test_token_multiline_only_works_with_x_flag(self):
-            g = r"""start: ABC
-                    ABC: /  a      b c
-                              d
-                                e f
-                            /i
-                      """
-            self.assertRaises( GrammarError, _Lark, g)
-
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?
@@ -1639,18 +1693,6 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('')
             self.assertEqual(tree.children, [])
 
-        def test_undefined_ignore(self):
-            g = """!start: "A"
-
-                %ignore B
-                """
-            self.assertRaises( GrammarError, _Lark, g)
-
-        def test_alias_in_terminal(self):
-            g = """start: TERM
-                TERM: "a" -> alias
-                """
-            self.assertRaises( GrammarError, _Lark, g)
 
         def test_line_and_column(self):
             g = r"""!start: "A" bc "D"
@@ -1950,36 +1992,6 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar, postlex=CustomIndenter())
             parser.parse("a\n    b\n")
 
-        def test_import_custom_sources(self):
-            custom_loader = FromPackageLoader('tests', ('grammars', ))
-
-            grammar = """
-            start: startab
-
-            %import ab.startab
-            """
-
-            p = _Lark(grammar, import_paths=[custom_loader])
-            self.assertEqual(p.parse('ab'),
-                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
-
-            grammar = """
-            start: rule_to_import
-
-            %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
-            """
-            p = _Lark(grammar, import_paths=[custom_loader])
-            x = p.parse('N')
-            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
-
-            custom_loader2 = FromPackageLoader('tests')
-            grammar = """
-            %import .test_relative_import (start, WS)
-            %ignore WS
-            """
-            p = _Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
-            x = p.parse('12 capybaras')
-            self.assertEqual(x.children, ['12', 'capybaras'])
 
         @unittest.skipIf(PARSER == 'cyk', "Doesn't work for CYK")
         def test_prioritization(self):
@@ -2192,27 +2204,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
 
-        def test_ranged_repeat_terms(self):
-            g = u"""!start: AAA
-                    AAA: "A"~3
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AAA'), Tree('start', ["AAA"]))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AA')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
 
-            g = u"""!start: AABB CC
-                    AABB: "A"~0..2 "B"~2
-                    CC: "C"~1..2
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AABBCC'), Tree('start', ['AABB', 'CC']))
-            self.assertEqual(l.parse(u'BBC'), Tree('start', ['BB', 'C']))
-            self.assertEqual(l.parse(u'ABBCC'), Tree('start', ['ABB', 'CC']))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
         @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX
         def test_priority_vs_embedded(self):
@@ -2417,10 +2409,62 @@ def _make_parser_test(LEXER, PARSER):
                            NAME: /[\w]+/
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
+        
+        @unittest.skipIf(not regex, "regex not installed")
+        def test_regex_width_fallback(self):
+            g = r"""
+                start: NAME NAME?
+                NAME: /(?(?=\d)\d+|\w+)/
+            """
+            self.assertRaises((GrammarError, LexError, re.error), _Lark, g)
+            p = _Lark(g, regex=True)
+            self.assertEqual(p.parse("123abc"), Tree('start', ['123', 'abc']))
+            
+            g = r"""
+                start: NAME NAME?
+                NAME: /(?(?=\d)\d+|\w*)/
+            """
+            self.assertRaises((GrammarError, LexError, re.error), _Lark, g, regex=True)
 
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser is only implemented for LALR at the moment")
+        def test_parser_interactive_parser(self):
 
-        @unittest.skipIf(PARSER!='lalr', "Puppet error handling only works with LALR for now")
-        def test_error_with_puppet(self):
+            g = _Lark(r'''
+                start: A+ B*
+                A: "a"
+                B: "b"
+            ''')
+            
+            ip = g.parse_interactive()
+
+            self.assertRaises(UnexpectedToken, ip.feed_eof)
+            self.assertRaises(TypeError, ip.exhaust_lexer)
+            ip.feed_token(Token('A', 'a'))
+            res = ip.feed_eof()
+            self.assertEqual(res, Tree('start', ['a']))
+
+            ip = g.parse_interactive("ab")
+
+            ip.exhaust_lexer()
+
+            ip_copy = ip.copy()
+            self.assertEqual(ip_copy.parser_state, ip.parser_state)
+            self.assertEqual(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.parser_state, ip.parser_state)
+            self.assertIsNot(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertIsNot(ip_copy.lexer_state.state.line_ctr, ip.lexer_state.state.line_ctr)
+
+            res = ip.feed_eof(ip.lexer_state.state.last_token)
+            self.assertEqual(res, Tree('start', ['a', 'b']))
+            self.assertRaises(UnexpectedToken ,ip.feed_eof)
+            
+            self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
+            ip_copy.feed_token(Token('B', 'b'))
+            res = ip_copy.feed_eof()
+            self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
+
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser error handling only works with LALR for now")
+        def test_error_with_interactive_parser(self):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):
                     # Skip bad character
@@ -2432,8 +2476,9 @@ def _make_parser_test(LEXER, PARSER):
                     return True
                 elif e.token.type == 'SIGNED_NUMBER':
                     # Try to feed a comma and retry the number
-                    e.puppet.feed_token(Token('COMMA', ','))
-                    e.puppet.feed_token(e.token)
+                    e.interactive_parser.feed_token(Token('COMMA', ','))
+                    e.interactive_parser.feed_token(e.token)
+
                     return True
 
                 # Unhandled error. Will stop parse and raise exception

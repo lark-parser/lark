@@ -15,7 +15,7 @@ standard library of your local installation:
 
 .. code:: bash
 
-   [lark]$ python -m examples.python_parser
+   [lark]$ python -m examples.advanced.python_parser
 
 Beginner Examples
 ~~~~~~~~~~~~~~~~~

@@ -39,22 +39,10 @@ class MakeParsingFrontend:
         lexer_conf.lexer_type = self.lexer_type
         return ParsingFrontend(lexer_conf, parser_conf, options)
 
-    @classmethod
-    def deserialize(cls, data, memo, callbacks, options):
-        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
+    def deserialize(self, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
         parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks
-
-        terminals = [item for item in memo.values() if isinstance(item, TerminalDef)]
-
-        lexer_conf.callbacks = _get_lexer_callbacks(options.transformer, terminals)
-        lexer_conf.re_module = regex if options.regex else re
-        lexer_conf.use_bytes = options.use_bytes
-        lexer_conf.g_regex_flags = options.g_regex_flags
-        lexer_conf.skip_validation = True
-        lexer_conf.postlex = options.postlex
-
         return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
 
@@ -83,6 +71,7 @@ class ParsingFrontend(Serialize):
         lexer_type = lexer_conf.lexer_type
         self.skip_lexer = False
         if lexer_type in ('dynamic', 'dynamic_complete'):
+            assert lexer_conf.postlex is None
             self.skip_lexer = True
             return
 
@@ -99,20 +88,29 @@ class ParsingFrontend(Serialize):
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
-
-
-    def parse(self, text, start=None):
+    
+    def _verify_start(self, start=None):
         if start is None:
-            start = self.parser_conf.start
-            if len(start) > 1:
-                raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
-            start ,= start
+            start_decls = self.parser_conf.start
+            if len(start_decls) > 1:
+                raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start_decls)
+            start ,= start_decls
+        elif start not in self.parser_conf.start:
+            raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
+        return start
 
-        if self.skip_lexer:
-            return self.parser.parse(text, start)
-
-        lexer_thread = LexerThread(self.lexer, text)
-        return self.parser.parse(lexer_thread, start)
+    def parse(self, text, start=None, on_error=None):
+        chosen_start = self._verify_start(start)
+        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        kw = {} if on_error is None else {'on_error': on_error}
+        return self.parser.parse(stream, chosen_start, **kw)
+    
+    def parse_interactive(self, text=None, start=None):
+        chosen_start = self._verify_start(start)
+        if self.parser_conf.parser_type != 'lalr':
+            raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
+        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        return self.parser.parse_interactive(stream, chosen_start)
 
 
 def get_frontend(parser, lexer):

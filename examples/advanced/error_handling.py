@@ -1,18 +1,18 @@
 """
-Error handling with a puppet
-==================================
+Error handling using an interactive parser
+==========================================
 
-This example demonstrates error handling using a parsing puppet in LALR
+This example demonstrates error handling using an interactive parser in LALR
 
 When the parser encounters an UnexpectedToken exception, it creates a
-parsing puppet with the current parse-state, and lets you control how
+an interactive parser with the current parse-state, and lets you control how
 to proceed step-by-step. When you've achieved the correct parse-state,
 you can resume the run by returning True.
 """
 
 from lark import Token
 
-from _json_parser import json_parser
+from examples.advanced._json_parser import json_parser
 
 def ignore_errors(e):
     if e.token.type == 'COMMA':
@@ -20,8 +20,8 @@ def ignore_errors(e):
         return True
     elif e.token.type == 'SIGNED_NUMBER':
         # Try to feed a comma and retry the number
-        e.puppet.feed_token(Token('COMMA', ','))
-        e.puppet.feed_token(e.token)
+        e.interactive_parser.feed_token(Token('COMMA', ','))
+        e.interactive_parser.feed_token(e.token)
         return True
 
     # Unhandled error. Will stop parse and raise exception

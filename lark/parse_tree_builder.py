@@ -1,4 +1,4 @@
-from .exceptions import GrammarError
+from .exceptions import GrammarError, ConfigurationError
 from .lexer import Token
 from .tree import Tree
 from .visitors import InlineTransformer  # XXX Deprecated
@@ -21,49 +21,67 @@ class ExpandSingleChild:
             return self.node_builder(children)
 
 
+
 class PropagatePositions:
-    def __init__(self, node_builder):
+    def __init__(self, node_builder, node_filter=None):
         self.node_builder = node_builder
+        self.node_filter = node_filter
 
     def __call__(self, children):
         res = self.node_builder(children)
 
-        # local reference to Tree.meta reduces number of presence checks
         if isinstance(res, Tree):
-            res_meta = res.meta
-            for c in children:
-                if isinstance(c, Tree):
-                    child_meta = c.meta
-                    if not child_meta.empty:
-                        res_meta.line = child_meta.line
-                        res_meta.column = child_meta.column
-                        res_meta.start_pos = child_meta.start_pos
-                        res_meta.empty = False
-                        break
-                elif isinstance(c, Token):
-                    res_meta.line = c.line
-                    res_meta.column = c.column
-                    res_meta.start_pos = c.pos_in_stream
-                    res_meta.empty = False
-                    break
+            # Calculate positions while the tree is streaming, according to the rule:
+            # - nodes start at the start of their first child's container,
+            #   and end at the end of their last child's container.
+            # Containers are nodes that take up space in text, but have been inlined in the tree.
 
-            for c in reversed(children):
-                if isinstance(c, Tree):
-                    child_meta = c.meta
-                    if not child_meta.empty:
-                        res_meta.end_line = child_meta.end_line
-                        res_meta.end_column = child_meta.end_column
-                        res_meta.end_pos = child_meta.end_pos
-                        res_meta.empty = False
-                        break
-                elif isinstance(c, Token):
-                    res_meta.end_line = c.end_line
-                    res_meta.end_column = c.end_column
-                    res_meta.end_pos = c.end_pos
+            res_meta = res.meta
+
+            first_meta = self._pp_get_meta(children)
+            if first_meta is not None:
+                if not hasattr(res_meta, 'line'):
+                    # meta was already set, probably because the rule has been inlined (e.g. `?rule`)
+                    res_meta.line = getattr(first_meta, 'container_line', first_meta.line)
+                    res_meta.column = getattr(first_meta, 'container_column', first_meta.column)
+                    res_meta.start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)
                     res_meta.empty = False
-                    break
+
+                res_meta.container_line = getattr(first_meta, 'container_line', first_meta.line)
+                res_meta.container_column = getattr(first_meta, 'container_column', first_meta.column)
+
+            last_meta = self._pp_get_meta(reversed(children))
+            if last_meta is not None:
+                if not hasattr(res_meta, 'end_line'):
+                    res_meta.end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                    res_meta.end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
+                    res_meta.end_pos = getattr(last_meta, 'container_end_pos', last_meta.end_pos)
+                    res_meta.empty = False
+
+                res_meta.container_end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
+                res_meta.container_end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
 
         return res
+
+    def _pp_get_meta(self, children):
+        for c in children:
+            if self.node_filter is not None and not self.node_filter(c):
+                continue
+            if isinstance(c, Tree):
+                if not c.meta.empty:
+                    return c.meta
+            elif isinstance(c, Token):
+                return c
+
+def make_propagate_positions(option):
+    if callable(option):
+        return partial(PropagatePositions, node_filter=option)
+    elif option is True:
+        return PropagatePositions
+    elif option is False:
+        return None
+
+    raise ConfigurationError('Invalid option for propagate_positions: %r' % option)
 
 
 class ChildFilter:
@@ -320,6 +338,8 @@ class ParseTreeBuilder:
         self.rule_builders = list(self._init_builders(rules))
 
     def _init_builders(self, rules):
+        propagate_positions = make_propagate_positions(self.propagate_positions)
+
         for rule in rules:
             options = rule.options
             keep_all_tokens = options.keep_all_tokens
@@ -328,7 +348,7 @@ class ParseTreeBuilder:
             wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
-                self.propagate_positions and PropagatePositions,
+                propagate_positions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
                 self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class)
             ]))

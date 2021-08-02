@@ -1,6 +1,18 @@
+"""
+Standalone Parser
+===================================
+
+    This example demonstrates how to generate and use the standalone parser,
+    using the JSON example.
+
+    See README.md for more details.
+"""
+
 import sys
 
-from json_parser import Lark_StandAlone, Transformer, inline_args
+from json_parser import Lark_StandAlone, Transformer, v_args
+
+inline_args = v_args(inline=True)
 
 class TreeToJson(Transformer):
     @inline_args

@@ -20,9 +20,10 @@ parser = Lark(r"""
         start: _NL? section+
         section: "[" NAME "]" _NL item+
         item: NAME "=" VALUE? _NL
+
+        NAME: /\w/+
         VALUE: /./+
 
-        %import common.CNAME -> NAME
         %import common.NEWLINE -> _NL
         %import common.WS_INLINE
         %ignore WS_INLINE

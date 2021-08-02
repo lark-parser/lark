@@ -51,7 +51,7 @@ def _match(term, token):
         return token.data == name
     elif isinstance(token, Token):
         return term == Terminal(token.type)
-    assert False
+    assert False, (term, token)
 
 
 def make_recons_rule(origin, expansion, old_expansion):

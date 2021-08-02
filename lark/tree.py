@@ -108,6 +108,13 @@ class Tree(object):
             self.children[i:i+1] = kid.children
 
     def scan_values(self, pred):
+        """Return all values in the tree that evaluate pred(value) as true.
+
+        This can be used to find all the tokens in the tree.
+
+        Example:
+            >>> all_tokens = tree.scan_values(lambda v: isinstance(v, Token))
+        """
         for c in self.children:
             if isinstance(c, Tree):
                 for t in c.scan_values(pred):

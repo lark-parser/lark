@@ -2,14 +2,18 @@
 
 from typing import (
     TypeVar, Type, List, Dict, IO, Iterator, Callable, Union, Optional,
-    Literal, Protocol, Tuple,  Iterable,
+    Literal, Protocol, Tuple, Iterable,
 )
+
+from .parsers.lalr_interactive_parser import InteractiveParser
 from .visitors import Transformer
 from .lexer import Token, Lexer, TerminalDef
 from .tree import Tree
 from .exceptions import UnexpectedInput
+from .load_grammar import Grammar
 
 _T = TypeVar('_T')
+
 
 class PostLex(Protocol):
 
@@ -29,7 +33,7 @@ class LarkOptions:
     regex: bool
     debug: bool
     keep_all_tokens: bool
-    propagate_positions: bool
+    propagate_positions: Union[bool, Callable]
     maybe_placeholders: bool
     lexer_callbacks: Dict[str, Callable[[Token], Token]]
     cache: Union[bool, str]
@@ -45,6 +49,7 @@ class PackageResource(object):
 
     def __init__(self, pkg_name: str, path: str): ...
 
+
 class FromPackageLoader:
     def __init__(self, pkg_name: str, search_paths: Tuple[str, ...] = ...): ...
 
@@ -54,16 +59,17 @@ class FromPackageLoader:
 class Lark:
     source_path: str
     source_grammar: str
+    grammar: Grammar
     options: LarkOptions
     lexer: Lexer
     terminals: List[TerminalDef]
 
     def __init__(
         self,
-        grammar: Union[str, IO[str]],
+        grammar: Union[Grammar, str, IO[str]],
         *,
         start: Union[None, str, List[str]] = "start",
-        parser: Literal["earley", "lalr", "cyk"] = "auto",
+        parser: Literal["earley", "lalr", "cyk", "auto"] = "auto",
         lexer: Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]] = "auto",
         transformer: Optional[Transformer] = None,
         postlex: Optional[PostLex] = None,
@@ -71,7 +77,7 @@ class Lark:
         regex: bool = False,
         debug: bool = False,
         keep_all_tokens: bool = False,
-        propagate_positions: bool = False,
+        propagate_positions: Union[bool, Callable] = False,
         maybe_placeholders: bool = False,
         lexer_callbacks: Optional[Dict[str, Callable[[Token], Token]]] = None,
         cache: Union[bool, str] = False,
@@ -83,6 +89,9 @@ class Lark:
         ...
 
     def parse(self, text: str, start: Optional[str] = None, on_error: Callable[[UnexpectedInput], bool] = None) -> Tree:
+        ...
+
+    def parse_interactive(self, text: str = None, start: Optional[str] = None) -> InteractiveParser:
         ...
 
     @classmethod

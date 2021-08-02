@@ -37,7 +37,7 @@ Welcome to Lark's documentation!
    classes
    visitors
    forest
-   nearley
+   tools
 
 
 
@@ -79,6 +79,7 @@ Resources
 -  :doc:`philosophy`
 -  :doc:`features`
 -  `Examples`_
+-  `Third-party examples`_
 -  `Online IDE`_
 -  Tutorials
 
@@ -101,7 +102,7 @@ Resources
    -  :doc:`visitors`
    -  :doc:`forest`
    -  :doc:`classes`
-   -  :doc:`nearley`
+   -  :doc:`tools`
    -  `Cheatsheet (PDF)`_
 
 -  Discussion
@@ -111,6 +112,7 @@ Resources
 
 
 .. _Examples: https://github.com/lark-parser/lark/tree/master/examples
+.. _Third-party examples: https://github.com/ligurio/lark-grammars
 .. _Online IDE: https://lark-parser.github.io/lark/ide/app.html
 .. _How to write a DSL: http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/
 .. _Program Synthesis is Possible: https://www.cs.cornell.edu/~asampson/blog/minisynth.html

@@ -744,7 +744,10 @@ class Grammar:
                 else:
                     exp_options = options
 
-                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                for sym in expansion:
+                    assert isinstance(sym, Symbol)
+                    if sym.is_term and exp_options and exp_options.keep_all_tokens:
+                        sym.filter_out = False
                 rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)
 

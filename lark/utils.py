@@ -61,14 +61,13 @@ class Serialize(object):
         fields = getattr(self, '__serialize_fields__')
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
         res['__type__'] = type(self).__name__
-        postprocess = getattr(self, '_serialize', None)
-        if postprocess:
-            postprocess(res, memo)
+        if hasattr(self, '_serialize'):
+            self._serialize(res, memo)
         return res
 
     @classmethod
     def deserialize(cls, data, memo):
-        namespace = getattr(cls, '__serialize_namespace__', {})
+        namespace = getattr(cls, '__serialize_namespace__', [])
         namespace = {c.__name__:c for c in namespace}
 
         fields = getattr(cls, '__serialize_fields__')
@@ -82,9 +81,10 @@ class Serialize(object):
                 setattr(inst, f, _deserialize(data[f], namespace, memo))
             except KeyError as e:
                 raise KeyError("Cannot find key for class", cls, e)
-        postprocess = getattr(inst, '_deserialize', None)
-        if postprocess:
-            postprocess()
+
+        if hasattr(inst, '_deserialize'):
+            inst._deserialize()
+
         return inst
 
 
@@ -163,7 +163,7 @@ def get_regexp_width(expr):
                 return 1, sre_constants.MAXREPEAT
             else:
                 return 0, sre_constants.MAXREPEAT
-            
+
 ###}
 
 
@@ -196,14 +196,6 @@ def dedup_list(l):
        the list entries are hashable."""
     dedup = set()
     return [x for x in l if not (x in dedup or dedup.add(x))]
-
-
-def compare(a, b):
-    if a == b:
-        return 0
-    elif a > b:
-        return 1
-    return -1
 
 
 class Enumerator(Serialize):
@@ -253,7 +245,7 @@ except ImportError:
 
 class FS:
     exists = os.path.exists
-    
+
     @staticmethod
     def open(name, mode="r", **kwargs):
         if atomicwrites and "w" in mode:
@@ -324,3 +316,29 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
+
+
+
+
+def small_factors(n, max_factor):
+    """
+    Splits n up into smaller factors and summands <= max_factor.
+    Returns a list of [(a, b), ...]
+    so that the following code returns n:
+
+    n = 1
+    for a, b in values:
+        n = n * a + b
+
+    Currently, we also keep a + b <= max_factor, but that might change
+    """
+    assert n >= 0
+    assert max_factor > 2
+    if n <= max_factor:
+        return [(n, 0)]
+
+    for a in range(max_factor, 1, -1):
+        r, b = divmod(n, a)
+        if a + b <= max_factor:
+            return small_factors(r, max_factor) + [(a, b)]
+    assert False, "Failed to factorize %s" % n

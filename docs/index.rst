@@ -113,7 +113,7 @@ Resources
 
 .. _Examples: https://github.com/lark-parser/lark/tree/master/examples
 .. _Third-party examples: https://github.com/ligurio/lark-grammars
-.. _Online IDE: https://lark-parser.github.io/lark/ide/app.html
+.. _Online IDE: https://lark-parser.github.io/ide
 .. _How to write a DSL: http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/
 .. _Program Synthesis is Possible: https://www.cs.cornell.edu/~asampson/blog/minisynth.html
 .. _Cheatsheet (PDF): _static/lark_cheatsheet.pdf

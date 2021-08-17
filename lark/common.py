@@ -1,4 +1,5 @@
 from types import ModuleType
+from copy import deepcopy
 
 from .utils import Serialize
 from .lexer import TerminalDef, Token
@@ -40,6 +41,17 @@ class LexerConf(Serialize):
     def _deserialize(self):
         self.terminals_by_name = {t.name: t for t in self.terminals}
 
+    def __deepcopy__(self, memo=None):
+        return type(self)(
+            deepcopy(self.terminals, memo),
+            self.re_module,
+            deepcopy(self.ignore, memo),
+            deepcopy(self.postlex, memo),
+            deepcopy(self.callbacks, memo),
+            deepcopy(self.g_regex_flags, memo),
+            deepcopy(self.skip_validation, memo),
+            deepcopy(self.use_bytes, memo),
+        )
 
 
 class ParserConf(Serialize):

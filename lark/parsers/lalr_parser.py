@@ -178,8 +178,8 @@ class _Parser(object):
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 
-            token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
-            return state.feed_token(token, True)
+            end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            return state.feed_token(end_token, True)
         except UnexpectedInput as e:
             try:
                 e.interactive_parser = InteractiveParser(self, state, state.lexer)

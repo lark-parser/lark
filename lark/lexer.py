@@ -359,7 +359,7 @@ class Lexer(ABC):
     """
     @abstractmethod
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
-        ...
+        return NotImplemented
 
     def make_lexer_state(self, text):
         line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')

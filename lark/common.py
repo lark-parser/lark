@@ -1,16 +1,31 @@
 from copy import deepcopy
+from types import ModuleType
 
 from .utils import Serialize
-from .lexer import TerminalDef
+from .lexer import TerminalDef, Token
 
 ###{standalone
+from typing import Any, Callable, Collection, Dict, Optional, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from .lark import PostLex
+
+_Callback = Callable[[Token], Token]
 
 class LexerConf(Serialize):
     __serialize_fields__ = 'terminals', 'ignore', 'g_regex_flags', 'use_bytes', 'lexer_type'
     __serialize_namespace__ = TerminalDef,
 
-    def __init__(self, terminals, re_module, ignore=(), postlex=None, callbacks=None, g_regex_flags=0, skip_validation=False, use_bytes=False):
+    terminals: Collection[TerminalDef]
+    re_module: ModuleType
+    ignore: Collection[str]
+    postlex: 'Optional[PostLex]'
+    callbacks: Dict[str, _Callback]
+    g_regex_flags: int
+    skip_validation: bool
+    use_bytes: bool
+
+    def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
         self.terminals = terminals
         self.terminals_by_name = {t.name: t for t in self.terminals}
         assert len(self.terminals) == len(self.terminals_by_name)

@@ -1,6 +1,5 @@
 from .utils import logger, NO_VALUE
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, TYPE_CHECKING
-from collections.abc import Sequence
+from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import Token
@@ -17,7 +16,7 @@ class ConfigurationError(LarkError, ValueError):
     pass
 
 
-def assert_config(value, options: Sequence, msg='Got %r, expected one of %s'):
+def assert_config(value, options: Collection, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 

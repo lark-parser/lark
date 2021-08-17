@@ -37,7 +37,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 Lark has no dependencies.
 
-[![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
+[![Tests](https://github.com/lark-parser/lark/actions/workflows/tests.yml/badge.svg)](https://github.com/lark-parser/lark/actions/workflows/tests.yml)
 
 ### Syntax Highlighting
 

@@ -8,6 +8,7 @@ import pkgutil
 from ast import literal_eval
 from numbers import Integral
 from contextlib import suppress
+from typing import List, Tuple, Union, Callable, Dict, Optional
 
 from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -17,7 +18,7 @@ from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
 from .utils import classify, dedup_list
-from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError, UnexpectedInput
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -540,7 +541,12 @@ def nr_deepcopy_tree(t):
 
 
 class Grammar:
-    def __init__(self, rule_defs, term_defs, ignore):
+
+    term_defs: List[Tuple[str, Tuple[Tree, int]]]
+    rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]]
+    ignore: List[str]
+
+    def __init__(self, rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]], term_defs: List[Tuple[str, Tuple[Tree, int]]], ignore: List[str]) -> None:
         self.term_defs = term_defs
         self.rule_defs = rule_defs
         self.ignore = ignore
@@ -679,14 +685,18 @@ class FromPackageLoader(object):
     pkg_name: The name of the package. You can probably provide `__name__` most of the time
     search_paths: All the path that will be search on absolute imports.
     """
-    def __init__(self, pkg_name, search_paths=("", )):
+
+    pkg_name: str
+    search_paths: Tuple[str, ...]
+
+    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...]=("", )) -> None:
         self.pkg_name = pkg_name
         self.search_paths = search_paths
 
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_path, grammar_path):
+    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]:
         if base_path is None:
             to_try = self.search_paths
         else:
@@ -863,7 +873,7 @@ def _search_interactive_parser(interactive_parser, predicate):
         if predicate(p):
             return path, p
 
-def find_grammar_errors(text, start='start'):
+def find_grammar_errors(text: str, start: str='start') -> List[Tuple[UnexpectedInput, str]]:
     errors = []
     def on_error(e):
         errors.append((e, _error_repr(e)))
@@ -912,7 +922,12 @@ def _mangle_exp(exp, mangle):
 
 
 class GrammarBuilder:
-    def __init__(self, global_keep_all_tokens=False, import_paths=None, used_files=None):
+
+    global_keep_all_tokens: bool
+    import_paths: List[Union[str, Callable]]
+    used_files: Dict[str, str]
+
+    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
         self.used_files = used_files or {}
@@ -1056,7 +1071,7 @@ class GrammarBuilder:
         return name, exp, params, opts
 
 
-    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None):
+    def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports = {}
@@ -1119,7 +1134,7 @@ class GrammarBuilder:
         self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
 
 
-    def do_import(self, dotted_path, base_path, aliases, base_mangle=None):
+    def do_import(self, dotted_path: Tuple[str, ...], base_path: Optional[str], aliases: Dict[str, str], base_mangle: Optional[Callable[[str], str]]=None) -> None:
         assert dotted_path
         mangle = _get_mangle('__'.join(dotted_path), aliases, base_mangle)
         grammar_path = os.path.join(*dotted_path) + EXT
@@ -1155,7 +1170,7 @@ class GrammarBuilder:
             assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
 
 
-    def validate(self):
+    def validate(self) -> None:
         for name, (params, exp, _options) in self._definitions.items():
             for i, p in enumerate(params):
                 if p in self._definitions:
@@ -1184,7 +1199,7 @@ class GrammarBuilder:
         if not set(self._definitions).issuperset(self._ignore_names):
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))
 
-    def build(self):
+    def build(self) -> Grammar:
         self.validate()
         rule_defs = []
         term_defs = []

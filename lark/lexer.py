@@ -1,5 +1,6 @@
 # Lexer Implementation
 
+from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
 
@@ -9,12 +10,23 @@ from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 ###{standalone
 from copy import copy
 
+from types import ModuleType
+from typing import (
+    TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
+    Pattern as REPattern, ClassVar, TYPE_CHECKING
+)
 
-class Pattern(Serialize):
-    raw = None
-    type = None
+if TYPE_CHECKING:
+    from .common import LexerConf
 
-    def __init__(self, value, flags=(), raw=None):
+class Pattern(Serialize, ABC):
+
+    value: str
+    flags: Collection[str]
+    raw: Optional[str]
+    type: ClassVar[str]
+
+    def __init__(self, value: str, flags: Collection[str]=(), raw: Optional[str]=None) -> None:
         self.value = value
         self.flags = frozenset(flags)
         self.raw = raw
@@ -29,13 +41,18 @@ class Pattern(Serialize):
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
-    def to_regexp(self):
+    @abstractmethod
+    def to_regexp(self) -> str:
         raise NotImplementedError()
 
-    def min_width(self):
+    @property
+    @abstractmethod
+    def min_width(self) -> int:
         raise NotImplementedError()
 
-    def max_width(self):
+    @property
+    @abstractmethod
+    def max_width(self) -> int:
         raise NotImplementedError()
 
     def _get_flags(self, value):
@@ -47,23 +64,26 @@ class Pattern(Serialize):
 class PatternStr(Pattern):
     __serialize_fields__ = 'value', 'flags'
 
-    type = "str"
+    type: ClassVar[str] = "str"
 
-    def to_regexp(self):
+    def to_regexp(self) -> str:
         return self._get_flags(re.escape(self.value))
 
     @property
-    def min_width(self):
+    def min_width(self) -> int:
         return len(self.value)
-    max_width = min_width
+
+    @property
+    def max_width(self) -> int:
+        return len(self.value)
 
 
 class PatternRE(Pattern):
     __serialize_fields__ = 'value', 'flags', '_width'
 
-    type = "re"
+    type: ClassVar[str] = "re"
 
-    def to_regexp(self):
+    def to_regexp(self) -> str:
         return self._get_flags(self.value)
 
     _width = None
@@ -73,11 +93,11 @@ class PatternRE(Pattern):
         return self._width
 
     @property
-    def min_width(self):
+    def min_width(self) -> int:
         return self._get_width()[0]
 
     @property
-    def max_width(self):
+    def max_width(self) -> int:
         return self._get_width()[1]
 
 
@@ -85,7 +105,11 @@ class TerminalDef(Serialize):
     __serialize_fields__ = 'name', 'pattern', 'priority'
     __serialize_namespace__ = PatternStr, PatternRE
 
-    def __init__(self, name, pattern, priority=1):
+    name: str
+    pattern: Pattern
+    priority: int
+
+    def __init__(self, name: str, pattern: Pattern, priority: int=1) -> None:
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
@@ -94,12 +118,13 @@ class TerminalDef(Serialize):
     def __repr__(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
 
-    def user_repr(self):
+    def user_repr(self) -> str:
         if self.name.startswith('__'): # We represent a generated terminal
             return self.pattern.raw or self.name
         else:
             return self.name
 
+_T = TypeVar('_T')
 
 class Token(str):
     """A string with meta-information, that is produced by the lexer.
@@ -122,6 +147,15 @@ class Token(str):
     """
     __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
+    type: str
+    start_pos: int
+    value: Any
+    line: int
+    column: int
+    end_line: int
+    end_column: int
+    end_pos: int
+
     def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         try:
             self = super(Token, cls).__new__(cls, value)
@@ -139,7 +173,7 @@ class Token(str):
         self.end_pos = end_pos
         return self
 
-    def update(self, type_=None, value=None):
+    def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         return Token.new_borrow_pos(
             type_ if type_ is not None else self.type,
             value if value is not None else self.value,
@@ -147,7 +181,7 @@ class Token(str):
         )
 
     @classmethod
-    def new_borrow_pos(cls, type_, value, borrow_t):
+    def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
@@ -281,13 +315,35 @@ def _regexp_has_newline(r):
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 
-class Lexer(object):
+class LexerState(object):
+    __slots__ = 'text', 'line_ctr', 'last_token'
+
+    def __init__(self, text, line_ctr, last_token=None):
+        self.text = text
+        self.line_ctr = line_ctr
+        self.last_token = last_token
+
+    def __eq__(self, other):
+        if not isinstance(other, LexerState):
+            return NotImplemented
+
+        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
+
+    def __copy__(self):
+        return type(self)(self.text, copy(self.line_ctr), self.last_token)
+
+
+_Callback = Callable[[Token], Token]
+
+class Lexer(ABC):
     """Lexer interface
 
     Method Signatures:
-        lex(self, text) -> Iterator[Token]
+        lex(self, lexer_state, parser_state) -> Iterator[Token]
     """
-    lex = NotImplemented
+    @abstractmethod
+    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
+        ...
 
     def make_lexer_state(self, text):
         line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')
@@ -296,7 +352,14 @@ class Lexer(object):
 
 class TraditionalLexer(Lexer):
 
-    def __init__(self, conf):
+    terminals: Collection[TerminalDef]
+    ignore_types: FrozenSet[str]
+    newline_types: FrozenSet[str]
+    user_callbacks: Dict[str, _Callback]
+    callback: Dict[str, _Callback]
+    re: ModuleType
+
+    def __init__(self, conf: 'LexerConf') -> None:
         terminals = list(conf.terminals)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -329,7 +392,7 @@ class TraditionalLexer(Lexer):
 
         self._mres = None
 
-    def _build(self):
+    def _build(self) -> None:
         terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
         assert all(self.callback.values())
 
@@ -343,23 +406,24 @@ class TraditionalLexer(Lexer):
         self._mres = build_mres(terminals, self.g_regex_flags, self.re, self.use_bytes)
 
     @property
-    def mres(self):
+    def mres(self) -> List[Tuple[REPattern, Dict[int, str]]]:
         if self._mres is None:
             self._build()
+            assert self._mres is not None
         return self._mres
 
-    def match(self, text, pos):
+    def match(self, text: str, pos: int) -> Optional[Tuple[str, str]]:
         for mre, type_from_index in self.mres:
             m = mre.match(text, pos)
             if m:
                 return m.group(0), type_from_index[m.lastindex]
 
-    def lex(self, state, parser_state):
+    def lex(self, state: LexerState, parser_state: Any) -> Iterator[Token]:
         with suppress(EOFError):
             while True:
                 yield self.next_token(state, parser_state)
 
-    def next_token(self, lex_state, parser_state=None):
+    def next_token(self, lex_state: LexerState, parser_state: Any=None) -> Token:
         line_ctr = lex_state.line_ctr
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
@@ -395,27 +459,12 @@ class TraditionalLexer(Lexer):
         raise EOFError(self)
 
 
-class LexerState(object):
-    __slots__ = 'text', 'line_ctr', 'last_token'
-
-    def __init__(self, text, line_ctr, last_token=None):
-        self.text = text
-        self.line_ctr = line_ctr
-        self.last_token = last_token
-
-    def __eq__(self, other):
-        if not isinstance(other, LexerState):
-            return NotImplemented
-
-        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
-
-    def __copy__(self):
-        return type(self)(self.text, copy(self.line_ctr), self.last_token)
-
-
 class ContextualLexer(Lexer):
 
-    def __init__(self, conf, states, always_accept=()):
+    lexers: Dict[str, TraditionalLexer]
+    root_lexer: TraditionalLexer
+
+    def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
         terminals = list(conf.terminals)
         terminals_by_name = conf.terminals_by_name
 
@@ -443,7 +492,7 @@ class ContextualLexer(Lexer):
     def make_lexer_state(self, text):
         return self.root_lexer.make_lexer_state(text)
 
-    def lex(self, lexer_state, parser_state):
+    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:
             while True:
                 lexer = self.lexers[parser_state.position]

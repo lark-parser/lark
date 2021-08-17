@@ -3,6 +3,12 @@ from .utils import logger, NO_VALUE
 
 ###{standalone
 
+from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .lexer import Token
+    from .parsers.lalr_interactive_parser import InteractiveParser
+    from .tree import Tree
 
 class LarkError(Exception):
     pass
@@ -28,6 +34,7 @@ class ParseError(LarkError):
 class LexError(LarkError):
     pass
 
+T = TypeVar('T')
 
 class UnexpectedInput(LarkError):
     """UnexpectedInput Error.
@@ -39,10 +46,13 @@ class UnexpectedInput(LarkError):
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
+    line: int
+    column: int
     pos_in_stream = None
+    state: Any
     _terminals_by_name = None
 
-    def get_context(self, text, span=40):
+    def get_context(self, text: str, span: int=40) -> str:
         """Returns a pretty string pinpointing the error in the text,
         with span amount of context characters around it.
 
@@ -63,7 +73,7 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn, examples, token_type_match_fallback=False, use_accepts=False):
+    def match_examples(self, parse_fn: 'Callable[[str], Tree]', examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]], token_type_match_fallback: bool=False, use_accepts: bool=False) -> Optional[T]:
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
 
@@ -126,6 +136,9 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
+
+    expected: 'List[Token]'
+
     def __init__(self, expected, state=None, terminals_by_name=None):
         self.expected = expected
         self.state = state
@@ -145,6 +158,10 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
+
+    allowed: Set[str]
+    considered_tokens: Set[Any]
+
     def __init__(self, seq, lex_pos, line, column, allowed=None, considered_tokens=None, state=None, token_history=None,
                  terminals_by_name=None, considered_rules=None):
         # TODO considered_tokens and allowed can be figured out using state
@@ -187,6 +204,10 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     see: ``InteractiveParser``.
     """
 
+    expected: Set[str]
+    considered_rules: Set[str]
+    interactive_parser: 'InteractiveParser'
+
     def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
@@ -205,7 +226,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         super(UnexpectedToken, self).__init__()
 
     @property
-    def accepts(self):
+    def accepts(self) -> Set[str]:
         if self._accepts is NO_VALUE:
             self._accepts = self.interactive_parser and self.interactive_parser.accepts()
         return self._accepts
@@ -227,6 +248,9 @@ class VisitError(LarkError):
     - obj: the tree node or token it was processing when the exception was raised
     - orig_exc: the exception that cause it to fail
     """
+
+    obj: 'Union[Tree, Token]'
+    orig_exc: Exception
 
     def __init__(self, rule, obj, orig_exc):
         self.obj = obj

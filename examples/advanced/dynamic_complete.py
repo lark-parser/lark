@@ -9,10 +9,10 @@ When using ``parser='earley'`` and ``lexer='dynamic_complete'``, Lark will be ab
 parse just about anything as long as there is a valid way to generate it from
 the Grammar, including looking 'into' the Regexes.
 
-This examples shows how to parse a json input where are quotes have been
+This examples shows how to parse a json input where the quotes have been
 replaced by underscores: ``{_foo_:{}, _bar_: [], _baz_: __}``
 Notice that underscores might still appear inside strings, so a potentially
-valid reading of the above might in normal json be:
+valid reading of the above is:
 ``{"foo_:{}, _bar": [], "baz": ""}``
 """
 from pprint import pprint
@@ -53,15 +53,56 @@ _STRING_ESC_INNER: _STRING_INNER /(?<!\\)(\\\\)*?/
 
 
 def score(tree: Tree):
+    """
+    Scores an option by how many children (and grand-children, and
+    grand-grand-children, ...) it has.
+    This means that the option with fewer large terminals get's selected
+
+    Between
+        object
+          pair
+            string	_foo_
+            object
+          pair
+            string	_bar_: [], _baz_
+            string	__
+
+    and
+
+        object
+          pair
+            string	_foo_
+            object
+          pair
+            string	_bar_
+            array
+          pair
+            string	_baz_
+            string	__
+
+    this will give the second a higher score. (9 vs 13)
+    """
     return sum(len(t.children) for t in tree.iter_subtrees())
 
 
 class RemoveAmbiguities(Transformer_InPlace):
+    """
+    Selects an option to resolve an ambiguity using the score function above.
+    Scores each option and selects the one with the higher score, e.g. the one
+    with more nodes.
+
+    If there is a performance problem with the Tree having to many _ambig and
+    being slow and to large, this can instead be written as a ForestVisitor.
+    Look at the 'Custom SPPF Prioritizer' example.
+    """
     def _ambig(self, options):
         return max(options, key=score)
 
 
 class TreeToJson(Transformer):
+    """
+    This is the same Transformer as the json_parser example.
+    """
     @v_args(inline=True)
     def string(self, s):
         return s[1:-1].replace('\\"', '"')

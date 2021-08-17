@@ -1,19 +1,18 @@
 "Provides Indentation services for languages with indentation similar to Python"
 
 from abc import ABC, abstractmethod
+from typing import List, Iterator
 
 from .exceptions import LarkError
 from .lark import PostLex
 from .lexer import Token
 
 ###{standalone
-from typing import List, Iterator
 
 class DedentError(LarkError):
     pass
 
 class Indenter(PostLex, ABC):
-
     paren_level: int
     indent_level: List[int]
 

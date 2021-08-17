@@ -1,7 +1,18 @@
 from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
-
+from typing import (
+    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
+    Tuple, Iterable, IO, Any, TYPE_CHECKING
+)
+if TYPE_CHECKING:
+    from .parsers.lalr_interactive_parser import InteractiveParser
+    from .visitors import Transformer
+    if sys.version_info >= (3, 8):
+        from typing import Literal
+    else:
+        from typing_extensions import Literal
+        
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
@@ -21,18 +32,7 @@ except ImportError:
 
 
 ###{standalone
-from typing import (
-    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
-    Tuple, Iterable, IO, Any, TYPE_CHECKING
-)
 
-if TYPE_CHECKING:
-    from .parsers.lalr_interactive_parser import InteractiveParser
-    from .visitors import Transformer
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
 
 class PostLex(ABC):
     @abstractmethod

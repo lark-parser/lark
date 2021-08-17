@@ -1,3 +1,4 @@
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
 from abc import ABC
 from functools import wraps
 
@@ -8,7 +9,6 @@ from .lexer import Token
 
 ###{standalone
 from inspect import getmembers, getmro
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
 
 _T = TypeVar('_T')
 _R = TypeVar('_R')

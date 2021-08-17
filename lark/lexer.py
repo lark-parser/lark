@@ -3,6 +3,13 @@
 from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
+from typing import (
+    TypeVar, Type, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
+    Pattern as REPattern, ClassVar, TYPE_CHECKING
+)
+from types import ModuleType
+if TYPE_CHECKING:
+    from .common import LexerConf
 
 from .utils import classify, get_regexp_width, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -10,14 +17,6 @@ from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 ###{standalone
 from copy import copy
 
-from types import ModuleType
-from typing import (
-    TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Pattern as REPattern, ClassVar, TYPE_CHECKING
-)
-
-if TYPE_CHECKING:
-    from .common import LexerConf
 
 class Pattern(Serialize, ABC):
 

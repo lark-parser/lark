@@ -1,15 +1,13 @@
 from .utils import logger, NO_VALUE
-
-
-###{standalone
-from collections.abc import Sequence
-
 from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, TYPE_CHECKING
+from collections.abc import Sequence
 
 if TYPE_CHECKING:
     from .lexer import Token
     from .parsers.lalr_interactive_parser import InteractiveParser
     from .tree import Tree
+
+###{standalone
 
 class LarkError(Exception):
     pass

@@ -8,7 +8,7 @@ import os
 import sys
 from copy import copy, deepcopy
 
-from lark.utils import Py36, isascii
+from lark.utils import isascii
 
 from lark import Token, Transformer_NonRecursive, LexError
 
@@ -1565,7 +1565,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual( g.parse('"hello"').children, ['"hello"'])
             self.assertEqual( g.parse("'hello'").children, ["'hello'"])
 
-        @unittest.skipIf(not Py36, "Required re syntax only exists in python3.6+")
         def test_join_regex_flags(self):
             g = r"""
                 start: A

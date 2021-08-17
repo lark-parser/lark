@@ -1,11 +1,13 @@
 """Reconstruct text from a tree, based on Lark grammar"""
 
+from typing import List, Dict, Union, Callable, Iterable, Optional
 import unicodedata
 
+from .lark import Lark
 from .tree import Tree
 from .visitors import Transformer_InPlace
-from .lexer import Token, PatternStr
-from .grammar import Terminal, NonTerminal
+from .lexer import Token, PatternStr, TerminalDef
+from .grammar import Terminal, NonTerminal, Symbol
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal
 from .utils import is_id_continue
@@ -21,7 +23,10 @@ def is_iter_empty(i):
 class WriteTokensTransformer(Transformer_InPlace):
     "Inserts discarded tokens into their correct place, according to the rules of grammar"
 
-    def __init__(self, tokens, term_subs):
+    tokens: Dict[str, TerminalDef]
+    term_subs: Dict[str, Callable[[Symbol], str]]
+
+    def __init__(self, tokens: Dict[str, TerminalDef], term_subs: Dict[str, Callable[[Symbol], str]]) -> None:
         self.tokens = tokens
         self.term_subs = term_subs
 
@@ -70,7 +75,9 @@ class Reconstructor(TreeMatcher):
         term_subs: a dictionary of [Terminal name as str] to [output text as str]
     """
 
-    def __init__(self, parser, term_subs=None):
+    write_tokens: WriteTokensTransformer
+
+    def __init__(self, parser: Lark, term_subs: Optional[Dict[str, Callable[[Symbol], str]]]=None) -> None:
         TreeMatcher.__init__(self, parser)
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
@@ -87,7 +94,7 @@ class Reconstructor(TreeMatcher):
             else:
                 yield item
 
-    def reconstruct(self, tree, postproc=None, insert_spaces=True):
+    def reconstruct(self, tree: Tree, postproc: Optional[Callable[[Iterable[str]], Iterable[str]]]=None, insert_spaces: bool=True) -> str:
         x = self._reconstruct(tree)
         if postproc:
             x = postproc(x)

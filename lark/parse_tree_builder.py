@@ -1,7 +1,6 @@
 from .exceptions import GrammarError, ConfigurationError
 from .lexer import Token
 from .tree import Tree
-from .visitors import InlineTransformer  # XXX Deprecated
 from .visitors import Transformer_InPlace
 from .visitors import _vargs_meta, _vargs_meta_inline
 
@@ -302,12 +301,6 @@ class AmbiguousIntermediateExpander:
         return self.node_builder(children)
 
 
-def ptb_inline_args(func):
-    @wraps(func)
-    def f(children):
-        return func(*children)
-    return f
-
 
 def inplace_transformer(func):
     @wraps(func)
@@ -363,15 +356,11 @@ class ParseTreeBuilder:
             user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:
                 f = getattr(transformer, user_callback_name)
-                # XXX InlineTransformer is deprecated!
                 wrapper = getattr(f, 'visit_wrapper', None)
                 if wrapper is not None:
                     f = apply_visit_wrapper(f, user_callback_name, wrapper)
-                else:
-                    if isinstance(transformer, InlineTransformer):
-                        f = ptb_inline_args(f)
-                    elif isinstance(transformer, Transformer_InPlace):
-                        f = inplace_transformer(f)
+                elif isinstance(transformer, Transformer_InPlace):
+                    f = inplace_transformer(f)
             except AttributeError:
                 f = partial(self.tree_class, user_callback_name)
 

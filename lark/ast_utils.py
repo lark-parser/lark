@@ -3,6 +3,8 @@
 """
 
 import inspect, re
+import types
+from typing import Optional
 
 from lark import Transformer, v_args
 
@@ -27,7 +29,7 @@ def _call(func, _data, children, _meta):
 
 inline = v_args(wrapper=_call)
 
-def create_transformer(ast_module, transformer=None):
+def create_transformer(ast_module: types.ModuleType, transformer: Optional[Transformer]=None) -> Transformer:
     """Collects `Ast` subclasses from the given module, and creates a Lark transformer that builds the AST.
 
     For each class, we create a corresponding rule in the transformer, with a matching name.

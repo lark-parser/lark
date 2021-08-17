@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 ###{standalone
 #
 #
@@ -26,7 +24,7 @@ from __future__ import print_function
 #
 #
 
-from io import open
+from abc import ABC, abstractmethod
 ###}
 
 import sys
@@ -35,15 +33,13 @@ import os
 from os import path
 from collections import defaultdict
 from functools import partial
-from argparse import ArgumentParser, SUPPRESS
-from warnings import warn
+from argparse import ArgumentParser
 
 import lark
-from lark import Lark
 from lark.tools import lalr_argparser, build_lalr, make_warnings_comments
 
 
-from lark.grammar import RuleOptions, Rule
+from lark.grammar import Rule
 from lark.lexer import TerminalDef
 
 _dir = path.dirname(__file__)
@@ -118,11 +114,6 @@ def strip_docstrings(line_gen):
     return ''.join(res)
 
 
-def main(fobj, start, print=print):
-    warn('`lark.tools.standalone.main` is being redesigned. Use `gen_standalone`', DeprecationWarning)
-    lark_inst = Lark(fobj, parser="lalr", lexer="contextual", start=start)
-    gen_standalone(lark_inst, print)
-
 def gen_standalone(lark_inst, output=None, out=sys.stdout, compress=False):
     if output is None:
         output = partial(print, file=out)
@@ -179,15 +170,11 @@ def main():
     make_warnings_comments()
     parser = ArgumentParser(prog="prog='python -m lark.tools.standalone'", description="Lark Stand-alone Generator Tool",
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
-    parser.add_argument("old_start", nargs='?', help=SUPPRESS)
     parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     ns = parser.parse_args()
-    if ns.old_start is not None:
-        warn('The syntax `python -m lark.tools.standalone <grammar-file> <start>` is deprecated. Use the -s option')
-        ns.start.append(ns.old_start)
 
     lark_inst, out = build_lalr(ns)
     gen_standalone(lark_inst, out=out, compress=ns.compress)

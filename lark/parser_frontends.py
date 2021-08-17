@@ -7,7 +7,7 @@ from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
 from .common import LexerConf, ParserConf
 try:
-    import regex
+    import regex  # type: ignore
 except ImportError:
     regex = None
 import re

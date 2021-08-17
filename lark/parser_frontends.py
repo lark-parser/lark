@@ -39,8 +39,7 @@ class MakeParsingFrontend:
         lexer_conf.lexer_type = self.lexer_type
         return ParsingFrontend(lexer_conf, parser_conf, options)
 
-    @classmethod
-    def deserialize(cls, data, memo, lexer_conf, callbacks, options):
+    def deserialize(self, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
         parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks
@@ -92,26 +91,26 @@ class ParsingFrontend(Serialize):
     
     def _verify_start(self, start=None):
         if start is None:
-            start = self.parser_conf.start
-            if len(start) > 1:
-                raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start)
-            start ,= start
+            start_decls = self.parser_conf.start
+            if len(start_decls) > 1:
+                raise ConfigurationError("Lark initialized with more than 1 possible start rule. Must specify which start rule to parse", start_decls)
+            start ,= start_decls
         elif start not in self.parser_conf.start:
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
     def parse(self, text, start=None, on_error=None):
-        start = self._verify_start(start)
+        chosen_start = self._verify_start(start)
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
         kw = {} if on_error is None else {'on_error': on_error}
-        return self.parser.parse(stream, start, **kw)
+        return self.parser.parse(stream, chosen_start, **kw)
     
     def parse_interactive(self, text=None, start=None):
-        start = self._verify_start(start)
+        chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
         stream = text if self.skip_lexer else LexerThread(self.lexer, text)
-        return self.parser.parse_interactive(stream, start)
+        return self.parser.parse_interactive(stream, chosen_start)
 
 
 def get_frontend(parser, lexer):

@@ -94,6 +94,26 @@ class TestParsers(unittest.TestCase):
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
 
+    def test_propagate_positions2(self):
+        g = Lark("""start: a
+                    a: b
+                    ?b: "(" t ")"
+                    !t: "t"
+                 """, propagate_positions=True)
+
+        start = g.parse("(t)")
+        a ,= start.children
+        t ,= a.children
+        assert t.children[0] == "t"
+
+        assert t.meta.column == 2
+        assert t.meta.end_column == 3
+
+        assert start.meta.column == a.meta.column == 1
+        assert start.meta.end_column == a.meta.end_column == 4
+
+
+
     def test_expand1(self):
 
         g = Lark("""start: a
@@ -2183,27 +2203,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
 
-        def test_ranged_repeat_terms(self):
-            g = u"""!start: AAA
-                    AAA: "A"~3
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AAA'), Tree('start', ["AAA"]))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AA')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAA')
 
-            g = u"""!start: AABB CC
-                    AABB: "A"~0..2 "B"~2
-                    CC: "C"~1..2
-                """
-            l = _Lark(g)
-            self.assertEqual(l.parse(u'AABBCC'), Tree('start', ['AABB', 'CC']))
-            self.assertEqual(l.parse(u'BBC'), Tree('start', ['BB', 'C']))
-            self.assertEqual(l.parse(u'ABBCC'), Tree('start', ['ABB', 'CC']))
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAABBB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
-            self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
         @unittest.skipIf(PARSER=='earley', "Priority not handled correctly right now")  # TODO XXX
         def test_priority_vs_embedded(self):

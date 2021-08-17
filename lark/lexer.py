@@ -281,7 +281,6 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     return new_terminals, callback
 
 
-
 class Scanner:
     def __init__(self, terminals, g_regex_flags, re_, use_bytes, match_whole=False):
         self.terminals = terminals

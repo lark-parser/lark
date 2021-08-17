@@ -40,8 +40,9 @@ class UnexpectedInput(LarkError):
 
     Used as a base class for the following exceptions:
 
-    - ``UnexpectedToken``: The parser received an unexpected token
     - ``UnexpectedCharacters``: The lexer encountered an unexpected string
+    - ``UnexpectedToken``: The parser received an unexpected token
+    - ``UnexpectedEOF``: The parser expected a token, but the input ended
 
     After catching one of these exceptions, you may call the following helper methods to create a nicer error message.
     """
@@ -135,7 +136,8 @@ class UnexpectedInput(LarkError):
 
 
 class UnexpectedEOF(ParseError, UnexpectedInput):
-
+    """An exception that is raised by the parser, when the input ends while it still expects a token.
+    """
     expected: 'List[Token]'
 
     def __init__(self, expected, state=None, terminals_by_name=None):
@@ -158,6 +160,9 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
+    """An exception that is raised by the lexer, when it cannot match the next 
+    string of characters to any of its terminals.
+    """
 
     allowed: Set[str]
     considered_tokens: Set[Any]
@@ -199,10 +204,15 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     """An exception that is raised by the parser, when the token it received
     doesn't match any valid step forward.
 
-    The parser provides an interactive instance through `interactive_parser`,
-    which is initialized to the point of failture, and can be used for debugging and error handling.
+    Parameters:
+        token: The mismatched token
+        expected: The set of expected tokens
+        considered_rules: Which rules were considered, to deduce the expected tokens
+        state: A value representing the parser state. Do not rely on its value or type.
+        interactive_parser: An instance of ``InteractiveParser``, that is initialized to the point of failture,
+                            and can be used for debugging and error handling.
 
-    see: ``InteractiveParser``.
+    Note: These parameters are available as attributes of the instance.
     """
 
     expected: Set[str]
@@ -247,8 +257,13 @@ class VisitError(LarkError):
     """VisitError is raised when visitors are interrupted by an exception
 
     It provides the following attributes for inspection:
-    - obj: the tree node or token it was processing when the exception was raised
-    - orig_exc: the exception that cause it to fail
+
+    Parameters:
+        rule: the name of the visit rule that failed
+        obj: the tree-node or token that was being processed
+        orig_exc: the exception that cause it to fail
+
+    Note: These parameters are available as attributes
     """
 
     obj: 'Union[Tree, Token]'
@@ -258,6 +273,7 @@ class VisitError(LarkError):
         message = 'Error trying to process rule "%s":\n\n%s' % (rule, orig_exc)
         super(VisitError, self).__init__(message)
 
+        self.rule = rule
         self.obj = obj
         self.orig_exc = orig_exc
 

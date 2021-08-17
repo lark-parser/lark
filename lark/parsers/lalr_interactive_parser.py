@@ -65,7 +65,7 @@ class InteractiveParser(object):
         """Print the output of ``choices()`` in a way that's easier to read."""
         out = ["Parser choices:"]
         for k, v in self.choices().items():
-            out.append('\t- %s -> %s' % (k, v))
+            out.append('\t- %s -> %r' % (k, v))
         out.append('stack size: %s' % len(self.parser_state.state_stack))
         return '\n'.join(out)
 

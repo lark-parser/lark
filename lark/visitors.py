@@ -10,9 +10,10 @@ from .lexer import Token
 ###{standalone
 from inspect import getmembers, getmro
 
-_T = TypeVar('_T')
+_Return_T = TypeVar('_Return_T')
+_Leaf_T = TypeVar('_Leaf_T')
 _R = TypeVar('_R')
-_FUNC = Callable[..., _T]
+_FUNC = Callable[..., _Return_T]
 _DECORATED = Union[_FUNC, type]
 
 class Discard(Exception):
@@ -52,7 +53,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable, ABC, Generic[_T]):
+class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -131,11 +132,11 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
         children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree, children)
 
-    def transform(self, tree: Tree) -> _T:
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
-    def __mul__(self, other: 'Transformer[_T]') -> 'TransformerChain[_T]':
+    def __mul__(self, other: 'Transformer[_Return_T, _Leaf_T]') -> 'TransformerChain[_Return_T, _Leaf_T]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -155,19 +156,19 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
         return token
 
 
-class TransformerChain(Generic[_T]):
+class TransformerChain(Generic[_Return_T, _Leaf_T]):
 
-    transformers: Tuple[Transformer[_T], ...]
+    transformers: Tuple[Transformer[_Return_T, _Leaf_T], ...]
 
-    def __init__(self, *transformers: Transformer[_T]) -> None:
+    def __init__(self, *transformers: Transformer[_Return_T, _Leaf_T]) -> None:
         self.transformers = transformers
 
-    def transform(self, tree: Tree) -> _T:
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         for t in self.transformers:
             tree = t.transform(tree)
         return tree
 
-    def __mul__(self, other: Transformer[_T]) -> 'TransformerChain[_T]':
+    def __mul__(self, other: Transformer[_Return_T, _Leaf_T]) -> 'TransformerChain[_Return_T, _Leaf_T]':
         return TransformerChain(*self.transformers + (other,))
 
 
@@ -179,7 +180,7 @@ class Transformer_InPlace(Transformer):
     def _transform_tree(self, tree):           # Cancel recursion
         return self._call_userfunc(tree)
 
-    def transform(self, tree):
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         for subtree in tree.iter_subtrees():
             subtree.children = list(self._transform_children(subtree.children))
 
@@ -194,10 +195,10 @@ class Transformer_NonRecursive(Transformer):
     Useful for huge trees.
     """
 
-    def transform(self, tree):
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         # Tree to postfix
-        rev_postfix = []
-        q = [tree]
+        rev_postfix: List[Union[_Leaf_T, Tree[_Leaf_T]]] = []
+        q: List[Union[_Leaf_T, Tree[_Leaf_T]]] = [tree]
         while q:
             t = q.pop()
             rev_postfix.append(t)
@@ -205,7 +206,7 @@ class Transformer_NonRecursive(Transformer):
                 q += t.children
 
         # Postfix to tree
-        stack = []
+        stack: List[Union[_Leaf_T, _Return_T]] = []
         for x in reversed(rev_postfix):
             if isinstance(x, Tree):
                 size = len(x.children)
@@ -220,8 +221,8 @@ class Transformer_NonRecursive(Transformer):
             else:
                 stack.append(x)
 
-        t ,= stack  # We should have only one tree remaining
-        return t
+        result, = stack  # We should have only one tree remaining
+        return result
 
 
 class Transformer_InPlaceRecursive(Transformer):
@@ -248,26 +249,26 @@ class VisitorBase:
         return cls
 
 
-class Visitor(VisitorBase, ABC, Generic[_T]):
+class Visitor(VisitorBase, ABC, Generic[_Leaf_T]):
     """Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
     """
 
-    def visit(self, tree: Tree) -> Tree:
+    def visit(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
 
-    def visit_topdown(self, tree: Tree) -> Tree:
+    def visit_topdown(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
         return tree
 
 
-class Visitor_Recursive(VisitorBase):
+class Visitor_Recursive(VisitorBase, Generic[_Leaf_T]):
     """Bottom-up visitor, recursive.
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
@@ -275,7 +276,7 @@ class Visitor_Recursive(VisitorBase):
     Slightly faster than the non-recursive version.
     """
 
-    def visit(self, tree: Tree) -> Tree:
+    def visit(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for child in tree.children:
             if isinstance(child, Tree):
@@ -284,7 +285,7 @@ class Visitor_Recursive(VisitorBase):
         self._call_userfunc(tree)
         return tree
 
-    def visit_topdown(self,tree: Tree) -> Tree:
+    def visit_topdown(self,tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         self._call_userfunc(tree)
 
@@ -295,7 +296,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_T]):
+class Interpreter(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -307,7 +308,7 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     This allows the user to implement branching and loops.
     """
 
-    def visit(self, tree: Tree) -> _T:
+    def visit(self, tree: Tree[_Leaf_T]) -> _Return_T:
         f = getattr(self, tree.data)
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
@@ -315,7 +316,7 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
         else:
             return f(tree)
 
-    def visit_children(self, tree: Tree) -> List[_T]:
+    def visit_children(self, tree: Tree[_Leaf_T]) -> List[_Return_T]:
         return [self.visit(child) if isinstance(child, Tree) else child
                 for child in tree.children]
 
@@ -326,7 +327,7 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
         return self.visit_children(tree)
 
 
-_InterMethod = Callable[[Type[Interpreter], _T], _R]
+_InterMethod = Callable[[Type[Interpreter], _Return_T], _R]
 
 def visit_children_decor(func: _InterMethod) -> _InterMethod:
     "See Interpreter"

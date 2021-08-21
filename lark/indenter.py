@@ -1,19 +1,18 @@
 "Provides Indentation services for languages with indentation similar to Python"
 
 from abc import ABC, abstractmethod
+from typing import List, Iterator
 
 from .exceptions import LarkError
 from .lark import PostLex
 from .lexer import Token
 
 ###{standalone
-from typing import Tuple, List, Iterator, Optional
 
 class DedentError(LarkError):
     pass
 
 class Indenter(PostLex, ABC):
-
     paren_level: int
     indent_level: List[int]
 
@@ -75,31 +74,31 @@ class Indenter(PostLex, ABC):
     @property
     @abstractmethod
     def NL_type(self) -> str:
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def OPEN_PAREN_types(self) -> List[str]:
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def CLOSE_PAREN_types(self) -> List[str]:
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def INDENT_type(self) -> str:
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def DEDENT_type(self) -> str:
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
     def tab_len(self) -> int:
-        ...
+        raise NotImplementedError()
 
 ###}

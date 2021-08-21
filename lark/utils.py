@@ -241,7 +241,7 @@ def combine_alternatives(lists):
 try:
     import atomicwrites
 except ImportError:
-    atomicwrites = None
+    atomicwrites = None  # type: ignore
 
 class FS:
     exists = os.path.exists

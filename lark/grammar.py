@@ -1,9 +1,8 @@
+from typing import Optional, Tuple, ClassVar
 
 from .utils import Serialize
 
 ###{standalone
-
-from typing import Optional, Tuple, ClassVar
 
 class Symbol(Serialize):
     __slots__ = ('name',)

@@ -1,3 +1,4 @@
+
 try:
     from future_builtins import filter  # type: ignore
 except ImportError:
@@ -6,10 +7,7 @@ except ImportError:
 import sys
 from copy import deepcopy
 
-
-###{standalone
-from collections import OrderedDict
-from typing import List, Callable, Iterator, Union, Optional, Any, TYPE_CHECKING
+from typing import List, Callable, Iterator, Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import TerminalDef
@@ -17,6 +15,9 @@ if TYPE_CHECKING:
         from typing import Literal
     else:
         from typing_extensions import Literal
+
+###{standalone
+from collections import OrderedDict
 
 class Meta:
 

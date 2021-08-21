@@ -1,14 +1,14 @@
-from types import ModuleType
 from copy import deepcopy
+from types import ModuleType
+from typing import Callable, Collection, Dict, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .lark import PostLex
 
 from .utils import Serialize
 from .lexer import TerminalDef, Token
 
 ###{standalone
-from typing import Any, Callable, Collection, Dict, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .lark import PostLex
 
 _Callback = Callable[[Token], Token]
 

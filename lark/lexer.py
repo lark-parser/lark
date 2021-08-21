@@ -3,6 +3,13 @@
 from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
+from typing import (
+    TypeVar, Type, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
+    Pattern as REPattern, ClassVar, TYPE_CHECKING
+)
+from types import ModuleType
+if TYPE_CHECKING:
+    from .common import LexerConf
 
 from .utils import classify, get_regexp_width, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -10,14 +17,6 @@ from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 ###{standalone
 from copy import copy
 
-from types import ModuleType
-from typing import (
-    TypeVar, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Pattern as REPattern, ClassVar, TYPE_CHECKING
-)
-
-if TYPE_CHECKING:
-    from .common import LexerConf
 
 class Pattern(Serialize, ABC):
 
@@ -218,7 +217,7 @@ class LineCounter:
 
         return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
-    def feed(self, token, test_newline=True):
+    def feed(self, token: Token, test_newline=True):
         """Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
@@ -320,7 +319,7 @@ class Scanner:
                 return m.group(0), type_from_index[m.lastindex]
 
 
-def _regexp_has_newline(r):
+def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
@@ -359,7 +358,7 @@ class Lexer(ABC):
     """
     @abstractmethod
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
-        ...
+        return NotImplemented
 
     def make_lexer_state(self, text):
         line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')

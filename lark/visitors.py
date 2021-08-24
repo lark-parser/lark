@@ -1,4 +1,4 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, cast
 from abc import ABC
 from functools import wraps
 
@@ -11,7 +11,9 @@ from .lexer import Token
 from inspect import getmembers, getmro
 
 _Return_T = TypeVar('_Return_T')
+_Return_V = TypeVar('_Return_V')
 _Leaf_T = TypeVar('_Leaf_T')
+_Leaf_U = TypeVar('_Leaf_U')
 _R = TypeVar('_R')
 _FUNC = Callable[..., _Return_T]
 _DECORATED = Union[_FUNC, type]
@@ -136,7 +138,7 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
-    def __mul__(self, other: 'Transformer[_Return_T, _Leaf_T]') -> 'TransformerChain[_Return_T, _Leaf_T]':
+    def __mul__(self: 'Transformer[Tree[_Leaf_U], _Leaf_T]', other: 'Transformer[_Return_V, _Leaf_U]') -> 'TransformerChain[_Return_V, _Leaf_T]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -158,17 +160,17 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
 
 class TransformerChain(Generic[_Return_T, _Leaf_T]):
 
-    transformers: Tuple[Transformer[_Return_T, _Leaf_T], ...]
+    transformers: Tuple[Transformer, ...]
 
-    def __init__(self, *transformers: Transformer[_Return_T, _Leaf_T]) -> None:
+    def __init__(self, *transformers: Transformer) -> None:
         self.transformers = transformers
 
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         for t in self.transformers:
             tree = t.transform(tree)
-        return tree
+        return cast(_Return_T, tree)
 
-    def __mul__(self, other: Transformer[_Return_T, _Leaf_T]) -> 'TransformerChain[_Return_T, _Leaf_T]':
+    def __mul__(self: 'TransformerChain[Tree[_Leaf_U], _Leaf_T]', other: Transformer[_Return_V, _Leaf_U]) -> 'TransformerChain[_Return_V, _Leaf_T]':
         return TransformerChain(*self.transformers + (other,))
 
 

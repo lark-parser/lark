@@ -146,6 +146,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 ### Projects using Lark
 
+ - [Poetry](https://github.com/python-poetry/poetry-core) - A utility for dependency management and packaging
  - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration

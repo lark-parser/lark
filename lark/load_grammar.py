@@ -358,9 +358,8 @@ class SimplifyRule_Visitor(Visitor):
 
     @staticmethod
     def _flatten(tree):
-        while True:
-            if not tree.expand_kids_by_data(tree.data):
-                break
+        while tree.expand_kids_by_data(tree.data):
+            pass
 
     def expansion(self, tree):
         # rules_list unpacking

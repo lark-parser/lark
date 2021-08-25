@@ -91,6 +91,7 @@ TERMINALS = {
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
     'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
+    '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
     '_TO': '->',
@@ -113,9 +114,10 @@ RULES = {
                         ''],
     '_template_params': ['RULE',
                          '_template_params _COMMA RULE'],
-    'expansions': ['alias',
-                   'expansions _OR alias',
-                   'expansions _NL _OR alias'],
+    'expansions': ['_expansions'],
+    '_expansions': ['alias',
+                    '_expansions _OR alias',
+                    '_expansions _NL_OR alias'],
 
     '?alias':     ['expansion _TO RULE', 'expansion'],
     'expansion': ['_expansion'],
@@ -357,11 +359,8 @@ class SimplifyRule_Visitor(Visitor):
     @staticmethod
     def _flatten(tree):
         while True:
-            to_expand = [i for i, child in enumerate(tree.children)
-                         if isinstance(child, Tree) and child.data == tree.data]
-            if not to_expand:
+            if not tree.expand_kids_by_data(tree.data):
                 break
-            tree.expand_kids_by_index(*to_expand)
 
     def expansion(self, tree):
         # rules_list unpacking
@@ -599,8 +598,7 @@ def _make_joined_pattern(regexp, flags_set):
 
     return PatternRE(regexp, flags)
 
-
-class TerminalTreeToPattern(Transformer):
+class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
         p ,= ps
         return p
@@ -670,8 +668,8 @@ class Grammar:
     def compile(self, start, terminals_to_keep):
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
-        term_defs = deepcopy(list(self.term_defs))
-        rule_defs = [(n,p,nr_deepcopy_tree(t),o) for n,p,t,o in self.rule_defs]
+        term_defs = [(n, (nr_deepcopy_tree(t), p)) for n, (t, p) in self.term_defs]
+        rule_defs = [(n, p, nr_deepcopy_tree(t), o) for n, p, t, o in self.rule_defs]
 
         # ===================
         #  Compile Terminals
@@ -919,7 +917,7 @@ def _get_parser():
         parser_conf = ParserConf(rules, callback, ['start'])
         lexer_conf.lexer_type = 'standard'
         parser_conf.parser_type = 'lalr'
-        _get_parser.cache = ParsingFrontend(lexer_conf, parser_conf, {})
+        _get_parser.cache = ParsingFrontend(lexer_conf, parser_conf, None)
         return _get_parser.cache
 
 GRAMMAR_ERRORS = [
@@ -1096,9 +1094,7 @@ class GrammarBuilder:
         # TODO: think about what to do with 'options'
         base = self._definitions[name][1]
 
-        while len(base.children) == 2:
-            assert isinstance(base.children[0], Tree) and base.children[0].data == 'expansions', base
-            base = base.children[0]
+        assert isinstance(base, Tree) and base.data == 'expansions'
         base.children.insert(0, exp)
 
     def _ignore(self, exp_or_name):

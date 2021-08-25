@@ -600,7 +600,21 @@ def _make_joined_pattern(regexp, flags_set):
     return PatternRE(regexp, flags)
 
 
-class TerminalTreeToPattern(Transformer):
+class FlattenExpansions(Transformer_InPlace):
+    @v_args(tree=True)
+    def expansions(self, tree):
+        i = 0
+        while i < len(tree.children):
+            c = tree.children[i]
+            if isinstance(c, Tree) and c.data == 'expansions':
+                tree.children[i:i+1] = c.children
+                i += len(c.children)
+            else:
+                i += 1
+        return tree
+
+
+class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
         p ,= ps
         return p
@@ -670,7 +684,7 @@ class Grammar:
     def compile(self, start, terminals_to_keep):
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
-        term_defs = deepcopy(list(self.term_defs))
+        term_defs = [(n,(nr_deepcopy_tree(t), p)) for n,(t,p) in self.term_defs]
         rule_defs = [(n,p,nr_deepcopy_tree(t),o) for n,p,t,o in self.rule_defs]
 
         # ===================
@@ -686,7 +700,7 @@ class Grammar:
             if len(expansions) == 1 and not expansions[0].children:
                 raise GrammarError("Terminals cannot be empty (%s)" % name)
 
-        transformer = PrepareLiterals() * TerminalTreeToPattern()
+        transformer = PrepareLiterals() * FlattenExpansions() * TerminalTreeToPattern()
         terminals = [TerminalDef(name, transformer.transform(term_tree), priority)
                      for name, (term_tree, priority) in term_defs if term_tree]
 

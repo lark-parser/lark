@@ -210,7 +210,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')
-        self.pos_in_stream = getattr(token, 'pos_in_stream', None)
+        self.pos_in_stream = getattr(token, 'start_pos', None)
         self.state = state
 
         self.token = token

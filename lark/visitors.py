@@ -73,6 +73,7 @@ class Transformer(_Decoratable):
     NOTE: A transformer without methods essentially performs a non-memoized partial deepcopy.
     """
     __visit_tokens__ = True   # For backwards compatibility
+    module_prefix = ""
 
     def __init__(self,  visit_tokens=True):
         self.__visit_tokens__ = visit_tokens
@@ -81,7 +82,7 @@ class Transformer(_Decoratable):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
         try:
-            f = getattr(self, tree.data)
+            f = getattr(self, module_prefix + tree.data)
         except AttributeError:
             return self.__default__(tree.data, children, tree.meta)
         else:
@@ -98,7 +99,7 @@ class Transformer(_Decoratable):
 
     def _call_userfunc_token(self, token):
         try:
-            f = getattr(self, token.type)
+            f = getattr(self, module_prefix + token.type)
         except AttributeError:
             return self.__default_token__(token)
         else:

@@ -109,14 +109,14 @@ class Tree(object):
 
     def expand_kids_by_data(self, *data_values):
         """Expand (inline) children with any of the given data values. Returns True if anything changed"""
-        indices = [i for i, c in enumerate(self.children) if isinstance(c, Tree) and c.data in data_values]
-        if not indices:
-            return False
+        changed = False
+        for i, c in reversed(list(enumerate(self.children))):
+            if isinstance(c, Tree) and c.data in data_values:
+                child = self.children[i]
+                self.children[i:i+1] = child.children
+                changed = True
+        return changed
 
-        for i in reversed(indices):  # reverse so that changing tail won't affect indices
-            child = self.children[i]
-            self.children[i:i+1] = child.children
-        return True
 
     def scan_values(self, pred):
         """Return all values in the tree that evaluate pred(value) as true.

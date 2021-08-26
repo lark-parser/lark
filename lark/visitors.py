@@ -80,9 +80,12 @@ class Transformer(_Decoratable):
 
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
+        
+        method_name = tree.data.replace(module_prefix, "")
+        
         children = new_children if new_children is not None else tree.children
         try:
-            f = getattr(self, module_prefix + tree.data)
+            f = getattr(self, method_name)
         except AttributeError:
             return self.__default__(tree.data, children, tree.meta)
         else:
@@ -98,8 +101,10 @@ class Transformer(_Decoratable):
                 raise VisitError(tree.data, tree, e)
 
     def _call_userfunc_token(self, token):
+        method_name = tree.data.replace(module_prefix, "")
+
         try:
-            f = getattr(self, module_prefix + token.type)
+            f = getattr(self, method_name)
         except AttributeError:
             return self.__default_token__(token)
         else:

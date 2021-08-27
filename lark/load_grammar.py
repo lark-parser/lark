@@ -1341,6 +1341,12 @@ def verify_used_files(file_hashes):
             return False
     return True
 
+def list_grammar_imports(grammar, import_paths=[]):
+    "Returns a list of paths to the lark grammars imported by the given grammar (recursively)"
+    builder = GrammarBuilder(False, import_paths)
+    builder.load_grammar(grammar, '<string>')
+    return [f for f in builder.used_files if not isinstance(f, PackageResource)]
+
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
     builder.load_grammar(grammar, source)

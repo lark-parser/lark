@@ -285,29 +285,8 @@ class TestTrees(TestCase):
         t1_res = T1().transform(tree)
         composed_res = merge_transformers(T2(), module=T3()).transform(tree)
         self.assertEqual(t1_res, composed_res)
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(AttributeError):
             merge_transformers(T1(), module=T3())
-        self.assertEqual(str(cm.exception),
-                         "Method 'module__main' already present in base transformer")
-
-        t2 = T2()
-        t3 = T3()
-        t2.shared = "A"
-        t3.shared = "A"
-        t3.not_shared = "B"
-        try:
-            composed = merge_transformers(t2, module=t3)
-        except AssertionError:
-            self.fail("Should not fail to merge transformers with identical properties")
-
-        self.assertEqual(composed.shared, "A")
-        self.assertEqual(composed.not_shared, "B")
-
-        t2.shared = "B"
-        with self.assertRaises(AssertionError) as cm2:
-            merge_transformers(t2, module=t3)
-        self.assertEqual(str(cm2.exception),
-                         "Property 'shared' already exists on the base transformer")
 
 if __name__ == '__main__':
     unittest.main()

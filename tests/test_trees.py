@@ -294,7 +294,6 @@ class TestTrees(TestCase):
 
         try:
             composed = merge_transformers(T1(), module=T4())
-            print(dir(composed))
         except AttributeError:
             self.fail("Should be able to add classes that do not conflict")
 

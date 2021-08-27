@@ -201,7 +201,7 @@ def merge_transformers(base_transformer=None, **kwargs):
             method = getattr(transformer, method_name)
             if not callable(method):
                 continue
-            if method_name in dir(Transformer()):
+            if method_name.startswith("_") or method_name == "transform":
                 continue
             new_method_name = prefix + method_name
             if prefix + method_name in dir(base_transformer):

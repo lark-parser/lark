@@ -149,11 +149,19 @@ class Transformer(_Decoratable):
         return token
 
 
-def merge_transformers(base_transformer=None, **kwargs):
+def merge_transformers(base_transformer=None, infix="__", **kwargs):
     """
-    Add the methods of other transformer to this one.
+    Paramaters:
+        :param base_transformer: Transformer that all other transformers will be added to.
+        :param infix: String that will sit between the key and the method name. (e.g. `merge_transformers(infix="_a_", module=T())` will result in a Transformer that has the methods of `T()` prefixed with `"module_a_"`).
+        :param \**kwargs: Key-value arguments providing the prefix for the methods of the transformer and the Transformers themselves.
 
-    This method is meant to aid in the maintenance of imports.
+    Compose a new transformer from a base and the in the `**kwargs` provided Transformer instances.
+
+    The key should match the grammar file that the Transformer is supposed to manipulate.
+
+    This method is meant to aid the composing of large transformers that
+    manipulate grammars that cross multiple lark files.
 
     Example:
     ```python
@@ -187,7 +195,7 @@ def merge_transformers(base_transformer=None, **kwargs):
     if base_transformer is None:
         base_transformer = Transformer()
     for prefix, transformer in kwargs.items():
-        prefix += "__"
+        prefix += infix
 
         for method_name in dir(transformer):
             method = getattr(transformer, method_name)

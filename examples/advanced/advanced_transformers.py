@@ -1,3 +1,14 @@
+"""
+Transformer merging
+==================
+
+This example is intended to show how transformers can be merged in order to
+keep the individual steps clean and simple.
+
+.. note::
+    The imported rules will have to be aliased according to the file it is in.
+    (See `storage.lark` for an implementation of this idea.)
+"""
 from lark import Lark, Tree
 from json import dumps
 from lark.visitors import Transformer, merge_transformers, v_args

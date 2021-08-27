@@ -138,7 +138,10 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
-    def __mul__(self: 'Transformer[Tree[_Leaf_U], _Leaf_T]', other: 'Transformer[_Return_V, _Leaf_U]') -> 'TransformerChain[_Return_V, _Leaf_T]':
+    def __mul__(
+            self: 'Transformer[Tree[_Leaf_U], _Leaf_T]',
+            other: 'Union[Transformer[_Return_V, _Leaf_U], TransformerChain[_Return_V, _Leaf_U]]'
+    ) -> 'TransformerChain[_Return_V, _Leaf_T]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -160,9 +163,9 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
 
 class TransformerChain(Generic[_Return_T, _Leaf_T]):
 
-    transformers: Tuple[Transformer, ...]
+    transformers: 'Tuple[Union[Transformer, TransformerChain], ...]'
 
-    def __init__(self, *transformers: Transformer) -> None:
+    def __init__(self, *transformers: 'Union[Transformer, TransformerChain]') -> None:
         self.transformers = transformers
 
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
@@ -170,7 +173,10 @@ class TransformerChain(Generic[_Return_T, _Leaf_T]):
             tree = t.transform(tree)
         return cast(_Return_T, tree)
 
-    def __mul__(self: 'TransformerChain[Tree[_Leaf_U], _Leaf_T]', other: Transformer[_Return_V, _Leaf_U]) -> 'TransformerChain[_Return_V, _Leaf_T]':
+    def __mul__(
+            self: 'TransformerChain[Tree[_Leaf_U], _Leaf_T]',
+            other: 'Union[Transformer[_Return_V, _Leaf_U], TransformerChain[_Return_V, _Leaf_U]]'
+    ) -> 'TransformerChain[_Return_V, _Leaf_T]':
         return TransformerChain(*self.transformers + (other,))
 
 

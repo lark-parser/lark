@@ -1,4 +1,5 @@
 from lark import Lark, Tree
+from json import dumps
 from lark.visitors import Transformer, merge_transformers, v_args
 
 class JsonTreeToJson(Transformer):
@@ -20,6 +21,10 @@ class CsvTreeToPandasDict(Transformer):
     FLOAT = float
     SIGNED_FLOAT = float
     WORD = str
+    NON_SEPARATOR_STRING = str
+
+    def row(self, children):
+        return children
 
     def start(self, children):
         data = {}
@@ -32,13 +37,20 @@ class CsvTreeToPandasDict(Transformer):
             for i, element in enumerate(row):
                 data[header[i]].append(element)
 
+        return data
+
+class Base(Transformer):
+    def start(self, children):
+        return children[0]
+
 if __name__ == "__main__":
-    merged = merge_transformers(csv=CsvTreeToPandasDict, json=JsonTreeToJson)
-    print(dir(merged))
+    merged = merge_transformers(Base(), csv=CsvTreeToPandasDict(), json=JsonTreeToJson())
     parser = Lark.open("storage.lark")
-    tree = parser.parse("""# file lines author
+    csv_tree = parser.parse("""# file lines author
 data.json 12 Robin
 data.csv  30 erezsh
 compiler.py 123123 Megalng
 """)
-    print("CSV data in pandas form:", merged.transform(tree))
+    print("CSV data in pandas form:", merged.transform(csv_tree))
+    json_tree = parser.parse(dumps({"test": "a", "dict": { "list": [1, 1.2] }}))
+    print("JSON data transformed: ", merged.transform(json_tree))

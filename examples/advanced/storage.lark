@@ -1,5 +1,5 @@
-start: _csv_start
-     | _json_start
+start: csv__start
+     | json__start
 
-%import .csv.start -> _csv_start
-%import .json.start -> _json_start
+%import .csv.start -> csv__start
+%import .json.start -> json__start

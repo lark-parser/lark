@@ -199,7 +199,7 @@ class Transformer_NonRecursive(Transformer):
 
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         # Tree to postfix
-        rev_postfix: List[Union[_Leaf_T, Tree[_Leaf_T]]] = []
+        rev_postfix = []
         q: List[Union[_Leaf_T, Tree[_Leaf_T]]] = [tree]
         while q:
             t = q.pop()
@@ -208,7 +208,7 @@ class Transformer_NonRecursive(Transformer):
                 q += t.children
 
         # Postfix to tree
-        stack: List[Union[_Leaf_T, _Return_T]] = []
+        stack: List = []
         for x in reversed(rev_postfix):
             if isinstance(x, Tree):
                 size = len(x.children)
@@ -224,7 +224,10 @@ class Transformer_NonRecursive(Transformer):
                 stack.append(x)
 
         result, = stack  # We should have only one tree remaining
-        return result
+        # There are no guarantees on the type of the value produced by calling a user func for a
+        # child will produce. This means type system can't statically know that the final result is
+        # _Return_T. As a result a cast is required.
+        return cast(_Return_T, result)
 
 
 class Transformer_InPlaceRecursive(Transformer):

@@ -1,0 +1,5 @@
+start: _csv_start
+     | _json_start
+
+%import .csv.start -> _csv_start
+%import .json.start -> _json_start

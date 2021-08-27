@@ -149,7 +149,7 @@ class Transformer(_Decoratable):
         return token
 
 
-def merge_transformers(base_transformer=Transformer(), **kwargs):
+def merge_transformers(base_transformer=None, **kwargs):
     """
     Add the methods of other transformer to this one.
 
@@ -183,6 +183,9 @@ def merge_transformers(base_transformer=Transformer(), **kwargs):
     In the above code block `regular_transformer` and `composed_transformer`
     should behave identically.
     """
+
+    if base_transformer is None:
+        base_transformer = Transformer()
     for prefix, transformer in kwargs.items():
         prefix += "__"
 

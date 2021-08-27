@@ -255,7 +255,7 @@ class TestGrammar(TestCase):
             """
 
             imports = list_grammar_imports(grammar)
-            assert {i.rsplit('\\', 1)[-1] for i in imports} == {'test_templates_import.lark', 'templates.lark'}
+            self.assertEqual({i.rsplit('\\', 1)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
 
 
 if __name__ == '__main__':

@@ -185,11 +185,24 @@ def merge_transformers(base_transformer=Transformer(), **kwargs):
     """
     for prefix, transformer in kwargs.items():
         prefix += "__"
+
+        if transformer.__dict__ != base_transformer.__dict__:
+            intersection = set(transformer.__dict__.keys()).intersection(
+                    set(base_transformer.__dict__.keys()))
+            for key in intersection:
+                assert transformer.__dict__[key] == base_transformer.__dict__[key], \
+                        f"Property '{key}' already exists on the base transformer"
+            base_transformer.__dict__.update(transformer.__dict__)
+
         for attr in dir(transformer):
+            method_name = prefix + attr
             method = getattr(transformer, attr)
             if callable(method):
-                if not prefix + attr in dir(base_transformer):
+                if not method_name in dir(Transformer()):
+                    assert not method_name in dir(base_transformer), \
+                        f"Method '{method_name}' already present in base transformer"
                     setattr(base_transformer, prefix + attr, method)
+
     return base_transformer
 
 

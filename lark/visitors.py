@@ -125,6 +125,44 @@ class Transformer(_Decoratable):
         children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree, children)
 
+    def merge(self, other, prefix=""):
+        """
+        Add the methods of other transformer to this one.
+
+        This method is meant to aid in the maintenance of imports.
+
+        Example:
+        ```python
+        class T1(Transformer):
+            def method_on_main_grammar(self, children):
+                # Do something
+                pass
+
+            def imported_grammar__method(self, children):
+                # Do something else
+                pass
+
+        class TMain(Transformer):
+            def method_on_main_grammar(self, children):
+                # Do something
+                pass
+
+        class TImportedGrammar(Transformer):
+            def method(self, children):
+                # Do something else
+                pass
+
+        regular_transformer = T1()
+        composed_transformer = TMain().merge(TImportedGrammar(),
+                                             prefix="imported_grammar")
+        ```
+        In the above code block `regular_transformer` and `composed_transformer`
+        should behave identically.
+        """
+        for attr, val in other.__dict__.items():
+            if not attr in Transformer().__dict__.keys():
+                setattr(self, prefix + attr, val)
+
     def transform(self, tree):
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)

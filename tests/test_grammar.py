@@ -256,6 +256,10 @@ class TestGrammar(TestCase):
 
             imports = list_grammar_imports(grammar, [os.path.dirname(__file__)])
             self.assertEqual({os.path.split(i)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
+
+            imports = list_grammar_imports('%import common.WS', [])
+            assert len(imports) == 1 and imports[0].pkg_name == 'lark'
+
     
     def test_large_terminal(self):
         # TODO: The `reversed` below is required because otherwise the regex engine is happy

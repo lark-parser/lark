@@ -256,6 +256,18 @@ class TestGrammar(TestCase):
 
             imports = list_grammar_imports(grammar)
             self.assertEqual({i.rsplit('\\', 1)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
+    
+    def test_large_terminal(self):
+        # TODO: The `reversed` below is required because otherwise the regex engine is happy
+        #       with just parsing 9 from the string 999 instead of consuming the longest
+        g = "start: NUMBERS\n"
+        g += "NUMBERS: " + '|'.join('"%s"' % i for i in reversed(range(0, 1000)))
+
+        l = Lark(g, parser='lalr')
+        for i in (0, 9, 99, 999):
+            self.assertEqual(l.parse(str(i)), Tree('start', [str(i)]))
+        for i in (-1, 1000):
+            self.assertRaises(UnexpectedInput, l.parse, str(i))
 
 
 if __name__ == '__main__':

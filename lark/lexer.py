@@ -150,7 +150,7 @@ class Token(Str):
 
     @property
     def pos_in_stream(self):
-        warn("Attribute Token.pos_in_stream was renamed to Token.start_pos", DeprecationWarning)
+        warn("Attribute Token.pos_in_stream was renamed to Token.start_pos", DeprecationWarning, 2)
         return self.start_pos
 
     def update(self, type_=None, value=None):

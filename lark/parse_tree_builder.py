@@ -204,8 +204,7 @@ class AmbiguousExpander:
                 if i in self.to_expand:
                     ambiguous.append(i)
 
-                to_expand = [j for j, grandchild in enumerate(child.children) if _is_ambig_tree(grandchild)]
-                child.expand_kids_by_index(*to_expand)
+                child.expand_kids_by_data('_ambig')
 
         if not ambiguous:
             return self.node_builder(children)

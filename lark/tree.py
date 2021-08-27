@@ -183,17 +183,17 @@ class SlottedTree(Tree):
     __slots__ = 'data', 'children', 'rule', '_meta'
 
 
-def pydot__tree_to_png(tree: Tree[Any], filename: str, rankdir: 'Literal["TB", "LR", "BT", "RL"]'="LR", **kwargs) -> None:
+def pydot__tree_to_png(tree: Tree, filename: str, rankdir: 'Literal["TB", "LR", "BT", "RL"]'="LR", **kwargs) -> None:
     graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
     graph.write_png(filename)
 
 
-def pydot__tree_to_dot(tree: Tree[Any], filename, rankdir="LR", **kwargs):
+def pydot__tree_to_dot(tree: Tree, filename, rankdir="LR", **kwargs):
     graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
     graph.write(filename)
 
 
-def pydot__tree_to_graph(tree: Tree[Any], rankdir="LR", **kwargs):
+def pydot__tree_to_graph(tree: Tree, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to

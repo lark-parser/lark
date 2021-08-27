@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
-import sys
+import os
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
-from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors
+from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
 from lark.load_grammar import FromPackageLoader
 
 
@@ -257,6 +257,20 @@ class TestGrammar(TestCase):
             self.assertEqual(l.parse(str(i)), Tree('start', [str(i)]))
         for i in (-1, 1000):
             self.assertRaises(UnexpectedInput, l.parse, str(i))
+
+    def test_list_grammar_imports(self):
+            grammar = """
+            %import .test_templates_import (start, sep)
+
+            %override sep{item, delim}: item (delim item)* delim?
+            %ignore " "
+            """
+
+            imports = list_grammar_imports(grammar, [os.path.dirname(__file__)])
+            self.assertEqual({os.path.split(i)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
+
+            imports = list_grammar_imports('%import common.WS', [])
+            assert len(imports) == 1 and imports[0].pkg_name == 'lark'
 
 
 if __name__ == '__main__':

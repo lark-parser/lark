@@ -149,6 +149,62 @@ class Transformer(_Decoratable):
         return token
 
 
+def merge_transformers(base_transformer=None, **kwargs):
+    """
+    Add the methods of other transformer to this one.
+
+    This method is meant to aid in the maintenance of imports.
+
+    Example:
+    ```python
+    class T1(Transformer):
+        def method_on_main_grammar(self, children):
+            # Do something
+            pass
+
+        def imported_grammar__method(self, children):
+            # Do something else
+            pass
+
+    class TMain(Transformer):
+        def method_on_main_grammar(self, children):
+            # Do something
+            pass
+
+    class TImportedGrammar(Transformer):
+        def method(self, children):
+            # Do something else
+            pass
+
+    regular_transformer = T1()
+    composed_transformer = merge_transformers(TMain(),
+                                              imported_grammar=TImportedGrammar())
+    ```
+    In the above code block `regular_transformer` and `composed_transformer`
+    should behave identically.
+    """
+
+    if base_transformer is None:
+        base_transformer = Transformer()
+    for prefix, transformer in kwargs.items():
+        prefix += "__"
+
+        for method_name in dir(transformer):
+            method = getattr(transformer, method_name)
+            if not callable(method):
+                continue
+            if method_name.startswith("_") or method_name == "transform":
+                continue
+            new_method_name = prefix + method_name
+            if prefix + method_name in dir(base_transformer):
+                raise AttributeError(
+                    ("Method '{new_method_name}' already present in base "
+                     "transformer").format(new_method_name=new_method_name))
+            setattr(base_transformer, new_method_name, method)
+
+    return base_transformer
+
+
 class InlineTransformer(Transformer):   # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed

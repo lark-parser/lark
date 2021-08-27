@@ -254,7 +254,7 @@ class TestGrammar(TestCase):
             %ignore " "
             """
 
-            imports = list_grammar_imports(grammar)
+            imports = list_grammar_imports(grammar, [os.path.dirname(__file__)])
             self.assertEqual({os.path.split(i)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
     
     def test_large_terminal(self):

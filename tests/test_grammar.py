@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 
-import sys
+import os
 from unittest import TestCase, main
-from pathlib import Path
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
@@ -256,7 +255,7 @@ class TestGrammar(TestCase):
             """
 
             imports = list_grammar_imports(grammar)
-            self.assertEqual({Path(i).name for i in imports}, {'test_templates_import.lark', 'templates.lark'})
+            self.assertEqual({os.path.split(i)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
     
     def test_large_terminal(self):
         # TODO: The `reversed` below is required because otherwise the regex engine is happy

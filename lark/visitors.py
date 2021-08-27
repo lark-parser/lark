@@ -314,6 +314,12 @@ class Interpreter(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
     """
 
     def visit(self, tree: Tree[_Leaf_T]) -> _Return_T:
+        # There are no guarantees on the type of the value produced by calling a user func for a
+        # child will produce. So only annotate the public method and use an internal method when
+        # visiting child trees.
+        return self._visit_tree(tree)
+
+    def _visit_tree(self, tree: Tree[_Leaf_T]):
         f = getattr(self, tree.data)
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
@@ -321,8 +327,8 @@ class Interpreter(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
         else:
             return f(tree)
 
-    def visit_children(self, tree: Tree[_Leaf_T]) -> List[_Return_T]:
-        return [self.visit(child) if isinstance(child, Tree) else child
+    def visit_children(self, tree: Tree[_Leaf_T]) -> List:
+        return [self._visit_tree(child) if isinstance(child, Tree) else child
                 for child in tree.children]
 
     def __getattr__(self, name):

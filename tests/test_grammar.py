@@ -4,7 +4,7 @@ import sys
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
-from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors
+from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
 from lark.load_grammar import FromPackageLoader
 
 
@@ -245,6 +245,17 @@ class TestGrammar(TestCase):
         self.assertEqual(l.parse(u'A' * 8191), Tree('start', []))
         self.assertRaises(UnexpectedInput, l.parse, u'A' * 8190)
         self.assertRaises(UnexpectedInput, l.parse, u'A' * 8192)
+
+    def test_list_grammar_imports(self):
+            grammar = """
+            %import .test_templates_import (start, sep)
+
+            %override sep{item, delim}: item (delim item)* delim?
+            %ignore " "
+            """
+
+            imports = list_grammar_imports(grammar)
+            assert {i.rsplit('\\', 1)[-1] for i in imports} == {'test_templates_import.lark', 'templates.lark'}
 
 
 if __name__ == '__main__':

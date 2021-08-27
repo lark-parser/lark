@@ -189,16 +189,18 @@ def merge_transformers(base_transformer=None, **kwargs):
     for prefix, transformer in kwargs.items():
         prefix += "__"
 
-        for attr in dir(transformer):
-            method_name = prefix + attr
-            method = getattr(transformer, attr)
-            if callable(method):
-                if not method_name in dir(Transformer()):
-                    if method_name in dir(base_transformer):
-                        raise AttributeError(
-                            ("Method '{method_name}' already present "
-                             "in base transformer").format(method_name=method_name))
-                    setattr(base_transformer, prefix + attr, method)
+        for method_name in dir(transformer):
+            method = getattr(transformer, method_name)
+            if not callable(method):
+                continue
+            if method_name in dir(Transformer()):
+                continue
+            new_method_name = prefix + method_name
+            if prefix + method_name in dir(base_transformer):
+                raise AttributeError(
+                    ("Method '{new_method_name}' already present in base "
+                     "transformer").format(new_method_name=new_method_name))
+            setattr(base_transformer, new_method_name, method)
 
     return base_transformer
 

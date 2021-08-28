@@ -159,7 +159,7 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
     thereby creating some of their rules in a 'namespace'. (i.e with a consitent name prefix)
     In this case, the key for the transformer should match the name of the imported grammar.
 
-    Paramaters:
+    Parameters:
         base_transformer (Transformer, optional): The transformer that all other transformers will be added to.
         **transformers_to_merge: Keyword arguments, in the form of ``name_prefix = transformer``.
 
@@ -167,21 +167,22 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
         AttributeError: In case of a name collision in the merged methods
 
     Example:
-        ```python
-        class TBase(Transformer):
-            def start(self, children):
-                return children[0] + 'bar'
+        ::
 
-        class TImportedGrammar(Transformer):
-            def foo(self, children):
-                return "foo"
+            class TBase(Transformer):
+                def start(self, children):
+                    return children[0] + 'bar'
 
-        composed_transformer = merge_transformers(TBase(), imported=TImportedGrammar())
+            class TImportedGrammar(Transformer):
+                def foo(self, children):
+                    return "foo"
 
-        t = Tree('start', [ Tree('imported__foo', []) ])
+            composed_transformer = merge_transformers(TBase(), imported=TImportedGrammar())
 
-        assert composed_transformer.transform(t) == 'foobar'
-        ```
+            t = Tree('start', [ Tree('imported__foo', []) ])
+
+            assert composed_transformer.transform(t) == 'foobar'
+
     """
     if base_transformer is None:
         base_transformer = Transformer()

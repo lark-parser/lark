@@ -1,3 +1,5 @@
+"Transformer for evaluating json.lark"
+
 from lark import Transformer, v_args
 
 class JsonTreeToJson(Transformer):

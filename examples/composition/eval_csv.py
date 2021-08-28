@@ -1,3 +1,5 @@
+"Transformer for evaluating csv.lark"
+
 from lark import Transformer
 
 class CsvTreeToPandasDict(Transformer):

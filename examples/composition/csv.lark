@@ -1,0 +1,14 @@
+start: header _NL row+
+header: "#" " "? (WORD _SEPARATOR?)+
+row: (_anything _SEPARATOR?)+ _NL
+_anything: INT | WORD | NON_SEPARATOR_STRING | FLOAT | SIGNED_FLOAT
+NON_SEPARATOR_STRING: /[a-zA-z.;\\\/]+/
+_SEPARATOR: /[  ]+/
+          | "\t"
+          | ","
+
+%import common.NEWLINE -> _NL
+%import common.WORD
+%import common.INT
+%import common.FLOAT
+%import common.SIGNED_FLOAT

@@ -15,7 +15,7 @@ file format that allows both CSV and JSON to co-exist.
    The resulting transformer can evaluate both JSON and CSV in the parse tree.
 
   The methods of each transformer are renamed into their appropriate namespace, using the given prefix.
-  This appraoch allows full re-use: the transformers don't need to care if their grammar is used directly,
+  This approach allows full re-use: the transformers don't need to care if their grammar is used directly,
   or being imported, or who is doing the importing.
 
 """

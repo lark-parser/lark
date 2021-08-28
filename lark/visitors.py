@@ -149,66 +149,54 @@ class Transformer(_Decoratable):
         return token
 
 
-def merge_transformers(base_transformer=None, **kwargs):
-    """
+def merge_transformers(base_transformer=None, **transformers_to_merge):
+    """Merge a collection of transformers into the base_transformer, each into its own 'namespace'.
+
+    When called, it will collect the methods from each transformer, and assign them to base_transformer,
+    with their name prefixed with the given keyword, as ``prefix__methodname`.
+
+    This function is especially useful for processing grammars that import other grammars,
+    thereby creating some of their rules in a 'namespace'. (i.e with a consitent name prefix)
+    In this case, the key for the transformer should match the name of the imported grammar.
+
     Paramaters:
-        :param base_transformer: Transformer that all other transformers will be added to.
-        :param \**kwargs: Key-value arguments providing the prefix for the methods of the transformer and the Transformers themselves.
+        base_transformer (Transformer, optional): The transformer that all other transformers will be added to.
+        **transformers_to_merge: Keyword arguments, in the form of ``name_prefix = transformer``.
 
-    Compose a new transformer from a base and the in the `**kwargs` provided Transformer instances.
-
-    The key should match the grammar file that the Transformer is supposed to manipulate.
-
-    This method is meant to aid the composing of large transformers that
-    manipulate grammars that cross multiple lark files.
+    Raises:
+        AttributeError: In case of a name collision in the merged methods
 
     Example:
-    ```python
-    class T1(Transformer):
-        def method_on_main_grammar(self, children):
-            # Do something
-            pass
+        ```python
+        class TBase(Transformer):
+            def start(self, children):
+                return children[0] + 'bar'
 
-        def imported_grammar__method(self, children):
-            # Do something else
-            pass
+        class TImportedGrammar(Transformer):
+            def foo(self, children):
+                return "foo"
 
-    class TMain(Transformer):
-        def method_on_main_grammar(self, children):
-            # Do something
-            pass
+        composed_transformer = merge_transformers(TBase(), imported=TImportedGrammar())
 
-    class TImportedGrammar(Transformer):
-        def method(self, children):
-            # Do something else
-            pass
+        t = Tree('start', [ Tree('imported__foo', []) ])
 
-    regular_transformer = T1()
-    composed_transformer = merge_transformers(TMain(),
-                                              imported_grammar=TImportedGrammar())
-    ```
-    In the above code block `regular_transformer` and `composed_transformer`
-    should behave identically.
+        assert composed_transformer.transform(t) == 'foobar'
+        ```
     """
-    infix = "__"
-
     if base_transformer is None:
         base_transformer = Transformer()
-    for prefix, transformer in kwargs.items():
-        prefix += infix
-
+    for prefix, transformer in transformers_to_merge.items():
         for method_name in dir(transformer):
             method = getattr(transformer, method_name)
             if not callable(method):
                 continue
             if method_name.startswith("_") or method_name == "transform":
                 continue
-            new_method_name = prefix + method_name
-            if prefix + method_name in dir(base_transformer):
-                raise AttributeError(
-                    ("Method '{new_method_name}' already present in base "
-                     "transformer").format(new_method_name=new_method_name))
-            setattr(base_transformer, new_method_name, method)
+            prefixed_method = prefix + "__" + method_name
+            if hasattr(base_transformer, prefixed_method):
+                raise AttributeError("Cannot merge: method '%s' appears more than once" % prefixed_method)
+
+            setattr(base_transformer, prefixed_method, method)
 
     return base_transformer
 

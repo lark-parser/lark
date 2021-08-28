@@ -153,10 +153,10 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
     """Merge a collection of transformers into the base_transformer, each into its own 'namespace'.
 
     When called, it will collect the methods from each transformer, and assign them to base_transformer,
-    with their name prefixed with the given keyword, as ``prefix__methodname`.
+    with their name prefixed with the given keyword, as ``prefix__methodname``.
 
     This function is especially useful for processing grammars that import other grammars,
-    thereby creating some of their rules in a 'namespace'. (i.e with a consitent name prefix)
+    thereby creating some of their rules in a 'namespace'. (i.e with a consistent name prefix).
     In this case, the key for the transformer should match the name of the imported grammar.
 
     Parameters:

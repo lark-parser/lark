@@ -39,7 +39,7 @@ def name(n):
 
 """, start='file_input')
 
-# Remove the 'python3__' prefix that was add to the implicitely imported rules.
+# Remove the 'python3__' prefix that was added to the implicitly imported rules.
 for t in tree.iter_subtrees():
     t.data = t.data.rsplit('__', 1)[-1]
 

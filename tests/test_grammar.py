@@ -247,10 +247,8 @@ class TestGrammar(TestCase):
         self.assertRaises(UnexpectedInput, l.parse, u'A' * 8192)
 
     def test_large_terminal(self):
-        # TODO: The `reversed` below is required because otherwise the regex engine is happy
-        #       with just parsing 9 from the string 999 instead of consuming the longest
         g = "start: NUMBERS\n"
-        g += "NUMBERS: " + '|'.join('"%s"' % i for i in reversed(range(0, 1000)))
+        g += "NUMBERS: " + '|'.join('"%s"' % i for i in range(0, 1000))
 
         l = Lark(g, parser='lalr')
         for i in (0, 9, 99, 999):

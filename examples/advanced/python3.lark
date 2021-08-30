@@ -1,8 +1,6 @@
 // Python 3 grammar for Lark
 
-// NOTE: Work in progress!!! (XXX TODO)
-// This grammar should parse all python 3.x code successfully,
-// but the resulting parse-tree is still not well-organized.
+// This grammar should parse all python 3.x code successfully.
 
 // Adapted from: https://docs.python.org/3/reference/grammar.html
 // Adapted by: Erez Shinan

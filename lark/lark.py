@@ -340,7 +340,9 @@ class Lark(Serialize):
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
             raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
-        if self.options.postlex is not None:
+        if self.options.parser is None:
+            terminals_to_keep = '*'
+        elif self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
         else:
             terminals_to_keep = set()

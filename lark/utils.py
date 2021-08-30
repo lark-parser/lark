@@ -287,7 +287,7 @@ except ImportError:
     atomicwrites = None
 
 class FS:
-    exists = os.path.exists
+    exists = staticmethod(os.path.exists)
 
     @staticmethod
     def open(name, mode="r", **kwargs):

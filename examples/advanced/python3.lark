@@ -106,8 +106,8 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 ?test_nocond: or_test | lambdef_nocond
 
 ?or_test: and_test ("or" and_test)*
-?and_test: not_test ("and" not_test)*
-?not_test: "not" not_test -> not_test
+?and_test: not_test_ ("and" not_test_)*
+?not_test_: "not" not_test_ -> not_test
          | comparison
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr

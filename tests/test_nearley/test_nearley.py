@@ -15,8 +15,8 @@ TEST_PATH    = os.path.abspath(os.path.dirname(__file__))
 NEARLEY_PATH = os.path.join(TEST_PATH, 'nearley')
 BUILTIN_PATH = os.path.join(NEARLEY_PATH, 'builtin')
 
-if not os.path.exists(NEARLEY_PATH):
-    logger.warn("Nearley not installed. Skipping Nearley tests!")
+if not os.path.exists(BUILTIN_PATH):
+    logger.warn("Nearley not included. Skipping Nearley tests! (use git submodule to add)")
     raise ImportError("Skipping Nearley tests!")
 
 import js2py    # Ensures that js2py exists, to avoid failing tests

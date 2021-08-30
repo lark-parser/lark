@@ -159,14 +159,15 @@ start           : (A | B)+
 A               : "a" | "ab"
 B               : "b"
 ```
-We get this behavior:
+We get only one possible derivation, instead of two:
 
 ```bash
+>>> p = Lark(g, ambiguity="explicit")
 >>> p.parse("ab")
-Tree(start, [Token(A, 'a'), Token(B, 'b')])
+Tree('start', [Token('A', 'ab')])
 ```
 
-This is happening because Python's regex engine always returns the first matching option.
+This is happening because Python's regex engine always returns the best matching option. There is no way to access the alternatives.
 
 If you find yourself in this situation, the recommended solution is to use rules instead.
 

@@ -614,6 +614,10 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         if len(exps) == 1:
             return exps[0]
 
+        # Do a bit of sorting to make sure that the longest option is returned
+        # (Python's re module otherwise prefers just 'l' when given (l|ll) and both could match)
+        exps.sort(key=lambda x: (-x.max_width, -x.min_width, -len(x.value)))
+
         pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
         return _make_joined_pattern(pattern, {i.flags for i in exps})
 

@@ -54,6 +54,7 @@ def create_transformer(ast_module, transformer=None):
         if not name.startswith('_') and inspect.isclass(obj):
             if issubclass(obj, Ast):
                 if not issubclass(obj, AsList):
+                    if issubclass(obj, WithMeta):
                         obj = with_meta_inline(obj).__get__(t)
                     else:
                         obj = inline(obj).__get__(t)

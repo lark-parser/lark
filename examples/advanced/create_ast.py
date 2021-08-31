@@ -31,7 +31,8 @@ class _Statement(_Ast):
     pass
 
 @dataclass
-class Value(_Ast):
+class Value(_Ast, ast_utils.WithMeta):
+    meta: object
     value: object
 
 @dataclass

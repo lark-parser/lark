@@ -22,7 +22,7 @@ class AsList(object):
 class WithMeta(object):
     """Abstract class
 
-    Subclasses will be instanciated the Meta instance of the tree. (see ``v_args`` for more detail)
+    Subclasses will be instanciated with the Meta instance of the tree. (see ``v_args`` for more detail)
     """
     pass
 

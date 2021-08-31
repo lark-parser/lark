@@ -143,7 +143,7 @@ class PackedNode(ForestNode):
         ambiguously. Hence, we use the sort order to identify
         the order in which ambiguous children should be considered.
         """
-        return self.is_empty, -self.priority, self.rule.order
+        return self.is_empty, self.priority, self.rule.order
 
     @property
     def children(self):
@@ -459,13 +459,15 @@ class ForestSumVisitor(ForestVisitor):
         return iter(node.children)
 
     def visit_packed_node_out(self, node):
-        priority = node.rule.options.priority if not node.parent.is_intermediate and node.rule.options.priority else 0
-        priority += getattr(node.right, 'priority', 0)
-        priority += getattr(node.left, 'priority', 0)
-        node.priority = priority
+        priority_left = getattr(node.left, 'priority', (0, 1) if isinstance(node.left, Token) else (0, 0))
+        priority_right = getattr(node.right, 'priority', (0, 1) if isinstance(node.right, Token) else (0, 0))
+        rule_priority = -node.rule.options.priority if not node.parent.is_intermediate and node.rule.options.priority else 0
+        rule_priority += priority_left[0] + priority_right[0]
+        token_count = priority_left[1] + priority_right[1]
+        node.priority = (rule_priority, token_count)
 
     def visit_symbol_node_out(self, node):
-        node.priority = max(child.priority for child in node.children)
+        node.priority = min(child.priority for child in node.children)
 
 class PackedData():
     """Used in transformationss of packed nodes to distinguish the data

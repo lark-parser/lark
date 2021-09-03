@@ -344,11 +344,12 @@ class EBNF_to_BNF(Transformer_InPlace):
                 return not sym.name.startswith('_')
             if isinstance(sym, Terminal):
                 return keep_all_tokens or not sym.filter_out
-            if sym is _EMPTY:
-                return False
-            assert False, sym
+            assert False
 
-        empty = ST('expansion', [_EMPTY] * len(list(rule.scan_values(will_not_get_removed))))
+        if any(rule.scan_values(will_not_get_removed)):
+            empty = _EMPTY
+        else:
+            empty = ST('expansion', [])
 
         return ST('expansions', [rule, empty])
 

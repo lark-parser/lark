@@ -2293,15 +2293,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("abba").children, ['a', None, 'b', 'b', 'a', None])
             self.assertEqual(p.parse("cbbbb").children, [None, 'c', 'b', 'b', 'b', 'b', None, None])
 
-            p = _Lark("""!start: ["a" "b" "c"] """, maybe_placeholders=True)
-            self.assertEqual(p.parse("").children, [None, None, None])
-            self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
-
-            p = _Lark("""!start: ["a" ["b" "c"]] """, maybe_placeholders=True)
-            self.assertEqual(p.parse("").children, [None, None, None])
-            self.assertEqual(p.parse("a").children, ['a', None, None])
-            self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
-
 
         def test_escaped_string(self):
             "Tests common.ESCAPED_STRING"

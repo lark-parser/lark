@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, overload
 from abc import ABC
 from .tree import Tree
 
@@ -108,5 +108,14 @@ def inline_args(obj: _FUNC) -> _FUNC:
     ...
 
 
-def merge_transformers(base_transformer: Optional[Transformer], **transformers_to_merge: Transformer) -> Transformer:
+_Transformer = TypeVar('_Transformer', bound=Transformer)
+
+
+@overload
+def merge_transformers(base_transformer: _Transformer, **transformers_to_merge: Transformer) -> _Transformer:
+    ...
+
+
+@overload
+def merge_transformers(base_transformer: None = ..., **transformers_to_merge: Transformer) -> Transformer:
     ...

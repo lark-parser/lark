@@ -187,7 +187,7 @@ def get_regexp_width(expr):
                 return 1, sre_constants.MAXREPEAT
             else:
                 return 0, sre_constants.MAXREPEAT
-            
+
 ###}
 
 
@@ -287,8 +287,8 @@ except ImportError:
     atomicwrites = None
 
 class FS:
-    exists = os.path.exists
-    
+    exists = staticmethod(os.path.exists)
+
     @staticmethod
     def open(name, mode="r", **kwargs):
         if atomicwrites and "w" in mode:
@@ -359,3 +359,29 @@ def _serialize(value, memo):
         return {key:_serialize(elem, memo) for key, elem in value.items()}
     # assert value is None or isinstance(value, (int, float, str, tuple)), value
     return value
+
+
+
+
+def small_factors(n, max_factor):
+    """
+    Splits n up into smaller factors and summands <= max_factor.
+    Returns a list of [(a, b), ...]
+    so that the following code returns n:
+
+    n = 1
+    for a, b in values:
+        n = n * a + b
+
+    Currently, we also keep a + b <= max_factor, but that might change
+    """
+    assert n >= 0
+    assert max_factor > 2
+    if n <= max_factor:
+        return [(n, 0)]
+
+    for a in range(max_factor, 1, -1):
+        r, b = divmod(n, a)
+        if a + b <= max_factor:
+            return small_factors(r, max_factor) + [(a, b)]
+    assert False, "Failed to factorize %s" % n

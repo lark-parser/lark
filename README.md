@@ -26,7 +26,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 - [Documentation @readthedocs](https://lark-parser.readthedocs.io/)
 - [Cheatsheet (PDF)](/docs/_static/lark_cheatsheet.pdf)
-- [Online IDE (very basic)](https://lark-parser.github.io/lark/ide/app.html)
+- [Online IDE](https://lark-parser.github.io/ide)
 - [Tutorial](/docs/json_tutorial.md) for writing a JSON parser.
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 - [Gitter chat](https://gitter.im/lark-parser/Lobby)
@@ -37,7 +37,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 Lark has no dependencies.
 
-[![Build Status](https://travis-ci.org/lark-parser/lark.svg?branch=master)](https://travis-ci.org/lark-parser/lark)
+[![Tests](https://github.com/lark-parser/lark/actions/workflows/tests.yml/badge.svg)](https://github.com/lark-parser/lark/actions/workflows/tests.yml)
 
 ### Syntax Highlighting
 
@@ -51,7 +51,10 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 
 ### Clones
 
+These are implementations of Lark in other languages. They accept Lark grammars, and provide similar utilities.
+
 - [Lerche (Julia)](https://github.com/jamesrhester/Lerche.jl) - an unofficial clone, written entirely in Julia.
+- [Lark.js (Javascript)](https://github.com/lark-parser/lark.js) - a port of the stand-alone LALR(1) parser generator to Javascsript.
 
 ### Hello World
 
@@ -143,6 +146,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
 ### Projects using Lark
 
+ - [Poetry](https://github.com/python-poetry/poetry-core) - A utility for dependency management and packaging
  - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration

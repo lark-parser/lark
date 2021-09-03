@@ -1,0 +1,9 @@
+start: (csv__start | json__start _NL?)+
+
+// Renaming of the import variables is required, as they receive the namespace of this file.
+// See: https://github.com/lark-parser/lark/pull/973#issuecomment-907287565
+%import .csv.start -> csv__start
+%import .json.start -> json__start
+
+%import .csv._NL -> _NL
+

@@ -9,7 +9,7 @@ import functools
 from lark.tree import Tree
 from lark.lexer import Token
 from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Transformer_InPlace, \
-    Transformer_InPlaceRecursive, Transformer_NonRecursive
+    Transformer_InPlaceRecursive, Transformer_NonRecursive, merge_transformers
 
 
 class TestTrees(TestCase):
@@ -233,21 +233,62 @@ class TestTrees(TestCase):
 
         x = MyTransformer().transform( t )
         self.assertEqual(x, t2)
-    
+
     def test_transformer_variants(self):
         tree = Tree('start', [Tree('add', [Token('N', '1'), Token('N', '2')]), Tree('add', [Token('N', '3'), Token('N', '4')])])
         for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
             class T(base):
                 def add(self, children):
                     return sum(children)
-                
+
                 def N(self, token):
                     return int(token)
-            
+
             copied = copy.deepcopy(tree)
             result = T().transform(copied)
             self.assertEqual(result, Tree('start', [3, 7]))
 
+    def test_merge_transformers(self):
+        tree = Tree('start', [
+            Tree('main', [
+                Token("A", '1'), Token("B", '2')
+            ]),
+            Tree("module__main", [
+                Token("A", "2"), Token("B", "3")
+            ])
+        ])
+
+        class T1(Transformer):
+            A = int
+            B = int
+            main = sum
+            start = list
+            def module__main(self, children):
+                return sum(children)
+
+        class T2(Transformer):
+            A = int
+            B = int
+            main = sum
+            start = list
+
+        class T3(Transformer):
+            def main(self, children):
+                return sum(children)
+
+        class T4(Transformer):
+            main = sum
+
+
+        t1_res = T1().transform(tree)
+        composed_res = merge_transformers(T2(), module=T3()).transform(tree)
+        self.assertEqual(t1_res, composed_res)
+
+        composed_res2 = merge_transformers(T2(), module=T4()).transform(tree)
+        self.assertEqual(t1_res, composed_res2)
+
+        with self.assertRaises(AttributeError):
+            merge_transformers(T1(), module=T3())
 
 if __name__ == '__main__':
     unittest.main()

@@ -15,6 +15,7 @@ from typing import List
 from dataclasses import dataclass
 
 from lark import Lark, ast_utils, Transformer, v_args
+from lark.tree import Meta
 
 this_module = sys.modules[__name__]
 
@@ -31,7 +32,9 @@ class _Statement(_Ast):
     pass
 
 @dataclass
-class Value(_Ast):
+class Value(_Ast, ast_utils.WithMeta):
+    "Uses WithMeta to include line-number metadata in the meta attribute"
+    meta: Meta
     value: object
 
 @dataclass

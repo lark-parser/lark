@@ -9,7 +9,7 @@ import pkgutil
 from ast import literal_eval
 from numbers import Integral
 
-from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique
+from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -91,6 +91,7 @@ TERMINALS = {
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
     'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
+    '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
     '_TO': '->',
@@ -113,9 +114,10 @@ RULES = {
                         ''],
     '_template_params': ['RULE',
                          '_template_params _COMMA RULE'],
-    'expansions': ['alias',
-                   'expansions _OR alias',
-                   'expansions _NL _OR alias'],
+    'expansions': ['_expansions'],
+    '_expansions': ['alias',
+                    '_expansions _OR alias',
+                    '_expansions _NL_OR alias'],
 
     '?alias':     ['expansion _TO RULE', 'expansion'],
     'expansion': ['_expansion'],
@@ -175,26 +177,135 @@ RULES = {
 }
 
 
+# Value 5 keeps the number of states in the lalr parser somewhat minimal
+# It isn't optimal, but close to it. See PR #949
+SMALL_FACTOR_THRESHOLD = 5
+# The Threshold whether repeat via ~ are split up into different rules
+# 50 is chosen since it keeps the number of states low and therefore lalr analysis time low,
+# while not being to overaggressive and unnecessarily creating rules that might create shift/reduce conflicts.
+# (See PR #949)
+REPEAT_BREAK_THRESHOLD = 50
+
+
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
         self.new_rules = []
-        self.rules_by_expr = {}
+        self.rules_cache = {}
         self.prefix = 'anon'
         self.i = 0
         self.rule_options = None
 
-    def _add_recurse_rule(self, type_, expr):
-        if expr in self.rules_by_expr:
-            return self.rules_by_expr[expr]
-
-        new_name = '__%s_%s_%d' % (self.prefix, type_, self.i)
+    def _name_rule(self, inner):
+        new_name = '__%s_%s_%d' % (self.prefix, inner, self.i)
         self.i += 1
-        t = NonTerminal(new_name)
-        tree = ST('expansions', [ST('expansion', [expr]), ST('expansion', [t, expr])])
-        self.new_rules.append((new_name, tree, self.rule_options))
-        self.rules_by_expr[expr] = t
+        return new_name
+
+    def _add_rule(self, key, name, expansions):
+        t = NonTerminal(name)
+        self.new_rules.append((name, expansions, self.rule_options))
+        self.rules_cache[key] = t
         return t
+
+    def _add_recurse_rule(self, type_, expr):
+        try:
+            return self.rules_cache[expr]
+        except KeyError:
+            new_name = self._name_rule(type_)
+            t = NonTerminal(new_name)
+            tree = ST('expansions', [
+                ST('expansion', [expr]),
+                ST('expansion', [t, expr])
+            ])
+            return self._add_rule(expr, new_name, tree)
+
+    def _add_repeat_rule(self, a, b, target, atom):
+        """Generate a rule that repeats target ``a`` times, and repeats atom ``b`` times.
+
+        When called recursively (into target), it repeats atom for x(n) times, where:
+            x(0) = 1
+            x(n) = a(n) * x(n-1) + b
+
+        Example rule when a=3, b=4:
+
+            new_rule: target target target atom atom atom atom
+
+        """
+        key = (a, b, target, atom)
+        try:
+            return self.rules_cache[key]
+        except KeyError:
+            new_name = self._name_rule('repeat_a%d_b%d' % (a, b))
+            tree = ST('expansions', [ST('expansion', [target] * a + [atom] * b)])
+            return self._add_rule(key, new_name, tree)
+
+    def _add_repeat_opt_rule(self, a, b, target, target_opt, atom):
+        """Creates a rule that matches atom 0 to (a*n+b)-1 times.
+
+        When target matches n times atom, and target_opt 0 to n-1 times target_opt,
+
+        First we generate target * i followed by target_opt, for i from 0 to a-1
+        These match 0 to n*a - 1 times atom
+
+        Then we generate target * a followed by atom * i, for i from 0 to b-1
+        These match n*a to n*a + b-1 times atom
+
+        The created rule will not have any shift/reduce conflicts so that it can be used with lalr
+
+        Example rule when a=3, b=4:
+
+            new_rule: target_opt
+                    | target target_opt
+                    | target target target_opt
+
+                    | target target target
+                    | target target target atom
+                    | target target target atom atom
+                    | target target target atom atom atom
+
+        """
+        key = (a, b, target, atom, "opt")
+        try:
+            return self.rules_cache[key]
+        except KeyError:
+            new_name = self._name_rule('repeat_a%d_b%d_opt' % (a, b))
+            tree = ST('expansions', [
+                ST('expansion', [target]*i + [target_opt]) for i in range(a)
+            ] + [
+                ST('expansion', [target]*a + [atom]*i) for i in range(b)
+            ])
+            return self._add_rule(key, new_name, tree)
+
+    def _generate_repeats(self, rule, mn, mx):
+        """Generates a rule tree that repeats ``rule`` exactly between ``mn`` to ``mx`` times.
+        """
+        # For a small number of repeats, we can take the naive approach
+        if mx < REPEAT_BREAK_THRESHOLD:
+            return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx + 1)])
+
+        # For large repeat values, we break the repetition into sub-rules. 
+        # We treat ``rule~mn..mx`` as ``rule~mn rule~0..(diff=mx-mn)``.
+        # We then use small_factors to split up mn and diff up into values [(a, b), ...]
+        # This values are used with the help of _add_repeat_rule and _add_repeat_rule_opt
+        # to generate a complete rule/expression that matches the corresponding number of repeats
+        mn_target = rule
+        for a, b in small_factors(mn, SMALL_FACTOR_THRESHOLD):
+            mn_target = self._add_repeat_rule(a, b, mn_target, rule)
+        if mx == mn:
+            return mn_target
+
+        diff = mx - mn + 1  # We add one because _add_repeat_opt_rule generates rules that match one less
+        diff_factors = small_factors(diff, SMALL_FACTOR_THRESHOLD)
+        diff_target = rule  # Match rule 1 times
+        diff_opt_target = ST('expansion', [])  # match rule 0 times (e.g. up to 1 -1 times)
+        for a, b in diff_factors[:-1]:
+            diff_opt_target = self._add_repeat_opt_rule(a, b, diff_target, diff_opt_target, rule)
+            diff_target = self._add_repeat_rule(a, b, diff_target, rule)
+
+        a, b = diff_factors[-1]
+        diff_opt_target = self._add_repeat_opt_rule(a, b, diff_target, diff_opt_target, rule)
+
+        return ST('expansions', [ST('expansion', [mn_target] + [diff_opt_target])])
 
     def expr(self, rule, op, *args):
         if op.value == '?':
@@ -220,7 +331,9 @@ class EBNF_to_BNF(Transformer_InPlace):
                 mn, mx = map(int, args)
                 if mx < mn or mn < 0:
                     raise GrammarError("Bad Range for %s (%d..%d isn't allowed)" % (rule, mn, mx))
-            return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx+1)])
+
+            return self._generate_repeats(rule, mn, mx)
+
         assert False, op
 
     def maybe(self, rule):
@@ -244,12 +357,8 @@ class SimplifyRule_Visitor(Visitor):
 
     @staticmethod
     def _flatten(tree):
-        while True:
-            to_expand = [i for i, child in enumerate(tree.children)
-                         if isinstance(child, Tree) and child.data == tree.data]
-            if not to_expand:
-                break
-            tree.expand_kids_by_index(*to_expand)
+        while tree.expand_kids_by_data(tree.data):
+            pass
 
     def expansion(self, tree):
         # rules_list unpacking
@@ -487,8 +596,7 @@ def _make_joined_pattern(regexp, flags_set):
 
     return PatternRE(regexp, flags)
 
-
-class TerminalTreeToPattern(Transformer):
+class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
         p ,= ps
         return p
@@ -504,6 +612,10 @@ class TerminalTreeToPattern(Transformer):
     def expansions(self, exps):
         if len(exps) == 1:
             return exps[0]
+
+        # Do a bit of sorting to make sure that the longest option is returned
+        # (Python's re module otherwise prefers just 'l' when given (l|ll) and both could match)
+        exps.sort(key=lambda x: (-x.max_width, -x.min_width, -len(x.value)))
 
         pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
         return _make_joined_pattern(pattern, {i.flags for i in exps})
@@ -558,8 +670,8 @@ class Grammar:
     def compile(self, start, terminals_to_keep):
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
-        term_defs = deepcopy(list(self.term_defs))
-        rule_defs = [(n,p,nr_deepcopy_tree(t),o) for n,p,t,o in self.rule_defs]
+        term_defs = [(n, (nr_deepcopy_tree(t), p)) for n, (t, p) in self.term_defs]
+        rule_defs = [(n, p, nr_deepcopy_tree(t), o) for n, p, t, o in self.rule_defs]
 
         # ===================
         #  Compile Terminals
@@ -632,7 +744,10 @@ class Grammar:
                 else:
                     exp_options = options
 
-                assert all(isinstance(x, Symbol) for x in expansion), expansion
+                for sym in expansion:
+                    assert isinstance(sym, Symbol)
+                    if sym.is_term and exp_options and exp_options.keep_all_tokens:
+                        sym.filter_out = False
                 rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)
 
@@ -666,12 +781,13 @@ class Grammar:
                 break
 
         # Filter out unused terminals
-        used_terms = {t.name for r in compiled_rules
-                             for t in r.expansion
-                             if isinstance(t, Terminal)}
-        terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore or t.name in terminals_to_keep)
-        if unused:
-            logger.debug("Unused terminals: %s", [t.name for t in unused])
+        if terminals_to_keep != '*':
+            used_terms = {t.name for r in compiled_rules
+                                 for t in r.expansion
+                                 if isinstance(t, Terminal)}
+            terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore or t.name in terminals_to_keep)
+            if unused:
+                logger.debug("Unused terminals: %s", [t.name for t in unused])
 
         return terminals, compiled_rules, self.ignore
 
@@ -804,7 +920,7 @@ def _get_parser():
         parser_conf = ParserConf(rules, callback, ['start'])
         lexer_conf.lexer_type = 'standard'
         parser_conf.parser_type = 'lalr'
-        _get_parser.cache = ParsingFrontend(lexer_conf, parser_conf, {})
+        _get_parser.cache = ParsingFrontend(lexer_conf, parser_conf, None)
         return _get_parser.cache
 
 GRAMMAR_ERRORS = [
@@ -981,9 +1097,7 @@ class GrammarBuilder:
         # TODO: think about what to do with 'options'
         base = self._definitions[name][1]
 
-        while len(base.children) == 2:
-            assert isinstance(base.children[0], Tree) and base.children[0].data == 'expansions', base
-            base = base.children[0]
+        assert isinstance(base, Tree) and base.data == 'expansions'
         base.children.insert(0, exp)
 
     def _ignore(self, exp_or_name):
@@ -1225,6 +1339,12 @@ def verify_used_files(file_hashes):
             logger.info("File %r changed, rebuilding Parser" % path)
             return False
     return True
+
+def list_grammar_imports(grammar, import_paths=[]):
+    "Returns a list of paths to the lark grammars imported by the given grammar (recursively)"
+    builder = GrammarBuilder(False, import_paths)
+    builder.load_grammar(grammar, '<string>')
+    return list(builder.used_files.keys())
 
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)

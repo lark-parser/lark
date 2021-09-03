@@ -103,7 +103,17 @@ v_args
 
 .. autofunction:: lark.visitors.v_args
 
+merge_transformers
+------------------
+
+.. autofunction:: lark.visitors.merge_transformers
+
 Discard
 -------
 
 .. autoclass:: lark.visitors.Discard
+
+VisitError
+----------
+
+.. autoclass:: lark.exceptions.VisitError

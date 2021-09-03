@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
+from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set
 from .tree import Tree
 from .lexer import Token
 from .parsers.lalr_interactive_parser import InteractiveParser
@@ -42,7 +42,7 @@ class UnexpectedInput(LarkError):
     def match_examples(
             self,
             parse_fn: Callable[[str], Tree],
-            examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
+            examples: Union[Mapping[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
             token_type_match_fallback: bool = False,
             use_accepts: bool = False,
     ) -> T:
@@ -54,6 +54,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
     considered_rules: Set[str]
     interactive_parser: InteractiveParser
     accepts: Set[str]
+    token: Token
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
     allowed: Set[str]

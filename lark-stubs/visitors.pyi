@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
 from abc import ABC
 from .tree import Tree
 
@@ -105,4 +105,8 @@ class InlineTransformer:
 
 # Deprecated
 def inline_args(obj: _FUNC) -> _FUNC:
+    ...
+
+
+def merge_transformers(base_transformer: Optional[Transformer], **transformers_to_merge: Transformer) -> Transformer:
     ...

@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple, List, Iterator, Optional
+from typing import List, Iterator, Optional
 from abc import ABC, abstractmethod
 from .lexer import Token
 from .lark import PostLex
+from .exceptions import LarkError
+
+
+class DedentError(LarkError):
+    ...
 
 
 class Indenter(PostLex, ABC):

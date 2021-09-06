@@ -270,6 +270,16 @@ class TestGrammar(TestCase):
             imports = list_grammar_imports('%import common.WS', [])
             assert len(imports) == 1 and imports[0].pkg_name == 'lark'
 
+    def test_line_breaks(self):
+        p = Lark(r"""start: "a" \
+                       "b"
+                """)
+        p.parse('ab')
+
+
+
+
+
 
 if __name__ == '__main__':
     main()

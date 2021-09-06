@@ -94,6 +94,7 @@ TERMINALS = {
     '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
     'COMMENT': r'\s*//[^\n]*',
+    'BACKSLASH': r'\\[ ]*\n',
     '_TO': '->',
     '_IGNORE': r'%ignore',
     '_OVERRIDE': r'%override',
@@ -917,7 +918,7 @@ def _get_parser():
                  for r, _p, xs, o in rules for i, x in enumerate(xs)]
         callback = ParseTreeBuilder(rules, ST).create_callback()
         import re
-        lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT'])
+        lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT', 'BACKSLASH'])
         parser_conf = ParserConf(rules, callback, ['start'])
         lexer_conf.lexer_type = 'standard'
         parser_conf.parser_type = 'lalr'

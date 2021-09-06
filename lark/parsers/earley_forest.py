@@ -172,6 +172,35 @@ class PackedNode(ForestNode):
             symbol = self.s.name
         return "({}, {}, {}, {})".format(symbol, self.start, self.priority, self.rule.order)
 
+class TokenNode(ForestNode):
+    """
+    A Token Node represents a matched terminal and is always a leaf node.
+
+    :ivar token: The Token associated with this node.
+    :ivar term: The TerminalDef matched by the token.
+    :ivar priority: The priority of this node.
+    """
+    __slots__ = ('token', 'term', 'priority', '_hash')
+    def __init__(self, token, term, priority=None):
+        self.token = token
+        self.term = term
+        if priority is not None:
+            self.priority = priority
+        else:
+            self.priority = term.priority if term is not None else 0
+        self._hash = hash(token)
+
+    def __eq__(self, other):
+        if not isinstance(other, TokenNode):
+            return False
+        return self is other or (self.token == other.token)
+
+    def __hash__(self):
+        return self._hash
+
+    def __repr__(self):
+        return repr(self.token)
+
 class ForestVisitor:
     """
     An abstract base class for building forest visitors.
@@ -291,8 +320,8 @@ class ForestVisitor:
                 input_stack.append(next_node)
                 continue
 
-            if not isinstance(current, ForestNode):
-                vtn(current)
+            if isinstance(current, TokenNode):
+                vtn(current.token)
                 input_stack.pop()
                 continue
 
@@ -322,8 +351,7 @@ class ForestVisitor:
                 if next_node is None:
                     continue
 
-                if not isinstance(next_node, ForestNode) and \
-                        not isinstance(next_node, Token):
+                if not isinstance(next_node, ForestNode):
                     next_node = iter(next_node)
                 elif id(next_node) in visiting:
                     oc(next_node, path)

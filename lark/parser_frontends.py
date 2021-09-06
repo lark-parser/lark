@@ -162,8 +162,6 @@ class EarleyRegexpMatcher:
     def __init__(self, lexer_conf):
         self.regexps = {}
         for t in lexer_conf.terminals:
-            if t.priority:
-                raise GrammarError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:
                 width = get_regexp_width(regexp)[0]
@@ -182,14 +180,14 @@ class EarleyRegexpMatcher:
 
 
 def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
-        earley_matcher = EarleyRegexpMatcher(lexer_conf)
-        return xearley.Parser(parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
+    earley_matcher = EarleyRegexpMatcher(lexer_conf)
+    return xearley.Parser(lexer_conf, parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
 
 def _match_earley_basic(term, token):
     return term.name == token.type
 
 def create_earley_parser__basic(lexer_conf, parser_conf, options, **kw):
-    return earley.Parser(parser_conf, _match_earley_basic, **kw)
+    return earley.Parser(lexer_conf, parser_conf, _match_earley_basic, **kw)
 
 def create_earley_parser(lexer_conf, parser_conf, options):
     resolve_ambiguity = options.ambiguity == 'resolve'

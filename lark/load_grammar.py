@@ -15,7 +15,7 @@ from .lexer import Token, TerminalDef, PatternStr, PatternRE
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, TOKEN_DEFAULT_PRIORITY
 from .utils import classify, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError, UnexpectedInput
 
@@ -1121,7 +1121,7 @@ class GrammarBuilder:
 
             name = '__IGNORE_%d'% len(self._ignore_names)
             self._ignore_names.append(name)
-            self._definitions[name] = ((), t, 1)
+            self._definitions[name] = ((), t, TOKEN_DEFAULT_PRIORITY)
 
     def _declare(self, *names):
         for name in names:
@@ -1172,7 +1172,7 @@ class GrammarBuilder:
         else:
             name = tree.children[0].value
             params = ()     # TODO terminal templates
-            opts = int(tree.children[1]) if len(tree.children) == 3 else 1 # priority
+            opts = int(tree.children[1]) if len(tree.children) == 3 else TOKEN_DEFAULT_PRIORITY # priority
             exp = tree.children[-1]
 
         if mangle is not None:

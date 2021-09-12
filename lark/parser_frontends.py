@@ -162,7 +162,7 @@ class EarleyRegexpMatcher:
     def __init__(self, lexer_conf):
         self.regexps = {}
         for t in lexer_conf.terminals:
-            if t.priority != 1:
+            if t.priority:
                 raise GrammarError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:

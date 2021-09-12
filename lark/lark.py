@@ -302,7 +302,7 @@ class Lark(Serialize):
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                    # Python2.7 doesn't support * syntax in tuples
+                        
                     cache_fn = tempfile.gettempdir() + '/.lark_cache_%s_%s_%s.tmp' % (cache_md5, *sys.version_info[:2])
 
                 if FS.exists(cache_fn):

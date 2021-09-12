@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from .utils import classify, get_regexp_width, Serialize
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
+from .grammar import TOKEN_DEFAULT_PRIORITY
 
 ###{standalone
 from copy import copy
@@ -108,7 +109,7 @@ class TerminalDef(Serialize):
     pattern: Pattern
     priority: int
 
-    def __init__(self, name: str, pattern: Pattern, priority: int=1) -> None:
+    def __init__(self, name: str, pattern: Pattern, priority: int=TOKEN_DEFAULT_PRIORITY) -> None:
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern

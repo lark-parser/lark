@@ -3,6 +3,8 @@ from typing import Optional, Tuple, ClassVar
 from .utils import Serialize
 
 ###{standalone
+TOKEN_DEFAULT_PRIORITY = 0
+
 
 class Symbol(Serialize):
     __slots__ = ('name',)

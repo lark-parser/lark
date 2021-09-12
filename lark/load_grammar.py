@@ -500,7 +500,7 @@ class ApplyTemplates(Transformer_InPlace):
             self.created_templates.add(result_name)
             (_n, params, tree, options) ,= (t for t in self.rule_defs if t[0] == name)
             assert len(params) == len(args), args
-            result_tree = deepcopy(tree)
+            result_tree = nr_deepcopy_tree(tree)
             self.replacer.names = dict(zip(params, args))
             self.replacer.transform(result_tree)
             self.rule_defs.append((result_name, [], result_tree, deepcopy(options)))
@@ -1030,7 +1030,6 @@ def _get_mangle(prefix, aliases, base_mangle=None):
 def _mangle_exp(exp, mangle):
     if mangle is None:
         return exp
-    exp = deepcopy(exp) # TODO: is this needed
     for t in exp.iter_subtrees():
         for i, c in enumerate(t.children):
             if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
@@ -1191,9 +1190,8 @@ class GrammarBuilder:
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         if grammar_text not in self.cached_grammars:
             tree = _parse_grammar(grammar_text, grammar_name)
-            self.cached_grammars[grammar_text] = deepcopy(tree)
-        else:
-            tree = deepcopy(self.cached_grammars[grammar_text])
+            self.cached_grammars[grammar_text] = tree
+        tree = nr_deepcopy_tree(self.cached_grammars[grammar_text])
 
         imports = {}
         for stmt in tree.children:

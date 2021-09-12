@@ -857,17 +857,13 @@ def resolve_term_references(term_dict):
                         except KeyError:
                             raise GrammarError("Terminal used but not defined: %s" % item)
                         assert term_value is not None
+                        if term_value is token_tree:
+                            raise GrammarError(
+                                "Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
                         exp.children[0] = term_value
                         changed = True
         if not changed:
             break
-
-    for name, term in term_dict.items():
-        if term:    # Not just declared
-            for child in term.children:
-                ids = [id(x) for x in child.iter_subtrees()]
-                if id(term) in ids:
-                    raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
 def options_from_rule(name, params, *x):

@@ -208,11 +208,11 @@ class TestParsers(unittest.TestCase):
 
         @v_args(meta=True)
         class T1(Transformer):
-            def a(self, children, meta):
+            def a(self, meta, children):
                 assert not children
                 return meta.line
 
-            def start(self, children, meta):
+            def start(self, meta, children):
                 return children
 
         @v_args(meta=True, inline=True)

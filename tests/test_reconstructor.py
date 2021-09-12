@@ -183,8 +183,8 @@ class TestReconstructor(TestCase):
         keyword x += y
         """
 
-        l1 = Lark(g1, parser='lalr')
-        l2 = Lark(g2, parser='lalr')
+        l1 = Lark(g1, parser='lalr', maybe_placeholders=False)
+        l2 = Lark(g2, parser='lalr', maybe_placeholders=False)
         r = Reconstructor(l2)
 
         tree = l1.parse(code)

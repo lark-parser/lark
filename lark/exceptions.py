@@ -74,7 +74,11 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn: 'Callable[[str], Tree]', examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]], token_type_match_fallback: bool=False, use_accepts: bool=False) -> Optional[T]:
+    def match_examples(self, parse_fn: 'Callable[[str], Tree]', 
+                             examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
+                             token_type_match_fallback: bool=False,
+                             use_accepts: bool=True
+                         ) -> Optional[T]:
         """Allows you to detect what's wrong in the input text by matching
         against example errors.
 
@@ -89,8 +93,7 @@ class UnexpectedInput(LarkError):
         Parameters:
             parse_fn: parse function (usually ``lark_instance.parse``)
             examples: dictionary of ``{'example_string': value}``.
-            use_accepts: Recommended to call this with ``use_accepts=True``.
-                The default is ``False`` for backwards compatibility.
+            use_accepts: Recommended to keep this as ``use_accepts=True``.
         """
         assert self.state is not None, "Not supported for this exception"
 
@@ -106,7 +109,7 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and hasattr(self, 'accepts') and ut.accepts != self.accepts:
+                        if use_accepts and hasattr(self, 'accepts') and hasattr(ut, 'accepts') and ut.accepts != self.accepts:
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                          (self.state, self.accepts, ut.accepts, i, j))
                             continue

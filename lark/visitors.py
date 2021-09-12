@@ -385,7 +385,7 @@ def _vargs_inline(f, _data, children, _meta):
 def _vargs_meta_inline(f, _data, children, meta):
     return f(meta, *children)
 def _vargs_meta(f, _data, children, meta):
-    return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
+    return f(meta, children)
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 

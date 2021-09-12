@@ -6,7 +6,6 @@ from collections import namedtuple
 from copy import copy, deepcopy
 import pkgutil
 from ast import literal_eval
-from numbers import Integral
 from contextlib import suppress
 from typing import List, Tuple, Union, Callable, Dict, Optional
 
@@ -1067,8 +1066,7 @@ class GrammarBuilder:
         if self._is_term(name):
             if options is None:
                 options = 1
-            # if we don't use Integral here, we run into python2.7/python3 problems with long vs int
-            elif not isinstance(options, Integral):
+            elif not isinstance(options, int):
                 raise GrammarError("Terminal require a single int as 'options' (e.g. priority), got %s" % (type(options),))
         else:
             if options is None:

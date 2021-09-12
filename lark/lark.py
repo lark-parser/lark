@@ -82,9 +82,8 @@ class LarkOptions(Serialize):
             Accepts ``False``, ``True``, or a callable, which will filter which nodes to ignore when propagating.
     maybe_placeholders
             When ``True``, the ``[]`` operator returns ``None`` when not matched.
-
             When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
-            (default= ``False``. Recommended to set to ``True``)
+            (default= ``True``)
     cache
             Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
 
@@ -164,7 +163,7 @@ class LarkOptions(Serialize):
         'regex': False,
         'propagate_positions': False,
         'lexer_callbacks': {},
-        'maybe_placeholders': False,
+        'maybe_placeholders': True,
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
@@ -303,8 +302,8 @@ class Lark(Serialize):
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                    # Python2.7 doesn't support * syntax in tuples
-                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s_%s_%s.tmp' % ((cache_md5,) + sys.version_info[:2])
+                        
+                    cache_fn = tempfile.gettempdir() + '/.lark_cache_%s_%s_%s.tmp' % (cache_md5, *sys.version_info[:2])
 
                 if FS.exists(cache_fn):
                     logger.debug('Loading grammar from cache: %s', cache_fn)
@@ -368,7 +367,6 @@ class Lark(Serialize):
 
         if self.options.priority not in _VALID_PRIORITY_OPTIONS:
             raise ConfigurationError("invalid priority option: %r. Must be one of %r" % (self.options.priority, _VALID_PRIORITY_OPTIONS))
-        assert self.options.ambiguity not in ('resolve__antiscore_sum', ), 'resolve__antiscore_sum has been replaced with the option priority="invert"'
         if self.options.ambiguity not in _VALID_AMBIGUITY_OPTIONS:
             raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
@@ -387,7 +385,6 @@ class Lark(Serialize):
         self._terminals_dict = {t.name: t for t in self.terminals}
 
         # If the user asked to invert the priorities, negate them all here.
-        # This replaces the old 'resolve__antiscore_sum' option.
         if self.options.priority == 'invert':
             for rule in self.rules:
                 if rule.options.priority is not None:

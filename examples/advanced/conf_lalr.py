@@ -6,7 +6,7 @@ This example demonstrates the power of LALR's contextual lexer,
 by parsing a toy configuration language.
 
 The terminals `NAME` and `VALUE` overlap. They can match the same input.
-A standard lexer would arbitrarily choose one over the other, based on priority,
+A basic lexer would arbitrarily choose one over the other, based on priority,
 which would lead to a (confusing) parse error.
 However, due to the unambiguous structure of the grammar, Lark's LALR(1) algorithm knows
 which one of them to expect at each point during the parse.

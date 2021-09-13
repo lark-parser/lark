@@ -790,7 +790,7 @@ class Grammar:
 PackageResource = namedtuple('PackageResource', 'pkg_name path')
 
 
-class FromPackageLoader(object):
+class FromPackageLoader:
     """
     Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
     This allows them to be compatible even from within zip files.
@@ -917,7 +917,7 @@ def _get_parser():
         import re
         lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT', 'BACKSLASH'])
         parser_conf = ParserConf(rules, callback, ['start'])
-        lexer_conf.lexer_type = 'standard'
+        lexer_conf.lexer_type = 'basic'
         parser_conf.parser_type = 'lalr'
         _get_parser.cache = ParsingFrontend(lexer_conf, parser_conf, None)
         return _get_parser.cache

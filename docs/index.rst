@@ -56,7 +56,7 @@ Install Lark
 
 .. code:: bash
 
-   $ pip install lark-parser
+   $ pip install lark
 
 Syntax Highlighting
 -------------------

@@ -43,7 +43,7 @@ It accepts a dictionary of the form
 
 Where callback is of type `f(Token) -> Token`
 
-It only works with the standard and contextual lexers.
+It only works with the basic and contextual lexers.
 
 This has the same effect of using a transformer, but can also process ignored tokens.
 

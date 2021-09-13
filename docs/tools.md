@@ -23,7 +23,7 @@ Lark comes with a tool to convert grammars from [Nearley](https://github.com/Har
 
 1. Install Lark with the `nearley` component:
 ```bash
-pip install lark-parser[nearley]
+pip install lark[nearley]
 ```
 
 2. Acquire a copy of the Nearley codebase. This can be done using:

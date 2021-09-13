@@ -124,7 +124,7 @@ Regexps/strings of different flags can only be concatenated in Python 3.6+
 
 #### Notes for when using a lexer:
 
-When using a lexer (standard or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched according to the following precedence:
+When using a lexer (basic or contextual), it is the grammar-author's responsibility to make sure the literals don't collide, or that if they do, they are matched in the desired order. Literals are matched according to the following precedence:
 
 1. Highest priority first (priority is specified as: TERM.number: ...)
 2. Length of match (for regexps, the longest theoretical match is used)

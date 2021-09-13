@@ -33,7 +33,7 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 
 ### Install Lark
 
-    $ pip install lark-parser --upgrade
+    $ pip install lark --upgrade
 
 Lark has no dependencies.
 

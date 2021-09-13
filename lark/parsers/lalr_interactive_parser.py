@@ -6,7 +6,7 @@ from .. import Token
 from ..exceptions import UnexpectedToken
 
 
-class InteractiveParser(object):
+class InteractiveParser:
     """InteractiveParser gives you advanced control over parsing and error handling when parsing with LALR.
 
     For a simpler interface, see the ``on_error`` argument to ``Lark.parse()``.

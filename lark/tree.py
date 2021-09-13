@@ -35,7 +35,7 @@ class Meta:
         self.empty = True
 
 
-class Tree(object):
+class Tree:
     """The main tree class.
 
     Creates a new tree, and stores "data" and "children" in attributes of the same name.

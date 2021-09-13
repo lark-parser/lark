@@ -77,7 +77,7 @@ class LexerJson(QsciLexerCustom):
             %ignore WS
         '''
 
-        self.lark = Lark(grammar, parser=None, lexer='standard')
+        self.lark = Lark(grammar, parser=None, lexer='basic')
         # All tokens: print([t.name for t in self.lark.parser.lexer.tokens])
 
     def defaultPaper(self, style):

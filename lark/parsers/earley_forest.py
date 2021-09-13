@@ -8,7 +8,6 @@ http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
 from random import randint
-from math import isinf
 from collections import deque
 from operator import attrgetter
 from importlib import import_module
@@ -20,7 +19,7 @@ from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
 
-class ForestNode(object):
+class ForestNode:
     pass
 
 class SymbolNode(ForestNode):
@@ -173,7 +172,7 @@ class PackedNode(ForestNode):
             symbol = self.s.name
         return "({}, {}, {}, {})".format(symbol, self.start, self.priority, self.rule.order)
 
-class ForestVisitor(object):
+class ForestVisitor:
     """
     An abstract base class for building forest visitors.
 

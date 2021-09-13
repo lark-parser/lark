@@ -157,12 +157,7 @@ class Token(str):
     end_pos: int
 
     def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
-        try:
-            inst = super(Token, cls).__new__(cls, value)
-        except UnicodeDecodeError:
-            value = value.decode('latin1')
-            inst = super(Token, cls).__new__(cls, value)
-
+        inst = super(Token, cls).__new__(cls, value)
         inst.type = type_
         inst.start_pos = start_pos
         inst.value = value
@@ -331,7 +326,7 @@ def _regexp_has_newline(r: str):
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 
-class LexerState(object):
+class LexerState:
     __slots__ = 'text', 'line_ctr', 'last_token'
 
     def __init__(self, text, line_ctr, last_token=None):
@@ -366,7 +361,7 @@ class Lexer(ABC):
         return LexerState(text, line_ctr)
 
 
-class TraditionalLexer(Lexer):
+class BasicLexer(Lexer):
 
     terminals: Collection[TerminalDef]
     ignore_types: FrozenSet[str]
@@ -473,8 +468,8 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
 
-    lexers: Dict[str, TraditionalLexer]
-    root_lexer: TraditionalLexer
+    lexers: Dict[str, BasicLexer]
+    root_lexer: BasicLexer
 
     def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
         terminals = list(conf.terminals)
@@ -493,13 +488,13 @@ class ContextualLexer(Lexer):
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 lexer_conf = copy(trad_conf)
                 lexer_conf.terminals = [terminals_by_name[n] for n in accepts if n in terminals_by_name]
-                lexer = TraditionalLexer(lexer_conf)
+                lexer = BasicLexer(lexer_conf)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
         assert trad_conf.terminals is terminals
-        self.root_lexer = TraditionalLexer(trad_conf)
+        self.root_lexer = BasicLexer(trad_conf)
 
     def make_lexer_state(self, text):
         return self.root_lexer.make_lexer_state(text)
@@ -521,7 +516,7 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-class LexerThread(object):
+class LexerThread:
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
 
     def __init__(self, lexer, text):

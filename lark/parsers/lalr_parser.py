@@ -69,7 +69,7 @@ class LALR_Parser(Serialize):
                     e = e2
 
 
-class ParseConf(object):
+class ParseConf:
     __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
 
     def __init__(self, parse_table, callbacks, start):
@@ -83,7 +83,7 @@ class ParseConf(object):
         self.start = start
 
 
-class ParserState(object):
+class ParserState:
     __slots__ = 'parse_conf', 'lexer', 'state_stack', 'value_stack'
 
     def __init__(self, parse_conf, lexer, state_stack=None, value_stack=None):
@@ -157,7 +157,7 @@ class ParserState(object):
                 if is_end and state_stack[-1] == end_state:
                     return value_stack[-1]
 
-class _Parser(object):
+class _Parser:
     def __init__(self, parse_table, callbacks, debug=False):
         self.parse_table = parse_table
         self.callbacks = callbacks

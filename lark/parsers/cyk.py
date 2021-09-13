@@ -23,7 +23,7 @@ def match(t, s):
     return t.name == s.type
 
 
-class Rule(object):
+class Rule:
     """Context-free grammar rule."""
 
     def __init__(self, lhs, rhs, weight, alias):
@@ -51,7 +51,7 @@ class Rule(object):
         return not (self == other)
 
 
-class Grammar(object):
+class Grammar:
     """Context-free grammar."""
 
     def __init__(self, rules):
@@ -68,7 +68,7 @@ class Grammar(object):
 
 
 # Parse tree data structures
-class RuleNode(object):
+class RuleNode:
     """A node in the parse tree, which also contains the full rhs rule."""
 
     def __init__(self, rule, children, weight=0):
@@ -81,7 +81,7 @@ class RuleNode(object):
 
 
 
-class Parser(object):
+class Parser:
     """Parser wrapper."""
 
     def __init__(self, rules):
@@ -186,7 +186,7 @@ def _parse(s, g):
 # * Empty rules (epsilon rules)
 
 
-class CnfWrapper(object):
+class CnfWrapper:
     """CNF wrapper for grammar.
 
   Validates that the input grammar is CNF and provides helper data structures.

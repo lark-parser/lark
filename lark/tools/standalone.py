@@ -3,7 +3,7 @@
 #
 #   Lark Stand-alone Generator Tool
 # ----------------------------------
-# Generates a stand-alone LALR(1) parser with a standard lexer
+# Generates a stand-alone LALR(1) parser
 #
 # Git:    https://github.com/erezsh/lark
 # Author: Erez Shinan (erezshin@gmail.com)

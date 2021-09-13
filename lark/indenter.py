@@ -44,8 +44,7 @@ class Indenter(PostLex, ABC):
     def _process(self, stream):
         for token in stream:
             if token.type == self.NL_type:
-                for t in self.handle_NL(token):
-                    yield t
+                yield from self.handle_NL(token)
             else:
                 yield token
 

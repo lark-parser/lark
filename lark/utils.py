@@ -1,4 +1,3 @@
-import hashlib
 import unicodedata
 import os
 from functools import reduce
@@ -7,23 +6,12 @@ from collections import deque
 ###{standalone
 import sys, re
 import logging
-from io import open
-logger = logging.getLogger("lark")
+logger: logging.Logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
 # Set to highest level, since we have some warnings amongst the code
 # By default, we should not output any log messages
 logger.setLevel(logging.CRITICAL)
 
-if sys.version_info[0]>2:
-    from abc import ABC, abstractmethod
-else:
-    from abc import ABCMeta, abstractmethod
-    class ABC(object): # Provide Python27 compatibility
-        __slots__ = ()
-        __metclass__ = ABCMeta
-
-
-Py36 = (sys.version_info[:2] >= (3, 6))
 
 NO_VALUE = object()
 
@@ -120,28 +108,16 @@ class SerializeMemoizer(Serialize):
         return _deserialize(data, namespace, memo)
 
 
-try:
-    STRING_TYPE = basestring
-except NameError:   # Python 3
-    STRING_TYPE = str
-
 
 import types
 from functools import wraps, partial
-from contextlib import contextmanager
-
-Str = type(u'')
-try:
-    classtype = types.ClassType  # Python2
-except AttributeError:
-    classtype = type    # Python3
 
 
 def smart_decorator(f, create_decorator):
     if isinstance(f, types.FunctionType):
         return wraps(f)(create_decorator(f, True))
 
-    elif isinstance(f, (classtype, type, types.BuiltinFunctionType)):
+    elif isinstance(f, (type, types.BuiltinFunctionType)):
         return wraps(f)(create_decorator(f, False))
 
     elif isinstance(f, types.MethodType):
@@ -156,7 +132,7 @@ def smart_decorator(f, create_decorator):
 
 
 try:
-    import regex
+    import regex  # type: ignore
 except ImportError:
     regex = None
 
@@ -222,25 +198,6 @@ def dedup_list(l):
     return [x for x in l if not (x in dedup or dedup.add(x))]
 
 
-try:
-    from contextlib import suppress     # Python 3
-except ImportError:
-    @contextmanager
-    def suppress(*excs):
-        '''Catch and dismiss the provided exception
-
-        >>> x = 'hello'
-        >>> with suppress(IndexError):
-        ...     x = x[10]
-        >>> x
-        'hello'
-        '''
-        try:
-            yield
-        except excs:
-            pass
-
-
 class Enumerator(Serialize):
     def __init__(self):
         self.enums = {}
@@ -284,7 +241,7 @@ def combine_alternatives(lists):
 try:
     import atomicwrites
 except ImportError:
-    atomicwrites = None
+    atomicwrites = None  # type: ignore
 
 class FS:
     exists = staticmethod(os.path.exists)

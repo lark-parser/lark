@@ -24,7 +24,7 @@ class TestStandalone(TestCase):
         standalone.gen_standalone(Lark(grammar, parser='lalr'), out=code_buf, compress=compress)
         code = code_buf.getvalue()
 
-        context = {'__doc__': None}
+        context = {'__doc__': None, '__name__': 'test_standalone'}
         exec(code, context)
         return context
 

@@ -3,6 +3,8 @@
 """
 
 import inspect, re
+import types
+from typing import Optional, Callable
 
 from lark import Transformer, v_args
 
@@ -29,7 +31,9 @@ class WithMeta(object):
 def camel_to_snake(name):
     return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
-def create_transformer(ast_module, transformer=None, decorator_factory=v_args):
+def create_transformer(ast_module: types.ModuleType,
+                       transformer: Optional[Transformer]=None,
+                       decorator_factory: Callable=v_args) -> Transformer:
     """Collects `Ast` subclasses from the given module, and creates a Lark transformer that builds the AST.
 
     For each class, we create a corresponding rule in the transformer, with a matching name.

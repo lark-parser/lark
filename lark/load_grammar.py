@@ -4,20 +4,20 @@ import os.path
 import sys
 from collections import namedtuple
 from copy import copy, deepcopy
-from io import open
 import pkgutil
 from ast import literal_eval
-from numbers import Integral
+from contextlib import suppress
+from typing import List, Tuple, Union, Callable, Dict, Optional
 
-from .utils import bfs, Py36, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
+from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
-from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol
-from .utils import classify, suppress, dedup_list, Str
-from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError
+from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, TOKEN_DEFAULT_PRIORITY
+from .utils import classify, dedup_list
+from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError, UnexpectedInput
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -585,18 +585,7 @@ class PrepareLiterals(Transformer_InPlace):
 
 
 def _make_joined_pattern(regexp, flags_set):
-    # In Python 3.6, a new syntax for flags was introduced, that allows us to restrict the scope
-    # of flags to a specific regexp group. We are already using it in `lexer.Pattern._get_flags`
-    # However, for prior Python versions, we still need to use global flags, so we have to make sure
-    # that there are no flag collisions when we merge several terminals.
-    flags = ()
-    if not Py36:
-        if len(flags_set) > 1:
-            raise GrammarError("Lark doesn't support joining terminals with conflicting flags in python <3.6!")
-        elif len(flags_set) == 1:
-            flags ,= flags_set
-
-    return PatternRE(regexp, flags)
+    return PatternRE(regexp, ())
 
 class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
@@ -652,9 +641,9 @@ class PrepareSymbols(Transformer_InPlace):
         if isinstance(v, Tree):
             return v
         elif v.type == 'RULE':
-            return NonTerminal(Str(v.value))
+            return NonTerminal(str(v.value))
         elif v.type == 'TERMINAL':
-            return Terminal(Str(v.value), filter_out=v.startswith('_'))
+            return Terminal(str(v.value), filter_out=v.startswith('_'))
         assert False
 
 
@@ -664,7 +653,12 @@ def nr_deepcopy_tree(t):
 
 
 class Grammar:
-    def __init__(self, rule_defs, term_defs, ignore):
+
+    term_defs: List[Tuple[str, Tuple[Tree, int]]]
+    rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]]
+    ignore: List[str]
+
+    def __init__(self, rule_defs: List[Tuple[str, Tuple[str, ...], Tree, RuleOptions]], term_defs: List[Tuple[str, Tuple[Tree, int]]], ignore: List[str]) -> None:
         self.term_defs = term_defs
         self.rule_defs = rule_defs
         self.ignore = ignore
@@ -807,14 +801,18 @@ class FromPackageLoader(object):
     pkg_name: The name of the package. You can probably provide `__name__` most of the time
     search_paths: All the path that will be search on absolute imports.
     """
-    def __init__(self, pkg_name, search_paths=("", )):
+
+    pkg_name: str
+    search_paths: Tuple[str, ...]
+
+    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...]=("", )) -> None:
         self.pkg_name = pkg_name
         self.search_paths = search_paths
 
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_path, grammar_path):
+    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]:
         if base_path is None:
             to_try = self.search_paths
         else:
@@ -991,7 +989,7 @@ def _search_interactive_parser(interactive_parser, predicate):
         if predicate(p):
             return path, p
 
-def find_grammar_errors(text, start='start'):
+def find_grammar_errors(text: str, start: str='start') -> List[Tuple[UnexpectedInput, str]]:
     errors = []
     def on_error(e):
         errors.append((e, _error_repr(e)))
@@ -1040,7 +1038,12 @@ def _mangle_exp(exp, mangle):
 
 
 class GrammarBuilder:
-    def __init__(self, global_keep_all_tokens=False, import_paths=None, used_files=None):
+
+    global_keep_all_tokens: bool
+    import_paths: List[Union[str, Callable]]
+    used_files: Dict[str, str]
+
+    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
         self.used_files = used_files or {}
@@ -1066,8 +1069,7 @@ class GrammarBuilder:
         if self._is_term(name):
             if options is None:
                 options = 1
-            # if we don't use Integral here, we run into python2.7/python3 problems with long vs int
-            elif not isinstance(options, Integral):
+            elif not isinstance(options, int):
                 raise GrammarError("Terminal require a single int as 'options' (e.g. priority), got %s" % (type(options),))
         else:
             if options is None:
@@ -1120,7 +1122,7 @@ class GrammarBuilder:
 
             name = '__IGNORE_%d'% len(self._ignore_names)
             self._ignore_names.append(name)
-            self._definitions[name] = ((), t, 1)
+            self._definitions[name] = ((), t, TOKEN_DEFAULT_PRIORITY)
 
     def _declare(self, *names):
         for name in names:
@@ -1171,7 +1173,7 @@ class GrammarBuilder:
         else:
             name = tree.children[0].value
             params = ()     # TODO terminal templates
-            opts = int(tree.children[1]) if len(tree.children) == 3 else 1 # priority
+            opts = int(tree.children[1]) if len(tree.children) == 3 else TOKEN_DEFAULT_PRIORITY # priority
             exp = tree.children[-1]
 
         if mangle is not None:
@@ -1182,7 +1184,7 @@ class GrammarBuilder:
         return name, exp, params, opts
 
 
-    def load_grammar(self, grammar_text, grammar_name="<?>", mangle=None):
+    def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports = {}
@@ -1245,7 +1247,7 @@ class GrammarBuilder:
         self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
 
 
-    def do_import(self, dotted_path, base_path, aliases, base_mangle=None):
+    def do_import(self, dotted_path: Tuple[str, ...], base_path: Optional[str], aliases: Dict[str, str], base_mangle: Optional[Callable[[str], str]]=None) -> None:
         assert dotted_path
         mangle = _get_mangle('__'.join(dotted_path), aliases, base_mangle)
         grammar_path = os.path.join(*dotted_path) + EXT
@@ -1281,7 +1283,7 @@ class GrammarBuilder:
             assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
 
 
-    def validate(self):
+    def validate(self) -> None:
         for name, (params, exp, _options) in self._definitions.items():
             for i, p in enumerate(params):
                 if p in self._definitions:
@@ -1310,7 +1312,7 @@ class GrammarBuilder:
         if not set(self._definitions).issuperset(self._ignore_names):
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))
 
-    def build(self):
+    def build(self) -> Grammar:
         self.validate()
         rule_defs = []
         term_defs = []

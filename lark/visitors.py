@@ -1,3 +1,5 @@
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
+from abc import ABC
 from functools import wraps
 
 from .utils import smart_decorator, combine_alternatives
@@ -8,6 +10,10 @@ from .lexer import Token
 ###{standalone
 from inspect import getmembers, getmro
 
+_T = TypeVar('_T')
+_R = TypeVar('_R')
+_FUNC = Callable[..., _T]
+_DECORATED = Union[_FUNC, type]
 
 class Discard(Exception):
     """When raising the Discard exception in a transformer callback,
@@ -46,7 +52,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable):
+class Transformer(_Decoratable, ABC, Generic[_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -74,7 +80,7 @@ class Transformer(_Decoratable):
     """
     __visit_tokens__ = True   # For backwards compatibility
 
-    def __init__(self,  visit_tokens=True):
+    def __init__(self,  visit_tokens: bool=True) -> None:
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
@@ -125,11 +131,11 @@ class Transformer(_Decoratable):
         children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree, children)
 
-    def transform(self, tree):
+    def transform(self, tree: Tree) -> _T:
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
-    def __mul__(self, other):
+    def __mul__(self, other: 'Transformer[_T]') -> 'TransformerChain[_T]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -213,17 +219,19 @@ class InlineTransformer(Transformer):   # XXX Deprecated
         else:
             return f(*children)
 
+class TransformerChain(Generic[_T]):
 
-class TransformerChain(object):
-    def __init__(self, *transformers):
+    transformers: Tuple[Transformer[_T], ...]
+
+    def __init__(self, *transformers: Transformer[_T]) -> None:
         self.transformers = transformers
 
-    def transform(self, tree):
+    def transform(self, tree: Tree) -> _T:
         for t in self.transformers:
             tree = t.transform(tree)
         return tree
 
-    def __mul__(self, other):
+    def __mul__(self, other: Transformer[_T]) -> 'TransformerChain[_T]':
         return TransformerChain(*self.transformers + (other,))
 
 
@@ -304,19 +312,19 @@ class VisitorBase:
         return cls
 
 
-class Visitor(VisitorBase):
+class Visitor(VisitorBase, ABC, Generic[_T]):
     """Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
     """
 
-    def visit(self, tree):
+    def visit(self, tree: Tree) -> Tree:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self, tree: Tree) -> Tree:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
@@ -331,7 +339,7 @@ class Visitor_Recursive(VisitorBase):
     Slightly faster than the non-recursive version.
     """
 
-    def visit(self, tree):
+    def visit(self, tree: Tree) -> Tree:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for child in tree.children:
             if isinstance(child, Tree):
@@ -340,7 +348,7 @@ class Visitor_Recursive(VisitorBase):
         self._call_userfunc(tree)
         return tree
 
-    def visit_topdown(self,tree):
+    def visit_topdown(self,tree: Tree) -> Tree:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         self._call_userfunc(tree)
 
@@ -351,16 +359,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-def visit_children_decor(func):
-    "See Interpreter"
-    @wraps(func)
-    def inner(cls, tree):
-        values = cls.visit_children(tree)
-        return func(cls, values)
-    return inner
-
-
-class Interpreter(_Decoratable):
+class Interpreter(_Decoratable, ABC, Generic[_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -372,7 +371,7 @@ class Interpreter(_Decoratable):
     This allows the user to implement branching and loops.
     """
 
-    def visit(self, tree):
+    def visit(self, tree: Tree) -> _T:
         f = getattr(self, tree.data)
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
@@ -380,7 +379,7 @@ class Interpreter(_Decoratable):
         else:
             return f(tree)
 
-    def visit_children(self, tree):
+    def visit_children(self, tree: Tree) -> List[_T]:
         return [self.visit(child) if isinstance(child, Tree) else child
                 for child in tree.children]
 
@@ -390,6 +389,16 @@ class Interpreter(_Decoratable):
     def __default__(self, tree):
         return self.visit_children(tree)
 
+
+_InterMethod = Callable[[Type[Interpreter], _T], _R]
+
+def visit_children_decor(func: _InterMethod) -> _InterMethod:
+    "See Interpreter"
+    @wraps(func)
+    def inner(cls, tree):
+        values = cls.visit_children(tree)
+        return func(cls, values)
+    return inner
 
 # Decorators
 
@@ -416,10 +425,6 @@ def _inline_args__func(func):
     return smart_decorator(func, create_decorator)
 
 
-def inline_args(obj):   # XXX Deprecated
-    return _apply_decorator(obj, _inline_args__func)
-
-
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     def create_decorator(_f, with_self):
         if with_self:
@@ -444,12 +449,12 @@ def _vargs_inline(f, _data, children, _meta):
 def _vargs_meta_inline(f, _data, children, meta):
     return f(meta, *children)
 def _vargs_meta(f, _data, children, meta):
-    return f(children, meta)   # TODO swap these for consistency? Backwards incompatible!
+    return f(meta, children)
 def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
 
-def v_args(inline=False, meta=False, tree=False, wrapper=None):
+def v_args(inline: bool=False, meta: bool=False, tree: bool=False, wrapper: Optional[Callable]=None) -> Callable[[_DECORATED], _DECORATED]:
     """A convenience decorator factory for modifying the behavior of user-supplied visitor methods.
 
     By default, callback methods of transformers/visitors accept one argument - a list of the node's children.

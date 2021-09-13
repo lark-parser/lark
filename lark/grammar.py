@@ -1,13 +1,18 @@
+from typing import Optional, Tuple, ClassVar
+
 from .utils import Serialize
 
 ###{standalone
+TOKEN_DEFAULT_PRIORITY = 0
+
 
 class Symbol(Serialize):
     __slots__ = ('name',)
 
-    is_term = NotImplemented
+    name: str
+    is_term: ClassVar[bool] = NotImplemented
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def __eq__(self, other):
@@ -29,7 +34,7 @@ class Symbol(Serialize):
 class Terminal(Symbol):
     __serialize_fields__ = 'name', 'filter_out'
 
-    is_term = True
+    is_term: ClassVar[bool] = True
 
     def __init__(self, name, filter_out=False):
         self.name = name
@@ -43,13 +48,19 @@ class Terminal(Symbol):
 class NonTerminal(Symbol):
     __serialize_fields__ = 'name',
 
-    is_term = False
+    is_term: ClassVar[bool] = False
 
 
 class RuleOptions(Serialize):
     __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
 
-    def __init__(self, keep_all_tokens=False, expand1=False, priority=None, template_source=None, empty_indices=()):
+    keep_all_tokens: bool
+    expand1: bool
+    priority: Optional[int]
+    template_source: Optional[str]
+    empty_indices: Tuple[bool, ...]
+
+    def __init__(self, keep_all_tokens: bool=False, expand1: bool=False, priority: Optional[int]=None, template_source: Optional[str]=None, empty_indices: Tuple[bool, ...]=()) -> None:
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority

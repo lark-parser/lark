@@ -7,3 +7,5 @@ v1.0
 - Token priority is now 0 by default
 
 - `v_args(meta=True)` now gives meta as the first argument. i.e. `(meta, children)`
+
+- Renamed TraditionalLexer to BasicLexer, and 'standard' lexer option to 'basic'

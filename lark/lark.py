@@ -19,7 +19,7 @@ from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
-from .lexer import Lexer, TraditionalLexer, TerminalDef, LexerThread, Token
+from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import get_frontend, _get_lexer_callbacks
 from .grammar import Rule
@@ -57,7 +57,7 @@ class LarkOptions(Serialize):
     keep_all_tokens: bool
     tree_class: Any
     parser: 'Literal["earley", "lalr", "cyk", "auto"]'
-    lexer: 'Union[Literal["auto", "standard", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
+    lexer: 'Union[Literal["auto", "basic", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
     ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
     postlex: Optional[PostLex]
     priority: 'Optional[Literal["auto", "normal", "invert"]]'
@@ -108,7 +108,7 @@ class LarkOptions(Serialize):
             Decides whether or not to use a lexer stage
 
             - "auto" (default): Choose for me based on the parser
-            - "standard": Use a standard lexer
+            - "basic": Use a basic lexer
             - "contextual": Stronger lexer (only works with parser="lalr")
             - "dynamic": Flexible and powerful (only with parser="earley")
             - "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible.
@@ -123,7 +123,7 @@ class LarkOptions(Serialize):
     **=== Misc. / Domain Specific Options ===**
 
     postlex
-            Lexer post-processing (Default: None) Only works with the standard and contextual lexers.
+            Lexer post-processing (Default: None) Only works with the basic and contextual lexers.
     priority
             How priorities should be evaluated - auto, none, normal, invert (Default: auto)
     lexer_callbacks
@@ -339,22 +339,22 @@ class Lark(Serialize):
                 self.options.lexer = 'contextual'
             elif self.options.parser == 'earley':
                 if self.options.postlex is not None:
-                    logger.info("postlex can't be used with the dynamic lexer, so we use standard instead. "
+                    logger.info("postlex can't be used with the dynamic lexer, so we use 'basic' instead. "
                                 "Consider using lalr with contextual instead of earley")
-                    self.options.lexer = 'standard'
+                    self.options.lexer = 'basic'
                 else:
                     self.options.lexer = 'dynamic'
             elif self.options.parser == 'cyk':
-                self.options.lexer = 'standard'
+                self.options.lexer = 'basic'
             else:
                 assert False, self.options.parser
         lexer = self.options.lexer
         if isinstance(lexer, type):
             assert issubclass(lexer, Lexer)     # XXX Is this really important? Maybe just ensure interface compliance
         else:
-            assert_config(lexer, ('standard', 'contextual', 'dynamic', 'dynamic_complete'))
+            assert_config(lexer, ('basic', 'contextual', 'dynamic', 'dynamic_complete'))
             if self.options.postlex is not None and 'dynamic' in lexer:
-                raise ConfigurationError("Can't use postlex with a dynamic lexer. Use standard or contextual instead")
+                raise ConfigurationError("Can't use postlex with a dynamic lexer. Use basic or contextual instead")
 
         if self.options.ambiguity == 'auto':
             if self.options.parser == 'earley':
@@ -429,7 +429,7 @@ class Lark(Serialize):
             from copy import copy
             lexer_conf = copy(lexer_conf)
             lexer_conf.ignore = ()
-        return TraditionalLexer(lexer_conf)
+        return BasicLexer(lexer_conf)
 
     def _prepare_callbacks(self):
         self._callbacks = {}
@@ -556,7 +556,7 @@ class Lark(Serialize):
 
 
     def lex(self, text: str, dont_ignore: bool=False) -> Iterator[Token]:
-        """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='standard'
+        """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='basic'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
 

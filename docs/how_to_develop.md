@@ -32,7 +32,7 @@ For a list of supported interpreters, you can consult the `tox.ini` file.
 You can also run a single unittest using its class and method name, for example:
 ```bash
 ##   test_package test_class_name.test_function_name
-python -m tests TestLalrStandard.test_lexer_error_recovering
+python -m tests TestLalrBasic.test_keep_all_tokens
 ```
 
 ### tox

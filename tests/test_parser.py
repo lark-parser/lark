@@ -36,7 +36,7 @@ from lark.exceptions import GrammarError, ParseError, UnexpectedToken, Unexpecte
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
 from lark.grammar import Rule
-from lark.lexer import TerminalDef, Lexer, TraditionalLexer
+from lark.lexer import TerminalDef, Lexer, BasicLexer
 from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
@@ -465,7 +465,7 @@ def _make_full_earley_test(LEXER):
             empty_tree = Tree('empty', [Tree('empty2', [])])
             self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
-        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_earley_explicit_ambiguity(self):
             # This was a sneaky bug!
 
@@ -481,7 +481,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
 
-        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_ambiguity1(self):
             grammar = """
             start: cd+ "e"
@@ -497,7 +497,7 @@ def _make_full_earley_test(LEXER):
             assert ambig_tree.data == '_ambig', ambig_tree
             assert len(ambig_tree.children) == 2
 
-        @unittest.skipIf(LEXER=='standard', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_ambiguity2(self):
             grammar = """
             ANY:  /[a-zA-Z0-9 ]+/
@@ -1019,9 +1019,9 @@ def _make_parser_test(LEXER, PARSER):
     def _Lark_open(gfilename, **kwargs):
         return Lark.open(gfilename, lexer=lexer_class_or_name, parser=PARSER, propagate_positions=True, **kwargs)
 
-    if (LEXER, PARSER) == ('standard', 'earley'):
+    if (LEXER, PARSER) == ('basic', 'earley'):
         # Check that the `lark.lark` grammar represents can parse every example used in these tests.
-        # Standard-Earley was an arbitrary choice, to make sure it only ran once.
+        # basic-Earley was an arbitrary choice, to make sure it only ran once.
         lalr_parser = Lark.open(os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark'), parser='lalr')
         def wrap_with_test_grammar(f):
             def _f(x, **kwargs):
@@ -1736,7 +1736,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        @unittest.skipIf(LEXER != 'standard', "Only standard lexers care about token priority")
+        # @unittest.skipIf(LEXER != 'basic', "Only basic lexers care about token priority")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -2505,9 +2505,9 @@ def _make_parser_test(LEXER, PARSER):
     __all__.append(_NAME)
 
 _TO_TEST = [
-        ('standard', 'earley'),
-        ('standard', 'cyk'),
-        ('standard', 'lalr'),
+        ('basic', 'earley'),
+        ('basic', 'cyk'),
+        ('basic', 'lalr'),
 
         ('dynamic', 'earley'),
         ('dynamic_complete', 'earley'),

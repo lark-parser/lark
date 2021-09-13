@@ -1,7 +1,7 @@
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import LexerThread, TraditionalLexer, ContextualLexer, Lexer, Token, TerminalDef
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, Token, TerminalDef
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -70,7 +70,7 @@ class ParsingFrontend(Serialize):
 
         try:
             create_lexer = {
-                'standard': create_traditional_lexer,
+                'basic': create_basic_lexer,
                 'contextual': create_contextual_lexer,
             }[lexer_type]
         except KeyError:
@@ -110,9 +110,9 @@ def get_frontend(parser, lexer):
     assert_config(parser, ('lalr', 'earley', 'cyk'))
     if not isinstance(lexer, type):     # not custom lexer?
         expected = {
-            'lalr': ('standard', 'contextual'),
-            'earley': ('standard', 'dynamic', 'dynamic_complete'),
-            'cyk': ('standard', ),
+            'lalr': ('basic', 'contextual'),
+            'earley': ('basic', 'dynamic', 'dynamic_complete'),
+            'cyk': ('basic', ),
          }[parser]
         assert_config(lexer, expected, 'Parser %r does not support lexer %%r, expected one of %%s' % parser)
 
@@ -141,8 +141,8 @@ class PostLexConnector:
 
 
 
-def create_traditional_lexer(lexer_conf, parser, postlex):
-    return TraditionalLexer(lexer_conf)
+def create_basic_lexer(lexer_conf, parser, postlex):
+    return BasicLexer(lexer_conf)
 
 def create_contextual_lexer(lexer_conf, parser, postlex):
     states = {idx:list(t.keys()) for idx, t in parser._parse_table.states.items()}

@@ -366,7 +366,7 @@ class Lexer(ABC):
         return LexerState(text, line_ctr)
 
 
-class TraditionalLexer(Lexer):
+class BasicLexer(Lexer):
 
     terminals: Collection[TerminalDef]
     ignore_types: FrozenSet[str]
@@ -473,8 +473,8 @@ class TraditionalLexer(Lexer):
 
 class ContextualLexer(Lexer):
 
-    lexers: Dict[str, TraditionalLexer]
-    root_lexer: TraditionalLexer
+    lexers: Dict[str, BasicLexer]
+    root_lexer: BasicLexer
 
     def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
         terminals = list(conf.terminals)
@@ -493,13 +493,13 @@ class ContextualLexer(Lexer):
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 lexer_conf = copy(trad_conf)
                 lexer_conf.terminals = [terminals_by_name[n] for n in accepts if n in terminals_by_name]
-                lexer = TraditionalLexer(lexer_conf)
+                lexer = BasicLexer(lexer_conf)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
         assert trad_conf.terminals is terminals
-        self.root_lexer = TraditionalLexer(trad_conf)
+        self.root_lexer = BasicLexer(trad_conf)
 
     def make_lexer_state(self, text):
         return self.root_lexer.make_lexer_state(text)

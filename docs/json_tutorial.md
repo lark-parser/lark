@@ -332,7 +332,7 @@ class TreeToJson(Transformer):
     true = lambda self, _: True
     false = lambda self, _: False
 
-json_parser = Lark(json_grammar, start='value', lexer='standard')
+json_parser = Lark(json_grammar, start='value', lexer='basic')
 
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:

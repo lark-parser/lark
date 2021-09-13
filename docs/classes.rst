@@ -13,7 +13,7 @@ Using Unicode character classes with ``regex``
 
 Python's builtin ``re`` module has a few persistent known bugs and also won't parse
 advanced regex features such as character classes.
-With ``pip install lark-parser[regex]``, the ``regex`` module will be
+With ``pip install lark[regex]``, the ``regex`` module will be
 installed alongside lark and can act as a drop-in replacement to ``re``.
 
 Any instance of Lark instantiated with ``regex=True`` will use the ``regex`` module instead of ``re``.

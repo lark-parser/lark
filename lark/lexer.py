@@ -157,12 +157,7 @@ class Token(str):
     end_pos: int
 
     def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
-        try:
-            inst = super(Token, cls).__new__(cls, value)
-        except UnicodeDecodeError:
-            value = value.decode('latin1')
-            inst = super(Token, cls).__new__(cls, value)
-
+        inst = super(Token, cls).__new__(cls, value)
         inst.type = type_
         inst.start_pos = start_pos
         inst.value = value

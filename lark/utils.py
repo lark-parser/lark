@@ -41,7 +41,7 @@ def _deserialize(data, namespace, memo):
     return data
 
 
-class Serialize(object):
+class Serialize:
     """Safe-ish serialization interface that doesn't rely on Pickle
 
     Attributes:

@@ -8,20 +8,20 @@ from typing import Optional, Callable
 
 from lark import Transformer, v_args
 
-class Ast(object):
+class Ast:
     """Abstract class
 
     Subclasses will be collected by `create_transformer()`
     """
     pass
 
-class AsList(object):
+class AsList:
     """Abstract class
 
     Subclasses will be instanciated with the parse results as a single list, instead of as arguments.
     """
 
-class WithMeta(object):
+class WithMeta:
     """Abstract class
 
     Subclasses will be instanciated with the Meta instance of the tree. (see ``v_args`` for more detail)

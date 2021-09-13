@@ -791,7 +791,7 @@ class Grammar:
 PackageResource = namedtuple('PackageResource', 'pkg_name path')
 
 
-class FromPackageLoader(object):
+class FromPackageLoader:
     """
     Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
     This allows them to be compatible even from within zip files.

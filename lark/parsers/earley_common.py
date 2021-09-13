@@ -1,21 +1,8 @@
-"This module implements an Earley Parser"
+"""This module implements useful building blocks for the Earley parser
+"""
 
-# The parser uses a parse-forest to keep track of derivations and ambiguations.
-# When the parse ends successfully, a disambiguation stage resolves all ambiguity
-# (right now ambiguity resolution is not developed beyond the needs of lark)
-# Afterwards the parse tree is reduced (transformed) according to user callbacks.
-# I use the no-recursion version of Transformer, because the tree might be
-# deeper than Python's recursion limit (a bit absurd, but that's life)
-#
-# The algorithm keeps track of each state set, using a corresponding Column instance.
-# Column keeps track of new items using NewsList instances.
-#
-# Author: Erez Shinan (2017)
-# Email : erezshin@gmail.com
 
-from ..grammar import NonTerminal, Terminal
-
-class Item(object):
+class Item:
     "An Earley Item, the atom of the algorithm."
 
     __slots__ = ('s', 'rule', 'ptr', 'start', 'is_complete', 'expect', 'previous', 'node', '_hash')

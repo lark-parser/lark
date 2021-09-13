@@ -331,7 +331,7 @@ def _regexp_has_newline(r: str):
     return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
 
 
-class LexerState(object):
+class LexerState:
     __slots__ = 'text', 'line_ctr', 'last_token'
 
     def __init__(self, text, line_ctr, last_token=None):
@@ -521,7 +521,7 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-class LexerThread(object):
+class LexerThread:
     """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
 
     def __init__(self, lexer, text):

@@ -5,7 +5,7 @@ from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal
 
 
-class RulePtr(object):
+class RulePtr:
     __slots__ = ('rule', 'index')
 
     def __init__(self, rule, index):
@@ -38,7 +38,7 @@ class RulePtr(object):
 
 
 # state generation ensures no duplicate LR0ItemSets
-class LR0ItemSet(object):
+class LR0ItemSet:
     __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads')
 
     def __init__(self, kernel, closure):
@@ -121,7 +121,7 @@ def calculate_sets(rules):
     return FIRST, FOLLOW, NULLABLE
 
 
-class GrammarAnalyzer(object):
+class GrammarAnalyzer:
     def __init__(self, parser_conf, debug=False):
         self.debug = debug
 

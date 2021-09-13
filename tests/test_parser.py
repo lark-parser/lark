@@ -918,7 +918,7 @@ class CustomLexerNew(Lexer):
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
     def __init__(self, lexer_conf):
-        self.lexer = TraditionalLexer(copy(lexer_conf))
+        self.lexer = BasicLexer(copy(lexer_conf))
     def lex(self, lexer_state, parser_state):
         return self.lexer.lex(lexer_state, parser_state)
 
@@ -930,7 +930,7 @@ class CustomLexerOld(Lexer):
     so it uses the traditionalparser as implementation without custom lexing behaviour.
     """
     def __init__(self, lexer_conf):
-        self.lexer = TraditionalLexer(copy(lexer_conf))
+        self.lexer = BasicLexer(copy(lexer_conf))
     def lex(self, text):
         ls = self.lexer.make_lexer_state(text)
         return self.lexer.lex(ls, None)
@@ -1736,7 +1736,8 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        # @unittest.skipIf(LEXER != 'basic', "Only basic lexers care about token priority")
+        # TODO: Remove after merging priority for Dynamic Earley
+        @unittest.skipIf(LEXER != 'basic', "Only basic lexers care about token priority")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 

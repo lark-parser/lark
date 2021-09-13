@@ -268,7 +268,7 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     for retok in tokens_by_type.get(PatternRE, []):
         unless = []
         for strtok in tokens_by_type.get(PatternStr, []):
-            if strtok.priority > retok.priority:
+            if strtok.priority != retok.priority:
                 continue
             s = strtok.pattern.value
             if s == _get_match(re_, retok.pattern.to_regexp(), s, g_regex_flags):

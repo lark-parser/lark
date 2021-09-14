@@ -180,6 +180,43 @@ class TestTrees(TestCase):
         x = T().transform(Tree('test', ['a', 'b']))
         self.assertEqual(x, 'ab')
 
+        class C:
+            def c_method(self):
+                return 'c_method'
+
+            c_class_attribute = 'c_class_attribute'
+
+            @classmethod
+            def c_classmethod(cls):
+                return cls.c_class_attribute
+
+        @v_args(inline=True)
+        class T(Transformer):
+            @staticmethod
+            def t_staticmethod():
+                return 't_staticmethod'
+
+            t_class_attribute = 't_class_attribute'
+
+            @classmethod
+            def t_classmethod(cls):
+                return cls.t_class_attribute
+
+            t_c_classmethod = C.c_classmethod
+            t_c_method = C.c_method
+
+        x = T().transform(Tree('t_staticmethod', []))
+        self.assertEqual(x, 't_staticmethod')
+        self.assertEqual(T.t_staticmethod(), 't_staticmethod')
+        x = T().transform(Tree('t_classmethod', []))
+        self.assertEqual(x, 't_class_attribute')
+        self.assertEqual(T.t_classmethod(), 't_class_attribute')
+        x = T().transform(Tree('t_c_classmethod', []))
+        self.assertEqual(x, 'c_class_attribute')
+        self.assertEqual(T.t_c_classmethod(), 'c_class_attribute')
+        x = T().transform(Tree('t_c_method', []))
+        self.assertEqual(x, 'c_method')
+
     def test_vargs_override(self):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
 

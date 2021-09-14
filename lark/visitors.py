@@ -1,6 +1,7 @@
 from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
 from abc import ABC
-from functools import wraps
+from functools import wraps, partial
+from inspect import ismethod
 
 from .utils import smart_decorator, combine_alternatives
 from .tree import Tree
@@ -44,7 +45,7 @@ class _Decoratable:
             if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
                 continue
 
-            static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
+            static = isinstance(cls.__dict__[name], (staticmethod, classmethod)) or ismethod(cls.__dict__[name])
             setattr(cls, name, decorator(value, static=static, **kwargs))
         return cls
 
@@ -411,20 +412,6 @@ def _apply_decorator(obj, decorator, **kwargs):
         return _apply(decorator, **kwargs)
 
 
-def _inline_args__func(func):
-    @wraps(func)
-    def create_decorator(_f, with_self):
-        if with_self:
-            def f(self, children):
-                return _f(self, *children)
-        else:
-            def f(self, children):
-                return _f(*children)
-        return f
-
-    return smart_decorator(func, create_decorator)
-
-
 def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
     def create_decorator(_f, with_self):
         if with_self:
@@ -436,12 +423,12 @@ def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
         return f
 
     if static:
-        f = wraps(func)(create_decorator(func, False))
+        f = wraps(func)(partial(func))
     else:
         f = smart_decorator(func, create_decorator)
     f.vargs_applied = True
     f.visit_wrapper = visit_wrapper
-    return f
+    return staticmethod(f) if static else f
 
 
 def _vargs_inline(f, _data, children, _meta):

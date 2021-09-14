@@ -25,9 +25,9 @@ from .earley_forest import SymbolNode, TokenNode
 
 
 class Parser(BaseParser):
-    def __init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False, tree_class=Tree):
+    def __init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity=True, complete_lex = False, debug=False, tree_class=Tree):
         BaseParser.__init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
-        self.ignore = [Terminal(t) for t in ignore]
+        self.ignore = [Terminal(t) for t in lexer_conf.ignore]
         self.complete_lex = complete_lex
 
     def _parse(self, stream, columns, to_scan, start_symbol=None):

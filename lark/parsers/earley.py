@@ -44,8 +44,8 @@ class Parser:
             if rule.origin not in self.predictions:
                 self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
-            ## Detect if any rules/terminals have priorities set. If the user specified priority = "none" then
-            #  the priorities will be stripped from all rules before they reach us, allowing us to
+            ## Detect if any rules/terminals have priorities set. If the user specified priority = None, then
+            #  the priorities will be stripped from all rules/terminals before they reach us, allowing us to
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
             #  on any rules/terminals.
             if self.forest_sum_visitor is None and rule.options.priority is not None:

@@ -181,7 +181,7 @@ class EarleyRegexpMatcher:
 
 def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
     earley_matcher = EarleyRegexpMatcher(lexer_conf)
-    return xearley.Parser(lexer_conf, parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
+    return xearley.Parser(lexer_conf, parser_conf, earley_matcher.match, **kw)
 
 def _match_earley_basic(term, token):
     return term.name == token.type

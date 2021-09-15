@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import unittest
+from functools import partial, reduce
+from operator import add, mul
 from unittest import TestCase
 import copy
 import pickle
@@ -171,6 +173,76 @@ class TestTrees(TestCase):
         x = MyTransformer().transform( Tree('hello', [2]))
         self.assertEqual(x, 'hello')
 
+    def test_smart_decorator(self):
+        class OtherClass:
+            @staticmethod
+            def ab_staticmethod(a, b):
+                return (a, b)
+
+            @classmethod
+            def ab_classmethod(cls, a, b):
+                assert cls is OtherClass, cls
+                return (a, b)
+
+            def ab_method(self, a, b):
+                assert isinstance(self, OtherClass), self
+                return (a, b)
+
+        class CustomCallable:
+            def __call__(self, *args, **kwargs):
+                assert isinstance(self, CustomCallable)
+                return args
+
+        oc_instance = OtherClass()
+
+        @v_args(inline=True)
+        class TestCls(Transformer):
+            @staticmethod
+            def ab_staticmethod(a, b):
+                return (a, b)
+
+            @classmethod
+            def ab_classmethod(cls, a, b):
+                assert cls is TestCls
+                return (a, b)
+
+            def ab_method(self, a, b):
+                assert isinstance(self, TestCls)
+                return (a, b)
+
+            oc_class_ab_staticmethod = oc_instance.ab_staticmethod
+            oc_class_ab_classmethod = oc_instance.ab_classmethod
+
+            oc_ab_staticmethod = oc_instance.ab_staticmethod
+            oc_ab_classmethod = oc_instance.ab_classmethod
+            oc_ab_method = oc_instance.ab_method
+
+            set_union = set(["a"]).union
+            static_add = staticmethod(add)
+            partial_reduce_mul = partial(reduce, mul)
+
+            # custom_callable = CustomCallable()
+
+        test_instance = TestCls()
+        expected = {
+            "ab_classmethod": ([1, 2], (1, 2)),
+            "ab_staticmethod": ([1, 2], (1, 2)),
+            "ab_method": ([1, 2], (1, 2)),
+            # "oc_ab_classmethod": ([1, 2], (1, 2)),
+            # "oc_ab_staticmethod": ([1, 2], (1, 2)),
+            # "oc_class_ab_classmethod": ([1, 2], (1, 2)),
+            # "oc_class_ab_staticmethod": ([1, 2], (1, 2)),
+            # "oc_ab_method": ([1, 2], (1, 2)),
+            # "custom_callable": ([1, 2], (1, 2)),
+            "set_union": ([["b"], ["c"]], {"a", "b", "c"}),
+            "static_add": ([1, 2], 3),
+            "partial_reduce_mul": ([[1, 2]], 2),
+        }
+        for method_name, (children, expected_result) in expected.items():
+            result = test_instance.transform(Tree(method_name, children))
+            self.assertEqual(result, expected_result)
+
+
     def test_inline_static(self):
         @v_args(inline=True)
         class T(Transformer):
@@ -212,7 +284,6 @@ class TestTrees(TestCase):
 
         res = T().transform(tree)
         assert res.children == ["@TEST1!", "test2!"]
-
 
     def test_discard(self):
         class MyTransformer(Transformer):

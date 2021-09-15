@@ -188,12 +188,28 @@ class TestTrees(TestCase):
                 assert isinstance(self, OtherClass), self
                 return (a, b)
 
+        @v_args(meta=True)
+        class OtherTransformer(Transformer):
+            @staticmethod
+            def ab_staticmethod(meta, children):
+                return tuple(children)
+
+            @classmethod
+            def ab_classmethod(cls, meta, children):
+                assert cls is OtherTransformer, cls
+                return tuple(children)
+
+            def ab_method(self, meta, children):
+                assert isinstance(self, OtherTransformer), self
+                return tuple(children)
+
         class CustomCallable:
             def __call__(self, *args, **kwargs):
                 assert isinstance(self, CustomCallable)
                 return args
 
         oc_instance = OtherClass()
+        ot_instance = OtherTransformer()
 
         def ab_for_partialmethod(self, a, b):
             assert isinstance(self, TestCls)
@@ -220,8 +236,15 @@ class TestTrees(TestCase):
             oc_ab_staticmethod = oc_instance.ab_staticmethod
             oc_ab_classmethod = oc_instance.ab_classmethod
             oc_ab_method = oc_instance.ab_method
-            ab_partialmethod = partialmethod(ab_for_partialmethod, 1)
+            
+            ot_class_ab_staticmethod = ot_instance.ab_staticmethod
+            ot_class_ab_classmethod = ot_instance.ab_classmethod
 
+            ot_ab_staticmethod = ot_instance.ab_staticmethod
+            ot_ab_classmethod = ot_instance.ab_classmethod
+            ot_ab_method = ot_instance.ab_method
+            
+            ab_partialmethod = partialmethod(ab_for_partialmethod, 1)
             set_union = set(["a"]).union
             static_add = staticmethod(add)
             partial_reduce_mul = partial(reduce, mul)
@@ -243,16 +266,38 @@ class TestTrees(TestCase):
             # "oc_class_ab_staticmethod": ([1, 2], (1, 2)),
 
             "oc_ab_method": ([1, 2], (1, 2)),
+            "ot_ab_classmethod": ([1, 2], (1, 2)),
+            "ot_class_ab_classmethod": ([1, 2], (1, 2)),
+
+            # Same as above
+            # "ot_ab_staticmethod": ([1, 2], (1, 2)),
+            # "ot_class_ab_staticmethod": ([1, 2], (1, 2)),
+
+            "ot_ab_method": ([1, 2], (1, 2)),
             "ab_partialmethod": ([2], (1, 2)),
             "custom_callable": ([1, 2], (1, 2)),
             "set_union": ([["b"], ["c"]], {"a", "b", "c"}),
             "static_add": ([1, 2], 3),
             "partial_reduce_mul": ([[1, 2]], 2),
         }
+        non_static = {"ab_method", "ab_partialmethod"}
         for method_name, (children, expected_result) in expected.items():
+            not_inline = "ot" in method_name
             result = test_instance.transform(Tree(method_name, children))
             self.assertEqual(result, expected_result)
 
+            if not_inline:
+                result = getattr(test_instance, method_name)(None, children)
+            else:
+                result = getattr(test_instance, method_name)(*children)
+            self.assertEqual(result, expected_result)
+
+            if method_name not in non_static:
+                if not_inline:
+                    result = getattr(TestCls, method_name)(None, children)
+                else:
+                    result = getattr(TestCls, method_name)(*children)
+                self.assertEqual(result, expected_result)
 
     def test_inline_static(self):
         @v_args(inline=True)

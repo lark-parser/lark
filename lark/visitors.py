@@ -418,6 +418,8 @@ class _VArgsWrapper:
     We also have the visit_wrapper attribute to be used by Transformers.
     """
     def __init__(self, func: Callable, visit_wrapper: Callable[[Callable, str, list, Any], Any]):
+        if isinstance(func, _VArgsWrapper):
+            func = func.base_func
         self.base_func = func
         self.visit_wrapper = visit_wrapper
         update_wrapper(self, func)

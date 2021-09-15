@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import unittest
-from functools import partial, reduce
+from functools import partial, reduce, partialmethod
 from operator import add, mul
 from unittest import TestCase
 import copy
@@ -195,6 +195,10 @@ class TestTrees(TestCase):
 
         oc_instance = OtherClass()
 
+        def ab_for_partialmethod(self, a, b):
+            assert isinstance(self, TestCls)
+            return a, b
+
         @v_args(inline=True)
         class TestCls(Transformer):
             @staticmethod
@@ -216,24 +220,31 @@ class TestTrees(TestCase):
             oc_ab_staticmethod = oc_instance.ab_staticmethod
             oc_ab_classmethod = oc_instance.ab_classmethod
             oc_ab_method = oc_instance.ab_method
+            ab_partialmethod = partialmethod(ab_for_partialmethod, 1)
 
             set_union = set(["a"]).union
             static_add = staticmethod(add)
             partial_reduce_mul = partial(reduce, mul)
 
-            # custom_callable = CustomCallable()
+            custom_callable = CustomCallable()
 
         test_instance = TestCls()
         expected = {
             "ab_classmethod": ([1, 2], (1, 2)),
             "ab_staticmethod": ([1, 2], (1, 2)),
             "ab_method": ([1, 2], (1, 2)),
-            # "oc_ab_classmethod": ([1, 2], (1, 2)),
+            "oc_ab_classmethod": ([1, 2], (1, 2)),
+            "oc_class_ab_classmethod": ([1, 2], (1, 2)),
+
+            # AFAIK, these two cases are impossible to deal with. `oc_instance.ab_staticmethod` returns an actual
+            # function object that is impossible to distinguish from a normally defined method.
+            # (i.e. `staticmethod(f).__get__(?, ?) is f` is True)
             # "oc_ab_staticmethod": ([1, 2], (1, 2)),
-            # "oc_class_ab_classmethod": ([1, 2], (1, 2)),
             # "oc_class_ab_staticmethod": ([1, 2], (1, 2)),
-            # "oc_ab_method": ([1, 2], (1, 2)),
-            # "custom_callable": ([1, 2], (1, 2)),
+
+            "oc_ab_method": ([1, 2], (1, 2)),
+            "ab_partialmethod": ([2], (1, 2)),
+            "custom_callable": ([1, 2], (1, 2)),
             "set_union": ([["b"], ["c"]], {"a", "b", "c"}),
             "static_add": ([1, 2], 3),
             "partial_reduce_mul": ([[1, 2]], 2),

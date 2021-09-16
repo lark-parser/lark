@@ -245,9 +245,16 @@ class UnexpectedToken(ParseError, UnexpectedInput):
             self._accepts = self.interactive_parser and self.interactive_parser.accepts()
         return self._accepts
 
+    @property
+    def _safe_accepts(self):
+        try:
+            return self.accepts
+        except Exception:
+            return self.expected
+
     def __str__(self):
         message = ("Unexpected token %r at line %s, column %s.\n%s"
-                   % (self.token, self.line, self.column, self._format_expected(self.accepts or self.expected)))
+                   % (self.token, self.line, self.column, self._format_expected(self._safe_accepts or self.expected)))
         if self.token_history:
             message += "Previous tokens: %r\n" % self.token_history
 

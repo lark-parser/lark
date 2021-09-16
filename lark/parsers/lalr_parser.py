@@ -113,12 +113,12 @@ class ParserState:
     def copy(self):
         return copy(self)
 
-    def feed_token(self, token, is_end=False):
+    def feed_token(self, token, is_end=False, override_callbacks=None):
         state_stack = self.state_stack
         value_stack = self.value_stack
         states = self.parse_conf.states
         end_state = self.parse_conf.end_state
-        callbacks = self.parse_conf.callbacks
+        callbacks = self.parse_conf.callbacks if override_callbacks is None else override_callbacks
 
         while True:
             state = state_stack[-1]

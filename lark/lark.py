@@ -3,7 +3,7 @@ import sys, os, pickle, hashlib
 import tempfile
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
-    Tuple, Iterable, IO, Any, TYPE_CHECKING
+    Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
 )
 if TYPE_CHECKING:
     from .parsers.lalr_interactive_parser import InteractiveParser
@@ -416,7 +416,7 @@ class Lark(Serialize):
                 assert cache_md5 is not None
                 f.write(cache_md5.encode('utf8') + b'\n')
                 pickle.dump(used_files, f)
-                self.save(f)
+                self.save(f, _LOAD_ALLOWED_OPTIONS)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
@@ -451,12 +451,14 @@ class Lark(Serialize):
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
         return parser_class(self.lexer_conf, parser_conf, options=self.options)
 
-    def save(self, f):
+    def save(self, f, exclude_options: Collection[str] = ()):
         """Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
         """
         data, m = self.memo_serialize([TerminalDef, Rule])
+        if exclude_options:
+            data["options"] = {n: v for n, v in data["options"].items() if n not in exclude_options}
         pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod

@@ -6,10 +6,7 @@ from lark import Lark, Tree, Transformer
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
+from io import BytesIO as StringIO
 
 
 class MockFile(StringIO):

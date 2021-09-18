@@ -7,10 +7,7 @@ from lark import Lark
 from lark.tree import Tree
 from lark.tools import standalone
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 
 

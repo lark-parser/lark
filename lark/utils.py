@@ -8,9 +8,11 @@ import sys, re
 import logging
 logger: logging.Logger = logging.getLogger("lark")
 logger.addHandler(logging.StreamHandler())
-# Set to highest level, since we have some warnings amongst the code
+# Set to a high level, since we have some warnings amongst the code
 # By default, we should not output any log messages
-logger.setLevel(logging.CRITICAL)
+# We are using ERROR instead of CRITICAL since we want to report
+# about failed loading from cache.
+logger.setLevel(logging.ERROR)
 
 
 NO_VALUE = object()

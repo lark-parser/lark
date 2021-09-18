@@ -96,6 +96,9 @@ class InteractiveParser:
             if t.isupper(): # is terminal?
                 new_cursor = copy(self)
                 try:
+                    # We override the callbacks here because some Token callbacks might break
+                    # when passed an empty string, and we don't even want to use the result,
+                    # We are only interested in if this succeeds or not.
                     new_cursor.feed_token(Token(t, ''), _NoopCallbacks())
                 except UnexpectedToken:
                     pass

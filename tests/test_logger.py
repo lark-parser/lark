@@ -3,10 +3,7 @@ from contextlib import contextmanager
 from lark import Lark, logger
 from unittest import TestCase, main
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 @contextmanager
 def capture_log():

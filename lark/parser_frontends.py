@@ -42,7 +42,7 @@ class MakeParsingFrontend:
 
 
 class ParsingFrontend(Serialize):
-    __serialize_fields__ = 'lexer_conf', 'parser_conf', 'parser', 'options'
+    __serialize_fields__ = 'lexer_conf', 'parser_conf', 'parser'
 
     def __init__(self, lexer_conf, parser_conf, options, parser=None):
         self.parser_conf = parser_conf

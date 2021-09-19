@@ -52,6 +52,9 @@ class InlineTestT(Transformer):
     def NUM(self, token):
         return int(token)
 
+    def __reduce__(self):
+        raise TypeError("This Transformer should not be pickled.")
+
 
 def append_zero(t):
     return t.update(value=t.value + '0')
@@ -107,6 +110,8 @@ class TestCache(TestCase):
     
     def test_inline(self):
         # Test inline transformer (tree-less) & lexer_callbacks
+        # Note: the Transformer should not be saved to the file,
+        #       and is made unpickable to check for that
         g = """
         start: add+
         add: NUM "+" NUM
@@ -134,7 +139,7 @@ class TestCache(TestCase):
         assert len(self.mock_fs.files) == 1
         res = parser.parse("ab")
         self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
-        
+
         
 
 

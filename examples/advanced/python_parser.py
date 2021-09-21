@@ -14,7 +14,6 @@ import glob, time
 from lark import Lark
 from lark.indenter import Indenter
 
-# __path__ = os.path.dirname(__file__)
 
 class PythonIndenter(Indenter):
     NL_type = '_NEWLINE'
@@ -24,11 +23,14 @@ class PythonIndenter(Indenter):
     DEDENT_type = '_DEDENT'
     tab_len = 8
 
-kwargs = dict(rel_to=__file__, postlex=PythonIndenter(), start='file_input')
+kwargs = dict(postlex=PythonIndenter(), start='file_input')
 
-python_parser2 = Lark.open('python2.lark', parser='lalr', **kwargs)
-python_parser3 = Lark.open('python3.lark',parser='lalr', **kwargs)
-python_parser2_earley = Lark.open('python2.lark', parser='earley', lexer='basic', **kwargs)
+# Official Python grammar by Lark
+python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'], parser='lalr', **kwargs)
+
+# Local Python2 grammar
+python_parser2 = Lark.open('python2.lark', rel_to=__file__, parser='lalr', **kwargs)
+python_parser2_earley = Lark.open('python2.lark', rel_to=__file__, parser='earley', lexer='basic', **kwargs)
 
 try:
     xrange

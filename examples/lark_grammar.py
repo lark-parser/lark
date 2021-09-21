@@ -15,7 +15,6 @@ parser = lark.Lark.open(lark_path / 'grammars/lark.lark', rel_to=__file__, parse
 
 grammar_files = [
     examples_path / 'advanced/python2.lark',
-    examples_path / 'advanced/python3.lark',
     examples_path / 'relative-imports/multiples.lark',
     examples_path / 'relative-imports/multiple2.lark',
     examples_path / 'relative-imports/multiple3.lark',

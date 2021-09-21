@@ -11,7 +11,7 @@ from lark.lark import Lark
 from python_parser import PythonIndenter
 
 GRAMMAR = r"""
-%import .python3 (compound_stmt, single_input, file_input, eval_input, test, suite, _NEWLINE, _INDENT, _DEDENT, COMMENT)
+%import python (compound_stmt, single_input, file_input, eval_input, test, suite, _NEWLINE, _INDENT, _DEDENT, COMMENT)
 
 %extend compound_stmt: match_stmt
 

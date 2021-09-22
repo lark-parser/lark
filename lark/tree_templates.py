@@ -74,15 +74,15 @@ class TemplateConf:
 
 class _ReplaceVars(Transformer):
     def __init__(self, conf, vars):
-        self.conf = conf
-        self.vars = vars
+        self._conf = conf
+        self._vars = vars
 
     def __default__(self, data, children, meta):
         tree = super().__default__(data, children, meta)
 
-        var = self.conf.test_var(tree)
+        var = self._conf.test_var(tree)
         if var:
-            return self.vars[var]
+            return self._vars[var]
         return tree
 
 

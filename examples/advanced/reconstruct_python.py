@@ -10,13 +10,11 @@ a small formatter.
 
 from lark import Lark, Token
 from lark.reconstruct import Reconstructor
-
-from python_parser import PythonIndenter
+from lark.indenter import PythonIndenter
 
 # Official Python grammar by Lark
-python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'], 
-                                        parser='lalr', postlex=PythonIndenter(),
-                                        start='file_input', maybe_placeholders=False)
+kwargs = dict(parser='lalr', postlex=PythonIndenter(), start='file_input', maybe_placeholders=False)
+python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'], **kwargs)
 
 
 SPACE_AFTER = set(',+-*/~@<>="|:')

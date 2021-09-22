@@ -12,7 +12,8 @@ Uses reconstruct_python.py for generating the final Python 2 code.
 from lark import Lark
 from lark.tree_templates import TemplateConf, TemplateTranslator
 
-from reconstruct_python import PythonIndenter, PythonReconstructor
+from lark.indenter import PythonIndenter
+from reconstruct_python import PythonReconstructor
 
 
 #

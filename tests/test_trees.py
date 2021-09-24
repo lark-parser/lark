@@ -236,14 +236,14 @@ class TestTrees(TestCase):
             oc_ab_staticmethod = oc_instance.ab_staticmethod
             oc_ab_classmethod = oc_instance.ab_classmethod
             oc_ab_method = oc_instance.ab_method
-            
+
             ot_class_ab_staticmethod = ot_instance.ab_staticmethod
             ot_class_ab_classmethod = ot_instance.ab_classmethod
 
             ot_ab_staticmethod = ot_instance.ab_staticmethod
             ot_ab_classmethod = ot_instance.ab_classmethod
             ot_ab_method = ot_instance.ab_method
-            
+
             ab_partialmethod = partialmethod(ab_for_partialmethod, 1)
             set_union = set(["a"]).union
             static_add = staticmethod(add)
@@ -298,6 +298,19 @@ class TestTrees(TestCase):
                 else:
                     result = getattr(TestCls, method_name)(*children)
                 self.assertEqual(result, expected_result)
+
+    def test_vargs_set_name(self):
+        # Test with cached_property if available. That actually uses __set_name__
+        prop = getattr(functools, "cached_property", property)
+
+        class T(Transformer):
+            @v_args(inline=True)
+            @prop  # Not sure why you would ever want to use a property here, but we support it
+            def test(self):
+                return lambda a, b: (self, a, b)
+
+        t = T()
+        self.assertEqual(t.transform(Tree("test", [1, 2])), (t, 1, 2))
 
     def test_inline_static(self):
         @v_args(inline=True)

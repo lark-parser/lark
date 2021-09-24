@@ -36,8 +36,8 @@ GRAMMAR = r"""
       | "false"            -> false
       | "null"             -> null
 
-array  : "[" [value ("," value)*] "]"
-object : "{" [pair ("," pair)*] "}"
+array  : "[" (value ("," value)*)? "]"
+object : "{" (pair ("," pair)*)? "}"
 pair   : string ":" value
 
 string: STRING
@@ -140,5 +140,4 @@ for example in EXAMPLES:
     tree = parser.parse(example)
     tree = RemoveAmbiguities().transform(tree)
     result = TreeToJson().transform(tree)
-    print('-' * 100)
     pprint(result)

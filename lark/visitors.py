@@ -427,7 +427,7 @@ class _VArgsWrapper:
     def __call__(self, *args, **kwargs):
         return self.base_func(*args, **kwargs)
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance, owner=None):
         try:
             g = self.base_func.__get__
         except AttributeError:

@@ -148,6 +148,8 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
  - [Poetry](https://github.com/python-poetry/poetry-core) - A utility for dependency management and packaging
  - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
+ - [PyQuil](https://github.com/rigetti/pyquil) - Python library for quantum programming using Quil
+ - [Preql](https://github.com/erezsh/preql) - An interpreted relational query language that compiles to SQL
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform

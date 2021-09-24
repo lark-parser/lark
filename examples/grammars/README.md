@@ -1,5 +1,5 @@
 # Example Grammars
 
-This directory is a collection of lark grammars, taken from real-world projects.
+This directory is a collection of lark grammars, taken from real world projects.
 
-- [verilog.lark](Verilog) - Taken from https://github.com/circuitgraph/circuitgraph/blob/master/circuitgraph/parsing/verilog.lark
+- [Verilog](verilog.lark) - Taken from https://github.com/circuitgraph/circuitgraph/blob/master/circuitgraph/parsing/verilog.lark

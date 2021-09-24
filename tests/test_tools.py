@@ -1,18 +1,12 @@
 from __future__ import absolute_import, print_function
 
-import sys
 from unittest import TestCase, main
 
 from lark import Lark
 from lark.tree import Tree
 from lark.tools import standalone
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
-
+from io import StringIO
 
 
 class TestStandalone(TestCase):

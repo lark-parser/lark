@@ -108,29 +108,6 @@ class SerializeMemoizer(Serialize):
         return _deserialize(data, namespace, memo)
 
 
-
-import types
-from functools import wraps, partial
-
-
-def smart_decorator(f, create_decorator):
-    if isinstance(f, types.FunctionType):
-        return wraps(f)(create_decorator(f, True))
-
-    elif isinstance(f, (type, types.BuiltinFunctionType)):
-        return wraps(f)(create_decorator(f, False))
-
-    elif isinstance(f, types.MethodType):
-        return wraps(f)(create_decorator(f.__func__, True))
-
-    elif isinstance(f, partial):
-        # wraps does not work for partials in 2.7: https://bugs.python.org/issue3445
-        return wraps(f.func)(create_decorator(lambda *args, **kw: f(*args[1:], **kw), True))
-
-    else:
-        return create_decorator(f.__func__.__call__, True)
-
-
 try:
     import regex  # type: ignore
 except ImportError:

@@ -820,18 +820,21 @@ class FromPackageLoader:
                 # Technically false, but FileNotFound doesn't exist in python2.7, and this message should never reach the end user anyway
                 raise IOError()
             to_try = [base_path.path]
+
+        err = None
         for path in to_try:
             full_path = os.path.join(path, grammar_path)
             key = PackageResource(self.pkg_name, full_path)
             if used_files is not None and key in used_files:
                 return key, used_files[key][1]
             try:
-                text = pkgutil.get_data(self.pkg_name, full_path)
-            except IOError:
+                text: Optional[str] = pkgutil.get_data(self.pkg_name, full_path)
+            except IOError as e:
+                err = e
                 continue
             else:
-                return key, text.decode()
-        raise IOError()
+                return key, (text.decode() if text else '')
+        raise IOError('Cannot find grammar in given paths') from err
 
 
 stdlib_loader = FromPackageLoader('lark', IMPORT_PATHS)

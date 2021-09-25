@@ -1,8 +1,8 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any
 from abc import ABC
-from functools import wraps
+from functools import wraps, update_wrapper
 
-from .utils import smart_decorator, combine_alternatives
+from .utils import combine_alternatives
 from .tree import Tree
 from .exceptions import VisitError, GrammarError
 from .lexer import Token
@@ -28,7 +28,7 @@ class _Decoratable:
     "Provides support for decorating methods with @v_args"
 
     @classmethod
-    def _apply_decorator(cls, decorator, **kwargs):
+    def _apply_v_args(cls, visit_wrapper):
         mro = getmro(cls)
         assert mro[0] is cls
         libmembers = {name for _cls in mro[1:] for name, _ in getmembers(_cls)}
@@ -41,11 +41,10 @@ class _Decoratable:
                 continue
 
             # Skip if v_args already applied (at the function level)
-            if hasattr(cls.__dict__[name], 'vargs_applied') or hasattr(value, 'vargs_applied'):
+            if isinstance(cls.__dict__[name], _VArgsWrapper):
                 continue
 
-            static = isinstance(cls.__dict__[name], (staticmethod, classmethod))
-            setattr(cls, name, decorator(value, static=static, **kwargs))
+            setattr(cls, name, _VArgsWrapper(cls.__dict__[name], visit_wrapper))
         return cls
 
     def __class_getitem__(cls, _):
@@ -402,46 +401,47 @@ def visit_children_decor(func: _InterMethod) -> _InterMethod:
 
 # Decorators
 
-def _apply_decorator(obj, decorator, **kwargs):
+def _apply_v_args(obj, visit_wrapper):
     try:
-        _apply = obj._apply_decorator
+        _apply = obj._apply_v_args
     except AttributeError:
-        return decorator(obj, **kwargs)
+        return _VArgsWrapper(obj, visit_wrapper)
     else:
-        return _apply(decorator, **kwargs)
+        return _apply(visit_wrapper)
 
 
-def _inline_args__func(func):
-    @wraps(func)
-    def create_decorator(_f, with_self):
-        if with_self:
-            def f(self, children):
-                return _f(self, *children)
+class _VArgsWrapper:
+    """
+    A wrapper around a Callable. It delegates `__call__` to the Callable.
+    If the Callable has a `__get__`, that is also delegate and the resulting function is wrapped.
+    Otherwise, we use the original function mirroring the behaviour without a __get__.
+    We also have the visit_wrapper attribute to be used by Transformers.
+    """
+    def __init__(self, func: Callable, visit_wrapper: Callable[[Callable, str, list, Any], Any]):
+        if isinstance(func, _VArgsWrapper):
+            func = func.base_func
+        self.base_func = func
+        self.visit_wrapper = visit_wrapper
+        update_wrapper(self, func)
+
+    def __call__(self, *args, **kwargs):
+        return self.base_func(*args, **kwargs)
+
+    def __get__(self, instance, owner=None):
+        try:
+            g = self.base_func.__get__
+        except AttributeError:
+            return self
         else:
-            def f(self, children):
-                return _f(*children)
-        return f
+            return _VArgsWrapper(g(instance, owner), self.visit_wrapper)
 
-    return smart_decorator(func, create_decorator)
-
-
-def _visitor_args_func_dec(func, visit_wrapper=None, static=False):
-    def create_decorator(_f, with_self):
-        if with_self:
-            def f(self, *args, **kwargs):
-                return _f(self, *args, **kwargs)
+    def __set_name__(self, owner, name):
+        try:
+            f = self.base_func.__set_name__
+        except AttributeError:
+            return
         else:
-            def f(self, *args, **kwargs):
-                return _f(*args, **kwargs)
-        return f
-
-    if static:
-        f = wraps(func)(create_decorator(func, False))
-    else:
-        f = smart_decorator(func, create_decorator)
-    f.vargs_applied = True
-    f.visit_wrapper = visit_wrapper
-    return f
+            f(owner, name)
 
 
 def _vargs_inline(f, _data, children, _meta):
@@ -454,7 +454,7 @@ def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
 
-def v_args(inline: bool=False, meta: bool=False, tree: bool=False, wrapper: Optional[Callable]=None) -> Callable[[_DECORATED], _DECORATED]:
+def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper: Optional[Callable] = None) -> Callable[[_DECORATED], _DECORATED]:
     """A convenience decorator factory for modifying the behavior of user-supplied visitor methods.
 
     By default, callback methods of transformers/visitors accept one argument - a list of the node's children.
@@ -505,7 +505,7 @@ def v_args(inline: bool=False, meta: bool=False, tree: bool=False, wrapper: Opti
         func = wrapper
 
     def _visitor_args_dec(obj):
-        return _apply_decorator(obj, _visitor_args_func_dec, visit_wrapper=func)
+        return _apply_v_args(obj, func)
     return _visitor_args_dec
 
 

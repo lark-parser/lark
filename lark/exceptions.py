@@ -1,5 +1,6 @@
 from .utils import logger, NO_VALUE
-from typing import Dict, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, TYPE_CHECKING
+from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, \
+    TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import Token
@@ -73,7 +74,7 @@ class UnexpectedInput(LarkError):
             return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
     def match_examples(self, parse_fn: 'Callable[[str], Tree]', 
-                             examples: Union[Dict[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
+                             examples: Union[Mapping[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
                              token_type_match_fallback: bool=False,
                              use_accepts: bool=True
                          ) -> Optional[T]:

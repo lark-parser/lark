@@ -811,7 +811,7 @@ class FromPackageLoader:
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str, used_files: Dict[str, tuple[str, str]]=None) -> Tuple[PackageResource, str]:
+    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str, used_files: Dict[str, Tuple[str, str]]=None) -> Tuple[PackageResource, str]:
         if base_path is None:
             to_try = self.search_paths
         else:

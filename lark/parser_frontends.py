@@ -151,7 +151,8 @@ def create_contextual_lexer(lexer_conf, parser, postlex):
 
 def create_lalr_parser(lexer_conf, parser_conf, options=None):
     debug = options.debug if options else False
-    return LALR_Parser(parser_conf, debug=debug)
+    accurate_exceptions = options.accurate_exceptions if options else False
+    return LALR_Parser(parser_conf, debug=debug, accurate_exceptions=accurate_exceptions)
 
 
 create_earley_parser = NotImplemented

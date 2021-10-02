@@ -2309,7 +2309,7 @@ def _make_parser_test(LEXER, PARSER):
             base: "a" ("b" base)?
             """
 
-            l = _Lark(grammar)
+            l = _Lark(grammar, accurate_exceptions=True)
             # The following string should be accepted
             l.parse("aabac")
 

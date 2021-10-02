@@ -14,14 +14,16 @@ from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedTok
 ###{standalone
 
 class LALR_Parser(Serialize):
-    def __init__(self, parser_conf, debug=False):
+    def __init__(self, parser_conf, debug=False, accurate_exceptions=False):
         analysis = LALR_Analyzer(parser_conf, debug=debug)
         analysis.compute_lalr()
         callbacks = parser_conf.callbacks
 
         self._parse_table = analysis.parse_table
         self.parser_conf = parser_conf
-        self.parser = _Parser(analysis.parse_table, callbacks, debug)
+        self.parser = _Parser(
+            parse_table=analysis.parse_table, callbacks=callbacks, debug=debug,
+            accurate_exceptions=accurate_exceptions)
 
     @classmethod
     def deserialize(cls, data, memo, callbacks, debug=False):
@@ -70,9 +72,11 @@ class LALR_Parser(Serialize):
 
 
 class ParseConf:
-    __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
+    __slots__ = (
+        'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states',
+        'accurate_exceptions')
 
-    def __init__(self, parse_table, callbacks, start):
+    def __init__(self, parse_table, callbacks, start, accurate_exceptions):
         self.parse_table = parse_table
 
         self.start_state = self.parse_table.start_states[start]
@@ -81,6 +85,8 @@ class ParseConf:
 
         self.callbacks = callbacks
         self.start = start
+
+        self.accurate_exceptions = accurate_exceptions
 
 
 class ParserState:
@@ -119,6 +125,7 @@ class ParserState:
         states = self.parse_conf.states
         end_state = self.parse_conf.end_state
         callbacks = self.parse_conf.callbacks
+        accurate_exceptions = self.parse_conf.accurate_exceptions
 
         # original_stacks contains a copy of the stacks if they are changed.
         original_stacks = None
@@ -145,9 +152,10 @@ class ParserState:
             else:
                 # reduce+shift as many times as necessary
 
-                if original_stacks is None:
-                    # Make a copy of the stacks before modifying them.
-                    original_stacks = list(state_stack), list(value_stack)
+                if accurate_exceptions:
+                    if original_stacks is None:
+                        # Make a copy of the stacks before modifying them.
+                        original_stacks = list(state_stack), list(value_stack)
 
                 rule = arg
                 size = len(rule.expansion)
@@ -169,13 +177,14 @@ class ParserState:
                     return value_stack[-1]
 
 class _Parser:
-    def __init__(self, parse_table, callbacks, debug=False):
+    def __init__(self, parse_table, callbacks, debug=False, accurate_exceptions=False):
         self.parse_table = parse_table
         self.callbacks = callbacks
         self.debug = debug
+        self.accurate_exceptions = accurate_exceptions
 
     def parse(self, lexer, start, value_stack=None, state_stack=None, start_interactive=False):
-        parse_conf = ParseConf(self.parse_table, self.callbacks, start)
+        parse_conf = ParseConf(self.parse_table, self.callbacks, start, self.accurate_exceptions)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         if start_interactive:
             return InteractiveParser(self, parser_state, parser_state.lexer)

@@ -120,12 +120,18 @@ class ParserState:
         end_state = self.parse_conf.end_state
         callbacks = self.parse_conf.callbacks
 
+        # original_stacks contains a copy of the stacks if they are changed.
+        original_stacks = None
+
         while True:
             state = state_stack[-1]
             try:
                 action, arg = states[state][token.type]
             except KeyError:
                 expected = {s for s in states[state].keys() if s.isupper()}
+                if original_stacks is not None:
+                    # Restore the original state of the stacks
+                    self.state_stack, self.value_stack = original_stacks
                 raise UnexpectedToken(token, expected, state=self, interactive_parser=None)
 
             assert arg != end_state
@@ -138,6 +144,11 @@ class ParserState:
                 return
             else:
                 # reduce+shift as many times as necessary
+
+                if original_stacks is None:
+                    # Make a copy of the stacks before modifying them.
+                    original_stacks = list(state_stack), list(value_stack)
+
                 rule = arg
                 size = len(rule.expansion)
                 if size:

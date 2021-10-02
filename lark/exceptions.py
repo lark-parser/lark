@@ -197,7 +197,7 @@ class UnexpectedCharacters(LexError, UnexpectedInput):
         message = "No terminal matches '%s' in the current parser context, at line %d col %d" % (self.char, self.line, self.column)
         message += '\n\n' + self._context
         if self.allowed:
-            message += self._format_expected(self.allowed)
+            message += self._format_expected(sorted(self.allowed))
         if self.token_history:
             message += '\nPrevious tokens: %s\n' % ', '.join(repr(t) for t in self.token_history)
         return message
@@ -247,8 +247,9 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         return self._accepts
 
     def __str__(self):
+        expected_str = self._format_expected(sorted(self.accepts or self.expected))
         message = ("Unexpected token %r at line %s, column %s.\n%s"
-                   % (self.token, self.line, self.column, self._format_expected(self.accepts or self.expected)))
+                   % (self.token, self.line, self.column, expected_str))
         if self.token_history:
             message += "Previous tokens: %r\n" % self.token_history
 

@@ -2302,6 +2302,23 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("a").children, ['a', None, None])
             self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
 
+        @unittest.skipIf(PARSER=='cyk', "Empty rules")
+        def test_expected_tokens(self):
+            grammar = """
+            start: base base "c"
+            base: "a" ("b" base)?
+            """
+
+            l = _Lark(grammar)
+            # The following string should be accepted
+            l.parse("aabac")
+
+            # The following string has an unexpected token
+            with self.assertRaises((UnexpectedToken, UnexpectedCharacters)) as e:
+                l.parse("aaa")
+            # The error message should include B as a possible next token
+            expect_message = "Expected one of: \n\t* B\n\t* C\n"
+            assert str(e.exception).endswith(expect_message)
 
         def test_escaped_string(self):
             "Tests common.ESCAPED_STRING"

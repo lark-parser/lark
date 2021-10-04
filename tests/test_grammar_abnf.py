@@ -214,5 +214,35 @@ class TestABNFGrammar(TestCase):
                 else:
                     assert False, "example did not raise an error"
 
+    def test_import_from_custom_sources(self):
+        custom_loader = FromPackageLoader('tests', ('grammars', ))
+        g1 = ('start = startab \n'
+              '%import ab\n')
+        p = Lark(g1, syntax='abnf', start='start', import_paths=[custom_loader])
+        self.assertEqual(p.parse('ab'),
+                         Tree('start', [Tree('startab', [Tree('expr', [Token('A', 'a'), Token('B', 'b')])])]))
+
+    def test_import(self):
+        g1 = ('start = LALPHA UALPHA 1*DIGIT CRLF\n'
+              'UALPHA = %x41-5A \n'
+              'LALPHA = %x61-7A \n'
+              'DIGIT = %x30-39\n'
+              '%import core-rules\n')
+        # grammar error is expected since DIGIT is defined twice in both g1 and core-rules.abnf
+        self.assertRaises(GrammarError, Lark, g1, syntax='abnf')
+
+        g2 = ('start = LALPHA UALPHA 1*DIGIT CRLF\n'
+             'UALPHA = %x41-5A \n'
+             'LALPHA = %x61-7A \n'
+             'DIGIT = %x30-39\n'
+             '%import core-rules ( CRLF )\n')
+        # g2 is okay since only rule 'CRLF' is imported but 'DIGITS' is not
+        p = Lark(g2, syntax='abnf')
+        self.assertEqual(p.parse('aA1\r\n'),
+                         Tree('start', [Token('LALPHA', 'a'), Token('UALPHA', 'A'),
+                                        Token('DIGIT', '1'),
+                                        Tree('CRLF', [Token('CR', '\r'), Token('LF', '\n')])]))
+
+
 if __name__ == '__main__':
     main()

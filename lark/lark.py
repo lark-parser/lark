@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
+from .load_grammar_abnf import load_abnf_grammar, ABNFGrammar
 from .tree import Tree
 from .common import LexerConf, ParserConf
 
@@ -98,6 +99,11 @@ class LarkOptions(Serialize):
             Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
     tree_class
             Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
+    syntax
+            Syntax for grammar specification.
+
+            - "lark" (default): Lark's EBNF based syntax
+            - "abnf" : ABNF syntax, described in RFC5234. Various extentions in Lark's EBNF syntax are not supported.
 
     **=== Algorithm Options ===**
 
@@ -169,6 +175,7 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
+        'syntax': 'lark',
     }
 
     def __init__(self, options_dict):
@@ -326,11 +333,17 @@ class Lark(Serialize):
                             # In practice the only relevant thing that might have been overriden should be `options`
                             self.options = old_options
 
+            assert_config(self.options.syntax, ('lark', 'abnf'))
 
             # Parse the grammar file and compose the grammars
-            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            if self.options.syntax == 'lark':
+                self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            elif self.options.syntax == 'abnf':
+                self.grammar, used_files = load_abnf_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            else:
+                assert False, self.options.syntax
         else:
-            assert isinstance(grammar, Grammar)
+            assert isinstance(grammar, (Grammar, ABNFGrammar))
             self.grammar = grammar
 
 

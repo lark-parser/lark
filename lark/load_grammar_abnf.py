@@ -1,8 +1,11 @@
 """Parses grammar written in ABNF (RFC5234 and 7405) and creates Grammar objects. """
+import hashlib
+import os, sys
 
 from .load_grammar import PrepareGrammar, PrepareAnonTerminals
 from .load_grammar import EBNF_to_BNF, SimplifyRule_Visitor
 from .load_grammar import _get_parser, symbols_from_strcase, nr_deepcopy_tree
+from .load_grammar import PackageResource, stdlib_loader
 
 from .utils import logger
 from .lexer import Token, TerminalDef, Pattern, PatternRE, PatternStr
@@ -12,12 +15,14 @@ from .parser_frontends import ParsingFrontend
 from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, TOKEN_DEFAULT_PRIORITY
 from .tree import Tree, SlottedTree as ST
-from .utils import classify, classify_bool
+from .utils import classify, classify_bool, bfs
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken
 
 from .visitors import v_args, Transformer_InPlace, Transformer_NonRecursive, Visitor, Transformer
 inline_args = v_args(inline=True)
 
+_ALL_RULES = object()
+ABNF_EXT = '.abnf'
 
 # Terminals (ie. keys in TERMINALS ) shall consist of uppercase letters and underscores.
 TERMINALS = {
@@ -51,6 +56,11 @@ TERMINALS = {
     'C_WSP':       r'[ \t]+|((;[^\n]*)*\r?\n)[ \t]+',
     '_C_NL':       r'((;[^\n]*)*\r?\n)(?![ \t])',
 
+    # terminals for nonstandard extensions
+    '_IMPORT': r'%import',
+    '_DOT':  r'\.',
+    '_COMMA':  r',',
+
     # define terminal for unusable charaters to see nice error messages for common pitfalls
     '_UNUSABLE_CHARS': r'[_@!#$&\+:]'
 }
@@ -63,7 +73,7 @@ RULES = {
 
     # rulelist       =  1*( rule / (*c-wsp c-nl) )
     '_rulelist':     ['_item', '_rulelist _item'],
-    '_item':         ['rule', '_C_NL' ],
+    '_item':         ['rule', 'import', '_C_NL' ], # 'import' is nonstandard extension
 
     # There are some assumptions in rule for 'rule'
     #
@@ -123,6 +133,18 @@ RULES = {
     'bin_val':       [ 'BIN_VAL' ],
 
     'prose_val':     [ 'PROSE_VAL' ],
+
+    # nonstandard extensions to ABNF grammar (%import directive)
+    'import': ['_IMPORT _import_path _C_NL',
+               '_IMPORT _import_path _LPAR name_list _RPAR _C_NL',
+    ],
+    '_import_path':    ['import_from_lib', 'import_relpath'],
+    'import_from_lib': ['_import_args'],
+    'import_relpath':  ['_DOT _import_args'],
+    '_import_args':    ['RULENAME', '_import_args _DOT RULENAME'],
+
+    'name_list': ['_name_list'],
+    '_name_list': ['RULENAME', '_name_list _COMMA RULENAME'],
 }
 
 
@@ -529,6 +551,17 @@ class ABNFGrammarBuilder:
 
         assert False, tree
 
+    def _remove_unused(self, used):
+        def rule_dependencies(symbol):
+            try:
+                tree = self._definitions[symbol]
+            except KeyError:
+                return []
+            return _find_used_symbols(tree)
+
+        _used = set(bfs(used, rule_dependencies))
+        self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
+
     def _define(self, name, oper, exp):
         if name in self._definitions:
             if oper == '=/':
@@ -559,12 +592,97 @@ class ABNFGrammarBuilder:
         return rulename, oper, rule_elements
 
 
+    def _unpack_import(self, stmt, grammar_name):
+        if len(stmt.children) > 1:
+            path_node, name_list = stmt.children
+            rules_to_import = [n.value for n in name_list.children]
+        else:
+            path_node, = stmt.children
+            rules_to_import = _ALL_RULES
+
+        # '%import topdir.subdir.file' --> dotted_path=['topdir','subdir','file']
+        dotted_path = tuple(path_node.children)
+
+        if path_node.data == 'import_from_lib':  # Import from lark/grammars/
+            base_path = None
+        else:  # Relative import
+            if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
+                try:
+                    base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                except AttributeError:
+                    base_file = None
+            else:
+                base_file = grammar_name  # Import relative to grammar file path if external grammar file
+            if base_file:
+                if isinstance(base_file, PackageResource):
+                    base_path = PackageResource(base_file.pkg_name, os.path.split(base_file.path)[0])
+                else:
+                    base_path = os.path.split(base_file)[0]
+            else:
+                base_path = os.path.abspath(os.path.curdir)
+
+        return dotted_path, base_path, rules_to_import
+
+    def do_import(self, dotted_path, base_path, rules_to_import):
+
+        assert dotted_path
+        grammar_path = os.path.join(*dotted_path) + ABNF_EXT
+
+        to_try = self.import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
+        for source in to_try:
+            try:
+                if callable(source):
+                    joined_path, text = source(base_path, grammar_path)
+                else:
+                    joined_path = os.path.join(source, grammar_path)
+                    with open(joined_path, encoding='utf8') as f:
+                        text = f.read()
+            except IOError:
+                continue
+            else:
+                h = hashlib.md5(text.encode('utf8')).hexdigest()
+                if self.used_files.get(joined_path, h) != h:
+                    raise RuntimeError("Grammar file was changed during importing")
+                self.used_files[joined_path] = h
+
+                gb = ABNFGrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
+                gb.load_grammar(text, joined_path)
+                if rules_to_import != _ALL_RULES:
+                    gb._remove_unused(rules_to_import)
+
+                for name in gb._definitions:
+                    if name in self._definitions:
+                        raise GrammarError("Cannot import '%s' from '%s': Symbol already defined." % (name, grammar_path))
+
+                self._definitions.update(**gb._definitions)
+                break
+        else:
+            # Search failed. Make Python throw a nice error.
+            open(grammar_path, encoding='utf8')
+            assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
+
     def load_grammar(self, grammar_text, grammar_name="<?>"):
         tree = _parse_abnf_grammar(grammar_text, grammar_name)
+
+        imports = {}
+        for stmt in tree.children:
+            if stmt.data == 'import':
+                dotted_path, base_path, rules_to_import = self._unpack_import(stmt, grammar_name)
+                try:
+                    import_base_path, import_rules = imports[dotted_path]
+                    assert base_path == import_base_path, 'Inconsistent base_path for %s.' % '.'.join(dotted_path)
+                    import_rules.update(rules_to_import)
+                except KeyError:
+                    imports[dotted_path] = base_path, rules_to_import
+
+        for dotted_path, (base_path, rules_to_import) in imports.items():
+            self.do_import(dotted_path, base_path, rules_to_import)
 
         for stmt in tree.children:
             if stmt.data == 'rule':
                 self._define(*self._unpack_definition(stmt))
+            elif stmt.data == 'import':
+                pass
             else:
                 assert False, stmt
 

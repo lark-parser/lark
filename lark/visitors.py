@@ -277,9 +277,15 @@ class Transformer_NonRecursive(Transformer):
                     del stack[-size:]
                 else:
                     args = []
-                stack.append(self._call_userfunc(x, args))
+                try:
+                    stack.append(self._call_userfunc(x, args))
+                except Discard:
+                    pass
             elif self.__visit_tokens__ and isinstance(x, Token):
-                stack.append(self._call_userfunc_token(x))
+                try:
+                    stack.append(self._call_userfunc_token(x))
+                except Discard:
+                    pass
             else:
                 stack.append(x)
 

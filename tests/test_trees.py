@@ -376,7 +376,7 @@ class TestTrees(TestCase):
 
     def test_transformer_variants(self):
         tree = Tree('start', [
-            Tree('add', [Token('N', '1'), Token('N', '2'), Token('token_ignore', '4')]),
+            Tree('add', [Token('N', '1'), Token('N', '2'), Token('IGNORE_TOKEN', '4')]),
             Tree('add', [Token('N', '3'), Token('N', '4')]),
             Tree('ignore_tree', [Token('DO', 'NOT PANIC')]),
             ])
@@ -391,7 +391,7 @@ class TestTrees(TestCase):
                 def ignore_tree(self, children):
                     raise Discard
 
-                def token_ignore(self, token):
+                def IGNORE_TOKEN(self, token):
                     raise Discard
 
             copied = copy.deepcopy(tree)

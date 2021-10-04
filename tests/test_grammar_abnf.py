@@ -195,6 +195,15 @@ class TestABNFGrammar(TestCase):
             self.assertEqual(l.parse(cat_face_in_unicode),
                              Tree('start', [Token('thecat', cat_face_in_unicode)]))
 
+    def test_terminal_rulename_with_hyphen(self):
+        # test to make sure that rule names may contain hyphen.
+        g = ('start = L-ALPHA U-ALPHA 1*DIGIT \n'
+             'U-ALPHA = %x41-5A \n'
+             'L-ALPHA = %x61-7A \n'
+             'DIGIT  = %d48-57 \n')
+        l = Lark(g, syntax='abnf')
+        self.assertEqual(l.parse(u'aA1'), Tree('start', [Token('L-ALPHA', 'a'), Token('U-ALPHA', 'A'), Token('DIGIT', '1')]))
+
     def test_errors(self):
         for msg, examples in ABNF_GRAMMAR_ERRORS:
             for example in examples:

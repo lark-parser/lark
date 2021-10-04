@@ -287,6 +287,12 @@ class Scanner:
 
         self.allowed_types = {t.name for t in self.terminals}
 
+        self.pattern_name_map = {n:'__%d' % i
+                                 for i, n in enumerate({t.name for t in self.terminals
+                                                        if not t.name.isidentifier()})}
+
+        self.pattern_name_map_reverse = {altname:n for n, altname in self.pattern_name_map.items()}
+
         self._mres = self._build_mres(terminals, len(terminals))
 
     def _build_mres(self, terminals, max_size):
@@ -296,7 +302,12 @@ class Scanner:
         postfix = '$' if self.match_whole else ''
         mres = []
         while terminals:
-            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+            # Replace terminal name with '__%d' if it is not a valid python identifier.
+            # otherwise pattern will fail to compile.
+            pattern = u'|'.join(u'(?P<%s>%s)' % (self.pattern_name_map.get(t.name, t.name),
+                                                 t.pattern.to_regexp() + postfix)
+                                for t in terminals[:max_size])
+
             if self.use_bytes:
                 pattern = pattern.encode('latin-1')
             try:
@@ -312,7 +323,8 @@ class Scanner:
         for mre, type_from_index in self._mres:
             m = mre.match(text, pos)
             if m:
-                return m.group(0), type_from_index[m.lastindex]
+                type_ = type_from_index[m.lastindex]
+                return m.group(0), self.pattern_name_map_reverse.get(type_, type_)
 
 
 def _regexp_has_newline(r: str):

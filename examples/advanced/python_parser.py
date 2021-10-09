@@ -82,15 +82,6 @@ def test_earley_equals_lalr():
 
 
 if __name__ == '__main__':
-    # test_python_lib()
+    test_python_lib()
     # test_earley_equals_lalr()
     # python_parser3.parse(_read(sys.argv[1]) + '\n')
-    print(python_parser3.parse("""
-match = 5
-case = 6
-match (match, case):
-    case (match, case):
-        print(match, case)
-
-""").pretty())
-

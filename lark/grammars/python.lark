@@ -105,7 +105,7 @@ match_stmt: "match" test ":" _NEWLINE _INDENT case+ _DEDENT
 
 case: "case" pattern ["if" test] ":" suite
 
-?pattern: sequence_item_pattern "," _sequence_pattern -> _sequence_pattern
+?pattern: sequence_item_pattern "," _sequence_pattern -> sequence_pattern
         | as_pattern
 ?as_pattern: or_pattern ("as" NAME)?
 ?or_pattern: closed_pattern ("|" closed_pattern)*

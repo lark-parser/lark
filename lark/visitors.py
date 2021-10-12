@@ -515,6 +515,29 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
     return _visitor_args_dec
 
 
+class abnf_alias:
+    """
+    A decorator to make aliases for public methods such that underscores in their names
+    changed to hyphens.
+     (e.g  an alias method "self.foo-bar(..)" is created for "self.foo_bar(..)". )
+
+    This is required to support ABNF grammar since hyphens are allowed in ABNF rules but not in
+    python method names.
+    """
+    def __init__( self, cls ):
+        self._cls = cls
+
+        for name, func in getmembers(cls):
+            if name.startswith('_'):
+                continue
+            if callable(getattr(cls, name)) and name.find('_') > 0:
+                alias = name.replace('_', '-')
+                setattr(cls, alias, func)
+
+    def __call__( self, *args, **kwargs ):
+        instance = self._cls( *args, **kwargs )
+        return instance
+
 ###}
 
 

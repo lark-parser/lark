@@ -86,7 +86,8 @@ TERMINALS = {
     '_DOT': r'\.(?!\.)',
     '_DOTDOT': r'\.\.',
     'TILDE': '~',
-    'RULE': '!?[_?]?[a-z][_a-z0-9]*',
+    'RULE_MODIFIERS': '(!|![?]?|[?]!?)(?=[_a-z])',
+    'RULE': '_?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
     'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
     'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
@@ -109,8 +110,11 @@ RULES = {
     '_list':  ['_item', '_list _item'],
     '_item':  ['rule', 'term', 'ignore', 'import', 'declare', 'override', 'extend', '_NL'],
 
-    'rule': ['RULE template_params _COLON expansions _NL',
-             'RULE template_params _DOT NUMBER _COLON expansions _NL'],
+    'rule': ['rule_modifiers RULE template_params priority _COLON expansions _NL'],
+    'rule_modifiers': ['RULE_MODIFIERS',
+                       ''],
+    'priority': ['_DOT NUMBER',
+                 ''],
     'template_params': ['_LBRACE _template_params _RBRACE',
                         ''],
     '_template_params': ['RULE',
@@ -871,23 +875,6 @@ def resolve_term_references(term_dict):
                     raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
-def options_from_rule(name, params, *x):
-    if len(x) > 1:
-        priority, expansions = x
-        priority = int(priority)
-    else:
-        expansions ,= x
-        priority = None
-    params = [t.value for t in params.children] if params is not None else []  # For the grammar parser
-
-    keep_all_tokens = name.startswith('!')
-    name = name.lstrip('!')
-    expand1 = name.startswith('?')
-    name = name.lstrip('?')
-
-    return name, params, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority,
-                                                 template_source=(name if params else None))
-
 
 def symbols_from_strcase(expansion):
     return [Terminal(x, filter_out=x.startswith('_')) if x.isupper() else NonTerminal(x) for x in expansion]
@@ -914,9 +901,11 @@ def _get_parser():
     except AttributeError:
         terminals = [TerminalDef(name, PatternRE(value)) for name, value in TERMINALS.items()]
 
-        rules = [options_from_rule(name, None, x) for name, x in RULES.items()]
+        rules = [(name.lstrip('?'), x, RuleOptions(expand1=name.startswith('?')))
+                for name, x in RULES.items()]
         rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o)
-                 for r, _p, xs, o in rules for i, x in enumerate(xs)]
+                 for r, xs, o in rules for i, x in enumerate(xs)]
+
         callback = ParseTreeBuilder(rules, ST).create_callback()
         import re
         lexer_conf = LexerConf(terminals, re, ['WS', 'COMMENT', 'BACKSLASH'])
@@ -1038,6 +1027,26 @@ def _mangle_exp(exp, mangle):
                 t.children[i] = Token(c.type, mangle(c.value))
     return exp
 
+def _make_rule_tuple(modifiers_tree, name, params, priority_tree, expansions):
+    if modifiers_tree.children:
+        m ,= modifiers_tree.children
+        expand1 = '?' in m
+        keep_all_tokens = '!' in m
+    else:
+        keep_all_tokens = False
+        expand1 = False
+
+    if priority_tree.children:
+        p ,= priority_tree.children[0]
+        priority = int(p)
+    else:
+        priority = None
+
+    if params is not None:
+        params = [t.value for t in params.children]  # For the grammar parser
+
+    return name, params, expansions, RuleOptions(keep_all_tokens, expand1, priority=priority,
+                                                 template_source=(name if params else None))
 
 
 class GrammarBuilder:
@@ -1172,7 +1181,7 @@ class GrammarBuilder:
 
     def _unpack_definition(self, tree, mangle):
         if tree.data == 'rule':
-            name, params, exp, opts = options_from_rule(*tree.children)
+            name, params, exp, opts = _make_rule_tuple(*tree.children)
         else:
             name = tree.children[0].value
             params = ()     # TODO terminal templates

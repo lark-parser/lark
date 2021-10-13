@@ -149,6 +149,7 @@ RULES = {
     'nonterminal': ['RULE'],
 
     '?name': ['RULE', 'TERMINAL'],
+    'symbol': ['terminal', 'nonterminal'],
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
@@ -177,7 +178,7 @@ RULES = {
     'name_list': ['_name_list'],
     '_name_list': ['name', '_name_list _COMMA name'],
 
-    '_declare_args': ['name', '_declare_args name'],
+    '_declare_args': ['symbol', '_declare_args symbol'],
     'literal': ['REGEXP', 'STRING'],
 }
 
@@ -876,8 +877,11 @@ def resolve_term_references(term_dict):
 
 
 
+def symbol_from_strcase(s):
+    return Terminal(s, filter_out=s.startswith('_')) if s.isupper() else NonTerminal(s)
+
 def symbols_from_strcase(expansion):
-    return [Terminal(x, filter_out=x.startswith('_')) if x.isupper() else NonTerminal(x) for x in expansion]
+    return list(map(symbol_from_strcase, expansion))
 
 
 @inline_args
@@ -887,6 +891,10 @@ class PrepareGrammar(Transformer_InPlace):
 
     def nonterminal(self, name):
         return name
+
+    def symbol(self, name):
+        # TODO use name.type instead
+        return symbol_from_strcase(name)
 
 
 def _find_used_symbols(tree):
@@ -1049,6 +1057,13 @@ def _make_rule_tuple(modifiers_tree, name, params, priority_tree, expansions):
                                                  template_source=(name if params else None))
 
 
+class Definition:
+    def __init__(self, is_term, tree, params=(), options=None):
+        self.is_term = is_term
+        self.tree = tree
+        self.params = tuple(params)
+        self.options = options
+
 class GrammarBuilder:
 
     global_keep_all_tokens: bool
@@ -1077,8 +1092,8 @@ class GrammarBuilder:
             args['Type' + postfix] = lowercase_type.title()
         raise GrammarError(msg.format(**args))
 
-    def _check_options(self, name, options):
-        if self._is_term(name):
+    def _check_options(self, is_term, options):
+        if is_term:
             if options is None:
                 options = 1
             elif not isinstance(options, int):
@@ -1093,7 +1108,7 @@ class GrammarBuilder:
         return options
 
 
-    def _define(self, name, exp, params=(), options=None, override=False):
+    def _define(self, name, is_term, exp, params=(), options=None, override=False):
         if name in self._definitions:
             if not override:
                 self._grammar_error("{Type} '{name}' defined more than once", name)
@@ -1103,15 +1118,24 @@ class GrammarBuilder:
         if name.startswith('__'):
             self._grammar_error('Names starting with double-underscore are reserved (Error at {name})', name)
 
-        self._definitions[name] = (params, exp, self._check_options(name, options))
+        self._definitions[name] = Definition(is_term, exp, params, self._check_options(is_term, options))
 
-    def _extend(self, name, exp, params=(), options=None):
+    def _extend(self, name, is_term, exp, params=(), options=None):
         if name not in self._definitions:
             self._grammar_error("Can't extend {type} {name} as it wasn't defined before", name)
-        if tuple(params) != tuple(self._definitions[name][0]):
+
+        d = self._definitions[name]
+
+        if is_term != d.is_term:
+            self._grammar_error("Cannot extend {type} {name} - one is a terminal, while the other is not.", name)
+        if tuple(params) != d.params:
             self._grammar_error("Cannot extend {type} with different parameters: {name}", name)
+
+        if d.tree is None:
+            self._grammar_error("Can't extend {type} {name} - it is abstract.", name)
+
         # TODO: think about what to do with 'options'
-        base = self._definitions[name][1]
+        base = d.tree
 
         assert isinstance(base, Tree) and base.data == 'expansions'
         base.children.insert(0, exp)
@@ -1134,11 +1158,7 @@ class GrammarBuilder:
 
             name = '__IGNORE_%d'% len(self._ignore_names)
             self._ignore_names.append(name)
-            self._definitions[name] = ((), t, TOKEN_DEFAULT_PRIORITY)
-
-    def _declare(self, *names):
-        for name in names:
-            self._define(name, None)
+            self._definitions[name] = Definition(True, t, options=TOKEN_DEFAULT_PRIORITY)
 
     def _unpack_import(self, stmt, grammar_name):
         if len(stmt.children) > 1:
@@ -1180,20 +1200,23 @@ class GrammarBuilder:
         return dotted_path, base_path, aliases
 
     def _unpack_definition(self, tree, mangle):
+
         if tree.data == 'rule':
             name, params, exp, opts = _make_rule_tuple(*tree.children)
+            is_term = False
         else:
             name = tree.children[0].value
             params = ()     # TODO terminal templates
             opts = int(tree.children[1]) if len(tree.children) == 3 else TOKEN_DEFAULT_PRIORITY # priority
             exp = tree.children[-1]
+            is_term = True
 
         if mangle is not None:
             params = tuple(mangle(p) for p in params)
             name = mangle(name)
 
         exp = _mangle_exp(exp, mangle)
-        return name, exp, params, opts
+        return name, is_term, exp, params, opts
 
 
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
@@ -1227,33 +1250,35 @@ class GrammarBuilder:
                 if mangle is None:
                     self._ignore(*stmt.children)
             elif stmt.data == 'declare':
-                names = [t.value for t in stmt.children]
-                if mangle is None:
-                    self._declare(*names)
-                else:
-                    self._declare(*map(mangle, names))
+                for symbol in stmt.children:
+                    assert isinstance(symbol, Symbol), symbol
+                    is_term = isinstance(symbol, Terminal)
+                    name = symbol.name
+                    if mangle is not None:
+                        name = mangle(name)
+                    self._define(name, is_term, None)
             elif stmt.data == 'import':
                 pass
             else:
                 assert False, stmt
 
 
-        term_defs = { name: exp
-            for name, (_params, exp, _options) in self._definitions.items()
-            if self._is_term(name)
+        term_defs = { name: d.tree
+            for name, d in self._definitions.items()
+            if d.is_term
         }
         resolve_term_references(term_defs)
 
 
     def _remove_unused(self, used):
         def rule_dependencies(symbol):
-            if self._is_term(symbol):
-                return []
             try:
-                params, tree,_ = self._definitions[symbol]
+                d = self._definitions[symbol]
             except KeyError:
                 return []
-            return _find_used_symbols(tree) - set(params)
+            if d.is_term:
+                return []
+            return _find_used_symbols(d.tree) - set(d.params)
 
         _used = set(bfs(used, rule_dependencies))
         self._definitions = {k: v for k, v in self._definitions.items() if k in _used}
@@ -1296,14 +1321,17 @@ class GrammarBuilder:
 
 
     def validate(self) -> None:
-        for name, (params, exp, _options) in self._definitions.items():
+        for name, d in self._definitions.items():
+            params = d.params
+            exp = d.tree
+
             for i, p in enumerate(params):
                 if p in self._definitions:
                     raise GrammarError("Template Parameter conflicts with rule %s (in template %s)" % (p, name))
                 if p in params[:i]:
                     raise GrammarError("Duplicate Template Parameter %s (in template %s)" % (p, name))
 
-            if exp is None: # Remaining checks don't apply to abstract rules/terminals
+            if exp is None: # Remaining checks don't apply to abstract rules/terminals (created with %declare)
                 continue
 
             for temp in exp.find_data('template_usage'):
@@ -1312,8 +1340,8 @@ class GrammarBuilder:
                 if sym not in params:
                     if sym not in self._definitions:
                         self._grammar_error("Template '%s' used but not defined (in {type} {name})" % sym, name)
-                    if len(args) != len(self._definitions[sym][0]):
-                        expected, actual = len(self._definitions[sym][0]), len(args)
+                    if len(args) != len(self._definitions[sym].params):
+                        expected, actual = len(self._definitions[sym].params), len(args)
                         self._grammar_error("Wrong number of template arguments used for {name} "
                                             "(expected %s, got %s) (in {type2} {name2})" % (expected, actual), sym, name)
 
@@ -1328,8 +1356,9 @@ class GrammarBuilder:
         self.validate()
         rule_defs = []
         term_defs = []
-        for name, (params, exp, options) in self._definitions.items():
-            if self._is_term(name):
+        for name, d in self._definitions.items():
+            (params, exp, options) = d.params, d.tree, d.options
+            if d.is_term:
                 assert len(params) == 0
                 term_defs.append((name, (exp, options)))
             else:

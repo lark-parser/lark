@@ -149,7 +149,7 @@ RULES = {
     'nonterminal': ['RULE'],
 
     '?name': ['RULE', 'TERMINAL'],
-    'symbol': ['terminal', 'nonterminal'],
+    '?symbol': ['terminal', 'nonterminal'],
 
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
@@ -479,8 +479,8 @@ class _ReplaceSymbols(Transformer_InPlace):
         self.names = {}
 
     def value(self, c):
-        if len(c) == 1 and isinstance(c[0], Token) and c[0].value in self.names:
-            return self.names[c[0].value]
+        if len(c) == 1 and isinstance(c[0], Symbol) and c[0].name in self.names:
+            return self.names[c[0].name]
         return self.__default__('value', c, None)
 
     def template_usage(self, c):
@@ -543,6 +543,7 @@ def eval_escaping(s):
 
 
 def _literal_to_pattern(literal):
+    assert isinstance(literal, Token)
     v = literal.value
     flag_start = _rfind(v, '/"')+1
     assert flag_start > 0
@@ -639,16 +640,11 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         return v[0]
 
 
-class PrepareSymbols(Transformer_InPlace):
+class ValidateSymbols(Transformer_InPlace):
     def value(self, v):
         v ,= v
-        if isinstance(v, Tree):
-            return v
-        elif v.type == 'RULE':
-            return NonTerminal(str(v.value))
-        elif v.type == 'TERMINAL':
-            return Terminal(str(v.value), filter_out=v.startswith('_'))
-        assert False
+        assert isinstance(v, (Tree, Symbol))
+        return v
 
 
 def nr_deepcopy_tree(t):
@@ -696,7 +692,7 @@ class Grammar:
 
         # 1. Pre-process terminals
         anon_tokens_transf = PrepareAnonTerminals(terminals)
-        transformer = PrepareLiterals() * PrepareSymbols() * anon_tokens_transf  # Adds to terminals
+        transformer = PrepareLiterals() * ValidateSymbols() * anon_tokens_transf  # Adds to terminals
 
         # 2. Inline Templates
 
@@ -854,17 +850,18 @@ def resolve_term_references(term_dict):
                 continue
             for exp in token_tree.find_data('value'):
                 item ,= exp.children
-                if isinstance(item, Token):
-                    if item.type == 'RULE':
-                        raise GrammarError("Rules aren't allowed inside terminals (%s in %s)" % (item, name))
-                    if item.type == 'TERMINAL':
-                        try:
-                            term_value = term_dict[item]
-                        except KeyError:
-                            raise GrammarError("Terminal used but not defined: %s" % item)
-                        assert term_value is not None
-                        exp.children[0] = term_value
-                        changed = True
+                if isinstance(item, NonTerminal):
+                    raise GrammarError("Rules aren't allowed inside terminals (%s in %s)" % (item, name))
+                elif isinstance(item, Terminal):
+                    try:
+                        term_value = term_dict[item.name]
+                    except KeyError:
+                        raise GrammarError("Terminal used but not defined: %s" % item.name)
+                    assert term_value is not None
+                    exp.children[0] = term_value
+                    changed = True
+                else:
+                    assert isinstance(item, Tree)
         if not changed:
             break
 
@@ -878,29 +875,22 @@ def resolve_term_references(term_dict):
 
 
 def symbol_from_strcase(s):
+    assert isinstance(s, str)
     return Terminal(s, filter_out=s.startswith('_')) if s.isupper() else NonTerminal(s)
-
-def symbols_from_strcase(expansion):
-    return list(map(symbol_from_strcase, expansion))
-
 
 @inline_args
 class PrepareGrammar(Transformer_InPlace):
     def terminal(self, name):
-        return name
+        return Terminal(str(name), filter_out=name.startswith('_'))
 
     def nonterminal(self, name):
-        return name
-
-    def symbol(self, name):
-        # TODO use name.type instead
-        return symbol_from_strcase(name)
+        return NonTerminal(name.value)
 
 
 def _find_used_symbols(tree):
     assert tree.data == 'expansions'
-    return {t for x in tree.find_data('expansion')
-              for t in x.scan_values(lambda t: t.type in ('RULE', 'TERMINAL'))}
+    return {t.name for x in tree.find_data('expansion')
+            for t in x.scan_values(lambda t: isinstance(t, Symbol))}
 
 
 def _get_parser():
@@ -911,7 +901,7 @@ def _get_parser():
 
         rules = [(name.lstrip('?'), x, RuleOptions(expand1=name.startswith('?')))
                 for name, x in RULES.items()]
-        rules = [Rule(NonTerminal(r), symbols_from_strcase(x.split()), i, None, o)
+        rules = [Rule(NonTerminal(r), [symbol_from_strcase(s) for s in x.split()], i, None, o)
                  for r, xs, o in rules for i, x in enumerate(xs)]
 
         callback = ParseTreeBuilder(rules, ST).create_callback()
@@ -1025,14 +1015,15 @@ def _get_mangle(prefix, aliases, base_mangle=None):
         return s
     return mangle
 
-def _mangle_exp(exp, mangle):
+def _mangle_definition_tree(exp, mangle):
     if mangle is None:
         return exp
-    exp = deepcopy(exp) # TODO: is this needed
+    exp = deepcopy(exp) # TODO: is this needed?
     for t in exp.iter_subtrees():
         for i, c in enumerate(t.children):
-            if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
-                t.children[i] = Token(c.type, mangle(c.value))
+            if isinstance(c, Symbol):
+                t.children[i] = c.renamed(mangle)
+
     return exp
 
 def _make_rule_tuple(modifiers_tree, name, params, priority_tree, expansions):
@@ -1210,7 +1201,7 @@ class GrammarBuilder:
             params = tuple(mangle(p) for p in params)
             name = mangle(name)
 
-        exp = _mangle_exp(exp, mangle)
+        exp = _mangle_definition_tree(exp, mangle)
         return name, is_term, exp, params, opts
 
 

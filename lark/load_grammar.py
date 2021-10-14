@@ -500,7 +500,7 @@ class ApplyTemplates(Transformer_InPlace):
             self.created_templates.add(result_name)
             (_n, params, tree, options) ,= (t for t in self.rule_defs if t[0] == name)
             assert len(params) == len(args), args
-            result_tree = deepcopy(tree)
+            result_tree = nr_deepcopy_tree(tree)
             self.replacer.names = dict(zip(params, args))
             self.replacer.transform(result_tree)
             self.rule_defs.append((result_name, [], result_tree, deepcopy(options)))
@@ -811,7 +811,7 @@ class FromPackageLoader:
     def __repr__(self):
         return "%s(%r, %r)" % (type(self).__name__, self.pkg_name, self.search_paths)
 
-    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str) -> Tuple[PackageResource, str]:
+    def __call__(self, base_path: Union[None, str, PackageResource], grammar_path: str, used_files: Dict[str, Tuple[str, str]]=None) -> Tuple[PackageResource, str]:
         if base_path is None:
             to_try = self.search_paths
         else:
@@ -824,14 +824,16 @@ class FromPackageLoader:
         err = None
         for path in to_try:
             full_path = os.path.join(path, grammar_path)
+            key = PackageResource(self.pkg_name, full_path)
+            if used_files is not None and key in used_files:
+                return key, used_files[key][1]
             try:
                 text: Optional[str] = pkgutil.get_data(self.pkg_name, full_path)
             except IOError as e:
                 err = e
                 continue
             else:
-                return PackageResource(self.pkg_name, full_path), (text.decode() if text else '')
-
+                return key, (text.decode() if text else '')
         raise IOError('Cannot find grammar in given paths') from err
 
 
@@ -858,17 +860,13 @@ def resolve_term_references(term_dict):
                         except KeyError:
                             raise GrammarError("Terminal used but not defined: %s" % item)
                         assert term_value is not None
+                        if term_value is token_tree:
+                            raise GrammarError(
+                                "Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
                         exp.children[0] = term_value
                         changed = True
         if not changed:
             break
-
-    for name, term in term_dict.items():
-        if term:    # Not just declared
-            for child in term.children:
-                ids = [id(x) for x in child.iter_subtrees()]
-                if id(term) in ids:
-                    raise GrammarError("Recursion in terminal '%s' (recursion is only allowed in rules, not terminals)" % name)
 
 
 def options_from_rule(name, params, *x):
@@ -1031,7 +1029,6 @@ def _get_mangle(prefix, aliases, base_mangle=None):
 def _mangle_exp(exp, mangle):
     if mangle is None:
         return exp
-    exp = deepcopy(exp) # TODO: is this needed
     for t in exp.iter_subtrees():
         for i, c in enumerate(t.children):
             if isinstance(c, Token) and c.type in ('RULE', 'TERMINAL'):
@@ -1039,17 +1036,19 @@ def _mangle_exp(exp, mangle):
     return exp
 
 
-
 class GrammarBuilder:
 
     global_keep_all_tokens: bool
     import_paths: List[Union[str, Callable]]
     used_files: Dict[str, str]
+    cached_grammars: Dict[str, str]
 
-    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
+    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None,
+                 used_files: Optional[Dict[str, str]]=None, cached_grammars: Optional[Dict[str, str]]=None) -> None:
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
         self.used_files = used_files or {}
+        self.cached_grammars = cached_grammars or {}
 
         self._definitions = {}
         self._ignore_names = []
@@ -1188,7 +1187,10 @@ class GrammarBuilder:
 
 
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
-        tree = _parse_grammar(grammar_text, grammar_name)
+        if grammar_text not in self.cached_grammars:
+            tree = _parse_grammar(grammar_text, grammar_name)
+            self.cached_grammars[grammar_text] = tree
+        tree = nr_deepcopy_tree(self.cached_grammars[grammar_text])
 
         imports = {}
         for stmt in tree.children:
@@ -1258,20 +1260,22 @@ class GrammarBuilder:
         for source in to_try:
             try:
                 if callable(source):
-                    joined_path, text = source(base_path, grammar_path)
+                    joined_path, text = source(base_path, grammar_path, self.used_files)
                 else:
                     joined_path = os.path.join(source, grammar_path)
-                    with open(joined_path, encoding='utf8') as f:
-                        text = f.read()
+                    if joined_path in self.used_files:
+                        text = self.used_files[joined_path][1]
+                    else:
+                        with open(joined_path, encoding='utf8') as f:
+                            text = f.read()
             except IOError:
                 continue
             else:
                 h = hashlib.md5(text.encode('utf8')).hexdigest()
-                if self.used_files.get(joined_path, h) != h:
+                if self.used_files.setdefault(joined_path, (h,text))[0] != h:
                     raise RuntimeError("Grammar file was changed during importing")
-                self.used_files[joined_path] = h
-                    
-                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
+
+                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files, self.cached_grammars)
                 gb.load_grammar(text, joined_path, mangle)
                 gb._remove_unused(map(mangle, aliases))
                 for name in gb._definitions:
@@ -1340,7 +1344,7 @@ def verify_used_files(file_hashes):
                 text = pkgutil.get_data(*path).decode('utf-8')
         if text is None: # We don't know how to load the path. ignore it.
             continue
-            
+
         current = hashlib.md5(text.encode()).hexdigest()
         if old != current:
             logger.info("File %r changed, rebuilding Parser" % path)
@@ -1356,4 +1360,4 @@ def list_grammar_imports(grammar, import_paths=[]):
 def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
     builder.load_grammar(grammar, source)
-    return builder.build(), builder.used_files
+    return builder.build(), {n: h for n, (h, t) in builder.used_files.items()}

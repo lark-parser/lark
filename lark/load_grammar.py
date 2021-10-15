@@ -124,7 +124,7 @@ RULES = {
                     '_expansions _OR alias',
                     '_expansions _NL_OR alias'],
 
-    '?alias':     ['expansion _TO RULE', 'expansion'],
+    '?alias':     ['expansion _TO nonterminal', 'expansion'],
     'expansion': ['_expansion'],
 
     '_expansion': ['', '_expansion expr'],
@@ -414,7 +414,7 @@ class RuleTreeToText(Transformer):
     def alias(self, x):
         (expansion, _alias), alias = x
         assert _alias is None, (alias, expansion, '-', _alias)  # Double alias not allowed
-        return expansion, alias.value
+        return expansion, alias.name
 
 
 class PrepareAnonTerminals(Transformer_InPlace):
@@ -1036,7 +1036,7 @@ def _make_rule_tuple(modifiers_tree, name, params, priority_tree, expansions):
         expand1 = False
 
     if priority_tree.children:
-        p ,= priority_tree.children[0]
+        p ,= priority_tree.children
         priority = int(p)
     else:
         priority = None

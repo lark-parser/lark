@@ -1138,8 +1138,9 @@ class GrammarBuilder:
                     item ,= t2.children
                     if item.data == 'value':
                         item ,= item.children
-                        if isinstance(item, Token) and item.type == 'TERMINAL':
-                            self._ignore_names.append(item.value)
+                        if isinstance(item, Terminal):
+                            # Keep terminal name, no need to create a new definition
+                            self._ignore_names.append(item.name)
                             return
 
             name = '__IGNORE_%d'% len(self._ignore_names)

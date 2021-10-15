@@ -182,8 +182,11 @@ class EarleyRegexpMatcher:
 
 
 def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
-        earley_matcher = EarleyRegexpMatcher(lexer_conf)
-        return xearley.Parser(parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
+    if lexer_conf.callbacks:
+        raise GrammarError("Earley's dynamic lexer doesn't support lexer_callbacks.")
+
+    earley_matcher = EarleyRegexpMatcher(lexer_conf)
+    return xearley.Parser(parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
 
 def _match_earley_basic(term, token):
     return term.name == token.type

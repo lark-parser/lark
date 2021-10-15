@@ -26,6 +26,17 @@ class TestGrammar(TestCase):
         # Issues #888
         self.assertRaises(GrammarError, Lark, "start: \"\"")
 
+    def test_ignore_name(self):
+        spaces = []
+        p = Lark("""
+            start: "a" "b"
+            WS: " "
+            %ignore WS
+        """, parser='lalr', lexer_callbacks={'WS': spaces.append})
+        assert p.parse("a b") == p.parse("a    b")
+        assert len(spaces) == 5
+
+
     def test_override_rule(self):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
         # Thus extending it beyond its original capacity

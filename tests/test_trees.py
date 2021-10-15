@@ -375,7 +375,11 @@ class TestTrees(TestCase):
         self.assertEqual(x, t2)
 
     def test_transformer_variants(self):
-        tree = Tree('start', [Tree('add', [Token('N', '1'), Token('N', '2')]), Tree('add', [Token('N', '3'), Token('N', '4')])])
+        tree = Tree('start', [
+            Tree('add', [Token('N', '1'), Token('N', '2'), Token('IGNORE_TOKEN', '4')]),
+            Tree('add', [Token('N', '3'), Token('N', '4')]),
+            Tree('ignore_tree', [Token('DO', 'NOT PANIC')]),
+            ])
         for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
             class T(base):
                 def add(self, children):
@@ -383,6 +387,12 @@ class TestTrees(TestCase):
 
                 def N(self, token):
                     return int(token)
+
+                def ignore_tree(self, children):
+                    raise Discard
+
+                def IGNORE_TOKEN(self, token):
+                    raise Discard
 
             copied = copy.deepcopy(tree)
             result = T().transform(copied)

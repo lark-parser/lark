@@ -96,7 +96,7 @@ class LexerJson(QsciLexerCustom):
 
         try:
             for token in self.lark.lex(text):
-                ws_len = token.pos_in_stream - last_pos
+                ws_len = token.start_pos - last_pos
                 if ws_len:
                     self.setStyling(ws_len, 0)    # whitespace
 
@@ -104,7 +104,7 @@ class LexerJson(QsciLexerCustom):
                 self.setStyling(
                     token_len, self.token_styles.get(token.type, 0))
 
-                last_pos = token.pos_in_stream + token_len
+                last_pos = token.start_pos + token_len
         except Exception as e:
             print(e)
 

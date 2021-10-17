@@ -173,13 +173,17 @@ Lark uses the [MIT license](LICENSE).
 
 (The standalone tool is under MPL2)
 
-## Contribute
+## Contributors
 
 Lark is currently accepting pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
+<a href="https://github.com/lark-parser/lark/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=lark-parser/lark" />
+</a>
+
 ## Sponsor
 
-If you like Lark, and want to see it grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
+If you like Lark, and want to see us grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
 
 ## Contact the author
 
@@ -188,3 +192,5 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
+
+

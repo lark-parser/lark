@@ -177,6 +177,8 @@ Lark uses the [MIT license](LICENSE).
 
 Lark is currently accepting pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
+Big thanks to everyone who contributed so far:
+
 <a href="https://github.com/lark-parser/lark/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=lark-parser/lark" />
 </a>

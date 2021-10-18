@@ -36,13 +36,14 @@ class SymbolNode(ForestNode):
 
     Hence a Symbol Node with a single child is unambiguous.
 
-    :ivar s: A Symbol, or a tuple of (rule, ptr) for an intermediate node.
-    :ivar start: The index of the start of the substring matched by this
-        symbol (inclusive).
-    :ivar end: The index of the end of the substring matched by this
-        symbol (exclusive).
-    :ivar is_intermediate: True if this node is an intermediate node.
-    :ivar priority: The priority of the node's symbol.
+    Parameters:
+        s: A Symbol, or a tuple of (rule, ptr) for an intermediate node.
+        start: The index of the start of the substring matched by this symbol (inclusive).
+        end: The index of the end of the substring matched by this symbol (exclusive).
+
+    Properties:
+        is_intermediate: True if this node is an intermediate node.
+        priority: The priority of the node's symbol.
     """
     __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate', '_hash')
     def __init__(self, s, start, end):
@@ -113,11 +114,12 @@ class PackedNode(ForestNode):
     """
     A Packed Node represents a single derivation in a symbol node.
 
-    :ivar rule: The rule associated with this node.
-    :ivar parent: The parent of this node.
-    :ivar left: The left child of this node. ``None`` if one does not exist.
-    :ivar right: The right child of this node. ``None`` if one does not exist.
-    :ivar priority: The priority of this node.
+    Parameters:
+        rule: The rule associated with this node.
+        parent: The parent of this node.
+        left: The left child of this node. ``None`` if one does not exist.
+        right: The right child of this node. ``None`` if one does not exist.
+        priority: The priority of this node.
     """
     __slots__ = ('parent', 's', 'rule', 'start', 'left', 'right', 'priority', '_hash')
     def __init__(self, parent, s, rule, start, left, right):
@@ -176,9 +178,10 @@ class TokenNode(ForestNode):
     """
     A Token Node represents a matched terminal and is always a leaf node.
 
-    :ivar token: The Token associated with this node.
-    :ivar term: The TerminalDef matched by the token.
-    :ivar priority: The priority of this node.
+    Parameters:
+        token: The Token associated with this node.
+        term: The TerminalDef matched by the token.
+        priority: The priority of this node.
     """
     __slots__ = ('token', 'term', 'priority', '_hash')
     def __init__(self, token, term, priority=None):
@@ -216,7 +219,8 @@ class ForestVisitor:
     methods. Returning a node(s) will schedule them to be visited. The visitor
     will begin to backtrack if no nodes are returned.
 
-    :ivar single_visit: If ``True``, non-Token nodes will only be visited once.
+    Parameters:
+        single_visit: If ``True``, non-Token nodes will only be visited once.
     """
 
     def __init__(self, single_visit=False):
@@ -253,11 +257,12 @@ class ForestVisitor:
     def on_cycle(self, node, path):
         """Called when a cycle is encountered.
 
-        :param node: The node that causes a cycle.
-        :param path: The list of nodes being visited: nodes that have been
-            entered but not exited. The first element is the root in a forest
-            visit, and the last element is the node visited most recently.
-            ``path`` should be treated as read-only.
+        Parameters:
+            node: The node that causes a cycle.
+            path: The list of nodes being visited: nodes that have been
+                entered but not exited. The first element is the root in a forest
+                visit, and the last element is the node visited most recently.
+                ``path`` should be treated as read-only.
         """
         pass
 
@@ -519,15 +524,13 @@ class ForestToParseTree(ForestTransformer):
     """Used by the earley parser when ambiguity equals 'resolve' or
     'explicit'. Transforms an SPPF into an (ambiguous) parse tree.
 
-    tree_class: The tree class to use for construction
-    callbacks: A dictionary of rules to functions that output a tree
-    prioritizer: A ``ForestVisitor`` that manipulates the priorities of
-        ForestNodes
-    resolve_ambiguity: If True, ambiguities will be resolved based on
-        priorities. Otherwise, `_ambig` nodes will be in the resulting
-        tree.
-    use_cache: If True, the results of packed node transformations will be
-        cached.
+    Parameters:
+        tree_class: The tree class to use for construction
+        callbacks: A dictionary of rules to functions that output a tree
+        prioritizer: A ``ForestVisitor`` that manipulates the priorities of ForestNodes
+        resolve_ambiguity: If True, ambiguities will be resolved based on
+                        priorities. Otherwise, `_ambig` nodes will be in the resulting tree.
+        use_cache: If True, the results of packed node transformations will be cached.
     """
 
     def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True, use_cache=True):
@@ -671,21 +674,18 @@ class TreeForestTransformer(ForestToParseTree):
     Non-tree transformations are made possible by override of
     ``__default__``, ``__default_token__``, and ``__default_ambig__``.
 
-    .. note::
-
+    Note:
         Tree shaping features such as inlined rules and token filtering are
-        not built into the transformation. Positions are also not
-        propagated.
+        not built into the transformation. Positions are also not propagated.
 
-    :param tree_class: The tree class to use for construction
-    :param prioritizer: A ``ForestVisitor`` that manipulates the priorities of
-        nodes in the SPPF.
-    :param resolve_ambiguity: If True, ambiguities will be resolved based on
-        priorities.
-    :param use_cache: If True, caches the results of some transformations,
-        potentially improving performance when ``resolve_ambiguity==False``.
-        Only use if you know what you are doing: i.e. All transformation
-        functions are pure and referentially transparent.
+    Parameters:
+        tree_class: The tree class to use for construction
+        prioritizer: A ``ForestVisitor`` that manipulates the priorities of nodes in the SPPF.
+        resolve_ambiguity: If True, ambiguities will be resolved based on priorities.
+        use_cache (bool): If True, caches the results of some transformations,
+                          potentially improving performance when ``resolve_ambiguity==False``.
+                          Only use if you know what you are doing: i.e. All transformation
+                          functions are pure and referentially transparent.
     """
 
     def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True, use_cache=False):

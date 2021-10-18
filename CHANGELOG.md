@@ -9,3 +9,5 @@ v1.0
 - `v_args(meta=True)` now gives meta as the first argument. i.e. `(meta, children)`
 
 - Renamed TraditionalLexer to BasicLexer, and 'standard' lexer option to 'basic'
+
+- Default priority is now 0, for both terminals and rules (used to be 1 for terminals)

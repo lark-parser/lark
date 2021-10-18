@@ -21,13 +21,13 @@ from ..exceptions import UnexpectedCharacters
 from ..lexer import Token
 from ..grammar import Terminal
 from .earley import Parser as BaseParser
-from .earley_forest import SymbolNode
+from .earley_forest import SymbolNode, TokenNode
 
 
 class Parser(BaseParser):
-    def __init__(self,  parser_conf, term_matcher, resolve_ambiguity=True, ignore = (), complete_lex = False, debug=False, tree_class=Tree):
-        BaseParser.__init__(self, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
-        self.ignore = [Terminal(t) for t in ignore]
+    def __init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity=True, complete_lex = False, debug=False, tree_class=Tree):
+        BaseParser.__init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity, debug, tree_class)
+        self.ignore = [Terminal(t) for t in lexer_conf.ignore]
         self.complete_lex = complete_lex
 
     def _parse(self, stream, columns, to_scan, start_symbol=None):
@@ -99,8 +99,9 @@ class Parser(BaseParser):
 
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
+                    token_node = TokenNode(token, terminals[token.type])
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
+                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token_node)
                 else:
                     new_item = item
 
@@ -125,6 +126,7 @@ class Parser(BaseParser):
 
         delayed_matches = defaultdict(list)
         match = self.term_matcher
+        terminals = self.lexer_conf.terminals_by_name
 
         # Cache for nodes & tokens created in a particular parse step.
         transitives = [{}]

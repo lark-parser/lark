@@ -1736,8 +1736,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        # TODO: Remove after merging priority for Dynamic Earley
-        @unittest.skipIf(LEXER != 'basic', "Only basic lexers care about token priority")
+        @unittest.skipIf(LEXER != 'basic', "basic lexer prioritization differs from dynamic lexer prioritization")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -1789,6 +1788,57 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
+        @unittest.skipIf('dynamic' not in LEXER, "dynamic lexer prioritization differs from basic lexer prioritization")
+        def test_dynamic_lexer_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: A B | AB
+            A.2: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['a', 'b'])
+            self.assertNotEqual(res.children, ['ab'])
+
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B: "b"
+            AB.3: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertNotEqual(res.children, ['a', 'b'])
+            self.assertEqual(res.children, ['ab'])
+
+
+            # this case differs from prioritization with a basic lexer
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B.-20: "b"
+            AB.-10: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+            self.assertEqual(res.children, ['ab'])
+
+
+            grammar = """
+            start: A B | AB
+            A.-99999999999999999999999: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['ab'])
 
 
 

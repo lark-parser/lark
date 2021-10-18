@@ -73,7 +73,7 @@ class LarkOptions(Serialize):
     start
             The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
     debug
-            Display debug information and extra warnings. Use only when debugging (default: False)
+            Display debug information and extra warnings. Use only when debugging (Default: ``False``)
             When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
@@ -95,7 +95,7 @@ class LarkOptions(Serialize):
     g_regex_flags
             Flags that are applied to all terminals (both regex and strings)
     keep_all_tokens
-            Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
+            Prevent the tree builder from automagically removing "punctuation" tokens (Default: ``False``)
     tree_class
             Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
 
@@ -123,13 +123,13 @@ class LarkOptions(Serialize):
     **=== Misc. / Domain Specific Options ===**
 
     postlex
-            Lexer post-processing (Default: None) Only works with the basic and contextual lexers.
+            Lexer post-processing (Default: ``None``) Only works with the basic and contextual lexers.
     priority
-            How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+            How priorities should be evaluated - "auto", ``None``, "normal", "invert" (Default: "auto")
     lexer_callbacks
             Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     use_bytes
-            Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
+            Accept an input of type ``bytes`` instead of ``str``.
     edit_terminals
             A callback for editing the terminals before parse.
     import_paths
@@ -391,13 +391,17 @@ class Lark(Serialize):
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
+            for term in self.terminals:
+                term.priority = -term.priority
         # Else, if the user asked to disable priorities, strip them from the
-        # rules. This allows the Earley parsers to skip an extra forest walk
+        # rules and terminals. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
         elif self.options.priority is None:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = None
+            for term in self.terminals:
+                term.priority = 0
 
         # TODO Deprecate lexer_callbacks?
         self.lexer_conf = LexerConf(

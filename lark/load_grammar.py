@@ -2,6 +2,7 @@
 import hashlib
 import os.path
 import sys
+from importlib import import_module
 from collections import namedtuple
 from copy import copy, deepcopy
 import pkgutil
@@ -18,6 +19,7 @@ from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, TOKEN_DEFAULT_PRIORITY
 from .utils import classify, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError, UnexpectedInput
+from .exceptions import ConfigurationError
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -1090,13 +1092,21 @@ class GrammarLoaderBase:
             assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (grammar_path,)
 
 
+class LarkGrammarLoader(GrammarLoaderBase):
+    """ default grammar loader for Lark's EBNF grammar """
+    GRAMMAR_FILE_EXT = '.lark'
+
+    def parse_grammar(self, gramma_text, grammar_name):
+        return _parse_grammar(gramma_text, grammar_name)
+
+
 class GrammarBuilder:
 
     global_keep_all_tokens: bool
 
     def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
 
-        self.loader = GrammarLoaderBase(import_paths, used_files)
+        self.loader = LarkGrammarLoader(import_paths, used_files)
         self.global_keep_all_tokens = global_keep_all_tokens
 
         self._definitions = {}
@@ -1243,8 +1253,24 @@ class GrammarBuilder:
         return name, is_term, exp, params, opts
 
 
+    def set_syntax(self, syntax: Union[str, object]):
+        if isinstance(syntax, str):
+            if syntax == 'lark':
+                self.loader = LarkGrammarLoader(self.loader.import_paths, self.loader.used_files)
+            else:
+                # load plugin from lark/syntax/ to support alternative grammars
+                try:
+                    module_name = 'lark.syntax.%s' % syntax
+                    loader = import_module(module_name, '.')
+                except Exception as e:
+                    raise ConfigurationError("invalid syntax option: %s" % syntax)
+
+                self.loader = loader.get_grammar_loader(self.loader.import_paths, self.loader.used_files)
+        else:
+            self.loader = syntax
+
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
-        tree = _parse_grammar(grammar_text, grammar_name)
+        tree = self.loader.parse_grammar(grammar_text, grammar_name)
 
         imports = {}
         for stmt in tree.children:
@@ -1397,7 +1423,8 @@ def list_grammar_imports(grammar, import_paths=[]):
     builder.load_grammar(grammar, '<string>')
     return list(builder.used_files.keys())
 
-def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
+def load_grammar(grammar, source, import_paths, global_keep_all_tokens, syntax='lark'):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
+    builder.set_syntax(syntax)
     builder.load_grammar(grammar, source)
     return builder.build(), builder.used_files

@@ -98,6 +98,11 @@ class LarkOptions(Serialize):
             Prevent the tree builder from automagically removing "punctuation" tokens (Default: ``False``)
     tree_class
             Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
+    syntax
+            Syntax for grammar specification.
+
+            - "lark" (default): Lark's EBNF based syntax
+            - "abnf" : ABNF syntax, described in RFC5234. Various extentions in Lark's EBNF syntax are not supported.
 
     **=== Algorithm Options ===**
 
@@ -169,6 +174,7 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
+        'syntax': 'lark',
     }
 
     def __init__(self, options_dict):
@@ -328,7 +334,7 @@ class Lark(Serialize):
 
 
             # Parse the grammar file and compose the grammars
-            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens, self.options.syntax)
         else:
             assert isinstance(grammar, Grammar)
             self.grammar = grammar

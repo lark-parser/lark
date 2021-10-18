@@ -8,14 +8,15 @@ a small formatter.
 
 """
 
-from lark import Lark, Token
+from lark import Token, Lark
 from lark.reconstruct import Reconstructor
 from lark.indenter import PythonIndenter
 
 # Official Python grammar by Lark
-kwargs = dict(parser='lalr', postlex=PythonIndenter(), start='file_input', maybe_placeholders=False)
-python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'], **kwargs)
-
+python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'],
+                                        parser='lalr', postlex=PythonIndenter(), start='file_input',
+                                        maybe_placeholders=False    # Necessary for reconstructor
+                                        )
 
 SPACE_AFTER = set(',+-*/~@<>="|:')
 SPACE_BEFORE = (SPACE_AFTER - set(',:')) | set('\'')
@@ -75,7 +76,7 @@ def test():
     tree_new = python_parser3.parse(output)
     print(tree.pretty())
     print(tree_new.pretty())
-
+    # assert tree.pretty() == tree_new.pretty()
     assert tree == tree_new
 
     print(output)

@@ -148,6 +148,8 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
 
  - [Poetry](https://github.com/python-poetry/poetry-core) - A utility for dependency management and packaging
  - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
+ - [PyQuil](https://github.com/rigetti/pyquil) - Python library for quantum programming using Quil
+ - [Preql](https://github.com/erezsh/preql) - An interpreted relational query language that compiles to SQL
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
@@ -171,13 +173,19 @@ Lark uses the [MIT license](LICENSE).
 
 (The standalone tool is under MPL2)
 
-## Contribute
+## Contributors
 
 Lark is currently accepting pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
+Big thanks to everyone who contributed so far:
+
+<a href="https://github.com/lark-parser/lark/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=lark-parser/lark" />
+</a>
+
 ## Sponsor
 
-If you like Lark, and want to see it grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
+If you like Lark, and want to see us grow, please consider [sponsoring us!](https://github.com/sponsors/lark-parser)
 
 ## Contact the author
 
@@ -186,3 +194,5 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
+
+

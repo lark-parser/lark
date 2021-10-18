@@ -66,6 +66,7 @@ class LarkOptions(Serialize):
     edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
     import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
     source_path: Optional[str]
+    syntax: Union[str, Callable[[str, str], Tree]]
 
     OPTIONS_DOC = """
     **===  General Options  ===**
@@ -136,6 +137,9 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
+    syntax
+            Select the syntax with which the grammar is parsed. Either a function or a registered syntax 
+            (default guess based on extension / uses lark when that fails)
     **=== End of Options ===**
     """
     if __doc__:
@@ -169,6 +173,7 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
+        'syntax': None
     }
 
     def __init__(self, options_dict):
@@ -328,7 +333,7 @@ class Lark(Serialize):
 
 
             # Parse the grammar file and compose the grammars
-            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options)
         else:
             assert isinstance(grammar, Grammar)
             self.grammar = grammar

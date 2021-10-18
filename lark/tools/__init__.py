@@ -28,6 +28,7 @@ lalr_argparser.add_argument('-s', '--start', action='append', default=[])
 lalr_argparser.add_argument('-l', '--lexer', default='contextual', choices=('basic', 'contextual'))
 k = {'encoding': 'utf-8'} if sys.version_info > (3, 4) else {}
 lalr_argparser.add_argument('-o', '--out', type=FileType('w', **k), default=sys.stdout, help='the output file (default=stdout)')
+# TODO: syntax. Might require imports to find the dialect.
 lalr_argparser.add_argument('grammar_file', type=FileType('r', **k), help='A valid .lark file')
 
 for f in flags:

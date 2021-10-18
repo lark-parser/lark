@@ -12,7 +12,7 @@ from lark import Token, Lark
 from lark.reconstruct import Reconstructor
 from lark.indenter import PythonIndenter
 
-
+# Official Python grammar by Lark
 python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'],
                                         parser='lalr', postlex=PythonIndenter(), start='file_input',
                                         maybe_placeholders=False    # Necessary for reconstructor
@@ -57,16 +57,25 @@ def postproc(items):
     yield "\n"
 
 
-python_reconstruct = Reconstructor(python_parser3, {'_NEWLINE': special, '_DEDENT': special, '_INDENT': special})
+class PythonReconstructor:
+    def __init__(self, parser):
+        self._recons = Reconstructor(parser, {'_NEWLINE': special, '_DEDENT': special, '_INDENT': special})
+
+    def reconstruct(self, tree):
+        return self._recons.reconstruct(tree, postproc)
 
 
 def test():
+    python_reconstructor = PythonReconstructor(python_parser3)
+
     self_contents = open(__file__).read()
 
     tree = python_parser3.parse(self_contents+'\n')
-    output = python_reconstruct.reconstruct(tree, postproc)
+    output = python_reconstructor.reconstruct(tree)
 
     tree_new = python_parser3.parse(output)
+    print(tree.pretty())
+    print(tree_new.pretty())
     # assert tree.pretty() == tree_new.pretty()
     assert tree == tree_new
 

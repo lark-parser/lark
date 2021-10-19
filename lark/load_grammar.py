@@ -154,7 +154,7 @@ RULES = {
     'maybe': ['_LBRA expansions _RBRA'],
     'range': ['STRING _DOTDOT STRING'],
 
-    'template_usage': ['RULE _LBRACE _template_args _RBRACE'],
+    'template_usage': ['nonterminal _LBRACE _template_args _RBRACE'],
     '_template_args': ['value',
                        '_template_args _COMMA value'],
 
@@ -484,8 +484,9 @@ class _ReplaceSymbols(Transformer_InPlace):
         return self.__default__('value', c, None)
 
     def template_usage(self, c):
-        if c[0] in self.names:
-            return self.__default__('template_usage', [self.names[c[0]].name] + c[1:], None)
+        name = c[0].name
+        if name in self.names:
+            return self.__default__('template_usage', [self.names[name]] + c[1:], None)
         return self.__default__('template_usage', c, None)
 
 
@@ -498,7 +499,7 @@ class ApplyTemplates(Transformer_InPlace):
         self.created_templates = set()
 
     def template_usage(self, c):
-        name = c[0]
+        name = c[0].name
         args = c[1:]
         result_name = "%s{%s}" % (name, ",".join(a.name for a in args))
         if result_name not in self.created_templates:
@@ -1323,7 +1324,7 @@ class GrammarBuilder:
                 continue
 
             for temp in exp.find_data('template_usage'):
-                sym = temp.children[0]
+                sym = temp.children[0].name
                 args = temp.children[1:]
                 if sym not in params:
                     if sym not in self._definitions:

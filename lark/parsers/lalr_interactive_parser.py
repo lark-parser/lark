@@ -2,8 +2,8 @@
 
 from copy import copy
 
-from .. import Token
-from ..exceptions import UnexpectedToken
+from lark.exceptions import UnexpectedToken
+from lark.lexer import Token
 
 
 class InteractiveParser:

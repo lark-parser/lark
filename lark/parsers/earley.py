@@ -17,7 +17,7 @@ from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
-from .earley_common import Item, TransitiveItem
+from .earley_common import Item
 from .earley_forest import ForestSumVisitor, SymbolNode, TokenNode, ForestToParseTree
 
 class Parser:
@@ -169,60 +169,8 @@ class Parser:
                 quasi = quasi.advance()
             return True
 
-        def create_leo_transitives(origin, start):
-            visited = set()
-            to_create = []
-            trule = None
-            previous = None
-
-            ### Recursively walk backwards through the Earley sets until we find the
-            #   first transitive candidate. If this is done continuously, we shouldn't
-            #   have to walk more than 1 hop.
-            while True:
-                if origin in transitives[start]:
-                    previous = trule = transitives[start][origin]
-                    break
-
-                is_empty_rule = not self.FIRST[origin]
-                if is_empty_rule:
-                    break
-
-                candidates = [ candidate for candidate in columns[start] if candidate.expect is not None and origin == candidate.expect ]
-                if len(candidates) != 1:
-                    break
-                originator = next(iter(candidates))
-
-                if originator is None or originator in visited:
-                    break
-
-                visited.add(originator)
-                if not is_quasi_complete(originator):
-                    break
-
-                trule = originator.advance()
-                if originator.start != start:
-                    visited.clear()
-
-                to_create.append((origin, start, originator))
-                origin = originator.rule.origin
-                start = originator.start
-
-            # If a suitable Transitive candidate is not found, bail.
-            if trule is None:
-                return
-
-            #### Now walk forwards and create Transitive Items in each set we walked through; and link
-            #    each transitive item to the next set forwards.
-            while to_create:
-                origin, start, originator = to_create.pop()
-                titem = None
-                if previous is not None:
-                        titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
-                else:
-                        titem = TransitiveItem(origin, trule, originator, start)
-                previous = transitives[start][origin] = titem
-
-
+        # def create_leo_transitives(origin, start):
+        #   ...   # removed at commit 4c1cfb2faf24e8f8bff7112627a00b94d261b420 
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.

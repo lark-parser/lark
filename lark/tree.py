@@ -125,12 +125,6 @@ class Tree:
 
 ###}
 
-    def expand_kids_by_index(self, *indices: int) -> None:
-        """Expand (inline) children at the given indices"""
-        for i in sorted(indices, reverse=True):  # reverse so that changing tail won't affect indices
-            kid = self.children[i]
-            self.children[i:i+1] = kid.children
-
     def expand_kids_by_data(self, *data_values):
         """Expand (inline) children with any of the given data values. Returns True if anything changed"""
         changed = False

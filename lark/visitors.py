@@ -15,11 +15,7 @@ _R = TypeVar('_R')
 _FUNC = Callable[..., _T]
 _DECORATED = Union[_FUNC, type]
 
-class Discard:
-    """When return the Discard singleton in a transformer callback,
-    that node is discarded and won't appear in the parent.
-    """
-    pass
+Discard = object()
 
 # Transformers
 
@@ -62,6 +58,8 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
 
     ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
     it is slightly less efficient.
+
+    To discard a node, return Discard (``lark.visitors.Discard``).
 
     All these classes implement the transformer interface:
 

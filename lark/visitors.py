@@ -15,14 +15,27 @@ _R = TypeVar('_R')
 _FUNC = Callable[..., _T]
 _DECORATED = Union[_FUNC, type]
 
-class Discard(Exception):
-    """When raising the Discard exception in a transformer callback,
+class _DiscardType:
+    """When the Discard value is returned from a transformer callback,
     that node is discarded and won't appear in the parent.
+
+    Example:
+        ::
+
+            class T(Transformer):
+                def ignore_tree(self, children):
+                    return Discard
+
+                def IGNORE_TOKEN(self, token):
+                    return Discard
     """
-    pass
+
+    def __repr__(self):
+        return "lark.visitors.Discard"
+
+Discard = _DiscardType()
 
 # Transformers
-
 
 class _Decoratable:
     "Provides support for decorating methods with @v_args"
@@ -64,6 +77,8 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
     ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,
     it is slightly less efficient.
 
+    To discard a node, return Discard (``lark.visitors.Discard``).
+
     All these classes implement the transformer interface:
 
     - ``Transformer`` - Recursively transforms the tree. This is the one you probably want.
@@ -96,7 +111,7 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
                     return f.visit_wrapper(f, tree.data, children, tree.meta)
                 else:
                     return f(children)
-            except (GrammarError, Discard):
+            except GrammarError:
                 raise
             except Exception as e:
                 raise VisitError(tree.data, tree, e)
@@ -109,22 +124,22 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
         else:
             try:
                 return f(token)
-            except (GrammarError, Discard):
+            except GrammarError:
                 raise
             except Exception as e:
                 raise VisitError(token.type, token, e)
 
     def _transform_children(self, children):
         for c in children:
-            try:
-                if isinstance(c, Tree):
-                    yield self._transform_tree(c)
-                elif self.__visit_tokens__ and isinstance(c, Token):
-                    yield self._call_userfunc_token(c)
-                else:
-                    yield c
-            except Discard:
-                pass
+            if isinstance(c, Tree):
+                res = self._transform_tree(c)
+            elif self.__visit_tokens__ and isinstance(c, Token):
+                res = self._call_userfunc_token(c)
+            else:
+                res = c
+
+            if res is not Discard:
+                yield res
 
     def _transform_tree(self, tree):
         children = list(self._transform_children(tree.children))
@@ -277,15 +292,15 @@ class Transformer_NonRecursive(Transformer):
                     del stack[-size:]
                 else:
                     args = []
-                try:
-                    stack.append(self._call_userfunc(x, args))
-                except Discard:
-                    pass
+
+                res = self._call_userfunc(x, args)
+                if res is not Discard:
+                    stack.append(res)
+
             elif self.__visit_tokens__ and isinstance(x, Token):
-                try:
-                    stack.append(self._call_userfunc_token(x))
-                except Discard:
-                    pass
+                res = self._call_userfunc_token(x)
+                if res is not Discard:
+                    stack.append(res)
             else:
                 stack.append(x)
 

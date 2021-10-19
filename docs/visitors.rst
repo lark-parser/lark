@@ -113,6 +113,7 @@ Discard
 
 .. autoclass:: lark.visitors.Discard
 
+
 VisitError
 ----------
 

@@ -20,7 +20,7 @@ class CustomTransformer(TreeForestTransformer):
         return self.tree_class('simple', children)
 
     def adj(self, children):
-        raise Discard()
+        return Discard
 
     def __default_token__(self, token):
         return token.capitalize()

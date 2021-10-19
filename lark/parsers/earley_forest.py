@@ -424,45 +424,26 @@ class ForestTransformer(ForestVisitor):
         return node.children
 
     def visit_token_node(self, node):
-        try:
-            transformed = self.transform_token_node(node)
-        except Discard:
-            pass
-        else:
+        transformed = self.transform_token_node(node)
+        if transformed is not Discard:
             self.data[self.node_stack[-1]].append(transformed)
+
+    def _visit_node_out_helper(self, node, method):
+        self.node_stack.pop()
+        transformed = method(node, self.data[id(node)])
+        if transformed is not Discard:
+            self.data[self.node_stack[-1]].append(transformed)
+        del self.data[id(node)]
 
     def visit_symbol_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_symbol_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_symbol_node)
 
     def visit_intermediate_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_intermediate_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_intermediate_node)
 
     def visit_packed_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_packed_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_packed_node)
+
 
 class ForestSumVisitor(ForestVisitor):
     """
@@ -563,8 +544,8 @@ class ForestToParseTree(ForestTransformer):
             if id(node) == id(self._cycle_node) or id(node) in self._successful_visits:
                 self._cycle_node = None
                 self._on_cycle_retreat = False
-                return
-            raise Discard()
+            else:
+                return Discard
 
     def _collapse_ambig(self, children):
         new_children = []
@@ -589,20 +570,24 @@ class ForestToParseTree(ForestTransformer):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard()
+        return Discard
 
     def transform_symbol_node(self, node, data):
         if id(node) not in self._successful_visits:
-            raise Discard()
-        self._check_cycle(node)
+            return Discard
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         self._successful_visits.remove(id(node))
         data = self._collapse_ambig(data)
         return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
         if id(node) not in self._successful_visits:
-            raise Discard()
-        self._check_cycle(node)
+            return Discard
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         self._successful_visits.remove(id(node))
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
@@ -610,9 +595,11 @@ class ForestToParseTree(ForestTransformer):
         return data[0]
 
     def transform_packed_node(self, node, data):
-        self._check_cycle(node)
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         if self.resolve_ambiguity and id(node.parent) in self._successful_visits:
-            raise Discard()
+            return Discard
         if self._use_cache and id(node) in self._cache:
             return self._cache[id(node)]
         children = []
@@ -708,7 +695,7 @@ class TreeForestTransformer(ForestToParseTree):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard()
+        return Discard
 
     def __default_token__(self, node):
         """Default operation on ``Token`` (for override).

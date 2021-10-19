@@ -1,0 +1,84 @@
+//
+// Lark's EBNF grammar to parse ABNF grammar (RFC5234)
+//
+
+
+_LPAR:        "("
+_RPAR:        ")"
+_LBRA:        "["
+_RBRA:        "]"
+_STAR:        "*"
+_SLASH:       "/"
+EQ:           "="
+EQ_ALT:       "=/"
+_IGNORE_CASE:    "%i"
+_CASE_SENSITIVE: "%s"
+
+RULE:   /[a-zA-Z][a-zA-Z0-9\-]*/
+
+QSTRING:    /"[ !#$%&\'\(\)\*\+,\-\.\/0-9:;<=>\?@A-Z\[\\\]\^_`a-z\{|\}~]*"/
+PROSE_VAL:  /<[ !"#$%&\'\(\)\*\+,\-\.\/0-9:;<=\?@A-Z\[\\\]\^_`a-z\{|\}~]*>/
+
+NUMBER:     /[0-9]+/
+DEC_VAL:    /%d([0-9]+(\.[0-9]+)+|[0-9]+\-[0-9]+|[0-9]+)/
+HEX_VAL:    /%x([0-9A-F]+(\.[0-9A-F]+)+|[0-9A-F]+\-[0-9A-F]+|[0-9A-F]+)/
+BIN_VAL:    /%b([01]+(\.[01]+)+|[01]+\-[01]+|[01]+)/
+
+_C_NL:    /(;[^\n]*)*\r?\n/
+_C_WSP:   /((;[^\n]*)*\r?\n)?[ \t]+/
+
+// terminals for nonstandard extensions
+_IMPORT:    "%import"
+_DOT:       "."
+_COMMA:     ","
+
+
+start:            _rulelist
+_rulelist:        (rule | abnf_import | terminal_def | (_C_WSP* _C_NL))+ 
+
+rule:              RULE _defined_as _elements _C_NL
+
+_defined_as:       _C_WSP* (EQ|EQ_ALT) _C_WSP*
+_elements:         alternation _C_WSP*
+alternation:       concatenation (_C_WSP* _SLASH _C_WSP* concatenation)*
+concatenation:     repetition (_C_WSP+ repetition)*
+repetition:        repeat? _element
+
+//  repeat =  1*DIGIT / (*DIGIT "*" *DIGIT)
+repeat:            (repeat_min _STAR repeat_max)|(repeat_min _STAR)|(_STAR repeat_max)|_STAR|repeat_n
+repeat_n:          NUMBER
+repeat_min:        NUMBER
+repeat_max:        NUMBER
+
+_element:          rule_ref|_group|option|char_val|num_val|prose_val
+rule_ref:          RULE
+// 'group' is inlined intentionally.
+_group:            _LPAR _C_WSP* alternation _C_WSP* _RPAR
+option:            _LBRA _C_WSP* alternation _C_WSP* _RBRA
+
+char_val:          case_insensitive_string|case_sensitive_string
+case_insensitive_string:          _IGNORE_CASE? QSTRING
+case_sensitive_string:            _CASE_SENSITIVE QSTRING
+
+num_val:           dec_val|bin_val|hex_val
+dec_val:           DEC_VAL
+hex_val:           HEX_VAL
+bin_val:           BIN_VAL
+
+prose_val:         PROSE_VAL
+
+// nonstandard extensions to ABNF grammar
+// (%import)
+abnf_import:       _import1
+_import1:          _IMPORT _C_WSP+ _import_path _C_WSP* name_list? _C_WSP* _C_NL
+_import_path:      import_from_lib|import_relpath
+import_from_lib:   _import_args
+import_relpath:    _DOT _import_args
+_import_args:      PATHNAME (_DOT PATHNAME)*
+name_list:         _LPAR _C_WSP* RULE (_C_WSP* _COMMA _C_WSP* RULE)* _C_WSP* _RPAR
+
+PATHNAME:    /[!#$%&\'\+,\-0-9;=@A-Z\[\]\^_a-z`\{\}~]+/
+
+// (%terminal)
+terminal_def:   _TERMINAL _C_WSP+ RULE (_C_WSP* _COMMA _C_WSP* RULE)*
+_TERMINAL:      "%terminal"

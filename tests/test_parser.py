@@ -382,6 +382,15 @@ class TestParsers(unittest.TestCase):
         self.assertEqual(r, Tree('start', [Token('A', 'A')]))
 
 
+    def test_lexer_token_limit(self):
+        "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
+        tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
+        g = """start: %s
+                  %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items()))
+                  
+        p = Lark(g, parser='lalr')
+
+
 
 def _make_full_earley_test(LEXER):
     def _Lark(grammar, **kwargs):
@@ -1589,12 +1598,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(g.parse("c").children,["c"])
             self.assertRaises(UnexpectedCharacters, g.parse, "C")
 
-
-        def test_lexer_token_limit(self):
-            "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
-            tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
-            g = _Lark("""start: %s
-                      %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
 
         def test_float_without_lexer(self):
             expected_error = UnexpectedCharacters if 'dynamic' in LEXER else UnexpectedToken

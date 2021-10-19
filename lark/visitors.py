@@ -15,7 +15,25 @@ _R = TypeVar('_R')
 _FUNC = Callable[..., _T]
 _DECORATED = Union[_FUNC, type]
 
-Discard = object()
+class _DiscardType:
+      """When the Discard value is returned from a transformer callback,
+        that node is discarded and won't appear in the parent.
+        
+        Example
+        ::
+
+            class T(Transformer):
+                def ignore_tree(self, children):
+                    return Discard
+
+                def IGNORE_TOKEN(self, token):
+                    return Discard
+
+      """
+     def __repr__(self):
+        return "lark.visitors.Discard"
+
+Discard = _DiscardType()
 
 # Transformers
 

@@ -111,18 +111,7 @@ merge_transformers
 Discard
 -------
 
-When the Discard value is returned from a transformer callback,
-that node is discarded and won't appear in the parent.
-
-Example
-::
-
-    class T(Transformer):
-        def ignore_tree(self, children):
-            return Discard
-
-        def IGNORE_TOKEN(self, token):
-            return Discard
+.. autoclass:: lark.visitors.Discard
 
 
 VisitError

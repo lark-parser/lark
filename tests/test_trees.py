@@ -360,7 +360,7 @@ class TestTrees(TestCase):
                 return 1 # some code here
 
             def b(cls, args):
-                raise Discard()
+                return Discard
 
         t = Tree('root', [
             Tree('b', []),
@@ -389,10 +389,10 @@ class TestTrees(TestCase):
                     return int(token)
 
                 def ignore_tree(self, children):
-                    raise Discard
+                    return Discard
 
                 def IGNORE_TOKEN(self, token):
-                    raise Discard
+                    return Discard
 
             copied = copy.deepcopy(tree)
             result = T().transform(copied)

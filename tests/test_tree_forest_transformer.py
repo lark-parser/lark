@@ -147,10 +147,10 @@ class TestTreeForestTransformer(unittest.TestCase):
 
         class CustomTransformer(TreeForestTransformer):
             def bc(self, data):
-                raise Discard()
+                return Discard
 
             def D(self, node):
-                raise Discard()
+                return Discard
 
         class TreeChecker(Transformer):
             def bc(self, children):

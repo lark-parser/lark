@@ -11,3 +11,5 @@ v1.0
 - Renamed TraditionalLexer to BasicLexer, and 'standard' lexer option to 'basic'
 
 - Default priority is now 0, for both terminals and rules (used to be 1 for terminals)
+
+- Discard mechanism is now done by returning Discard, instead of raising it as an exception.

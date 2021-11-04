@@ -207,7 +207,7 @@ encoding_decl: NAME
 yield_expr: "yield" [testlist]
           | "yield" "from" test -> yield_from
 
-number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | COMPLEX_NUMBER
+number: DEC_NUMBER | HEX_NUMBER | BIN_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
 string: STRING | LONG_STRING
 
 // Other terminals
@@ -225,16 +225,16 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 NAME: /[a-zA-Z_]\w*/
 COMMENT: /#[^\n]*/
 
-STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+STRING: /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
 DEC_NUMBER: /0|\d(?:_?\d)*/i
-HEX_NUMBER.2: /0x[\da-f]*/i
-OCT_NUMBER.2: /0o[0-7]*/i
-BIN_NUMBER.2: /0b[0-1]*/i
+HEX_NUMBER.2: /0x(?:_?[\da-f])*/i
+OCT_NUMBER.2: /0o(?:_?[0-7])*/i
+BIN_NUMBER.2: /0b(?:_?[0-1])*/i
 FLOAT_NUMBER.2: (DEC_NUMBER "." DEC_NUMBER? | "." DEC_NUMBER) (("E" | "e") ["+" | "-"] DEC_NUMBER)?
-              | DEC_NUMBER (("E" | "e") ["+" | "-"] DEC_NUMBER)?
-COMPLEX_NUMBER.2: (DEC_NUMBER | FLOAT_NUMBER) ("+" | "-") (DEC_NUMBER | FLOAT_NUMBER) ("J" | "j")
+              | DEC_NUMBER (("E" | "e") ["+" | "-"] DEC_NUMBER)
+IMAG_NUMBER.2: (DEC_NUMBER | FLOAT_NUMBER) ("J" | "j")
 
 
 // Comma-separated list (with an optional trailing comma)

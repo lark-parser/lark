@@ -228,10 +228,10 @@ COMMENT: /#[^\n]*/
 STRING: /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
-DEC_NUMBER: /0|\d(?:_?\d)*/i
-HEX_NUMBER.2: /0x(?:_?[\da-f])*/i
-OCT_NUMBER.2: /0o(?:_?[0-7])*/i
-BIN_NUMBER.2: /0b(?:_?[0-1])*/i
+DEC_NUMBER: "0".."9" ("_"?  "0".."9"                       )*
+HEX_NUMBER.2: "0x"   ("_"? ("0".."9" | "a".."f" | "A".."F"))*
+OCT_NUMBER.2: "0o"   ("_"?  "0".."7"                       )*
+BIN_NUMBER.2: "0b"   ("_"?  "0".."1"                       )*
 FLOAT_NUMBER.2: (DEC_NUMBER "." DEC_NUMBER? | "." DEC_NUMBER) (("E" | "e") ["+" | "-"] DEC_NUMBER)?
               | DEC_NUMBER (("E" | "e") ["+" | "-"] DEC_NUMBER)
 IMAG_NUMBER.2: (DEC_NUMBER | FLOAT_NUMBER) ("J" | "j")

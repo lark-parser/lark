@@ -228,13 +228,17 @@ COMMENT: /#[^\n]*/
 STRING: /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
 LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
-DEC_NUMBER: "0"+ | "1".."9" ("_"?  "0".."9"                       )*
-HEX_NUMBER.2: "0x"          ("_"? ("0".."9" | "a".."f" | "A".."F"))+
-OCT_NUMBER.2: "0o"          ("_"?  "0".."7"                       )+
-BIN_NUMBER.2: "0b"          ("_"?  "0".."1"                       )+
-FLOAT_NUMBER.2: (DEC_NUMBER "." DEC_NUMBER? | "." DEC_NUMBER) (("E" | "e") ["+" | "-"] DEC_NUMBER)?
-              | DEC_NUMBER (("E" | "e") ["+" | "-"] DEC_NUMBER)
-IMAG_NUMBER.2: (DEC_NUMBER | FLOAT_NUMBER) ("J" | "j")
+DEC_NUMBER: "0"+ | "1".."9" _DEC_END
+_DEC_END:          ("_"?  "0".."9"                       )*
+HEX_NUMBER.2: "0x" ("_"? ("0".."9" | "a".."f" | "A".."F"))+
+OCT_NUMBER.2: "0o" ("_"?  "0".."7"                       )+
+BIN_NUMBER.2: "0b" ("_"?  "0".."1"                       )+
+
+_SPECIAL_DEC: "0".."9" _DEC_END
+DECIMAL: _SPECIAL_DEC "." _SPECIAL_DEC? | "." _SPECIAL_DEC
+_EXP: ("e"|"E") ["+" | "-"] _SPECIAL_DEC
+FLOAT_NUMBER.2: _SPECIAL_DEC _EXP | DECIMAL _EXP?
+IMAG_NUMBER.2: (_SPECIAL_DEC | FLOAT_NUMBER) ("J" | "j")
 
 
 // Comma-separated list (with an optional trailing comma)

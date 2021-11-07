@@ -2,7 +2,7 @@ from unittest import TestCase, main
 
 from lark import Lark
 from lark.indenter import PythonIndenter
-from lark.exceptions import UnexpectedCharacters
+from lark.exceptions import UnexpectedCharacters, UnexpectedToken
 
 
 python_parser = Lark.open_from_package(
@@ -213,7 +213,7 @@ class TestPythonParser(TestCase):
 
     def test_invalid_number(self):
         for case in invalid_number:
-            with self.assertRaises(UnexpectedCharacters):
+            with self.assertRaises(UnexpectedToken):
                 python_parser.parse(case, start="number")
 
 

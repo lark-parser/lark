@@ -2,6 +2,7 @@ from unittest import TestCase, main
 
 from lark import Lark
 from lark.indenter import PythonIndenter
+from lark.exceptions import UnexpectedCharacters
 
 
 python_parser = Lark.open_from_package(
@@ -88,6 +89,91 @@ valid_number = (valid_DEC_NUMBER + valid_HEX_NUMBER + valid_OCT_NUMBER +
                 valid_BIN_NUMBER + valid_FLOAT_NUMBER + valid_IMAG_NUMBER)
 
 
+invalid_number = [
+    "0_",
+    "42_",
+    "1.4j_",
+    "0x_",
+    "0b1_",
+    "0xf_",
+    "0o5_",
+    "1_Else",
+    "0_b0",
+    "0_xf",
+    "0_o5",
+    "0_7",
+    "09_99",
+    "4_______2",
+    "0.1__4",
+    "0.1__4j",
+    "0b1001__0100",
+    "0xffff__ffff",
+    "0x___",
+    "0o5__77",
+    "1e1__0",
+    "1e1__0j",
+    "1_.4",
+    "1_.4j",
+    "1._4",
+    "1._4j",
+    "._5",
+    "._5j",
+    "1.0e+_1",
+    "1.0e+_1j",
+    "1.4_j",
+    "1.4e5_j",
+    "1_e1",
+    "1.4_e1",
+    "1.4_e1j",
+    "1e_1",
+    "1.4e_1",
+    "1.4e_1j",
+    "1+1.5_j_",
+    "1+1.5_j",
+
+    "_0",
+    "_42",
+    "_1.4j",
+    "_0x",
+    "_0b1",
+    "_0xf",
+    "_0o5",
+    "_1_Else",
+    "_0_b0",
+    "_0_xf",
+    "_0_o5",
+    "_0_7",
+    "_09_99",
+    "_4_______2",
+    "_0.1__4",
+    "_0.1__4j",
+    "_0b1001__0100",
+    "_0xffff__ffff",
+    "_0x__",
+    "_0o5__77",
+    "_1e1__0",
+    "_1e1__0j",
+    "_1_.4",
+    "_1_.4j",
+    "_1._4",
+    "_1._4j",
+    "_._5",
+    "_._5j",
+    "_1.0e+_1",
+    "_1.0e+_1j",
+    "_1.4_j",
+    "_1.4e5_j",
+    "_1_e1",
+    "_1.4_e1",
+    "_1.4_e1j",
+    "_1e_1",
+    "_1.4e_1",
+    "_1.4e_1j",
+    "_1+1.5_j",
+    "_1+1.5_j",
+]
+
+
 class TestPythonParser(TestCase):
     def test_DEC_NUMBER(self):
         for case in valid_DEC_NUMBER:
@@ -117,6 +203,9 @@ class TestPythonParser(TestCase):
         for case in valid_number:
             python_parser.parse(case, start="number")  # no error
 
+        for case in invalid_number:
+            with self.assertRaises(UnexpectedCharacters):
+                python_parser.parse(case, start="number")  # no error
 
 if __name__ == '__main__':
     main()

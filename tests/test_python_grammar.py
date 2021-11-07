@@ -206,11 +206,12 @@ class TestPythonParser(TestCase):
         for case in valid_IMAG_NUMBER:
             self._test_parsed_is_this_terminal(case, "IMAG_NUMBER", "number")
 
-    def test_number(self):
+    def test_valid_number(self):
         # XXX: all valid test cases should run with the above tests for numbers
         for case in valid_number:
             python_parser.parse(case, start="number")  # no error
 
+    def test_invalid_number(self):
         for case in invalid_number:
             with self.assertRaises(UnexpectedCharacters):
                 python_parser.parse(case, start="number")

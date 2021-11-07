@@ -175,29 +175,29 @@ invalid_number = [
 
 
 class TestPythonParser(TestCase):
-#     def test_DEC_NUMBER(self):
-#         for case in valid_DEC_NUMBER:
-#             python_parser.parse(case, start="DEC_NUMBER")  # no error
+    def test_DEC_NUMBER(self):
+        for case in valid_DEC_NUMBER:
+            python_parser.parse(case, start="DEC_NUMBER")  # no error
 
-#     def test_HEX_NUMBER(self):
-#         for case in valid_HEX_NUMBER:
-#             python_parser.parse(case, start="HEX_NUMBER")  # no error
+    def test_HEX_NUMBER(self):
+        for case in valid_HEX_NUMBER:
+            python_parser.parse(case, start="HEX_NUMBER")  # no error
 
-#     def test_OCT_NUMBER(self):
-#         for case in valid_OCT_NUMBER:
-#             python_parser.parse(case, start="OCT_NUMBER")  # no error
+    def test_OCT_NUMBER(self):
+        for case in valid_OCT_NUMBER:
+            python_parser.parse(case, start="OCT_NUMBER")  # no error
 
-#     def test_BIN_NUMBER(self):
-#         for case in valid_BIN_NUMBER:
-#             python_parser.parse(case, start="BIN_NUMBER")  # no error
+    def test_BIN_NUMBER(self):
+        for case in valid_BIN_NUMBER:
+            python_parser.parse(case, start="BIN_NUMBER")  # no error
 
-#     def test_FLOAT_NUMBER(self):
-#         for case in valid_FLOAT_NUMBER:
-#             python_parser.parse(case, start="FLOAT_NUMBER")  # no error
+    def test_FLOAT_NUMBER(self):
+        for case in valid_FLOAT_NUMBER:
+            python_parser.parse(case, start="FLOAT_NUMBER")  # no error
 
-#     def test_IMAG_NUMBER(self):
-#         for case in valid_IMAG_NUMBER:
-#             python_parser.parse(case, start="IMAG_NUMBER")  # no error
+    def test_IMAG_NUMBER(self):
+        for case in valid_IMAG_NUMBER:
+            python_parser.parse(case, start="IMAG_NUMBER")  # no error
 
     def test_number(self):
         for case in valid_number:
@@ -206,6 +206,7 @@ class TestPythonParser(TestCase):
         for case in invalid_number:
             with self.assertRaises(UnexpectedCharacters):
                 python_parser.parse(case, start="number")
+
 
 if __name__ == '__main__':
     main()

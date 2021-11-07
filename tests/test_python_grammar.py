@@ -213,7 +213,7 @@ class TestPythonParser(TestCase):
 
     def test_invalid_number(self):
         for case in invalid_number:
-            with self.assertRaises(UnexpectedToken):
+            with self.assertRaises((UnexpectedCharacters, UnexpectedToken)):
                 python_parser.parse(case, start="number")
 
 

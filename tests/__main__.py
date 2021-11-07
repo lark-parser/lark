@@ -11,6 +11,7 @@ from .test_grammar import TestGrammar
 from .test_reconstructor import TestReconstructor
 from .test_tree_forest_transformer import TestTreeForestTransformer
 from .test_lexer import TestLexer
+from .test_python_grammar import TestPythonParser
 
 try:
     from .test_nearley.test_nearley import TestNearley

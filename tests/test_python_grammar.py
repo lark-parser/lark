@@ -5,20 +5,9 @@ from lark.indenter import PythonIndenter
 from lark.exceptions import UnexpectedCharacters
 
 
-python_parser = Lark(
-    """
-    dec: DEC_NUMBER
-    hex: HEX_NUMBER
-    oct: OCT_NUMBER
-    bin: BIN_NUMBER
-    float: FLOAT_NUMBER
-    imag: IMAG_NUMBER
-
-    %import python (number, DEC_NUMBER, HEX_NUMBER, OCT_NUMBER, BIN_NUMBER, FLOAT_NUMBER, IMAG_NUMBER)
-    """,
-    parser='lalr', postlex=PythonIndenter(),
-    start=["number", "dec", "hex", "oct",
-           "bin", "float", "imag"])
+python_parser = Lark.open_from_package(
+    "lark", "python.lark", ("grammars",), parser='lalr',
+    postlex=PythonIndenter(), start=["number"])
 
 
 valid_DEC_NUMBER = [
@@ -43,7 +32,7 @@ valid_OCT_NUMBER = [
     "0o77777777777777777",
     "0O77777777777777777",
 ]
-    
+
 valid_BIN_NUMBER = [
     "0b1001_0100",
     "0b_0",
@@ -186,31 +175,39 @@ invalid_number = [
 
 
 class TestPythonParser(TestCase):
+    def _test_parsed_is_this_terminal(self, text, terminal, start):
+        tree = python_parser.parse(text, start=start)
+        self.assertEqual(len(tree.children), 1)
+        token = tree.children[0]
+        self.assertEqual(token.type, terminal)
+        self.assertEqual(token.value, text)
+
     def test_DEC_NUMBER(self):
         for case in valid_DEC_NUMBER:
-            python_parser.parse(case, start="dec")  # no error
+            self._test_parsed_is_this_terminal(case, "DEC_NUMBER", "number")
 
     def test_HEX_NUMBER(self):
         for case in valid_HEX_NUMBER:
-            python_parser.parse(case, start="hex")  # no error
+            self._test_parsed_is_this_terminal(case, "HEX_NUMBER", "number")
 
     def test_OCT_NUMBER(self):
         for case in valid_OCT_NUMBER:
-            python_parser.parse(case, start="oct")  # no error
+            self._test_parsed_is_this_terminal(case, "OCT_NUMBER", "number")
 
     def test_BIN_NUMBER(self):
         for case in valid_BIN_NUMBER:
-            python_parser.parse(case, start="bin")  # no error
+            self._test_parsed_is_this_terminal(case, "BIN_NUMBER", "number")
 
     def test_FLOAT_NUMBER(self):
         for case in valid_FLOAT_NUMBER:
-            python_parser.parse(case, start="float")  # no error
+            self._test_parsed_is_this_terminal(case, "FLOAT_NUMBER", "number")
 
     def test_IMAG_NUMBER(self):
         for case in valid_IMAG_NUMBER:
-            python_parser.parse(case, start="imag")  # no error
+            self._test_parsed_is_this_terminal(case, "IMAG_NUMBER", "number")
 
     def test_number(self):
+        # XXX: all valid test cases should run with the above tests for numbers
         for case in valid_number:
             python_parser.parse(case, start="number")  # no error
 

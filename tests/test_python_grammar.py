@@ -5,10 +5,21 @@ from lark.indenter import PythonIndenter
 from lark.exceptions import UnexpectedCharacters
 
 
-python_parser = Lark.open_from_package(
-    "lark", "python.lark", ["grammars"], parser='lalr', postlex=PythonIndenter(),
-    start=["number", "DEC_NUMBER", "HEX_NUMBER", "OCT_NUMBER",
-           "BIN_NUMBER", "FLOAT_NUMBER", "IMAG_NUMBER"])
+python_parser = Lark(
+    """
+    dec: DEC_NUMBER
+    hex: HEX_NUMBER
+    oct: OCT_NUMBER
+    bin: BIN_NUMBER
+    float: FLOAT_NUMBER
+    imag: IMAG_NUMBER
+
+    %import python (number, DEC_NUMBER, HEX_NUMBER, OCT_NUMBER, BIN_NUMBER, FLOAT_NUMBER, IMAG_NUMBER)
+    """,
+    parser='lalr', postlex=PythonIndenter(),
+    start=["number", "dec", "hex", "oct",
+           "bin", "float", "imag"])
+
 
 valid_DEC_NUMBER = [
     "0",
@@ -177,27 +188,27 @@ invalid_number = [
 class TestPythonParser(TestCase):
     def test_DEC_NUMBER(self):
         for case in valid_DEC_NUMBER:
-            python_parser.parse(case, start="DEC_NUMBER")  # no error
+            python_parser.parse(case, start="dec")  # no error
 
     def test_HEX_NUMBER(self):
         for case in valid_HEX_NUMBER:
-            python_parser.parse(case, start="HEX_NUMBER")  # no error
+            python_parser.parse(case, start="hex")  # no error
 
     def test_OCT_NUMBER(self):
         for case in valid_OCT_NUMBER:
-            python_parser.parse(case, start="OCT_NUMBER")  # no error
+            python_parser.parse(case, start="oct")  # no error
 
     def test_BIN_NUMBER(self):
         for case in valid_BIN_NUMBER:
-            python_parser.parse(case, start="BIN_NUMBER")  # no error
+            python_parser.parse(case, start="bin")  # no error
 
     def test_FLOAT_NUMBER(self):
         for case in valid_FLOAT_NUMBER:
-            python_parser.parse(case, start="FLOAT_NUMBER")  # no error
+            python_parser.parse(case, start="float")  # no error
 
     def test_IMAG_NUMBER(self):
         for case in valid_IMAG_NUMBER:
-            python_parser.parse(case, start="IMAG_NUMBER")  # no error
+            python_parser.parse(case, start="imag")  # no error
 
     def test_number(self):
         for case in valid_number:

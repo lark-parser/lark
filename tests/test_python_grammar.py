@@ -176,7 +176,6 @@ class TestPythonParser(TestCase):
             "lark", "python.lark", ("grammars",), parser='lalr',
             postlex=PythonIndenter(), start=["number"])
 
-
     def _test_parsed_is_this_terminal(self, text, terminal, start):
         tree = self.python_parser.parse(text, start=start)
         self.assertEqual(len(tree.children), 1)

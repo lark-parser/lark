@@ -5,11 +5,6 @@ from lark.indenter import PythonIndenter
 from lark.exceptions import UnexpectedCharacters, UnexpectedToken
 
 
-python_parser = Lark.open_from_package(
-    "lark", "python.lark", ("grammars",), parser='lalr',
-    postlex=PythonIndenter(), start=["number"])
-
-
 valid_DEC_NUMBER = [
     "0",
     "000",
@@ -175,8 +170,15 @@ invalid_number = [
 
 
 class TestPythonParser(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.python_parser = Lark.open_from_package(
+            "lark", "python.lark", ("grammars",), parser='lalr',
+            postlex=PythonIndenter(), start=["number"])
+
+
     def _test_parsed_is_this_terminal(self, text, terminal, start):
-        tree = python_parser.parse(text, start=start)
+        tree = self.python_parser.parse(text, start=start)
         self.assertEqual(len(tree.children), 1)
         token = tree.children[0]
         self.assertEqual(token.type, terminal)
@@ -209,12 +211,12 @@ class TestPythonParser(TestCase):
     def test_valid_number(self):
         # XXX: all valid test cases should run with the above tests for numbers
         for case in valid_number:
-            python_parser.parse(case, start="number")  # no error
+            self.python_parser.parse(case, start="number")  # no error
 
     def test_invalid_number(self):
         for case in invalid_number:
             with self.assertRaises((UnexpectedCharacters, UnexpectedToken)):
-                python_parser.parse(case, start="number")
+                self.python_parser.parse(case, start="number")
 
 
 if __name__ == '__main__':

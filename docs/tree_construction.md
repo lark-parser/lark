@@ -9,9 +9,9 @@ Using `item+` or `item*` will result in a list of items, equivalent to writing `
 
 Using `item?` will return the item if it matched, or nothing.
 
-If `maybe_placeholders=False` (the default), then `[]` behaves like `()?`.
+If `maybe_placeholders=True` (the default), then using `[item]` will return the item if it matched, or the value `None`, if it didn't.
 
-If `maybe_placeholders=True`, then using `[item]` will return the item if it matched, or the value `None`, if it didn't.
+If `maybe_placeholders=False`, then `[]` behaves like `()?`.
 
 ## Terminals
 

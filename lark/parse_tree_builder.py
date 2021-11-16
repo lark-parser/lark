@@ -352,6 +352,8 @@ class ParseTreeBuilder:
     def create_callback(self, transformer=None):
         callbacks = {}
 
+        default_callback = getattr(transformer, '__default__', self.tree_class)
+
         for rule, wrapper_chain in self.rule_builders:
 
             user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
@@ -363,7 +365,7 @@ class ParseTreeBuilder:
                 elif isinstance(transformer, Transformer_InPlace):
                     f = inplace_transformer(f)
             except AttributeError:
-                f = partial(self.tree_class, user_callback_name)
+                f = partial(default_callback, user_callback_name)
 
             for w in wrapper_chain:
                 f = w(f)

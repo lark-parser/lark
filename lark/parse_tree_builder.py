@@ -352,7 +352,12 @@ class ParseTreeBuilder:
     def create_callback(self, transformer=None):
         callbacks = {}
 
-        default_callback = getattr(transformer, '__default__', self.tree_class)
+        default_handler = getattr(transformer, '__default__', None)
+        if default_handler:
+            def default_callback(data, children):
+                return default_handler(data, children, None)
+        else:
+            default_callback = self.tree_class
 
         for rule, wrapper_chain in self.rule_builders:
 

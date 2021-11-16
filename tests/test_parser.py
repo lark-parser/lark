@@ -186,7 +186,7 @@ class TestParsers(unittest.TestCase):
         g = """
         start: add+
         add: NUM "+" NUM
-        NUM: /\d+/
+        NUM: /\\d+/
         %ignore " "
         """
         text = "1+2 3+4"

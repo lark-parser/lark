@@ -112,7 +112,7 @@ class TestCache(TestCase):
         # Test inline transformer (tree-less) & lexer_callbacks
         # Note: the Transformer should not be saved to the file,
         #       and is made unpickable to check for that
-        g = """
+        g = r"""
         start: add+
         add: NUM "+" NUM
         NUM: /\d+/

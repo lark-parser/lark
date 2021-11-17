@@ -101,7 +101,6 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
  - **CYK** parser, for highly ambiguous grammars
  - **EBNF** grammar
  - **Unicode** fully supported
- - **Python 2 & 3** compatible
  - Automatic line & column tracking
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))

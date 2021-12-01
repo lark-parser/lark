@@ -2560,6 +2560,32 @@ def _make_parser_test(LEXER, PARSER):
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
 
+        @unittest.skipIf(PARSER!='lalr', "Tree-less mode is only supported in lalr")
+        def test_default_in_treeless_mode(self):
+            grammar = r"""
+                start: expr
+
+                expr: A B
+                    | A expr B
+
+                A: "a"
+                B: "b"
+
+                %import common.WS
+                %ignore WS
+            """
+            s = 'a a a b b b'
+
+            class AbTransformer(Transformer):
+                def __default__(self, data, children, meta):
+                    return '@', data, children
+
+            parser = _Lark(grammar)
+            a = AbTransformer().transform(parser.parse(s))
+            parser = _Lark(grammar, transformer=AbTransformer())
+            b = parser.parse(s)
+            assert a == b
+
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME

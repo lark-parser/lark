@@ -141,7 +141,7 @@ class TestGrammar(TestCase):
         self.assertRaises( GrammarError, Lark, g)
 
     def test_import_custom_sources(self):
-        custom_loader = FromPackageLoader('tests', ('grammars', ))
+        custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
         grammar = """
         start: startab
@@ -154,7 +154,7 @@ class TestGrammar(TestCase):
                             Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
 
     def test_import_custom_sources2(self):
-        custom_loader = FromPackageLoader('tests', ('grammars', ))
+        custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
         grammar = """
         start: rule_to_import
@@ -166,7 +166,7 @@ class TestGrammar(TestCase):
         self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
 
     def test_import_custom_sources3(self):
-        custom_loader2 = FromPackageLoader('tests')
+        custom_loader2 = FromPackageLoader(__name__)
         grammar = """
         %import .test_relative_import (start, WS)
         %ignore WS

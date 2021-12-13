@@ -18,13 +18,13 @@ Knowledge assumed:
 ## Part 1 - The Grammar
 
 Lark accepts its grammars in a format called [EBNF](https://www.wikiwand.com/en/Extended_Backus%E2%80%93Naur_form). It basically looks like this:
+```lark
+rule_name : list of rules and TERMINALS to match
+          | another possible list of items
+          | etc.
 
-    rule_name : list of rules and TERMINALS to match
-              | another possible list of items
-              | etc.
-
-    TERMINAL: "some text to match"
-
+TERMINAL: "some text to match"
+```
 (*a terminal is a string or a regular expression*)
 
 The parser will try to match each rule (left-part) by matching its items (right-part) sequentially, trying each alternative (In practice, the parser is predictive so we don't have to try every alternative).
@@ -38,16 +38,16 @@ The dictionaries and lists are recursive, and contain other json documents (or "
 Let's write this structure in EBNF form:
 
 ```lark
-    value: dict
-         | list
-         | STRING
-         | NUMBER
-         | "true" | "false" | "null"
+value: dict
+     | list
+     | STRING
+     | NUMBER
+     | "true" | "false" | "null"
 
-    list : "[" [value ("," value)*] "]"
+list : "[" [value ("," value)*] "]"
 
-    dict : "{" [pair ("," pair)*] "}"
-    pair : STRING ":" value
+dict : "{" [pair ("," pair)*] "}"
+pair : STRING ":" value
 ```
 
 A quick explanation of the syntax:
@@ -60,8 +60,8 @@ Lark also supports the rule+ operator, meaning one or more instances. It also su
 Of course, we still haven't defined "STRING" and "NUMBER". Luckily, both these literals are already defined in Lark's common library:
 
 ```lark
-    %import common.ESCAPED_STRING   -> STRING
-    %import common.SIGNED_NUMBER    -> NUMBER
+%import common.ESCAPED_STRING   -> STRING
+%import common.SIGNED_NUMBER    -> NUMBER
 ```
 
 The arrow (->) renames the terminals. But that only adds obscurity in this case, so going forward we'll just use their original names.
@@ -69,8 +69,8 @@ The arrow (->) renames the terminals. But that only adds obscurity in this case,
 We'll also take care of the white-space, which is part of the text, by simply matching and then throwing it away.
 
 ```lark
-    %import common.WS
-    %ignore WS
+%import common.WS
+%ignore WS
 ```
 
 We tell our parser to ignore whitespace. Otherwise, we'd have to fill our grammar with WS terminals.
@@ -78,9 +78,9 @@ We tell our parser to ignore whitespace. Otherwise, we'd have to fill our gramma
 By the way, if you're curious what these terminals signify, they are roughly equivalent to this:
 
 ```lark
-    NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
-    STRING : /".*?(?<!\\)"/
-    %ignore /[ \t\n\f\r]+/
+NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+STRING : /".*?(?<!\\)"/
+%ignore /[ \t\n\f\r]+/
 ```
 
 Lark will accept this way of writing too, if you really want to complicate your life :)
@@ -158,17 +158,17 @@ We now have a parser that can create a parse tree (or: AST), but the tree has so
 I'll present the solution, and then explain it:
 
 ```lark
-    ?value: dict
-          | list
-          | string
-          | SIGNED_NUMBER      -> number
-          | "true"             -> true
-          | "false"            -> false
-          | "null"             -> null
+?value: dict
+      | list
+      | string
+      | SIGNED_NUMBER      -> number
+      | "true"             -> true
+      | "false"            -> false
+      | "null"             -> null
 
-    ...
+...
 
-    string : ESCAPED_STRING
+string : ESCAPED_STRING
 ```
 
 1. Those little arrows signify *aliases*. An alias is a name for a specific part of the rule. In this case, we will name the *true/false/null* matches, and this way we won't lose the information. We also alias *SIGNED_NUMBER* to mark it for later processing.
@@ -350,13 +350,13 @@ if __name__ == '__main__':
 ```
 
 We run it and get this:
+```
+$ time python tutorial_json.py json_data > /dev/null
 
-    $ time python tutorial_json.py json_data > /dev/null
-
-    real	0m36.257s
-    user	0m34.735s
-    sys         0m1.361s
-
+real	0m36.257s
+user	0m34.735s
+sys         0m1.361s
+```
 
 That's unsatisfactory time for a 6MB file. Maybe if we were parsing configuration or a small DSL, but we're trying to handle large amount of data here.
 
@@ -398,11 +398,11 @@ if __name__ == '__main__':
 We've used the transformer we've already written, but this time we plug it straight into the parser. Now it can avoid building the parse tree, and just send the data straight into our transformer. The *parse()* method now returns the transformed JSON, instead of a tree.
 
 Let's benchmark it:
-
-    real	0m4.866s
-    user	0m4.722s
-    sys 	0m0.121s
-
+```
+real	0m4.866s
+user	0m4.722s
+sys 	0m0.121s
+```
 That's a measurable improvement! Also, this way is more memory efficient. Check out the benchmark table at the end to see just how much.
 
 As a general practice, it's recommended to work with parse trees, and only skip the tree-builder when your transformer is already working.
@@ -414,13 +414,13 @@ PyPy is a JIT engine for running Python, and it's designed to be a drop-in repla
 Lark is written purely in Python, which makes it very suitable for PyPy.
 
 Let's get some free performance:
+```
+$ time pypy tutorial_json.py json_data > /dev/null
 
-    $ time pypy tutorial_json.py json_data > /dev/null
-
-    real	0m1.397s
-    user	0m1.296s
-    sys 	0m0.083s
-
+real	0m1.397s
+user	0m1.296s
+sys 	0m0.083s
+```
 PyPy is awesome!
 
 ### Conclusion

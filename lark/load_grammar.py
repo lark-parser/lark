@@ -7,7 +7,7 @@ from copy import copy, deepcopy
 import pkgutil
 from ast import literal_eval
 from contextlib import suppress
-from typing import List, Tuple, Union, Callable, Dict, Optional
+from typing import List, Tuple, Union, Callable, Dict, Optional, Sequence
 
 from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -804,9 +804,9 @@ class FromPackageLoader:
     """
 
     pkg_name: str
-    search_paths: List[str]
+    search_paths: Sequence[str]
 
-    def __init__(self, pkg_name: str, search_paths: List[str]=[""]) -> None:
+    def __init__(self, pkg_name: str, search_paths: Sequence[str]=[""]) -> None:
         self.pkg_name = pkg_name
         self.search_paths = search_paths
 

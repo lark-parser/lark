@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
 from typing import (
-    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
+    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional, Sequence,
     Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
 )
 if TYPE_CHECKING:
@@ -540,7 +540,7 @@ class Lark(Serialize):
             return cls(f, **options)
 
     @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: List[str]=[""], **options) -> _T:
+    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Sequence[str]=[""], **options) -> _T:
         """Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
 

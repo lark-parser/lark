@@ -540,7 +540,7 @@ class Lark(Serialize):
             return cls(f, **options)
 
     @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...]=("",), **options) -> _T:
+    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: List[str]=[""], **options) -> _T:
         """Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
 

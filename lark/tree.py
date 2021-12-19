@@ -36,6 +36,7 @@ class Meta:
 
 
 _Leaf_T = TypeVar("_Leaf_T")
+Branch = Union[_Leaf_T, 'Tree[_Leaf_T]']
 
 
 class Tree(Generic[_Leaf_T]):
@@ -52,9 +53,9 @@ class Tree(Generic[_Leaf_T]):
     """
 
     data: str
-    children: 'List[Union[_Leaf_T, Tree[_Leaf_T]]]'
+    children: 'List[Branch[_Leaf_T]]'
 
-    def __init__(self, data: str, children: 'List[Union[_Leaf_T, Tree[_Leaf_T]]]', meta: Optional[Meta]=None) -> None:
+    def __init__(self, data: str, children: 'List[Branch[_Leaf_T]]', meta: Optional[Meta]=None) -> None:
         self.data = data
         self.children = children
         self._meta = meta
@@ -135,7 +136,7 @@ class Tree(Generic[_Leaf_T]):
             kid = self.children[i]
             self.children[i:i+1] = kid.children
 
-    def scan_values(self, pred: 'Callable[[Union[_Leaf_T, Tree[_Leaf_T]]], bool]') -> Iterator[_Leaf_T]:
+    def scan_values(self, pred: 'Callable[[Branch[_Leaf_T]], bool]') -> Iterator[_Leaf_T]:
         """Return all values in the tree that evaluate pred(value) as true.
 
         This can be used to find all the tokens in the tree.
@@ -171,7 +172,7 @@ class Tree(Generic[_Leaf_T]):
     def copy(self) -> 'Tree[_Leaf_T]':
         return type(self)(self.data, self.children)
 
-    def set(self, data: str, children: 'List[Union[_Leaf_T, Tree[_Leaf_T]]]') -> None:
+    def set(self, data: str, children: 'List[Branch[_Leaf_T]]') -> None:
         self.data = data
         self.children = children
 

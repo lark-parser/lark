@@ -3,7 +3,7 @@ from abc import ABC
 from functools import wraps
 
 from .utils import smart_decorator, combine_alternatives
-from .tree import Tree
+from .tree import Tree, Branch
 from .exceptions import VisitError, GrammarError
 from .lexer import Token
 
@@ -206,7 +206,7 @@ class Transformer_NonRecursive(Transformer):
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         # Tree to postfix
         rev_postfix = []
-        q: List[Union[_Leaf_T, Tree[_Leaf_T]]] = [tree]
+        q: List[Branch[_Leaf_T]] = [tree]
         while q:
             t = q.pop()
             rev_postfix.append(t)

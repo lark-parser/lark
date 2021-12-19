@@ -55,7 +55,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
+class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -139,9 +139,9 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
         return self._transform_tree(tree)
 
     def __mul__(
-            self: 'Transformer[Tree[_Leaf_U], _Leaf_T]',
-            other: 'Union[Transformer[_Return_V, _Leaf_U], TransformerChain[_Return_V, _Leaf_U]]'
-    ) -> 'TransformerChain[_Return_V, _Leaf_T]':
+            self: 'Transformer[_Leaf_T, Tree[_Leaf_U]]',
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V,]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -161,7 +161,7 @@ class Transformer(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
         return token
 
 
-class TransformerChain(Generic[_Return_T, _Leaf_T]):
+class TransformerChain(Generic[_Leaf_T, _Return_T]):
 
     transformers: 'Tuple[Union[Transformer, TransformerChain], ...]'
 
@@ -174,9 +174,9 @@ class TransformerChain(Generic[_Return_T, _Leaf_T]):
         return cast(_Return_T, tree)
 
     def __mul__(
-            self: 'TransformerChain[Tree[_Leaf_U], _Leaf_T]',
-            other: 'Union[Transformer[_Return_V, _Leaf_U], TransformerChain[_Return_V, _Leaf_U]]'
-    ) -> 'TransformerChain[_Return_V, _Leaf_T]':
+            self: 'TransformerChain[_Leaf_T, Tree[_Leaf_U]]',
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         return TransformerChain(*self.transformers + (other,))
 
 
@@ -307,7 +307,7 @@ class Visitor_Recursive(VisitorBase, Generic[_Leaf_T]):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_Return_T, _Leaf_T]):
+class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)

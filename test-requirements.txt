@@ -1,2 +1,3 @@
 Js2Py==0.68
 regex
+typing_extensions >= 3.7, < 5.0; python_version < "3.8"

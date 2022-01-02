@@ -1,5 +1,4 @@
 from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, cast
-
 from abc import ABC
 from functools import wraps
 
@@ -10,14 +9,9 @@ from .lexer import Token
 
 ###{standalone
 from inspect import getmembers, getmro
-import sys
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
 
-_Return_T = TypeVar('_Return_T', covariant=True)
-_Return_V = TypeVar('_Return_V', covariant=True)
+_Return_T = TypeVar('_Return_T')
+_Return_V = TypeVar('_Return_V')
 _Leaf_T = TypeVar('_Leaf_T')
 _Leaf_U = TypeVar('_Leaf_U')
 _R = TypeVar('_R')
@@ -59,21 +53,6 @@ class _Decoratable:
 
     def __class_getitem__(cls, _):
         return cls
-
-
-class ITransformer(Protocol[_Leaf_T, _Return_T]):
-    """Base interface for classes that can transform a Tree"""
-
-    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
-        """Transform the given tree, and return the final result"""
-        pass
-
-    def __mul__(
-            self: 'ITransformer[_Leaf_T, Tree[_Leaf_U]]',
-            other: 'ITransformer[_Leaf_U, _Return_V]'
-    ) -> 'ITransformer[_Leaf_T, _Return_V]':
-        """Chain two transformers together, returning a new transformer."""
-        pass
 
 
 class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
@@ -161,8 +140,8 @@ class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
 
     def __mul__(
             self: 'Transformer[_Leaf_T, Tree[_Leaf_U]]',
-            other: ITransformer[_Leaf_U, _Return_V]
-    ) -> ITransformer[_Leaf_T, _Return_V]:
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V,]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -184,9 +163,9 @@ class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
 
 class TransformerChain(Generic[_Leaf_T, _Return_T]):
 
-    transformers: Tuple[ITransformer, ...]
+    transformers: 'Tuple[Union[Transformer, TransformerChain], ...]'
 
-    def __init__(self, *transformers: ITransformer) -> None:
+    def __init__(self, *transformers: 'Union[Transformer, TransformerChain]') -> None:
         self.transformers = transformers
 
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
@@ -196,8 +175,8 @@ class TransformerChain(Generic[_Leaf_T, _Return_T]):
 
     def __mul__(
             self: 'TransformerChain[_Leaf_T, Tree[_Leaf_U]]',
-            other: ITransformer[_Leaf_U, _Return_V]
-    ) -> ITransformer[_Leaf_T, _Return_V]:
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         return TransformerChain(*self.transformers + (other,))
 
 

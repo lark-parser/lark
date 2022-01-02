@@ -12,7 +12,7 @@ setup(
     packages = ['lark', 'lark.parsers', 'lark.tools', 'lark.grammars', 'lark.__pyinstaller'],
 
     requires = [],
-    install_requires = ['typing_extensions >= 3.7, < 5.0; python_version < "3.8"'],
+    install_requires = [],
 
     extras_require = {
         "regex": ["regex"],

@@ -95,7 +95,7 @@ class UnexpectedInput(LarkError):
         """
         assert self.state is not None, "Not supported for this exception"
 
-        if isinstance(examples, dict):
+        if isinstance(examples, Mapping):
             examples = examples.items()
 
         candidate = (None, False)

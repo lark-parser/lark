@@ -226,7 +226,7 @@ _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Lark")
 
 class Lark(Serialize):
     """Main interface for the library.

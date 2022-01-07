@@ -11,7 +11,7 @@ import functools
 from lark.tree import Tree
 from lark.lexer import Token
 from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Transformer_InPlace, \
-    Transformer_InPlaceRecursive, Transformer_NonRecursive, merge_transformers
+    Transformer_InPlaceRecursive, Transformer_NonRecursive, merge_transformers, call_for
 
 
 class TestTrees(TestCase):
@@ -446,6 +446,94 @@ class TestTrees(TestCase):
 
         with self.assertRaises(AttributeError):
             merge_transformers(T1(), module=T3())
+
+    def test_call_for_transformer(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        class T(Transformer):
+            @call_for("i")
+            def int_(self, values) -> int:
+                return int(values[0])
+
+            @call_for("f")
+            def float_(self, values) -> float:
+                return float(values[0])
+
+            def sub(self, values):
+                return values[0] - values[1]
+
+            def add(self, values):
+                return sum(values)
+
+        res = T().transform(t)
+        self.assertEqual(res, 2.9)
+
+    def test_call_for_transformer_subclass(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        class T(Transformer):
+            @call_for("i")
+            def int_(self, values) -> int:
+                return int(values[0])
+
+            def sub(self, values):
+                return values[0] - values[1]
+
+            def add(self, values):
+                return sum(values)
+
+        class TT(T):
+            @call_for("f")
+            def float_(self, values) -> float:
+                return float(values[0])
+
+        res = TT().transform(t)
+        self.assertEqual(res, 2.9)
+
+    def test_call_for_visitor(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        class V(Visitor):
+            def __init__(self) -> None:
+                self.int_called = False
+                self.float_called = False
+
+            @call_for("i")
+            def int_(self, _) -> None:
+                self.int_called = True
+
+            @call_for("f")
+            def float_(self, _) -> None:
+                self.float_called = True
+
+        v = V()
+        v.visit(t)
+
+        self.assertTrue(v.int_called)
+        self.assertTrue(v.float_called)
+
+    def test_call_for_visitor_subclass(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
+
+        class V(Visitor):
+            def __init__(self) -> None:
+                self.int_called = False
+                self.float_called = False
+
+            @call_for("i")
+            def int_(self, _) -> None:
+                self.int_called = True
+
+        class VV(V):
+            @call_for("f")
+            def float_(self, _) -> None:
+                self.float_called = True
+
+        v = VV()
+        v.visit(t)
+
+        self.assertTrue(v.int_called)
+        self.assertTrue(v.float_called)
 
 if __name__ == '__main__':
     unittest.main()

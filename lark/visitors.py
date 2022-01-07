@@ -1,4 +1,4 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, Mapping, ClassVar
 from abc import ABC
 from functools import wraps, update_wrapper
 
@@ -35,6 +35,69 @@ class _DiscardType:
 
 Discard = _DiscardType()
 
+# User function lookup and aliases
+
+
+class _UserFuncOverride:
+    def __init__(self, rule_name: str, user_func: Callable) -> None:
+        """
+        Initialize an instance.
+
+        Parameters:
+            rule_name: Name of the rule this should be replacing.
+            user_func: User function to call when rule is encountered. Will be a plain function,
+                NOT be bound to a class instance.
+        """
+        self.rule_name = rule_name
+        self.user_func = user_func
+        update_wrapper(self, user_func)
+
+    def __call__(self, *args, **kwargs):
+        return self.user_func(*args, **kwargs)
+
+    def __get__(self, instance, owner=None):
+        # bind user function with instance when function is called directly
+        return self.user_func.__get__(instance, owner)
+
+
+def call_for(rule_name: str) -> Callable:
+    def _call_for(func: Callable) -> Callable:
+        return _UserFuncOverride(rule_name, func)
+
+    return _call_for
+
+
+class _UserFuncLookup:
+    _user_func_overrides: ClassVar[Mapping[str, _UserFuncOverride]]
+
+    def __init_subclass__(cls, **kwargs):
+        # cls is the subclass being initialized, so each subclass gets a unique override mapping
+        super().__init_subclass__(**kwargs)
+        all_overrides = {}
+        # Aggregate any overrides from parent classes (skipping the subclass & object).
+        # Reverse order so child overrides have precedence over parents.
+        for hierarchy_class in reversed(cls.__mro__[1:-1]):
+            aliases = getattr(hierarchy_class, "_user_func_overrides", None)
+            if aliases is not None:
+                all_overrides.update(aliases)
+
+        all_overrides.update(cls._collect_user_func_overrides())
+        cls._user_func_overrides = all_overrides
+
+    @classmethod
+    def _collect_user_func_overrides(cls) -> Mapping[str, _UserFuncOverride]:
+        aliases = {}
+        for obj in cls.__dict__.values():
+            if isinstance(obj, _UserFuncOverride):
+                aliases[obj.rule_name] = obj
+        return aliases
+
+    def _look_up_user_func(self, rule_name: str) -> Optional[Callable]:
+        override = self._user_func_overrides.get(rule_name)
+        if override is None:
+            return getattr(self, rule_name, None)
+        return override.user_func.__get__(self, self.__class__)
+
 # Transformers
 
 class _Decoratable:
@@ -64,7 +127,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable, ABC, Generic[_T]):
+class Transformer(_UserFuncLookup, _Decoratable, ABC, Generic[_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -100,34 +163,32 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
             return self.__default__(tree.data, children, tree.meta)
-        else:
-            try:
-                wrapper = getattr(f, 'visit_wrapper', None)
-                if wrapper is not None:
-                    return f.visit_wrapper(f, tree.data, children, tree.meta)
-                else:
-                    return f(children)
-            except GrammarError:
-                raise
-            except Exception as e:
-                raise VisitError(tree.data, tree, e)
+
+        try:
+            wrapper = getattr(f, 'visit_wrapper', None)
+            if wrapper is not None:
+                return f.visit_wrapper(f, tree.data, children, tree.meta)
+            else:
+                return f(children)
+        except GrammarError:
+            raise
+        except Exception as e:
+            raise VisitError(tree.data, tree, e)
 
     def _call_userfunc_token(self, token):
-        try:
-            f = getattr(self, token.type)
-        except AttributeError:
+        f = super()._look_up_user_func(token.type)
+        if f is None:
             return self.__default_token__(token)
-        else:
-            try:
-                return f(token)
-            except GrammarError:
-                raise
-            except Exception as e:
-                raise VisitError(token.type, token, e)
+
+        try:
+            return f(token)
+        except GrammarError:
+            raise
+        except Exception as e:
+            raise VisitError(token.type, token, e)
 
     def _transform_children(self, children):
         for c in children:
@@ -204,6 +265,7 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
             assert composed_transformer.transform(t) == 'foobar'
 
     """
+    # TODO: investigate how this works with overrides
     if base_transformer is None:
         base_transformer = Transformer()
     for prefix, transformer in transformers_to_merge.items():
@@ -226,12 +288,10 @@ class InlineTransformer(Transformer):   # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
             return self.__default__(tree.data, children, tree.meta)
-        else:
-            return f(*children)
+        return f(*children)
 
 class TransformerChain(Generic[_T]):
 
@@ -317,9 +377,12 @@ class Transformer_InPlaceRecursive(Transformer):
 
 # Visitors
 
-class VisitorBase:
+class VisitorBase(_UserFuncLookup):
     def _call_userfunc(self, tree):
-        return getattr(self, tree.data, self.__default__)(tree)
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
+            f = self.__default__
+        return f(tree)
 
     def __default__(self, tree):
         """Default function that is called if there is no attribute matching ``tree.data``
@@ -379,7 +442,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_T]):
+class Interpreter(_UserFuncLookup, _Decoratable, ABC, Generic[_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -392,7 +455,10 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     """
 
     def visit(self, tree: Tree) -> _T:
-        f = getattr(self, tree.data)
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
+            return self.__default__(tree)
+
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
             return f.visit_wrapper(f, tree.data, tree.children, tree.meta)
@@ -402,9 +468,6 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     def visit_children(self, tree: Tree) -> List[_T]:
         return [self.visit(child) if isinstance(child, Tree) else child
                 for child in tree.children]
-
-    def __getattr__(self, name):
-        return self.__default__
 
     def __default__(self, tree):
         return self.visit_children(tree)

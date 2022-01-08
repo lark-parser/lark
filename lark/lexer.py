@@ -124,7 +124,7 @@ class TerminalDef(Serialize):
         else:
             return self.name
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Token")
 
 class Token(str):
     """A string with meta-information, that is produced by the lexer.

@@ -27,7 +27,8 @@ parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams
           | kwparams
 
 SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
-starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
+starparams: starparam ("," paramvalue)* ["," kwparams]
+starparam: "*" typedparam | "*" -> param_star
 kwparams: "**" typedparam ","?
 
 ?paramvalue: typedparam ("=" test)?

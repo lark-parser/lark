@@ -1,9 +1,3 @@
-
-try:
-    from future_builtins import filter  # type: ignore
-except ImportError:
-    pass
-
 import sys
 from copy import deepcopy
 

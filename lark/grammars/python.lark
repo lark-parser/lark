@@ -222,7 +222,7 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 // Python terminals
 
-NAME: /[a-zA-Z_]\w*/
+NAME: /[^\W\d]\w*/
 COMMENT: /#[^\n]*/
 
 STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i

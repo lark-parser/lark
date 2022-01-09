@@ -7,7 +7,7 @@ from copy import copy, deepcopy
 import pkgutil
 from ast import literal_eval
 from contextlib import suppress
-from typing import List, Tuple, Union, Callable, Dict, Optional
+from typing import List, Tuple, Union, Callable, Dict, Optional, Sequence
 
 from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
@@ -804,9 +804,9 @@ class FromPackageLoader:
     """
 
     pkg_name: str
-    search_paths: Tuple[str, ...]
+    search_paths: Sequence[str]
 
-    def __init__(self, pkg_name: str, search_paths: Tuple[str, ...]=("", )) -> None:
+    def __init__(self, pkg_name: str, search_paths: Sequence[str]=("", )) -> None:
         self.pkg_name = pkg_name
         self.search_paths = search_paths
 
@@ -827,7 +827,7 @@ class FromPackageLoader:
         for path in to_try:
             full_path = os.path.join(path, grammar_path)
             try:
-                text: Optional[str] = pkgutil.get_data(self.pkg_name, full_path)
+                text: Optional[bytes] = pkgutil.get_data(self.pkg_name, full_path)
             except IOError as e:
                 err = e
                 continue
@@ -1095,7 +1095,7 @@ class GrammarBuilder:
         return options
 
 
-    def _define(self, name, is_term, exp, params=(), options=None, override=False):
+    def _define(self, name, is_term, exp, params=(), options=None, *, override=False):
         if name in self._definitions:
             if not override:
                 self._grammar_error(is_term, "{Type} '{name}' defined more than once", name)

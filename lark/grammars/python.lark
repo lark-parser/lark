@@ -112,7 +112,8 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr
 
-?expr: or_expr
+?expr: or_expr | assign_expr
+assign_expr: NAME ":=" expr
 ?or_expr: xor_expr ("|" xor_expr)*
 ?xor_expr: and_expr ("^" and_expr)*
 ?and_expr: shift_expr ("&" shift_expr)*

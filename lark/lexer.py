@@ -478,7 +478,7 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
-        lexer_by_tokens = {}
+        lexer_by_tokens: Dict[FrozenSet[str], BasicLexer] = {}
         self.lexers = {}
         for state, accepts in states.items():
             key = frozenset(accepts)

@@ -1067,8 +1067,8 @@ class GrammarBuilder:
         self.import_paths = import_paths or []
         self.used_files = used_files or {}
 
-        self._definitions = {}
-        self._ignore_names = []
+        self._definitions: Dict[str, Definition] = {}
+        self._ignore_names: List[str] = []
 
     def _grammar_error(self, is_term, msg, *names):
         args = {}
@@ -1210,7 +1210,7 @@ class GrammarBuilder:
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
 
-        imports = {}
+        imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
         for stmt in tree.children:
             if stmt.data == 'import':
                 dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)

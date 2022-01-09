@@ -105,6 +105,10 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
 ?test: or_test ("if" or_test "else" test)?
      | lambdef
+     | assign_expr
+
+assign_expr: NAME ":=" expr
+
 ?test_nocond: or_test | lambdef_nocond
 
 ?or_test: and_test ("or" and_test)*
@@ -114,8 +118,7 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr
 
-?expr: or_expr | assign_expr
-assign_expr: NAME ":=" expr
+?expr: or_expr
 ?or_expr: xor_expr ("|" xor_expr)*
 ?xor_expr: and_expr ("^" and_expr)*
 ?and_expr: shift_expr ("&" shift_expr)*

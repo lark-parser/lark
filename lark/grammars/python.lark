@@ -107,7 +107,7 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
      | lambdef
      | assign_expr
 
-assign_expr: NAME ":=" expr
+assign_expr: NAME ":=" test
 
 ?test_nocond: or_test | lambdef_nocond
 

@@ -490,6 +490,54 @@ class TestTrees(TestCase):
         res = TT().transform(t)
         self.assertEqual(res, 2.9)
 
+    def test_call_for_transformer_merge(self):
+        t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('t2__f', ['1.1'])]), Tree('i', ['1'])])
+
+        class T1(Transformer):
+            @call_for("i")
+            def int_(self, values) -> int:
+                return int(values[0])
+
+            def sub(self, values):
+                return values[0] - values[1]
+
+            def add(self, values):
+                return sum(values)
+
+        class T2(Transformer):
+            @call_for("f")
+            def float_(self, values) -> float:
+                return float(values[0])
+
+        merged_transformer = merge_transformers(T1(), t2=T2())
+
+        res = merged_transformer.transform(t)
+        self.assertEqual(res, 2.9)
+
+    def test_call_for_transformer_merge_no_base(self):
+        t = Tree('t1__add', [Tree('t1__sub', [Tree('t1__i', ['3']), Tree('t2__f', ['1.1'])]), Tree('t1__i', ['1'])])
+
+        class T1(Transformer):
+            @call_for("i")
+            def int_(self, values) -> int:
+                return int(values[0])
+
+            def sub(self, values):
+                return values[0] - values[1]
+
+            def add(self, values):
+                return sum(values)
+
+        class T2(Transformer):
+            @call_for("f")
+            def float_(self, values) -> float:
+                return float(values[0])
+
+        merged_transformer = merge_transformers(t1=T1(), t2=T2())
+
+        res = merged_transformer.transform(t)
+        self.assertEqual(res, 2.9)
+
     def test_call_for_visitor(self):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
 

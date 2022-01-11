@@ -1,6 +1,7 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, Mapping, ClassVar
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, Dict
 from abc import ABC
 from functools import wraps, update_wrapper
+import warnings
 
 from .utils import combine_alternatives
 from .tree import Tree
@@ -35,68 +36,48 @@ class _DiscardType:
 
 Discard = _DiscardType()
 
-# User function lookup and aliases
-
-
-class _UserFuncOverride:
-    def __init__(self, rule_name: str, user_func: Callable) -> None:
-        """
-        Initialize an instance.
-
-        Parameters:
-            rule_name: Name of the rule this should be replacing.
-            user_func: User function to call when rule is encountered. Will be a plain function,
-                NOT be bound to a class instance.
-        """
-        self.rule_name = rule_name
-        self.user_func = user_func
-        update_wrapper(self, user_func)
-
-    def __call__(self, *args, **kwargs):
-        return self.user_func(*args, **kwargs)
-
-    def __get__(self, instance, owner=None):
-        # bind user function with instance when function is called directly
-        return self.user_func.__get__(instance, owner)
+# User function lookup and overrides
 
 
 def call_for(rule_name: str) -> Callable:
     def _call_for(func: Callable) -> Callable:
-        return _UserFuncOverride(rule_name, func)
+        func._rule_name = rule_name
+        return func
 
     return _call_for
 
 
 class _UserFuncLookup:
-    _user_func_overrides: ClassVar[Mapping[str, _UserFuncOverride]]
+    _user_func_overrides: Dict[str, Callable]
 
-    def __init_subclass__(cls, **kwargs):
-        # cls is the subclass being initialized, so each subclass gets a unique override mapping
-        super().__init_subclass__(**kwargs)
-        all_overrides = {}
-        # Aggregate any overrides from parent classes (skipping the subclass & object).
-        # Reverse order so child overrides have precedence over parents.
-        for hierarchy_class in reversed(cls.__mro__[1:-1]):
-            aliases = getattr(hierarchy_class, "_user_func_overrides", None)
-            if aliases is not None:
-                all_overrides.update(aliases)
-
-        all_overrides.update(cls._collect_user_func_overrides())
-        cls._user_func_overrides = all_overrides
-
-    @classmethod
-    def _collect_user_func_overrides(cls) -> Mapping[str, _UserFuncOverride]:
-        aliases = {}
-        for obj in cls.__dict__.values():
-            if isinstance(obj, _UserFuncOverride):
-                aliases[obj.rule_name] = obj
-        return aliases
+    def __init__(self):
+        self._user_func_overrides = {}
 
     def _look_up_user_func(self, rule_name: str) -> Optional[Callable]:
-        override = self._user_func_overrides.get(rule_name)
-        if override is None:
-            return getattr(self, rule_name, None)
-        return override.user_func.__get__(self, self.__class__)
+        user_func = getattr(self, rule_name, None)
+        if user_func is not None:
+            return user_func
+
+        # backwards compatibility for subclass not calling __init__()
+        if not hasattr(self, "_user_func_overrides"):
+            warnings.warn("Subclasses of Transformer and Visitor should call super().__init__().",
+                          DeprecationWarning)
+            self._user_func_overrides = {}
+
+        # check cache
+        user_func = self._user_func_overrides.get(rule_name)
+        if user_func is not None:
+            return user_func
+
+        for attr_name in dir(self):
+            if attr_name.startswith("_"):
+                continue
+            attr = getattr(self, attr_name)
+            if hasattr(attr, "_rule_name") and attr._rule_name == rule_name:
+                self._user_func_overrides[attr._rule_name] = attr
+                return attr
+
+        return None
 
 # Transformers
 
@@ -158,6 +139,7 @@ class Transformer(_UserFuncLookup, _Decoratable, ABC, Generic[_T]):
     __visit_tokens__ = True   # For backwards compatibility
 
     def __init__(self,  visit_tokens: bool=True) -> None:
+        super().__init__()
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
@@ -265,7 +247,19 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
             assert composed_transformer.transform(t) == 'foobar'
 
     """
-    # TODO: investigate how this works with overrides
+    prefix_format = "{}__{}"
+
+    def _make_merged_method(prefix_with: str, to_wrap: Callable) -> Callable:
+        # Python methods don't allow attributes to be set, while that is allowed for functions. As
+        # a result, a wrapping function is needed to update the rule name.
+        # A factory function is needed to capture a reference to the method that is being wrapped.
+        @wraps(to_wrap)
+        def _merged_method(*args, **kwargs):
+            return to_wrap(*args, **kwargs)
+
+        _merged_method._rule_name = prefix_format.format(prefix_with, to_wrap._rule_name)
+        return _merged_method
+
     if base_transformer is None:
         base_transformer = Transformer()
     for prefix, transformer in transformers_to_merge.items():
@@ -275,10 +269,12 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
                 continue
             if method_name.startswith("_") or method_name == "transform":
                 continue
-            prefixed_method = prefix + "__" + method_name
+            prefixed_method = prefix_format.format(prefix, method_name)
             if hasattr(base_transformer, prefixed_method):
                 raise AttributeError("Cannot merge: method '%s' appears more than once" % prefixed_method)
 
+            if hasattr(method, "_rule_name"):
+                method = _make_merged_method(prefix, method)
             setattr(base_transformer, prefixed_method, method)
 
     return base_transformer

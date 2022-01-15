@@ -64,12 +64,15 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('ABAB')
 
+        _v_args = context['v_args']
+        @_v_args(inline=True)
         class T(context['Transformer']):
-            def a(self, items):
+            def a(self):
                 return 'a'
-            def b(self, items):
+            def b(self):
                 return 'b'
-            start = list
+
+            start = _v_args(inline=False)(list)
 
         x = T().transform(x)
         self.assertEqual(x, ['a', 'b'])

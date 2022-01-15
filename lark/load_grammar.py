@@ -193,6 +193,35 @@ SMALL_FACTOR_THRESHOLD = 5
 REPEAT_BREAK_THRESHOLD = 50
 
 
+class FindRuleSize(Transformer):
+    def __init__(self, keep_all_tokens):
+        self.keep_all_tokens = keep_all_tokens
+
+    def _will_not_get_removed(self, sym):
+        if isinstance(sym, NonTerminal):
+            return not sym.name.startswith('_')
+        if isinstance(sym, Terminal):
+            return self.keep_all_tokens or not sym.filter_out
+        if sym is _EMPTY:
+            return False
+        assert False, sym
+
+    def _args_as_int(self, args):
+        for a in args:
+            if isinstance(a, int):
+                yield a
+            elif isinstance(a, Symbol):
+                yield 1 if self._will_not_get_removed(a) else 0
+            else:
+                assert False
+
+    def expansion(self, args):
+        return sum(self._args_as_int(args))
+
+    def expansions(self, args):
+        return max(self._args_as_int(args))
+
+
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
@@ -344,18 +373,8 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def maybe(self, rule):
         keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
-
-        def will_not_get_removed(sym):
-            if isinstance(sym, NonTerminal):
-                return not sym.name.startswith('_')
-            if isinstance(sym, Terminal):
-                return keep_all_tokens or not sym.filter_out
-            if sym is _EMPTY:
-                return False
-            assert False, sym
-
-        empty = ST('expansion', [_EMPTY] * len(list(rule.scan_values(will_not_get_removed))))
-
+        rule_size = FindRuleSize(keep_all_tokens).transform(rule)
+        empty = ST('expansion', [_EMPTY] * rule_size)
         return ST('expansions', [rule, empty])
 
 

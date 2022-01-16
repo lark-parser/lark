@@ -132,9 +132,6 @@ class PostLexConnector:
         self.lexer = lexer
         self.postlexer = postlexer
 
-    def make_lexer_state(self, text):
-        return self.lexer.make_lexer_state(text)
-
     def lex(self, lexer_state, parser_state):
         i = self.lexer.lex(lexer_state, parser_state)
         return self.postlexer.process(i)

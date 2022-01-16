@@ -34,8 +34,7 @@ from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
-from lark.grammar import Rule
-from lark.lexer import TerminalDef, Lexer, BasicLexer
+from lark.lexer import Lexer, BasicLexer
 from lark.indenter import Indenter
 
 __all__ = ['TestParsers']

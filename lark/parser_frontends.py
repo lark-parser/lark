@@ -1,16 +1,11 @@
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, Token, TerminalDef
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
 from .common import LexerConf, ParserConf
-try:
-    import regex  # type: ignore
-except ImportError:
-    regex = None
-import re
 
 ###{standalone
 

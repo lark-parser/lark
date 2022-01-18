@@ -46,6 +46,7 @@ class CalculateTree(Transformer):
     number = float
 
     def __init__(self):
+        super().__init__()
         self.vars = {}
 
     def assign_var(self, name, value):

@@ -1,4 +1,4 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, Dict
 from abc import ABC
 
 from .utils import combine_alternatives
@@ -9,6 +9,7 @@ from .lexer import Token
 ###{standalone
 from functools import wraps, update_wrapper
 from inspect import getmembers, getmro
+import warnings
 
 _T = TypeVar('_T')
 _R = TypeVar('_R')
@@ -34,6 +35,49 @@ class _DiscardType:
         return "lark.visitors.Discard"
 
 Discard = _DiscardType()
+
+# User function lookup and overrides
+
+
+def call_for(rule_name: str) -> Callable:
+    def _call_for(func: Callable) -> Callable:
+        func._rule_name = rule_name
+        return func
+
+    return _call_for
+
+
+class _UserFuncLookup:
+    _user_func_overrides: Dict[str, Callable]
+
+    def __init__(self):
+        self._user_func_overrides = {}
+
+    def _look_up_user_func(self, rule_name: str) -> Optional[Callable]:
+        user_func = getattr(self, rule_name, None)
+        if user_func is not None:
+            return user_func
+
+        # backwards compatibility for subclass not calling __init__()
+        if not hasattr(self, "_user_func_overrides"):
+            warnings.warn("Subclasses of Transformer and Visitor should call super().__init__().",
+                          DeprecationWarning)
+            self._user_func_overrides = {}
+
+        # check cache
+        user_func = self._user_func_overrides.get(rule_name)
+        if user_func is not None:
+            return user_func
+
+        for attr_name in dir(self):
+            if attr_name.startswith("_"):
+                continue
+            attr = getattr(self, attr_name)
+            if hasattr(attr, "_rule_name") and attr._rule_name == rule_name:
+                self._user_func_overrides[attr._rule_name] = attr
+                return attr
+
+        return None
 
 # Transformers
 
@@ -64,7 +108,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable, ABC, Generic[_T]):
+class Transformer(_UserFuncLookup, _Decoratable, ABC, Generic[_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -95,39 +139,38 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
     __visit_tokens__ = True   # For backwards compatibility
 
     def __init__(self,  visit_tokens: bool=True) -> None:
+        super().__init__()
         self.__visit_tokens__ = visit_tokens
 
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
             return self.__default__(tree.data, children, tree.meta)
-        else:
-            try:
-                wrapper = getattr(f, 'visit_wrapper', None)
-                if wrapper is not None:
-                    return f.visit_wrapper(f, tree.data, children, tree.meta)
-                else:
-                    return f(children)
-            except GrammarError:
-                raise
-            except Exception as e:
-                raise VisitError(tree.data, tree, e)
+
+        try:
+            wrapper = getattr(f, 'visit_wrapper', None)
+            if wrapper is not None:
+                return f.visit_wrapper(f, tree.data, children, tree.meta)
+            else:
+                return f(children)
+        except GrammarError:
+            raise
+        except Exception as e:
+            raise VisitError(tree.data, tree, e)
 
     def _call_userfunc_token(self, token):
-        try:
-            f = getattr(self, token.type)
-        except AttributeError:
+        f = super()._look_up_user_func(token.type)
+        if f is None:
             return self.__default_token__(token)
-        else:
-            try:
-                return f(token)
-            except GrammarError:
-                raise
-            except Exception as e:
-                raise VisitError(token.type, token, e)
+
+        try:
+            return f(token)
+        except GrammarError:
+            raise
+        except Exception as e:
+            raise VisitError(token.type, token, e)
 
     def _transform_children(self, children):
         for c in children:
@@ -204,6 +247,19 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
             assert composed_transformer.transform(t) == 'foobar'
 
     """
+    prefix_format = "{}__{}"
+
+    def _make_merged_method(prefix_with: str, to_wrap: Callable) -> Callable:
+        # Python methods don't allow attributes to be set, while that is allowed for functions. As
+        # a result, a wrapping function is needed to update the rule name.
+        # A factory function is needed to capture a reference to the method that is being wrapped.
+        @wraps(to_wrap)
+        def _merged_method(*args, **kwargs):
+            return to_wrap(*args, **kwargs)
+
+        _merged_method._rule_name = prefix_format.format(prefix_with, to_wrap._rule_name)
+        return _merged_method
+
     if base_transformer is None:
         base_transformer = Transformer()
     for prefix, transformer in transformers_to_merge.items():
@@ -213,10 +269,12 @@ def merge_transformers(base_transformer=None, **transformers_to_merge):
                 continue
             if method_name.startswith("_") or method_name == "transform":
                 continue
-            prefixed_method = prefix + "__" + method_name
+            prefixed_method = prefix_format.format(prefix, method_name)
             if hasattr(base_transformer, prefixed_method):
                 raise AttributeError("Cannot merge: method '%s' appears more than once" % prefixed_method)
 
+            if hasattr(method, "_rule_name"):
+                method = _make_merged_method(prefix, method)
             setattr(base_transformer, prefixed_method, method)
 
     return base_transformer
@@ -226,12 +284,10 @@ class InlineTransformer(Transformer):   # XXX Deprecated
     def _call_userfunc(self, tree, new_children=None):
         # Assumes tree is already transformed
         children = new_children if new_children is not None else tree.children
-        try:
-            f = getattr(self, tree.data)
-        except AttributeError:
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
             return self.__default__(tree.data, children, tree.meta)
-        else:
-            return f(*children)
+        return f(*children)
 
 class TransformerChain(Generic[_T]):
 
@@ -317,9 +373,12 @@ class Transformer_InPlaceRecursive(Transformer):
 
 # Visitors
 
-class VisitorBase:
+class VisitorBase(_UserFuncLookup):
     def _call_userfunc(self, tree):
-        return getattr(self, tree.data, self.__default__)(tree)
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
+            f = self.__default__
+        return f(tree)
 
     def __default__(self, tree):
         """Default function that is called if there is no attribute matching ``tree.data``
@@ -379,7 +438,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_T]):
+class Interpreter(_UserFuncLookup, _Decoratable, ABC, Generic[_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -392,7 +451,10 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     """
 
     def visit(self, tree: Tree) -> _T:
-        f = getattr(self, tree.data)
+        f = super()._look_up_user_func(tree.data)
+        if f is None:
+            return self.__default__(tree)
+
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
             return f.visit_wrapper(f, tree.data, tree.children, tree.meta)
@@ -402,9 +464,6 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     def visit_children(self, tree: Tree) -> List[_T]:
         return [self.visit(child) if isinstance(child, Tree) else child
                 for child in tree.children]
-
-    def __getattr__(self, name):
-        return self.__default__
 
     def __default__(self, tree):
         return self.visit_children(tree)

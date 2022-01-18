@@ -195,6 +195,7 @@ REPEAT_BREAK_THRESHOLD = 50
 
 class FindRuleSize(Transformer):
     def __init__(self, keep_all_tokens):
+        super().__init__()
         self.keep_all_tokens = keep_all_tokens
 
     def _will_not_get_removed(self, sym):
@@ -225,6 +226,7 @@ class FindRuleSize(Transformer):
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
+        super().__init__()
         self.new_rules = []
         self.rules_cache = {}
         self.prefix = 'anon'
@@ -440,6 +442,7 @@ class PrepareAnonTerminals(Transformer_InPlace):
     """Create a unique list of anonymous terminals. Attempt to give meaningful names to them when we add them"""
 
     def __init__(self, terminals):
+        super().__init__()
         self.terminals = terminals
         self.term_set = {td.name for td in self.terminals}
         self.term_reverse = {td.pattern: td for td in terminals}
@@ -495,6 +498,7 @@ class _ReplaceSymbols(Transformer_InPlace):
     """Helper for ApplyTemplates"""
 
     def __init__(self):
+        super().__init__()
         self.names = {}
 
     def value(self, c):
@@ -513,6 +517,7 @@ class ApplyTemplates(Transformer_InPlace):
     """Apply the templates, creating new rules that represent the used templates"""
 
     def __init__(self, rule_defs):
+        super().__init__()
         self.rule_defs = rule_defs
         self.replacer = _ReplaceSymbols()
         self.created_templates = set()

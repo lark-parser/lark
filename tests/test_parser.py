@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 import re
 import unittest
-import logging
 import os
 import sys
 from copy import copy, deepcopy
@@ -2354,6 +2353,15 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("").children, [None, None, None])
             self.assertEqual(p.parse("a").children, ['a', None, None])
             self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
+
+            p = _Lark(r"""!start: "a" ["b" | "c"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("a").children, ['a', None])
+            self.assertEqual(p.parse("ab").children, ['a', 'b'])
+
+            p = _Lark(r"""!start: "a" ["b" | "c" "d"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("a").children, ['a', None, None])
+            # self.assertEqual(p.parse("ab").children, ['a', 'b', None])        # Not implemented; current behavior is incorrect
+            self.assertEqual(p.parse("acd").children, ['a', 'c', 'd'])
 
 
         def test_escaped_string(self):

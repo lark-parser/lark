@@ -22,12 +22,15 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" NAME "(" [parameters] ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," SLASH ("," paramvalue)*] ["," [starparams | kwparams]]
           | starparams
           | kwparams
 
 SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
-starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
+starparams: (starparam | starguard) poststarparams
+starparam: "*" typedparam
+starguard: "*"
+poststarparams: ("," paramvalue)* ["," kwparams]
 kwparams: "**" typedparam ","?
 
 ?paramvalue: typedparam ("=" test)?
@@ -102,6 +105,10 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
 ?test: or_test ("if" or_test "else" test)?
      | lambdef
+     | assign_expr
+
+assign_expr: NAME ":=" test
+
 ?test_nocond: or_test | lambdef_nocond
 
 ?or_test: and_test ("or" and_test)*
@@ -190,7 +197,7 @@ arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
 
 starargs: stararg ("," stararg)* ("," argvalue)* ["," kwargs]
 stararg: "*" test
-kwargs: "**" test
+kwargs: "**" test ("," argvalue)*
 
 ?argvalue: test ("=" test)?
 
@@ -222,11 +229,11 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 // Python terminals
 
-NAME: /[a-zA-Z_]\w*/
+NAME: /[^\W\d]\w*/
 COMMENT: /#[^\n]*/
 
-STRING: /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
-LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
 DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*

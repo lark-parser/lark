@@ -1,7 +1,5 @@
 from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, Dict
 from abc import ABC
-from functools import wraps, update_wrapper
-import warnings
 
 from .utils import combine_alternatives
 from .tree import Tree
@@ -9,7 +7,9 @@ from .exceptions import VisitError, GrammarError
 from .lexer import Token
 
 ###{standalone
+from functools import wraps, update_wrapper
 from inspect import getmembers, getmro
+import warnings
 
 _T = TypeVar('_T')
 _R = TypeVar('_R')

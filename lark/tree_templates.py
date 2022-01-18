@@ -76,6 +76,7 @@ class TemplateConf:
 
 class _ReplaceVars(Transformer):
     def __init__(self, conf, vars):
+        super().__init__()
         self._conf = conf
         self._vars = vars
 

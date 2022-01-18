@@ -51,12 +51,14 @@ class TestTrees(TestCase):
     def test_visitor(self):
         class Visitor1(Visitor):
             def __init__(self):
+                super().__init__()
                 self.nodes=[]
 
             def __default__(self,tree):
                 self.nodes.append(tree)
         class Visitor1_Recursive(Visitor_Recursive):
             def __init__(self):
+                super().__init__()
                 self.nodes=[]
 
             def __default__(self,tree):
@@ -543,6 +545,7 @@ class TestTrees(TestCase):
 
         class V(Visitor):
             def __init__(self) -> None:
+                super().__init__()
                 self.int_called = False
                 self.float_called = False
 
@@ -565,6 +568,7 @@ class TestTrees(TestCase):
 
         class V(Visitor):
             def __init__(self) -> None:
+                super().__init__()
                 self.int_called = False
                 self.float_called = False
 

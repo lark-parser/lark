@@ -53,6 +53,7 @@ def _get_rulename(name):
 @v_args(inline=True)
 class NearleyToLark(Transformer):
     def __init__(self):
+        super().__init__()
         self._count = 0
         self.extra_rules = {}
         self.extra_rules_rev = {}

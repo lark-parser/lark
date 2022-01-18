@@ -27,6 +27,7 @@ class WriteTokensTransformer(Transformer_InPlace):
     term_subs: Dict[str, Callable[[Symbol], str]]
 
     def __init__(self, tokens: Dict[str, TerminalDef], term_subs: Dict[str, Callable[[Symbol], str]]) -> None:
+        super().__init__()
         self.tokens = tokens
         self.term_subs = term_subs
 

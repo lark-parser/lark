@@ -1,10 +1,10 @@
 import sys
 from copy import deepcopy
 
-from typing import List, Callable, Iterator, Union, Optional, TYPE_CHECKING
+from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .lexer import TerminalDef
+    from .lexer import TerminalDef, Token
     if sys.version_info >= (3, 8):
         from typing import Literal
     else:
@@ -29,7 +29,11 @@ class Meta:
         self.empty = True
 
 
-class Tree:
+_Leaf_T = TypeVar("_Leaf_T")
+Branch = Union[_Leaf_T, 'Tree[_Leaf_T]']
+
+
+class Tree(Generic[_Leaf_T]):
     """The main tree class.
 
     Creates a new tree, and stores "data" and "children" in attributes of the same name.
@@ -43,9 +47,9 @@ class Tree:
     """
 
     data: str
-    children: 'List[Union[str, Tree]]'
+    children: 'List[Branch[_Leaf_T]]'
 
-    def __init__(self, data: str, children: 'List[Union[str, Tree]]', meta: Optional[Meta]=None) -> None:
+    def __init__(self, data: str, children: 'List[Branch[_Leaf_T]]', meta: Optional[Meta]=None) -> None:
         self.data = data
         self.children = children
         self._meta = meta
@@ -94,7 +98,7 @@ class Tree:
     def __hash__(self) -> int:
         return hash((self.data, tuple(self.children)))
 
-    def iter_subtrees(self) -> 'Iterator[Tree]':
+    def iter_subtrees(self) -> 'Iterator[Tree[_Leaf_T]]':
         """Depth-first iteration.
 
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
@@ -103,17 +107,18 @@ class Tree:
         subtrees = OrderedDict()
         for subtree in queue:
             subtrees[id(subtree)] = subtree
-            queue += [c for c in reversed(subtree.children)
+            # Reason for type ignore https://github.com/python/mypy/issues/10999
+            queue += [c for c in reversed(subtree.children)  # type: ignore
                       if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
         return reversed(list(subtrees.values()))
 
-    def find_pred(self, pred: 'Callable[[Tree], bool]') -> 'Iterator[Tree]':
+    def find_pred(self, pred: 'Callable[[Tree[_Leaf_T]], bool]') -> 'Iterator[Tree[_Leaf_T]]':
         """Returns all nodes of the tree that evaluate pred(node) as true."""
         return filter(pred, self.iter_subtrees())
 
-    def find_data(self, data: str) -> 'Iterator[Tree]':
+    def find_data(self, data: str) -> 'Iterator[Tree[_Leaf_T]]':
         """Returns all nodes of the tree whose data equals the given data."""
         return self.find_pred(lambda t: t.data == data)
 
@@ -130,7 +135,7 @@ class Tree:
         return changed
 
 
-    def scan_values(self, pred: 'Callable[[Union[str, Tree]], bool]') -> Iterator[str]:
+    def scan_values(self, pred: 'Callable[[Branch[_Leaf_T]], bool]') -> Iterator[_Leaf_T]:
         """Return all values in the tree that evaluate pred(value) as true.
 
         This can be used to find all the tokens in the tree.
@@ -163,13 +168,15 @@ class Tree:
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
 
-    def copy(self) -> 'Tree':
+    def copy(self) -> 'Tree[_Leaf_T]':
         return type(self)(self.data, self.children)
 
-    def set(self, data: str, children: 'List[Union[str, Tree]]') -> None:
+    def set(self, data: str, children: 'List[Branch[_Leaf_T]]') -> None:
         self.data = data
         self.children = children
 
+
+ParseTree = Tree['Token']
 
 
 class SlottedTree(Tree):
@@ -181,12 +188,12 @@ def pydot__tree_to_png(tree: Tree, filename: str, rankdir: 'Literal["TB", "LR", 
     graph.write_png(filename)
 
 
-def pydot__tree_to_dot(tree, filename, rankdir="LR", **kwargs):
+def pydot__tree_to_dot(tree: Tree, filename, rankdir="LR", **kwargs):
     graph = pydot__tree_to_graph(tree, rankdir, **kwargs)
     graph.write(filename)
 
 
-def pydot__tree_to_graph(tree, rankdir="LR", **kwargs):
+def pydot__tree_to_graph(tree: Tree, rankdir="LR", **kwargs):
     """Creates a colorful image that represents the tree (data+children, without meta)
 
     Possible values for `rankdir` are "TB", "LR", "BT", "RL", corresponding to

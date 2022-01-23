@@ -457,10 +457,13 @@ class _VArgsWrapper:
     Otherwise, we use the original function mirroring the behaviour without a __get__.
     We also have the visit_wrapper attribute to be used by Transformers.
     """
+    base_func: Callable
+
     def __init__(self, func: Callable, visit_wrapper: Callable[[Callable, str, list, Any], Any]):
         if isinstance(func, _VArgsWrapper):
             func = func.base_func
-        self.base_func = func
+        # https://github.com/python/mypy/issues/708
+        self.base_func = func  # type: ignore[assignment]
         self.visit_wrapper = visit_wrapper
         update_wrapper(self, func)
 

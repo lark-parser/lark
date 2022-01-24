@@ -2,6 +2,7 @@
 import hashlib
 import os.path
 import sys
+from importlib import import_module
 from collections import namedtuple
 from copy import copy, deepcopy
 import pkgutil
@@ -18,6 +19,7 @@ from .common import LexerConf, ParserConf
 from .grammar import RuleOptions, Rule, Terminal, NonTerminal, Symbol, TOKEN_DEFAULT_PRIORITY
 from .utils import classify, dedup_list
 from .exceptions import GrammarError, UnexpectedCharacters, UnexpectedToken, ParseError, UnexpectedInput
+from .exceptions import ConfigurationError
 
 from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
@@ -1075,19 +1077,63 @@ class Definition:
         self.params = tuple(params)
         self.options = options
 
-class GrammarBuilder:
-
-    global_keep_all_tokens: bool
-    import_paths: List[Union[str, Callable]]
+class GrammarLoaderBase:
     used_files: Dict[str, str]
+    import_paths: List[Union[str, Callable]]
 
-    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
-        self.global_keep_all_tokens = global_keep_all_tokens
+    def __init__(self,
+                 import_paths: Optional[List[Union[str, Callable]]]=None,
+                 used_files: Optional[Dict[str, str]]=None) -> None:
         self.import_paths = import_paths or []
         self.used_files = used_files or {}
 
+    def read_grammar_from_file(self, base_path: Optional[str], grammar_path: str):
+        to_try = self.import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
+        for source in to_try:
+            try:
+                if callable(source):
+                    joined_path, text = source(base_path, grammar_path)
+                else:
+                    joined_path = os.path.join(source, grammar_path)
+                    with open(joined_path, encoding='utf8') as f:
+                        text = f.read()
+            except IOError:
+                continue
+            else:
+                h = hashlib.md5(text.encode('utf8')).hexdigest()
+                if self.used_files.get(joined_path, h) != h:
+                    raise RuntimeError("Grammar file was changed during importing")
+                self.used_files[joined_path] = h
+                return joined_path, text
+        else:
+            # Search failed. Make Python throw a nice error.
+            open(grammar_path, encoding='utf8')
+            assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (grammar_path,)
+
+
+class LarkGrammarLoader(GrammarLoaderBase):
+    """ default grammar loader for Lark's EBNF grammar """
+    GRAMMAR_FILE_EXT = '.lark'
+
+    def parse_grammar(self, gramma_text, grammar_name):
+        return _parse_grammar(gramma_text, grammar_name)
+
+
+class GrammarBuilder:
+
+    global_keep_all_tokens: bool
+
+    def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
+
+        self.loader = LarkGrammarLoader(import_paths, used_files)
+        self.global_keep_all_tokens = global_keep_all_tokens
+
         self._definitions: Dict[str, Definition] = {}
         self._ignore_names: List[str] = []
+
+    @property
+    def used_files(self):
+        return self.loader.used_files
 
     def _grammar_error(self, is_term, msg, *names):
         args = {}
@@ -1226,8 +1272,24 @@ class GrammarBuilder:
         return name, is_term, exp, params, opts
 
 
+    def set_syntax(self, syntax: Union[str, object]):
+        if isinstance(syntax, str):
+            if syntax == 'lark':
+                self.loader = LarkGrammarLoader(self.loader.import_paths, self.loader.used_files)
+            else:
+                # load plugin from lark/syntax/ to support alternative grammars
+                try:
+                    module_name = 'lark.syntax.%s' % syntax
+                    loader = import_module(module_name, '.')
+                except Exception as e:
+                    raise ConfigurationError("invalid syntax option: %s" % syntax)
+
+                self.loader = loader.get_grammar_loader(self.loader.import_paths, self.loader.used_files)
+        else:
+            self.loader = syntax
+
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
-        tree = _parse_grammar(grammar_text, grammar_name)
+        tree = self.loader.parse_grammar(grammar_text, grammar_name)
 
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
         for stmt in tree.children:
@@ -1296,36 +1358,17 @@ class GrammarBuilder:
         assert dotted_path
         mangle = _get_mangle('__'.join(dotted_path), aliases, base_mangle)
         grammar_path = os.path.join(*dotted_path) + EXT
-        to_try = self.import_paths + ([base_path] if base_path is not None else []) + [stdlib_loader]
-        for source in to_try:
-            try:
-                if callable(source):
-                    joined_path, text = source(base_path, grammar_path)
-                else:
-                    joined_path = os.path.join(source, grammar_path)
-                    with open(joined_path, encoding='utf8') as f:
-                        text = f.read()
-            except IOError:
-                continue
-            else:
-                h = hashlib.md5(text.encode('utf8')).hexdigest()
-                if self.used_files.get(joined_path, h) != h:
-                    raise RuntimeError("Grammar file was changed during importing")
-                self.used_files[joined_path] = h
-                    
-                gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
-                gb.load_grammar(text, joined_path, mangle)
-                gb._remove_unused(map(mangle, aliases))
-                for name in gb._definitions:
-                    if name in self._definitions:
-                        raise GrammarError("Cannot import '%s' from '%s': Symbol already defined." % (name, grammar_path))
 
-                self._definitions.update(**gb._definitions)
-                break
-        else:
-            # Search failed. Make Python throw a nice error.
-            open(grammar_path, encoding='utf8')
-            assert False, "Couldn't import grammar %s, but a corresponding file was found at a place where lark doesn't search for it" % (dotted_path,)
+        joined_path, text = self.loader.read_grammar_from_file(base_path, grammar_path)
+
+        gb = GrammarBuilder(self.global_keep_all_tokens, self.loader.import_paths, self.loader.used_files)
+        gb.load_grammar(text, joined_path, mangle)
+        gb._remove_unused(map(mangle, aliases))
+        for name in gb._definitions:
+            if name in self._definitions:
+                raise GrammarError("Cannot import '%s' from '%s': Symbol already defined." % (name, grammar_path))
+
+        self._definitions.update(**gb._definitions)
 
 
     def validate(self) -> None:
@@ -1399,7 +1442,8 @@ def list_grammar_imports(grammar, import_paths=[]):
     builder.load_grammar(grammar, '<string>')
     return list(builder.used_files.keys())
 
-def load_grammar(grammar, source, import_paths, global_keep_all_tokens):
+def load_grammar(grammar, source, import_paths, global_keep_all_tokens, syntax='lark'):
     builder = GrammarBuilder(global_keep_all_tokens, import_paths)
+    builder.set_syntax(syntax)
     builder.load_grammar(grammar, source)
     return builder.build(), builder.used_files

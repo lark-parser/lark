@@ -1,0 +1,8 @@
+startab = expr
+
+expr = A B
+     / A expr B
+
+A = "a"
+B = "b"
+

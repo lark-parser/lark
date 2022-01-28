@@ -4,12 +4,13 @@ A tree templates is a tree that contains nodes that are template variables.
 
 """
 
-from typing import Union, Optional, Mapping
+from typing import Union, Optional, Mapping, Dict, Tuple, Iterator
 
 from lark import Tree, Transformer
 from lark.exceptions import MissingVariableError
 
-TreeOrCode = Union[Tree, str]
+TreeOrCode = Union[Tree[str], str]
+_TEMPLATE_MARKER = '$'
 
 
 class TemplateConf:
@@ -21,7 +22,7 @@ class TemplateConf:
     def __init__(self, parse=None):
         self._parse = parse
 
-    def test_var(self, var: Union[Tree, str]) -> Optional[str]:
+    def test_var(self, var: Union[Tree[str], str]) -> Optional[str]:
         """Given a tree node, if it is a template variable return its name. Otherwise, return None.
 
         This method may be overridden for customization
@@ -30,17 +31,20 @@ class TemplateConf:
             var: Tree | str - The tree node to test
 
         """
-        if isinstance(var, str) and var.startswith('$'):
-            return var.lstrip('$')
+        if isinstance(var, str):
+            return _get_template_name(var)
 
-        if isinstance(var, Tree) and var.data == 'var' and len(var.children) > 0:
-            first_child = var.children[0]
-            if isinstance(first_child, str) and first_child.startswith('$'):
-                return first_child.lstrip('$')
+        if (
+            isinstance(var, Tree)
+            and var.data == "var"
+            and len(var.children) > 0
+            and isinstance(var.children[0], str)
+        ):
+            return _get_template_name(var.children[0])
 
         return None
 
-    def _get_tree(self, template: TreeOrCode):
+    def _get_tree(self, template: TreeOrCode) -> Tree[str]:
         if isinstance(template, str):
             assert self._parse
             template = self._parse(template)
@@ -48,10 +52,10 @@ class TemplateConf:
         assert isinstance(template, Tree)
         return template
 
-    def __call__(self, template):
+    def __call__(self, template: Tree[str]) -> 'Template':
         return Template(template, conf=self)
 
-    def _match_tree_template(self, template, tree):
+    def _match_tree_template(self, template: TreeOrCode, tree: TreeOrCode) -> Optional[Dict[str, TreeOrCode]]:
         template_var = self.test_var(template)
         if template_var:
             return {template_var: tree}
@@ -61,7 +65,7 @@ class TemplateConf:
                 return {}
             return None
 
-        assert isinstance(template, Tree), template
+        assert isinstance(template, Tree) and isinstance(tree, Tree), f"template={template} tree={tree}"
 
         if template.data == tree.data and len(template.children) == len(tree.children):
             res = {}
@@ -74,13 +78,16 @@ class TemplateConf:
 
             return res
 
+        return None
 
-class _ReplaceVars(Transformer):
-    def __init__(self, conf, vars):
+
+class _ReplaceVars(Transformer[str, Tree[str]]):
+    def __init__(self, conf: TemplateConf, vars: Mapping[str, Tree[str]]) -> None:
+        super().__init__()
         self._conf = conf
         self._vars = vars
 
-    def __default__(self, data, children, meta):
+    def __default__(self, data, children, meta) -> Tree[str]:
         tree = super().__default__(data, children, meta)
 
         var = self._conf.test_var(tree)
@@ -100,11 +107,11 @@ class Template:
     (future versions may support annotations on the variables, to allow more complex templates)
     """
 
-    def __init__(self, tree: Tree, conf = TemplateConf()):
+    def __init__(self, tree: Tree[str], conf: TemplateConf = TemplateConf()):
         self.conf = conf
         self.tree = conf._get_tree(tree)
 
-    def match(self, tree: TreeOrCode):
+    def match(self, tree: TreeOrCode) -> Optional[Dict[str, TreeOrCode]]:
         """Match a tree template to a tree.
 
         A tree template without variables will only match ``tree`` if it is equal to the template.
@@ -120,7 +127,7 @@ class Template:
         tree = self.conf._get_tree(tree)
         return self.conf._match_tree_template(self.tree, tree)
 
-    def search(self, tree: TreeOrCode):
+    def search(self, tree: TreeOrCode) -> Iterator[Tuple[Tree[str], Dict[str, TreeOrCode]]]:
         """Search for all occurances of the tree template inside ``tree``.
         """
         tree = self.conf._get_tree(tree)
@@ -129,7 +136,7 @@ class Template:
             if res:
                 yield subtree, res
 
-    def apply_vars(self, vars: Mapping[str, Tree]):
+    def apply_vars(self, vars: Mapping[str, Tree[str]]) -> Tree[str]:
         """Apply vars to the template tree
         """
         return _ReplaceVars(self.conf, vars).transform(self.tree)
@@ -149,11 +156,15 @@ class TemplateTranslator:
     """Utility class for translating a collection of patterns
     """
 
-    def __init__(self, translations: Mapping[TreeOrCode, TreeOrCode]):
-        assert all( isinstance(k, Template) and isinstance(v, Template) for k, v in translations.items() )
+    def __init__(self, translations: Mapping[Template, Template]):
+        assert all(isinstance(k, Template) and isinstance(v, Template) for k, v in translations.items())
         self.translations = translations
 
-    def translate(self, tree: Tree):
+    def translate(self, tree: Tree[str]):
         for k, v in self.translations.items():
             tree = translate(k, v, tree)
         return tree
+
+
+def _get_template_name(value: str) -> Optional[str]:
+    return value.lstrip(_TEMPLATE_MARKER) if value.startswith(_TEMPLATE_MARKER) else None

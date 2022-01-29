@@ -7,6 +7,7 @@ from typing import (
 )
 if TYPE_CHECKING:
     from .parsers.lalr_interactive_parser import InteractiveParser
+    from .tree import ParseTree
     from .visitors import Transformer
     if sys.version_info >= (3, 8):
         from typing import Literal
@@ -226,7 +227,7 @@ _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Lark")
 
 class Lark(Serialize):
     """Main interface for the library.
@@ -596,7 +597,7 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> Tree:
+    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:

@@ -4,7 +4,7 @@ from typing import List, Dict, Union, Callable, Iterable, Optional
 import unicodedata
 
 from .lark import Lark
-from .tree import Tree
+from .tree import Tree, ParseTree
 from .visitors import Transformer_InPlace
 from .lexer import Token, PatternStr, TerminalDef
 from .grammar import Terminal, NonTerminal, Symbol
@@ -93,7 +93,7 @@ class Reconstructor(TreeMatcher):
             else:
                 yield item
 
-    def reconstruct(self, tree: Tree, postproc: Optional[Callable[[Iterable[str]], Iterable[str]]]=None, insert_spaces: bool=True) -> str:
+    def reconstruct(self, tree: ParseTree, postproc: Optional[Callable[[Iterable[str]], Iterable[str]]]=None, insert_spaces: bool=True) -> str:
         x = self._reconstruct(tree)
         if postproc:
             x = postproc(x)

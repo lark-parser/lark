@@ -35,6 +35,8 @@ class TemplateConf:
         if isinstance(var, Tree) and var.data == 'var' and var.children[0].startswith('$'):
             return var.children[0].lstrip('$')
 
+        return None
+
 
     def _get_tree(self, template: TreeOrCode):
         if isinstance(template, str):

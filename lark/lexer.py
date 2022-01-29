@@ -124,7 +124,7 @@ class TerminalDef(Serialize):
         else:
             return self.name
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Token")
 
 class Token(str):
     """A string with meta-information, that is produced by the lexer.
@@ -478,7 +478,7 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
-        lexer_by_tokens: Dict[frozenset, BasicLexer] = {}
+        lexer_by_tokens: Dict[FrozenSet[str], BasicLexer] = {}
         self.lexers = {}
         for state, accepts in states.items():
             key = frozenset(accepts)

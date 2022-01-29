@@ -1,10 +1,6 @@
 import sys
 from argparse import ArgumentParser, FileType
-try:
-    from textwrap import indent
-except ImportError:
-    def indent(text, prefix):
-        return ''.join(prefix + line for line in text.splitlines(True))
+from textwrap import indent
 from logging import DEBUG, INFO, WARN, ERROR
 import warnings
 

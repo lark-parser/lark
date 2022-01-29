@@ -1,8 +1,5 @@
-try:
-    import regex as re
-except ImportError:
-    import re
-from setuptools import find_packages, setup
+import re
+from setuptools import setup
 
 __version__ ,= re.findall('__version__: str = "(.*)"', open('lark/__init__.py').read())
 
@@ -20,7 +17,7 @@ setup(
         "atomic_cache": ["atomicwrites"],
     },
 
-    package_data = {'': ['*.md', '*.lark'], 'lark': ['py.typed']},
+    package_data = {'': ['*.md', '*.lark']},
 
     test_suite = 'tests.__main__',
 

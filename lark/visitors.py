@@ -1,18 +1,21 @@
-from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any
+from typing import TypeVar, Tuple, List, Callable, Generic, Type, Union, Optional, Any, cast
 from abc import ABC
-from functools import wraps, update_wrapper
 
 from .utils import combine_alternatives
-from .tree import Tree
+from .tree import Tree, Branch
 from .exceptions import VisitError, GrammarError
 from .lexer import Token
 
 ###{standalone
+from functools import wraps, update_wrapper
 from inspect import getmembers, getmro
 
-_T = TypeVar('_T')
+_Return_T = TypeVar('_Return_T')
+_Return_V = TypeVar('_Return_V')
+_Leaf_T = TypeVar('_Leaf_T')
+_Leaf_U = TypeVar('_Leaf_U')
 _R = TypeVar('_R')
-_FUNC = Callable[..., _T]
+_FUNC = Callable[..., _Return_T]
 _DECORATED = Union[_FUNC, type]
 
 class _DiscardType:
@@ -64,7 +67,7 @@ class _Decoratable:
         return cls
 
 
-class Transformer(_Decoratable, ABC, Generic[_T]):
+class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
     """Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
 
     Methods are provided by the user via inheritance, and called according to ``tree.data``.
@@ -145,11 +148,14 @@ class Transformer(_Decoratable, ABC, Generic[_T]):
         children = list(self._transform_children(tree.children))
         return self._call_userfunc(tree, children)
 
-    def transform(self, tree: Tree) -> _T:
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         "Transform the given tree, and return the final result"
         return self._transform_tree(tree)
 
-    def __mul__(self, other: 'Transformer[_T]') -> 'TransformerChain[_T]':
+    def __mul__(
+            self: 'Transformer[_Leaf_T, Tree[_Leaf_U]]',
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V,]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         """Chain two transformers together, returning a new transformer.
         """
         return TransformerChain(self, other)
@@ -233,19 +239,23 @@ class InlineTransformer(Transformer):   # XXX Deprecated
         else:
             return f(*children)
 
-class TransformerChain(Generic[_T]):
 
-    transformers: Tuple[Transformer[_T], ...]
+class TransformerChain(Generic[_Leaf_T, _Return_T]):
 
-    def __init__(self, *transformers: Transformer[_T]) -> None:
+    transformers: 'Tuple[Union[Transformer, TransformerChain], ...]'
+
+    def __init__(self, *transformers: 'Union[Transformer, TransformerChain]') -> None:
         self.transformers = transformers
 
-    def transform(self, tree: Tree) -> _T:
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         for t in self.transformers:
             tree = t.transform(tree)
-        return tree
+        return cast(_Return_T, tree)
 
-    def __mul__(self, other: Transformer[_T]) -> 'TransformerChain[_T]':
+    def __mul__(
+            self: 'TransformerChain[_Leaf_T, Tree[_Leaf_U]]',
+            other: 'Union[Transformer[_Leaf_U, _Return_V], TransformerChain[_Leaf_U, _Return_V]]'
+    ) -> 'TransformerChain[_Leaf_T, _Return_V]':
         return TransformerChain(*self.transformers + (other,))
 
 
@@ -257,7 +267,7 @@ class Transformer_InPlace(Transformer):
     def _transform_tree(self, tree):           # Cancel recursion
         return self._call_userfunc(tree)
 
-    def transform(self, tree):
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         for subtree in tree.iter_subtrees():
             subtree.children = list(self._transform_children(subtree.children))
 
@@ -272,10 +282,10 @@ class Transformer_NonRecursive(Transformer):
     Useful for huge trees.
     """
 
-    def transform(self, tree):
+    def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         # Tree to postfix
         rev_postfix = []
-        q = [tree]
+        q: List[Branch[_Leaf_T]] = [tree]
         while q:
             t = q.pop()
             rev_postfix.append(t)
@@ -283,7 +293,7 @@ class Transformer_NonRecursive(Transformer):
                 q += t.children
 
         # Postfix to tree
-        stack = []
+        stack: List = []
         for x in reversed(rev_postfix):
             if isinstance(x, Tree):
                 size = len(x.children)
@@ -304,8 +314,11 @@ class Transformer_NonRecursive(Transformer):
             else:
                 stack.append(x)
 
-        t ,= stack  # We should have only one tree remaining
-        return t
+        result, = stack  # We should have only one tree remaining
+        # There are no guarantees on the type of the value produced by calling a user func for a
+        # child will produce. This means type system can't statically know that the final result is
+        # _Return_T. As a result a cast is required.
+        return cast(_Return_T, result)
 
 
 class Transformer_InPlaceRecursive(Transformer):
@@ -332,26 +345,26 @@ class VisitorBase:
         return cls
 
 
-class Visitor(VisitorBase, ABC, Generic[_T]):
+class Visitor(VisitorBase, ABC, Generic[_Leaf_T]):
     """Tree visitor, non-recursive (can handle huge trees).
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
     """
 
-    def visit(self, tree: Tree) -> Tree:
+    def visit(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for subtree in tree.iter_subtrees():
             self._call_userfunc(subtree)
         return tree
 
-    def visit_topdown(self, tree: Tree) -> Tree:
+    def visit_topdown(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         for subtree in tree.iter_subtrees_topdown():
             self._call_userfunc(subtree)
         return tree
 
 
-class Visitor_Recursive(VisitorBase):
+class Visitor_Recursive(VisitorBase, Generic[_Leaf_T]):
     """Bottom-up visitor, recursive.
 
     Visiting a node calls its methods (provided by the user via inheritance) according to ``tree.data``
@@ -359,7 +372,7 @@ class Visitor_Recursive(VisitorBase):
     Slightly faster than the non-recursive version.
     """
 
-    def visit(self, tree: Tree) -> Tree:
+    def visit(self, tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visits the tree, starting with the leaves and finally the root (bottom-up)"
         for child in tree.children:
             if isinstance(child, Tree):
@@ -368,7 +381,7 @@ class Visitor_Recursive(VisitorBase):
         self._call_userfunc(tree)
         return tree
 
-    def visit_topdown(self,tree: Tree) -> Tree:
+    def visit_topdown(self,tree: Tree[_Leaf_T]) -> Tree[_Leaf_T]:
         "Visit the tree, starting at the root, and ending at the leaves (top-down)"
         self._call_userfunc(tree)
 
@@ -379,7 +392,7 @@ class Visitor_Recursive(VisitorBase):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_T]):
+class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
     """Interpreter walks the tree starting at the root.
 
     Visits the tree, starting with the root and finally the leaves (top-down)
@@ -391,7 +404,13 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
     This allows the user to implement branching and loops.
     """
 
-    def visit(self, tree: Tree) -> _T:
+    def visit(self, tree: Tree[_Leaf_T]) -> _Return_T:
+        # There are no guarantees on the type of the value produced by calling a user func for a
+        # child will produce. So only annotate the public method and use an internal method when
+        # visiting child trees.
+        return self._visit_tree(tree)
+
+    def _visit_tree(self, tree: Tree[_Leaf_T]):
         f = getattr(self, tree.data)
         wrapper = getattr(f, 'visit_wrapper', None)
         if wrapper is not None:
@@ -399,8 +418,8 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
         else:
             return f(tree)
 
-    def visit_children(self, tree: Tree) -> List[_T]:
-        return [self.visit(child) if isinstance(child, Tree) else child
+    def visit_children(self, tree: Tree[_Leaf_T]) -> List:
+        return [self._visit_tree(child) if isinstance(child, Tree) else child
                 for child in tree.children]
 
     def __getattr__(self, name):
@@ -410,7 +429,7 @@ class Interpreter(_Decoratable, ABC, Generic[_T]):
         return self.visit_children(tree)
 
 
-_InterMethod = Callable[[Type[Interpreter], _T], _R]
+_InterMethod = Callable[[Type[Interpreter], _Return_T], _R]
 
 def visit_children_decor(func: _InterMethod) -> _InterMethod:
     "See Interpreter"
@@ -438,10 +457,13 @@ class _VArgsWrapper:
     Otherwise, we use the original function mirroring the behaviour without a __get__.
     We also have the visit_wrapper attribute to be used by Transformers.
     """
+    base_func: Callable
+
     def __init__(self, func: Callable, visit_wrapper: Callable[[Callable, str, list, Any], Any]):
         if isinstance(func, _VArgsWrapper):
             func = func.base_func
-        self.base_func = func
+        # https://github.com/python/mypy/issues/708
+        self.base_func = func  # type: ignore[assignment]
         self.visit_wrapper = visit_wrapper
         update_wrapper(self, func)
 

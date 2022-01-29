@@ -1081,6 +1081,9 @@ class GrammarBuilder:
     import_paths: List[Union[str, Callable]]
     used_files: Dict[str, str]
 
+    _definitions: Dict[str, Definition]
+    _ignore_names: List[str]
+
     def __init__(self, global_keep_all_tokens: bool=False, import_paths: Optional[List[Union[str, Callable]]]=None, used_files: Optional[Dict[str, str]]=None) -> None:
         self.global_keep_all_tokens = global_keep_all_tokens
         self.import_paths = import_paths or []
@@ -1230,6 +1233,7 @@ class GrammarBuilder:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
+          
         for stmt in tree.children:
             if stmt.data == 'import':
                 dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)

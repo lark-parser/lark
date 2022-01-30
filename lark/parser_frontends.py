@@ -1,16 +1,11 @@
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, Token, TerminalDef
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
 from .common import LexerConf, ParserConf
-try:
-    import regex  # type: ignore
-except ImportError:
-    regex = None
-import re
 
 ###{standalone
 
@@ -34,7 +29,8 @@ class MakeParsingFrontend:
 
     def deserialize(self, data, memo, lexer_conf, callbacks, options):
         parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
-        parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
+        cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
+        parser = cls.deserialize(data['parser'], memo, callbacks, options.debug)
         parser_conf.callbacks = callbacks
         return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
@@ -77,7 +73,7 @@ class ParsingFrontend(Serialize):
             assert issubclass(lexer_type, Lexer), lexer_type
             self.lexer = _wrap_lexer(lexer_type)(lexer_conf)
         else:
-            self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex)
+            self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex, options)
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
@@ -92,17 +88,21 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
+    def _make_lexer_thread(self, text):
+        cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
+        return text if self.skip_lexer else cls(self.lexer, text)
+
     def parse(self, text, start=None, on_error=None):
         chosen_start = self._verify_start(start)
-        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
         kw = {} if on_error is None else {'on_error': on_error}
+        stream = self._make_lexer_thread(text)
         return self.parser.parse(stream, chosen_start, **kw)
     
     def parse_interactive(self, text=None, start=None):
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
-        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        stream = self._make_lexer_thread(text)
         return self.parser.parse_interactive(stream, chosen_start)
 
 
@@ -132,26 +132,26 @@ class PostLexConnector:
         self.lexer = lexer
         self.postlexer = postlexer
 
-    def make_lexer_state(self, text):
-        return self.lexer.make_lexer_state(text)
-
     def lex(self, lexer_state, parser_state):
         i = self.lexer.lex(lexer_state, parser_state)
         return self.postlexer.process(i)
 
 
 
-def create_basic_lexer(lexer_conf, parser, postlex):
-    return BasicLexer(lexer_conf)
+def create_basic_lexer(lexer_conf, parser, postlex, options):
+    cls = (options and options._plugins.get('BasicLexer')) or BasicLexer
+    return cls(lexer_conf)
 
-def create_contextual_lexer(lexer_conf, parser, postlex):
+def create_contextual_lexer(lexer_conf, parser, postlex, options):
+    cls = (options and options._plugins.get('ContextualLexer')) or ContextualLexer
     states = {idx:list(t.keys()) for idx, t in parser._parse_table.states.items()}
     always_accept = postlex.always_accept if postlex else ()
-    return ContextualLexer(lexer_conf, states, always_accept=always_accept)
+    return cls(lexer_conf, states, always_accept=always_accept)
 
 def create_lalr_parser(lexer_conf, parser_conf, options=None):
     debug = options.debug if options else False
-    return LALR_Parser(parser_conf, debug=debug)
+    cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
+    return cls(parser_conf, debug=debug)
 
 
 create_earley_parser = NotImplemented

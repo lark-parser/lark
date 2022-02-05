@@ -7,8 +7,10 @@ A tree templates is a tree that contains nodes that are template variables.
 from typing import Union, Optional, Mapping
 
 from lark import Tree, Transformer
+from lark.exceptions import MissingVariableError
 
 TreeOrCode = Union[Tree, str]
+
 
 class TemplateConf:
     """Template Configuration
@@ -18,7 +20,6 @@ class TemplateConf:
 
     def __init__(self, parse=None):
         self._parse = parse
-
 
     def test_var(self, var: Union[Tree, str]) -> Optional[str]:
         """Given a tree node, if it is a template variable return its name. Otherwise, return None.
@@ -32,11 +33,12 @@ class TemplateConf:
         if isinstance(var, str) and var.startswith('$'):
             return var.lstrip('$')
 
-        if isinstance(var, Tree) and var.data == 'var' and var.children[0].startswith('$'):
-            return var.children[0].lstrip('$')
+        if isinstance(var, Tree) and var.data == 'var' and len(var.children) > 0:
+            first_child = var.children[0]
+            if isinstance(first_child, str) and first_child.startswith('$'):
+                return first_child.lstrip('$')
 
         return None
-
 
     def _get_tree(self, template: TreeOrCode):
         if isinstance(template, str):
@@ -57,7 +59,7 @@ class TemplateConf:
         if isinstance(template, str):
             if template == tree:
                 return {}
-            return
+            return None
 
         assert isinstance(template, Tree), template
 
@@ -66,12 +68,11 @@ class TemplateConf:
             for t1, t2 in zip(template.children, tree.children):
                 matches = self._match_tree_template(t1, t2)
                 if matches is None:
-                    return
+                    return None
 
                 res.update(matches)
 
             return res
-
 
 
 class _ReplaceVars(Transformer):
@@ -84,7 +85,10 @@ class _ReplaceVars(Transformer):
 
         var = self._conf.test_var(tree)
         if var:
-            return self._vars[var]
+            try:
+                return self._vars[var]
+            except KeyError:
+                raise MissingVariableError(f"No mapping for template variable ({var})")
         return tree
 
 
@@ -139,7 +143,6 @@ def translate(t1: Template, t2: Template, tree: TreeOrCode):
         res = t2.apply_vars(vars)
         subtree.set(res.data, res.children)
     return tree
-
 
 
 class TemplateTranslator:

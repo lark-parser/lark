@@ -279,4 +279,8 @@ class VisitError(LarkError):
         self.obj = obj
         self.orig_exc = orig_exc
 
+
+class MissingVariableError(LarkError):
+    pass
+
 ###}

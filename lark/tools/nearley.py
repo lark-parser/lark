@@ -47,7 +47,7 @@ nearley_grammar = r"""
 nearley_grammar_parser = Lark(nearley_grammar, parser='earley', lexer='basic')
 
 def _get_rulename(name):
-    name = {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
+    name = {'_': '_ws_maybe', '__': '_ws'}.get(name, name)
     return 'n_' + name.replace('$', '__DOLLAR__').lower()
 
 @v_args(inline=True)

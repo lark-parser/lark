@@ -2567,6 +2567,17 @@ def _make_parser_test(LEXER, PARSER):
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
 
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser error handling only works with LALR for now")
+        def test_iter_parse(self):
+            ab_grammar = '!start: "a"* "b"*'
+            parser = Lark(ab_grammar, parser="lalr")
+            ip = parser.parse_interactive("aaabb")
+            i = ip.iter_parse()
+            assert next(i) == 'a'
+            assert next(i) == 'a'
+            assert next(i) == 'a'
+            assert next(i) == 'b'
+
         @unittest.skipIf(PARSER!='lalr', "Tree-less mode is only supported in lalr")
         def test_default_in_treeless_mode(self):
             grammar = r"""

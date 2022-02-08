@@ -74,18 +74,18 @@ def extract_sections(lines):
     section = None
     text = []
     sections = defaultdict(list)
-    for l in lines:
-        if l.startswith('###'):
-            if l[3] == '{':
-                section = l[4:].strip()
-            elif l[3] == '}':
+    for line in lines:
+        if line.startswith('###'):
+            if line[3] == '{':
+                section = line[4:].strip()
+            elif line[3] == '}':
                 sections[section] += text
                 section = None
                 text = []
             else:
-                raise ValueError(l)
+                raise ValueError(line)
         elif section:
-            text.append(l)
+            text.append(line)
 
     return {name: ''.join(text) for name, text in sections.items()}
 

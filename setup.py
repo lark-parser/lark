@@ -17,7 +17,7 @@ setup(
         "atomic_cache": ["atomicwrites"],
     },
 
-    package_data = {'': ['*.md', '*.lark']},
+    package_data = {'': ['*.md', '*.lark'], 'lark': ['py.typed']},
 
     test_suite = 'tests.__main__',
 

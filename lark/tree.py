@@ -162,8 +162,8 @@ class Tree(Generic[_Leaf_T]):
             if not isinstance(node, Tree):
                 continue
             yield node
-            for n in reversed(node.children):
-                stack.append(n)
+            for child in reversed(node.children):
+                stack.append(child)
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)

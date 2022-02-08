@@ -178,7 +178,7 @@ def main():
     parser = ArgumentParser(prog="prog='python -m lark.tools.standalone'", description="Lark Stand-alone Generator Tool",
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
     parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
-    if len(sys.argv)==1:
+    if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     ns = parser.parse_args()

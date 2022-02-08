@@ -1,5 +1,6 @@
 # This module provides a LALR interactive parser, which is used for debugging and error handling
 
+from typing import Iterator, List
 from copy import copy
 
 from lark.exceptions import UnexpectedToken
@@ -15,20 +16,34 @@ class InteractiveParser:
         self.parser = parser
         self.parser_state = parser_state
         self.lexer_state = lexer_state
+        self.result = None
 
-    def feed_token(self, token):
+    def feed_token(self, token: Token):
         """Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
         """
         return self.parser_state.feed_token(token, token.type == '$END')
+
+    def iter_parse(self) -> Iterator[Token]:
+        """Step through the different stages of the parse, by reading tokens from the lexer
+        and feeding them to the parser, one per iteration.
+
+        Returns an iterator of the tokens it encounters.
+
+        When the parse is over, the resulting tree can be found in ``InteractiveParser.result``. 
+        """
+        for token in self.lexer_state.lex(self.parser_state):
+            yield token
+            self.result = self.feed_token(token)
     
-    def exhaust_lexer(self):
+    def exhaust_lexer(self) -> List[Token]:
         """Try to feed the rest of the lexer state into the interactive parser.
         
-        Note that this modifies the instance in place and does not feed an '$END' Token"""
-        for token in self.lexer_state.lex(self.parser_state):
-            self.parser_state.feed_token(token)
+        Note that this modifies the instance in place and does not feed an '$END' Token
+        """
+        return list(self.iter_parse())
+
     
     def feed_eof(self, last_token=None):
         """Feed a '$END' Token. Borrows from 'last_token' if given."""

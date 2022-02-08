@@ -87,7 +87,7 @@ def extract_sections(lines):
         elif section:
             text.append(l)
 
-    return {name:''.join(text) for name, text in sections.items()}
+    return {name: ''.join(text) for name, text in sections.items()}
 
 
 def strip_docstrings(line_gen):

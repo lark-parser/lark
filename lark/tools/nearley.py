@@ -134,7 +134,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
         elif statement.data == 'macro':
             pass    # TODO Add support for macros!
         elif statement.data == 'ruledef':
-            rule_defs.append( n2l.transform(statement) )
+            rule_defs.append(n2l.transform(statement))
         else:
             raise Exception("Unknown statement: %s" % statement)
 

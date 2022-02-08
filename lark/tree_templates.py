@@ -154,6 +154,6 @@ class TemplateTranslator:
         self.translations = translations
 
     def translate(self, tree: Tree):
-        for k, v in self.translations.items():
-            tree = translate(k, v, tree)
+        for key, value in self.translations.items():
+            tree = translate(key, value, tree)
         return tree

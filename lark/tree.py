@@ -143,13 +143,13 @@ class Tree(Generic[_Leaf_T]):
         Example:
             >>> all_tokens = tree.scan_values(lambda v: isinstance(v, Token))
         """
-        for c in self.children:
-            if isinstance(c, Tree):
-                for t in c.scan_values(pred):
+        for child in self.children:
+            if isinstance(child, Tree):
+                for t in child.scan_values(pred):
                     yield t
             else:
-                if pred(c):
-                    yield c
+                if pred(child):
+                    yield child
 
     def iter_subtrees_topdown(self):
         """Breadth-first iteration.

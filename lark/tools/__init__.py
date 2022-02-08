@@ -26,13 +26,13 @@ k = {'encoding': 'utf-8'} if sys.version_info > (3, 4) else {}
 lalr_argparser.add_argument('-o', '--out', type=FileType('w', **k), default=sys.stdout, help='the output file (default=stdout)')
 lalr_argparser.add_argument('grammar_file', type=FileType('r', **k), help='A valid .lark file')
 
-for f in flags:
-    if isinstance(f, tuple):
-        options.append(f[1])
-        lalr_argparser.add_argument('-' + f[0], '--' + f[1], action='store_true')
+for flag in flags:
+    if isinstance(flag, tuple):
+        options.append(flag[1])
+        lalr_argparser.add_argument('-' + flag[0], '--' + flag[1], action='store_true')
     else:
-        options.append(f)
-        lalr_argparser.add_argument('--' + f, action='store_true')
+        options.append(flag)
+        lalr_argparser.add_argument('--' + flag, action='store_true')
 
 
 def build_lalr(namespace):

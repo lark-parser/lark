@@ -108,7 +108,7 @@ class Tree(Generic[_Leaf_T]):
         for subtree in queue:
             subtrees[id(subtree)] = subtree
             # Reason for type ignore https://github.com/python/mypy/issues/10999
-            queue += [c for c in reversed(subtree.children)  # type: ignore
+            queue += [c for c in reversed(subtree.children)  # type: ignore[misc]
                       if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
@@ -204,7 +204,7 @@ def pydot__tree_to_graph(tree: Tree, rankdir="LR", **kwargs):
     possible attributes, see https://www.graphviz.org/doc/info/attrs.html.
     """
 
-    import pydot  # type: ignore
+    import pydot  # type: ignore[import]
     graph = pydot.Dot(graph_type='digraph', rankdir=rankdir, **kwargs)
 
     i = [0]

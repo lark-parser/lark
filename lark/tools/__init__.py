@@ -34,6 +34,8 @@ for flag in flags:
     elif isinstance(flag, str):
         options.append(flag)
         lalr_argparser.add_argument('--' + flag, action='store_true')
+    else:
+        raise NotImplementedError("flags must only contain strings or tuples of strings")
 
 
 def build_lalr(namespace):

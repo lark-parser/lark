@@ -30,7 +30,7 @@ for flag in flags:
     if isinstance(flag, tuple):
         options.append(flag[1])
         lalr_argparser.add_argument('-' + flag[0], '--' + flag[1], action='store_true')
-    else:
+    elif isinstance(flag, str):
         options.append(flag)
         lalr_argparser.add_argument('--' + flag, action='store_true')
 

@@ -18,11 +18,11 @@ from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
 from .tree import Tree
-from .common import LexerConf, ParserConf
+from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
 from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend, _get_lexer_callbacks
+from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
 
 import re
@@ -57,8 +57,8 @@ class LarkOptions(Serialize):
     g_regex_flags: int
     keep_all_tokens: bool
     tree_class: Any
-    parser: 'Literal["earley", "lalr", "cyk", "auto"]'
-    lexer: 'Union[Literal["auto", "basic", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
+    parser: _ParserArgType
+    lexer: _LexerArgType
     ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
     postlex: Optional[PostLex]
     priority: 'Optional[Literal["auto", "normal", "invert"]]'
@@ -453,9 +453,15 @@ class Lark(Serialize):
 
     def _build_parser(self):
         self._prepare_callbacks()
-        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        _validate_frontend_args(self.options.parser, self.options.lexer)
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
-        return parser_class(self.lexer_conf, parser_conf, options=self.options)
+        return _construct_parsing_frontend(
+            self.options.parser,
+            self.options.lexer,
+            self.lexer_conf,
+            parser_conf,
+            options=self.options
+        )
 
     def save(self, f, exclude_options: Collection[str] = ()):
         """Saves the instance into the given file object
@@ -504,12 +510,12 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
-        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        _validate_frontend_args(self.options.parser, self.options.lexer)
         self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
         self.terminals = self.lexer_conf.terminals
         self._prepare_callbacks()
         self._terminals_dict = {t.name: t for t in self.terminals}
-        self.parser = parser_class.deserialize(
+        self.parser = _deserialize_parsing_frontend(
             data['parser'],
             memo,
             self.lexer_conf,

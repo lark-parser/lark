@@ -1,15 +1,28 @@
 from copy import deepcopy
+import sys
 from types import ModuleType
 from typing import Callable, Collection, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lark import PostLex
+    from .lexer import Lexer
+    from typing import Union, Type
+    if sys.version_info >= (3, 8):
+        from typing import Literal
+    else:
+        from typing_extensions import Literal
+    if sys.version_info >= (3, 10):
+        from typing import TypeAlias
+    else:
+        from typing_extensions import TypeAlias
 
 from .utils import Serialize
 from .lexer import TerminalDef, Token
 
 ###{standalone
 
+_ParserArgType: 'TypeAlias' = 'Literal["earley", "lalr", "cyk", "auto"]'
+_LexerArgType: 'TypeAlias' = 'Union[Literal["auto", "basic", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
 _Callback = Callable[[Token], Token]
 
 class LexerConf(Serialize):
@@ -24,6 +37,7 @@ class LexerConf(Serialize):
     g_regex_flags: int
     skip_validation: bool
     use_bytes: bool
+    lexer_type: Optional[_LexerArgType]
 
     def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
         self.terminals = terminals

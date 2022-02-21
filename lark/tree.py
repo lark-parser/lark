@@ -86,6 +86,34 @@ class Tree(Generic[_Leaf_T]):
         """
         return ''.join(self._pretty(0, indent_str))
 
+    def __rich__(self, parent:'rich.tree.Tree'=None) -> 'rich.tree.Tree':
+        """Returns a tree widget for the 'rich' library.
+
+        Example:
+            ::
+                from rich import print
+                from lark import Tree
+
+                tree = Tree('root', ['node1', 'node2'])
+                print(tree)
+        """
+        return self._rich(parent)
+
+    def _rich(self, parent):
+        if parent:
+            tree = parent.add(f'[bold]{self.data}[/bold]')
+        else:
+            import rich.tree
+            tree = rich.tree.Tree(self.data)
+
+        for c in self.children:
+            if isinstance(c, Tree):
+                c._rich(tree)
+            else:
+                tree.add(f'[green]{c}[/green]')
+
+        return tree
+
     def __eq__(self, other):
         try:
             return self.data == other.data and self.children == other.children

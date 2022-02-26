@@ -2518,12 +2518,12 @@ def _make_parser_test(LEXER, PARSER):
 
             ip_copy = ip.copy()
             self.assertEqual(ip_copy.parser_state, ip.parser_state)
-            self.assertEqual(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertEqual(ip_copy.lexer_thread.state, ip.lexer_thread.state)
             self.assertIsNot(ip_copy.parser_state, ip.parser_state)
-            self.assertIsNot(ip_copy.lexer_state.state, ip.lexer_state.state)
-            self.assertIsNot(ip_copy.lexer_state.state.line_ctr, ip.lexer_state.state.line_ctr)
+            self.assertIsNot(ip_copy.lexer_thread.state, ip.lexer_thread.state)
+            self.assertIsNot(ip_copy.lexer_thread.state.line_ctr, ip.lexer_thread.state.line_ctr)
 
-            res = ip.feed_eof(ip.lexer_state.state.last_token)
+            res = ip.feed_eof(ip.lexer_thread.state.last_token)
             self.assertEqual(res, Tree('start', ['a', 'b']))
             self.assertRaises(UnexpectedToken ,ip.feed_eof)
             

@@ -574,7 +574,7 @@ class Lark(Serialize):
             lexer = self._build_lexer(dont_ignore)
         else:
             lexer = self.lexer
-        lexer_thread = LexerThread(lexer, text)
+        lexer_thread = LexerThread.from_text(lexer, text)
         stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)

@@ -137,9 +137,9 @@ def get_regexp_width(expr):
             # we manually test for the most important info (whether the empty string is matched)
             c = regex.compile(regexp_final)
             if c.match('') is None:
-                return 1, sre_constants.MAXREPEAT
+                return 1, int(sre_constants.MAXREPEAT)
             else:
-                return 0, sre_constants.MAXREPEAT
+                return 0, int(sre_constants.MAXREPEAT)
 
 ###}
 

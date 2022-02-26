@@ -87,7 +87,7 @@ class ParsingFrontend(Serialize):
 
     def _make_lexer_thread(self, text):
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
-        return text if self.skip_lexer else cls(self.lexer, text)
+        return text if self.skip_lexer else cls.from_text(self.lexer, text)
 
     def parse(self, text, start=None, on_error=None):
         chosen_start = self._verify_start(start)

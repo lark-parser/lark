@@ -352,18 +352,21 @@ class LexerThread:
     """A thread that ties a lexer instance and a lexer state, to be used by the parser
     """
 
-    def __init__(self, lexer, text):
+    def __init__(self, lexer: 'Lexer', lexer_state: LexerState):
         self.lexer = lexer
-        self.state = LexerState(text)
+        self.state = lexer_state
+
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text: str):
+        return cls(lexer, LexerState(text))
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
 
     def __copy__(self):
-        copied = object.__new__(LexerThread)
-        copied.lexer = self.lexer
-        copied.state = copy(self.state)
-        return copied
+        return type(self)(self.lexer, copy(self.state))
+
+    _Token = Token
 
 
 _Callback = Callable[[Token], Token]

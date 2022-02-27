@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import logging
 from unittest import TestCase, main
 
 from lark import Lark, Tree, Transformer
@@ -139,6 +140,24 @@ class TestCache(TestCase):
         assert len(self.mock_fs.files) == 1
         res = parser.parse("ab")
         self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
+
+    def test_recursive_pattern(self):
+        g = """
+        start: recursive+
+        recursive: /\w{3}\d{3}(?R)?/
+        """
+
+        assert len(self.mock_fs.files) == 0
+        Lark(g, parser="lalr", regex=True, cache=True)
+        assert len(self.mock_fs.files) == 1
+
+        with self.assertLogs("lark", level="ERROR") as cm:
+            Lark(g, parser='lalr', regex=True, cache=True)
+            assert len(self.mock_fs.files) == 1
+            # need to add an error log, because 'self.assertNoLogs' was added in Python 3.10
+            logging.getLogger('lark').error("dummy message")
+        # should only have the dummy log
+        self.assertCountEqual(cm.output, ["ERROR:lark:dummy message"])
 
         
 

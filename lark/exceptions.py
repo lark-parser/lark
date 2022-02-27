@@ -107,11 +107,19 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and hasattr(self, 'accepts') and hasattr(ut, 'accepts') and ut.accepts != self.accepts:
+                        if (
+                            use_accepts
+                            and isinstance(self, UnexpectedToken)
+                            and isinstance(ut, UnexpectedToken)
+                            and ut.accepts != self.accepts
+                        ):
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                          (self.state, self.accepts, ut.accepts, i, j))
                             continue
-                        try:
+                        if (
+                            isinstance(self, (UnexpectedToken, UnexpectedEOF))
+                            and isinstance(ut, (UnexpectedToken, UnexpectedEOF))
+                        ):
                             if ut.token == self.token:  # Try exact match first
                                 logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
@@ -122,8 +130,6 @@ class UnexpectedInput(LarkError):
                                     logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
-                        except AttributeError:
-                            pass
                         if candidate[0] is None:
                             logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False

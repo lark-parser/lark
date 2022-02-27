@@ -137,6 +137,7 @@ def get_regexp_width(expr):
             # we manually test for the most important info (whether the empty string is matched)
             c = regex.compile(regexp_final)
             if c.match('') is None:
+                # MAXREPEAT is a none pickable subclass of int, therefore needs to be converted to enable caching
                 return 1, int(sre_constants.MAXREPEAT)
             else:
                 return 0, int(sre_constants.MAXREPEAT)

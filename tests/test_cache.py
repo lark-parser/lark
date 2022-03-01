@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import logging
-from unittest import TestCase, main
+from unittest import TestCase, main, skipIf
 
 from lark import Lark, Tree, Transformer
 from lark.lexer import Lexer, Token
@@ -12,6 +12,10 @@ try:
 except ImportError:
     from io import BytesIO as StringIO
 
+try:
+    import regex
+except ImportError:
+    regex = None
 
 class MockFile(StringIO):
     def close(self):
@@ -141,6 +145,7 @@ class TestCache(TestCase):
         res = parser.parse("ab")
         self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
 
+    @skipIf(regex is None, "'regex' lib not installed")
     def test_recursive_pattern(self):
         g = """
         start: recursive+

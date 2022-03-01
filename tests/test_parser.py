@@ -2461,7 +2461,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual( match_error("ebc"), 2 )
 
 
-        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_class(self):
             "Tests that character classes from the `regex` module work correctly."
             g = _Lark(r"""?start: NAME
@@ -2471,7 +2471,7 @@ def _make_parser_test(LEXER, PARSER):
 
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_word(self):
             "Tests that a persistent bug in the `re` module works when `regex` is enabled."
             g = _Lark(r"""?start: NAME

@@ -6,4 +6,4 @@ from .exceptions import (ParseError, LexError, GrammarError, UnexpectedToken,
 from .lexer import Token
 from .lark import Lark
 
-__version__: str = "1.1.1"
+__version__: str = "1.1.2"

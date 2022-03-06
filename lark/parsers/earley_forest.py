@@ -36,13 +36,14 @@ class SymbolNode(ForestNode):
 
     Hence a Symbol Node with a single child is unambiguous.
 
-    :ivar s: A Symbol, or a tuple of (rule, ptr) for an intermediate node.
-    :ivar start: The index of the start of the substring matched by this
-        symbol (inclusive).
-    :ivar end: The index of the end of the substring matched by this
-        symbol (exclusive).
-    :ivar is_intermediate: True if this node is an intermediate node.
-    :ivar priority: The priority of the node's symbol.
+    Parameters:
+        s: A Symbol, or a tuple of (rule, ptr) for an intermediate node.
+        start: The index of the start of the substring matched by this symbol (inclusive).
+        end: The index of the end of the substring matched by this symbol (exclusive).
+
+    Properties:
+        is_intermediate: True if this node is an intermediate node.
+        priority: The priority of the node's symbol.
     """
     __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate', '_hash')
     def __init__(self, s, start, end):
@@ -113,11 +114,12 @@ class PackedNode(ForestNode):
     """
     A Packed Node represents a single derivation in a symbol node.
 
-    :ivar rule: The rule associated with this node.
-    :ivar parent: The parent of this node.
-    :ivar left: The left child of this node. ``None`` if one does not exist.
-    :ivar right: The right child of this node. ``None`` if one does not exist.
-    :ivar priority: The priority of this node.
+    Parameters:
+        rule: The rule associated with this node.
+        parent: The parent of this node.
+        left: The left child of this node. ``None`` if one does not exist.
+        right: The right child of this node. ``None`` if one does not exist.
+        priority: The priority of this node.
     """
     __slots__ = ('parent', 's', 'rule', 'start', 'left', 'right', 'priority', '_hash')
     def __init__(self, parent, s, rule, start, left, right):
@@ -172,6 +174,36 @@ class PackedNode(ForestNode):
             symbol = self.s.name
         return "({}, {}, {}, {})".format(symbol, self.start, self.priority, self.rule.order)
 
+class TokenNode(ForestNode):
+    """
+    A Token Node represents a matched terminal and is always a leaf node.
+
+    Parameters:
+        token: The Token associated with this node.
+        term: The TerminalDef matched by the token.
+        priority: The priority of this node.
+    """
+    __slots__ = ('token', 'term', 'priority', '_hash')
+    def __init__(self, token, term, priority=None):
+        self.token = token
+        self.term = term
+        if priority is not None:
+            self.priority = priority
+        else:
+            self.priority = term.priority if term is not None else 0
+        self._hash = hash(token)
+
+    def __eq__(self, other):
+        if not isinstance(other, TokenNode):
+            return False
+        return self is other or (self.token == other.token)
+
+    def __hash__(self):
+        return self._hash
+
+    def __repr__(self):
+        return repr(self.token)
+
 class ForestVisitor:
     """
     An abstract base class for building forest visitors.
@@ -187,7 +219,8 @@ class ForestVisitor:
     methods. Returning a node(s) will schedule them to be visited. The visitor
     will begin to backtrack if no nodes are returned.
 
-    :ivar single_visit: If ``True``, non-Token nodes will only be visited once.
+    Parameters:
+        single_visit: If ``True``, non-Token nodes will only be visited once.
     """
 
     def __init__(self, single_visit=False):
@@ -224,11 +257,12 @@ class ForestVisitor:
     def on_cycle(self, node, path):
         """Called when a cycle is encountered.
 
-        :param node: The node that causes a cycle.
-        :param path: The list of nodes being visited: nodes that have been
-            entered but not exited. The first element is the root in a forest
-            visit, and the last element is the node visited most recently.
-            ``path`` should be treated as read-only.
+        Parameters:
+            node: The node that causes a cycle.
+            path: The list of nodes being visited: nodes that have been
+                entered but not exited. The first element is the root in a forest
+                visit, and the last element is the node visited most recently.
+                ``path`` should be treated as read-only.
         """
         pass
 
@@ -291,8 +325,8 @@ class ForestVisitor:
                 input_stack.append(next_node)
                 continue
 
-            if not isinstance(current, ForestNode):
-                vtn(current)
+            if isinstance(current, TokenNode):
+                vtn(current.token)
                 input_stack.pop()
                 continue
 
@@ -322,8 +356,7 @@ class ForestVisitor:
                 if next_node is None:
                     continue
 
-                if not isinstance(next_node, ForestNode) and \
-                        not isinstance(next_node, Token):
+                if not isinstance(next_node, ForestNode):
                     next_node = iter(next_node)
                 elif id(next_node) in visiting:
                     oc(next_node, path)
@@ -391,45 +424,26 @@ class ForestTransformer(ForestVisitor):
         return node.children
 
     def visit_token_node(self, node):
-        try:
-            transformed = self.transform_token_node(node)
-        except Discard:
-            pass
-        else:
+        transformed = self.transform_token_node(node)
+        if transformed is not Discard:
             self.data[self.node_stack[-1]].append(transformed)
+
+    def _visit_node_out_helper(self, node, method):
+        self.node_stack.pop()
+        transformed = method(node, self.data[id(node)])
+        if transformed is not Discard:
+            self.data[self.node_stack[-1]].append(transformed)
+        del self.data[id(node)]
 
     def visit_symbol_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_symbol_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_symbol_node)
 
     def visit_intermediate_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_intermediate_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_intermediate_node)
 
     def visit_packed_node_out(self, node):
-        self.node_stack.pop()
-        try:
-            transformed = self.transform_packed_node(node, self.data[id(node)])
-        except Discard:
-            pass
-        else:
-            self.data[self.node_stack[-1]].append(transformed)
-        finally:
-            del self.data[id(node)]
+        self._visit_node_out_helper(node, self.transform_packed_node)
+
 
 class ForestSumVisitor(ForestVisitor):
     """
@@ -491,15 +505,13 @@ class ForestToParseTree(ForestTransformer):
     """Used by the earley parser when ambiguity equals 'resolve' or
     'explicit'. Transforms an SPPF into an (ambiguous) parse tree.
 
-    tree_class: The tree class to use for construction
-    callbacks: A dictionary of rules to functions that output a tree
-    prioritizer: A ``ForestVisitor`` that manipulates the priorities of
-        ForestNodes
-    resolve_ambiguity: If True, ambiguities will be resolved based on
-        priorities. Otherwise, `_ambig` nodes will be in the resulting
-        tree.
-    use_cache: If True, the results of packed node transformations will be
-        cached.
+    Parameters:
+        tree_class: The tree class to use for construction
+        callbacks: A dictionary of rules to functions that output a tree
+        prioritizer: A ``ForestVisitor`` that manipulates the priorities of ForestNodes
+        resolve_ambiguity: If True, ambiguities will be resolved based on
+                        priorities. Otherwise, `_ambig` nodes will be in the resulting tree.
+        use_cache: If True, the results of packed node transformations will be cached.
     """
 
     def __init__(self, tree_class=Tree, callbacks=dict(), prioritizer=ForestSumVisitor(), resolve_ambiguity=True, use_cache=True):
@@ -532,8 +544,8 @@ class ForestToParseTree(ForestTransformer):
             if id(node) == id(self._cycle_node) or id(node) in self._successful_visits:
                 self._cycle_node = None
                 self._on_cycle_retreat = False
-                return
-            raise Discard()
+            else:
+                return Discard
 
     def _collapse_ambig(self, children):
         new_children = []
@@ -558,20 +570,24 @@ class ForestToParseTree(ForestTransformer):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard()
+        return Discard
 
     def transform_symbol_node(self, node, data):
         if id(node) not in self._successful_visits:
-            raise Discard()
-        self._check_cycle(node)
+            return Discard
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         self._successful_visits.remove(id(node))
         data = self._collapse_ambig(data)
         return self._call_ambig_func(node, data)
 
     def transform_intermediate_node(self, node, data):
         if id(node) not in self._successful_visits:
-            raise Discard()
-        self._check_cycle(node)
+            return Discard
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         self._successful_visits.remove(id(node))
         if len(data) > 1:
             children = [self.tree_class('_inter', c) for c in data]
@@ -579,9 +595,11 @@ class ForestToParseTree(ForestTransformer):
         return data[0]
 
     def transform_packed_node(self, node, data):
-        self._check_cycle(node)
+        r = self._check_cycle(node)
+        if r is Discard:
+            return r
         if self.resolve_ambiguity and id(node.parent) in self._successful_visits:
-            raise Discard()
+            return Discard
         if self._use_cache and id(node) in self._cache:
             return self._cache[id(node)]
         children = []
@@ -643,21 +661,18 @@ class TreeForestTransformer(ForestToParseTree):
     Non-tree transformations are made possible by override of
     ``__default__``, ``__default_token__``, and ``__default_ambig__``.
 
-    .. note::
-
+    Note:
         Tree shaping features such as inlined rules and token filtering are
-        not built into the transformation. Positions are also not
-        propagated.
+        not built into the transformation. Positions are also not propagated.
 
-    :param tree_class: The tree class to use for construction
-    :param prioritizer: A ``ForestVisitor`` that manipulates the priorities of
-        nodes in the SPPF.
-    :param resolve_ambiguity: If True, ambiguities will be resolved based on
-        priorities.
-    :param use_cache: If True, caches the results of some transformations,
-        potentially improving performance when ``resolve_ambiguity==False``.
-        Only use if you know what you are doing: i.e. All transformation
-        functions are pure and referentially transparent.
+    Parameters:
+        tree_class: The tree class to use for construction
+        prioritizer: A ``ForestVisitor`` that manipulates the priorities of nodes in the SPPF.
+        resolve_ambiguity: If True, ambiguities will be resolved based on priorities.
+        use_cache (bool): If True, caches the results of some transformations,
+                          potentially improving performance when ``resolve_ambiguity==False``.
+                          Only use if you know what you are doing: i.e. All transformation
+                          functions are pure and referentially transparent.
     """
 
     def __init__(self, tree_class=Tree, prioritizer=ForestSumVisitor(), resolve_ambiguity=True, use_cache=False):
@@ -680,7 +695,7 @@ class TreeForestTransformer(ForestToParseTree):
             return self.tree_class('_ambig', data)
         elif data:
             return data[0]
-        raise Discard()
+        return Discard
 
     def __default_token__(self, node):
         """Default operation on ``Token`` (for override).

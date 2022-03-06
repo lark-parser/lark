@@ -37,6 +37,7 @@ The dictionaries and lists are recursive, and contain other json documents (or "
 
 Let's write this structure in EBNF form:
 
+```lark
     value: dict
          | list
          | STRING
@@ -47,7 +48,7 @@ Let's write this structure in EBNF form:
 
     dict : "{" [pair ("," pair)*] "}"
     pair : STRING ":" value
-
+```
 
 A quick explanation of the syntax:
  - Parenthesis let us group rules together.
@@ -58,25 +59,31 @@ Lark also supports the rule+ operator, meaning one or more instances. It also su
 
 Of course, we still haven't defined "STRING" and "NUMBER". Luckily, both these literals are already defined in Lark's common library:
 
+```lark
     %import common.ESCAPED_STRING   -> STRING
     %import common.SIGNED_NUMBER    -> NUMBER
+```
 
 The arrow (->) renames the terminals. But that only adds obscurity in this case, so going forward we'll just use their original names.
 
-We'll also take care of the white-space, which is part of the text.
+We'll also take care of the white-space, which is part of the text, by simply matching and then throwing it away.
 
+```lark
     %import common.WS
     %ignore WS
+```
 
 We tell our parser to ignore whitespace. Otherwise, we'd have to fill our grammar with WS terminals.
 
 By the way, if you're curious what these terminals signify, they are roughly equivalent to this:
 
+```lark
     NUMBER : /-?\d+(\.\d+)?([eE][+-]?\d+)?/
     STRING : /".*?(?<!\\)"/
     %ignore /[ \t\n\f\r]+/
+```
 
-Lark will accept this, if you really want to complicate your life :)
+Lark will accept this way of writing too, if you really want to complicate your life :)
 
 You can find the original definitions in [common.lark](https://github.com/lark-parser/lark/blob/master/lark/grammars/common.lark).
 They don't strictly adhere to [json.org](https://json.org/) - but our purpose here is to accept json, not validate it.
@@ -150,6 +157,7 @@ We now have a parser that can create a parse tree (or: AST), but the tree has so
 
 I'll present the solution, and then explain it:
 
+```lark
     ?value: dict
           | list
           | string
@@ -161,6 +169,7 @@ I'll present the solution, and then explain it:
     ...
 
     string : ESCAPED_STRING
+```
 
 1. Those little arrows signify *aliases*. An alias is a name for a specific part of the rule. In this case, we will name the *true/false/null* matches, and this way we won't lose the information. We also alias *SIGNED_NUMBER* to mark it for later processing.
 
@@ -444,5 +453,4 @@ This is the end of the tutorial. I hoped you liked it and learned a little about
 
 To see what else you can do with Lark, check out the [examples](/examples).
 
-For questions or any other subject, feel free to email me at erezshin at gmail dot com.
-
+Read the documentation here: https://lark-parser.readthedocs.io/en/latest/

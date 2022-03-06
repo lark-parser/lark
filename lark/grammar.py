@@ -30,6 +30,9 @@ class Symbol(Serialize):
 
     fullrepr = property(__repr__)
 
+    def renamed(self, f):
+        return type(self)(f(self.name))
+
 
 class Terminal(Symbol):
     __serialize_fields__ = 'name', 'filter_out'
@@ -43,6 +46,9 @@ class Terminal(Symbol):
     @property
     def fullrepr(self):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
+
+    def renamed(self, f):
+        return type(self)(f(self.name), self.filter_out)
 
 
 class NonTerminal(Symbol):

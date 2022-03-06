@@ -22,12 +22,15 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" name "(" [parameters] ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," SLASH] ["," [starparams | kwparams]]
+parameters: paramvalue ("," paramvalue)* ["," SLASH ("," paramvalue)*] ["," [starparams | kwparams]]
           | starparams
           | kwparams
 
 SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
-starparams: "*" typedparam? ("," paramvalue)* ["," kwparams]
+starparams: (starparam | starguard) poststarparams
+starparam: "*" typedparam
+starguard: "*"
+poststarparams: ("," paramvalue)* ["," kwparams]
 kwparams: "**" typedparam ","?
 
 ?paramvalue: typedparam ("=" test)?
@@ -139,7 +142,7 @@ _sequence_pattern: (sequence_item_pattern ("," sequence_item_pattern)* ","?)?
                       | "*" NAME -> star_pattern
 
 class_pattern: name_or_attr_pattern "(" [arguments_pattern ","?] ")"
-arguments_pattern: pos_arg_pattern ["," keyws_arg_pattern] 
+arguments_pattern: pos_arg_pattern ["," keyws_arg_pattern]
                  | keyws_arg_pattern -> no_pos_arguments
 
 pos_arg_pattern: as_pattern ("," as_pattern)*
@@ -152,6 +155,10 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
 ?test: or_test ("if" or_test "else" test)?
      | lambdef
+     | assign_expr
+
+assign_expr: name ":=" test
+
 ?test_nocond: or_test | lambdef_nocond
 
 ?or_test: and_test ("or" and_test)*
@@ -240,7 +247,7 @@ arguments: argvalue ("," argvalue)*  ("," [ starargs | kwargs])?
 
 starargs: stararg ("," stararg)* ("," argvalue)* ["," kwargs]
 stararg: "*" test
-kwargs: "**" test
+kwargs: "**" test ("," argvalue)*
 
 ?argvalue: test ("=" test)?
 
@@ -273,18 +280,23 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 // Python terminals
 
 !name: NAME | "match" | "case"
-NAME: /[a-zA-Z_]\w*/
+NAME: /[^\W\d]\w*/
 COMMENT: /#[^\n]*/
 
-STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
-LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
-DEC_NUMBER: /0|[1-9][\d_]*/i
-HEX_NUMBER.2: /0x[\da-f]*/i
-OCT_NUMBER.2: /0o[0-7]*/i
-BIN_NUMBER.2 : /0b[0-1]*/i
-FLOAT_NUMBER.2: /((\d+\.[\d_]*|\.[\d_]+)([Ee][-+]?\d+)?|\d+([Ee][-+]?\d+))/
-IMAG_NUMBER.2: /\d+[Jj]/ | FLOAT_NUMBER /[Jj]/
+_SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*
+DEC_NUMBER:   "1".."9"        ("_"?  "0".."9"                       )*
+          |   "0"             ("_"?  "0"                            )* /(?![1-9])/
+HEX_NUMBER.2: "0" ("x" | "X") ("_"? ("0".."9" | "a".."f" | "A".."F"))+
+OCT_NUMBER.2: "0" ("o" | "O") ("_"?  "0".."7"                       )+
+BIN_NUMBER.2: "0" ("b" | "B") ("_"?  "0".."1"                       )+
+
+_EXP: ("e"|"E") ["+" | "-"] _SPECIAL_DEC
+DECIMAL: "." _SPECIAL_DEC | _SPECIAL_DEC "." _SPECIAL_DEC?
+FLOAT_NUMBER.2: _SPECIAL_DEC _EXP | DECIMAL _EXP?
+IMAG_NUMBER.2: (_SPECIAL_DEC      | FLOAT_NUMBER) ("J" | "j")
 
 
 // Comma-separated list (with an optional trailing comma)

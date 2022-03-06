@@ -11,6 +11,8 @@ from .test_grammar import TestGrammar
 from .test_reconstructor import TestReconstructor
 from .test_tree_forest_transformer import TestTreeForestTransformer
 from .test_lexer import TestLexer
+from .test_python_grammar import TestPythonParser
+from .test_tree_templates import *  # We define __all__ to list which TestSuites to run
 
 try:
     from .test_nearley.test_nearley import TestNearley
@@ -22,7 +24,7 @@ except ImportError:
 
 from .test_logger import Testlogger
 
-from .test_parser import * # We define __all__ to list which TestSuites to run
+from .test_parser import *  # We define __all__ to list which TestSuites to run
 
 logger.setLevel(logging.INFO)
 

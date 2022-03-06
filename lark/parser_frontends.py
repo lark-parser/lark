@@ -1,16 +1,13 @@
+from typing import Any, Callable, Dict, Tuple
+
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, Token, TerminalDef
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
-from .common import LexerConf, ParserConf
-try:
-    import regex  # type: ignore
-except ImportError:
-    regex = None
-import re
+from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
 ###{standalone
 
@@ -27,18 +24,15 @@ def _wrap_lexer(lexer_class):
         return CustomLexerWrapper
 
 
-class MakeParsingFrontend:
-    def __init__(self, parser_type, lexer_type):
-        self.parser_type = parser_type
-        self.lexer_type = lexer_type
+def _deserialize_parsing_frontend(data, memo, lexer_conf, callbacks, options):
+    parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
+    cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
+    parser = cls.deserialize(data['parser'], memo, callbacks, options.debug)
+    parser_conf.callbacks = callbacks
+    return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
-    def deserialize(self, data, memo, lexer_conf, callbacks, options):
-        parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
-        parser = LALR_Parser.deserialize(data['parser'], memo, callbacks, options.debug)
-        parser_conf.callbacks = callbacks
-        return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
-    # ... Continued later in the module
+_parser_creators: 'Dict[str, Callable[[LexerConf, Any, Any], Any]]' = {}
 
 
 class ParsingFrontend(Serialize):
@@ -53,11 +47,10 @@ class ParsingFrontend(Serialize):
         if parser:  # From cache
             self.parser = parser
         else:
-            create_parser = {
-                'lalr': create_lalr_parser,
-                'earley': create_earley_parser,
-                'cyk': CYK_FrontEnd,
-            }[parser_conf.parser_type]
+            create_parser = _parser_creators.get(parser_conf.parser_type)
+            assert create_parser is not None, "{} is not supported in standalone mode".format(
+                    parser_conf.parser_type
+                )
             self.parser = create_parser(lexer_conf, parser_conf, options)
 
         # Set-up lexer
@@ -77,7 +70,7 @@ class ParsingFrontend(Serialize):
             assert issubclass(lexer_type, Lexer), lexer_type
             self.lexer = _wrap_lexer(lexer_type)(lexer_conf)
         else:
-            self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex)
+            self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex, options)
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
@@ -92,21 +85,25 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
+    def _make_lexer_thread(self, text):
+        cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
+        return text if self.skip_lexer else cls.from_text(self.lexer, text)
+
     def parse(self, text, start=None, on_error=None):
         chosen_start = self._verify_start(start)
-        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
         kw = {} if on_error is None else {'on_error': on_error}
+        stream = self._make_lexer_thread(text)
         return self.parser.parse(stream, chosen_start, **kw)
     
     def parse_interactive(self, text=None, start=None):
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
-        stream = text if self.skip_lexer else LexerThread(self.lexer, text)
+        stream = self._make_lexer_thread(text)
         return self.parser.parse_interactive(stream, chosen_start)
 
 
-def get_frontend(parser, lexer):
+def _validate_frontend_args(parser, lexer) -> None:
     assert_config(parser, ('lalr', 'earley', 'cyk'))
     if not isinstance(lexer, type):     # not custom lexer?
         expected = {
@@ -115,8 +112,6 @@ def get_frontend(parser, lexer):
             'cyk': ('basic', ),
          }[parser]
         assert_config(lexer, expected, 'Parser %r does not support lexer %%r, expected one of %%s' % parser)
-
-    return MakeParsingFrontend(parser, lexer)
 
 
 def _get_lexer_callbacks(transformer, terminals):
@@ -132,38 +127,35 @@ class PostLexConnector:
         self.lexer = lexer
         self.postlexer = postlexer
 
-    def make_lexer_state(self, text):
-        return self.lexer.make_lexer_state(text)
-
     def lex(self, lexer_state, parser_state):
         i = self.lexer.lex(lexer_state, parser_state)
         return self.postlexer.process(i)
 
 
 
-def create_basic_lexer(lexer_conf, parser, postlex):
-    return BasicLexer(lexer_conf)
+def create_basic_lexer(lexer_conf, parser, postlex, options):
+    cls = (options and options._plugins.get('BasicLexer')) or BasicLexer
+    return cls(lexer_conf)
 
-def create_contextual_lexer(lexer_conf, parser, postlex):
+def create_contextual_lexer(lexer_conf, parser, postlex, options):
+    cls = (options and options._plugins.get('ContextualLexer')) or ContextualLexer
     states = {idx:list(t.keys()) for idx, t in parser._parse_table.states.items()}
     always_accept = postlex.always_accept if postlex else ()
-    return ContextualLexer(lexer_conf, states, always_accept=always_accept)
+    return cls(lexer_conf, states, always_accept=always_accept)
 
 def create_lalr_parser(lexer_conf, parser_conf, options=None):
     debug = options.debug if options else False
-    return LALR_Parser(parser_conf, debug=debug)
+    cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
+    return cls(parser_conf, debug=debug)
 
+_parser_creators['lalr'] = create_lalr_parser
 
-create_earley_parser = NotImplemented
-CYK_FrontEnd = NotImplemented
 ###}
 
 class EarleyRegexpMatcher:
     def __init__(self, lexer_conf):
         self.regexps = {}
         for t in lexer_conf.terminals:
-            if t.priority:
-                raise GrammarError("Dynamic Earley doesn't support weights on terminals", t, t.priority)
             regexp = t.pattern.to_regexp()
             try:
                 width = get_regexp_width(regexp)[0]
@@ -182,14 +174,17 @@ class EarleyRegexpMatcher:
 
 
 def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
-        earley_matcher = EarleyRegexpMatcher(lexer_conf)
-        return xearley.Parser(parser_conf, earley_matcher.match, ignore=lexer_conf.ignore, **kw)
+    if lexer_conf.callbacks:
+        raise GrammarError("Earley's dynamic lexer doesn't support lexer_callbacks.")
+
+    earley_matcher = EarleyRegexpMatcher(lexer_conf)
+    return xearley.Parser(lexer_conf, parser_conf, earley_matcher.match, **kw)
 
 def _match_earley_basic(term, token):
     return term.name == token.type
 
 def create_earley_parser__basic(lexer_conf, parser_conf, options, **kw):
-    return earley.Parser(parser_conf, _match_earley_basic, **kw)
+    return earley.Parser(lexer_conf, parser_conf, _match_earley_basic, **kw)
 
 def create_earley_parser(lexer_conf, parser_conf, options):
     resolve_ambiguity = options.ambiguity == 'resolve'
@@ -232,10 +227,19 @@ class CYK_FrontEnd:
         return self.callbacks[tree.rule](tree.children)
 
 
-class MakeParsingFrontend(MakeParsingFrontend):
-    def __call__(self, lexer_conf, parser_conf, options):
-        assert isinstance(lexer_conf, LexerConf)
-        assert isinstance(parser_conf, ParserConf)
-        parser_conf.parser_type = self.parser_type
-        lexer_conf.lexer_type = self.lexer_type
-        return ParsingFrontend(lexer_conf, parser_conf, options)
+_parser_creators['earley'] = create_earley_parser
+_parser_creators['cyk'] = CYK_FrontEnd
+
+
+def _construct_parsing_frontend(
+        parser_type: _ParserArgType,
+        lexer_type: _LexerArgType,
+        lexer_conf,
+        parser_conf,
+        options
+):
+    assert isinstance(lexer_conf, LexerConf)
+    assert isinstance(parser_conf, ParserConf)
+    parser_conf.parser_type = parser_type
+    lexer_conf.lexer_type = lexer_type
+    return ParsingFrontend(lexer_conf, parser_conf, options)

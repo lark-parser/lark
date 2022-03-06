@@ -137,9 +137,10 @@ def get_regexp_width(expr):
             # we manually test for the most important info (whether the empty string is matched)
             c = regex.compile(regexp_final)
             if c.match('') is None:
-                return 1, sre_constants.MAXREPEAT
+                # MAXREPEAT is a none pickable subclass of int, therefore needs to be converted to enable caching
+                return 1, int(sre_constants.MAXREPEAT)
             else:
-                return 0, sre_constants.MAXREPEAT
+                return 0, int(sre_constants.MAXREPEAT)
 
 ###}
 
@@ -218,7 +219,7 @@ def combine_alternatives(lists):
 try:
     import atomicwrites
 except ImportError:
-    atomicwrites = None  # type: ignore
+    atomicwrites = None  # type: ignore[assigment]
 
 class FS:
     exists = staticmethod(os.path.exists)

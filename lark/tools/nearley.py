@@ -47,7 +47,7 @@ nearley_grammar = r"""
 nearley_grammar_parser = Lark(nearley_grammar, parser='earley', lexer='basic')
 
 def _get_rulename(name):
-    name = {'_': '_ws_maybe', '__':'_ws'}.get(name, name)
+    name = {'_': '_ws_maybe', '__': '_ws'}.get(name, name)
     return 'n_' + name.replace('$', '__DOLLAR__').lower()
 
 @v_args(inline=True)
@@ -134,7 +134,7 @@ def _nearley_to_lark(g, builtin_path, n2l, js_code, folder_path, includes):
         elif statement.data == 'macro':
             pass    # TODO Add support for macros!
         elif statement.data == 'ruledef':
-            rule_defs.append( n2l.transform(statement) )
+            rule_defs.append(n2l.transform(statement))
         else:
             raise Exception("Unknown statement: %s" % statement)
 
@@ -195,7 +195,7 @@ def get_arg_parser():
 
 if __name__ == '__main__':
     parser = get_arg_parser()
-    if len(sys.argv)==1:
+    if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     args = parser.parse_args()

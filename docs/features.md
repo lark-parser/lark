@@ -11,11 +11,11 @@
  - Flexible error handling by using an interactive parser interface (LALR only)
  - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
+ - Grammar composition - Import terminals and rules from other grammars
  - Standard library of terminals (strings, numbers, names, etc.)
  - Unicode fully supported
  - Extensive test suite
- - MyPy support using type stubs
- - Python 2 & Python 3 compatible
+ - Type annotations (MyPy support)
  - Pure-Python implementation
 
 [Read more about the parsers](parsers.md)
@@ -27,13 +27,6 @@
   - Import grammars from Nearley.js ([read more](tools.html#importing-grammars-from-nearleyjs))
   - CYK parser
   - Visualize your parse trees as dot or png files ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
-
-
-### Experimental features
   - Automatic reconstruction of input from parse-tree (see examples)
+  - Use Lark grammars in Julia and Javascript.
 
-### Planned features (not implemented yet)
- - Generate code in other languages than Python
- - Grammar composition
- - LALR(k) parser
- - Full regexp-collision support using NFAs

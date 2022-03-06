@@ -18,6 +18,13 @@ class TestTrees(TestCase):
     def setUp(self):
         self.tree1 = Tree('a', [Tree(x, y) for x, y in zip('bcd', 'xyz')])
 
+    def test_eq(self):
+        assert self.tree1 == self.tree1
+        assert self.tree1 != 0
+
+    def test_copy(self):
+        assert self.tree1 == copy.copy(self.tree1)
+
     def test_deepcopy(self):
         assert self.tree1 == copy.deepcopy(self.tree1)
 
@@ -360,7 +367,7 @@ class TestTrees(TestCase):
                 return 1 # some code here
 
             def b(cls, args):
-                raise Discard()
+                return Discard
 
         t = Tree('root', [
             Tree('b', []),
@@ -389,10 +396,10 @@ class TestTrees(TestCase):
                     return int(token)
 
                 def ignore_tree(self, children):
-                    raise Discard
+                    return Discard
 
                 def IGNORE_TOKEN(self, token):
-                    raise Discard
+                    return Discard
 
             copied = copy.deepcopy(tree)
             result = T().transform(copied)

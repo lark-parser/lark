@@ -124,7 +124,7 @@ class TerminalDef(Serialize):
         else:
             return self.name
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Token")
 
 class Token(str):
     """A string with meta-information, that is produced by the lexer.
@@ -327,11 +327,15 @@ def _regexp_has_newline(r: str):
 
 
 class LexerState:
+    """Represents the current state of the lexer as it scans the text
+    (Lexer objects are only instanciated per grammar, not per text)
+    """
+
     __slots__ = 'text', 'line_ctr', 'last_token'
 
-    def __init__(self, text, line_ctr, last_token=None):
+    def __init__(self, text, line_ctr=None, last_token=None):
         self.text = text
-        self.line_ctr = line_ctr
+        self.line_ctr = line_ctr or LineCounter(b'\n' if isinstance(text, bytes) else '\n')
         self.last_token = last_token
 
     def __eq__(self, other):
@@ -342,6 +346,27 @@ class LexerState:
 
     def __copy__(self):
         return type(self)(self.text, copy(self.line_ctr), self.last_token)
+
+
+class LexerThread:
+    """A thread that ties a lexer instance and a lexer state, to be used by the parser
+    """
+
+    def __init__(self, lexer: 'Lexer', lexer_state: LexerState):
+        self.lexer = lexer
+        self.state = lexer_state
+
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text: str):
+        return cls(lexer, LexerState(text))
+
+    def lex(self, parser_state):
+        return self.lexer.lex(self.state, parser_state)
+
+    def __copy__(self):
+        return type(self)(self.lexer, copy(self.state))
+
+    _Token = Token
 
 
 _Callback = Callable[[Token], Token]
@@ -357,8 +382,8 @@ class Lexer(ABC):
         return NotImplemented
 
     def make_lexer_state(self, text):
-        line_ctr = LineCounter(b'\n' if isinstance(text, bytes) else '\n')
-        return LexerState(text, line_ctr)
+        "Deprecated"
+        return LexerState(text)
 
 
 class BasicLexer(Lexer):
@@ -478,7 +503,7 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
-        lexer_by_tokens = {}
+        lexer_by_tokens: Dict[FrozenSet[str], BasicLexer] = {}
         self.lexers = {}
         for state, accepts in states.items():
             key = frozenset(accepts)
@@ -495,9 +520,6 @@ class ContextualLexer(Lexer):
 
         assert trad_conf.terminals is terminals
         self.root_lexer = BasicLexer(trad_conf)
-
-    def make_lexer_state(self, text):
-        return self.root_lexer.make_lexer_state(text)
 
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:
@@ -516,19 +538,4 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-class LexerThread:
-    """A thread that ties a lexer instance and a lexer state, to be used by the parser"""
-
-    def __init__(self, lexer, text):
-        self.lexer = lexer
-        self.state = lexer.make_lexer_state(text)
-
-    def lex(self, parser_state):
-        return self.lexer.lex(self.state, parser_state)
-
-    def __copy__(self):
-        copied = object.__new__(LexerThread)
-        copied.lexer = self.lexer
-        copied.state = copy(self.state)
-        return copied
 ###}

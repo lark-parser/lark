@@ -1,11 +1,8 @@
 import sys
 from argparse import ArgumentParser, FileType
-try:
-    from textwrap import indent
-except ImportError:
-    def indent(text, prefix):
-        return ''.join(prefix + line for line in text.splitlines(True))
+from textwrap import indent
 from logging import DEBUG, INFO, WARN, ERROR
+from typing import Optional
 import warnings
 
 from lark import Lark, logger
@@ -26,17 +23,19 @@ options = ['start', 'lexer']
 lalr_argparser.add_argument('-v', '--verbose', action='count', default=0, help="Increase Logger output level, up to three times")
 lalr_argparser.add_argument('-s', '--start', action='append', default=[])
 lalr_argparser.add_argument('-l', '--lexer', default='contextual', choices=('basic', 'contextual'))
-k = {'encoding': 'utf-8'} if sys.version_info > (3, 4) else {}
-lalr_argparser.add_argument('-o', '--out', type=FileType('w', **k), default=sys.stdout, help='the output file (default=stdout)')
-lalr_argparser.add_argument('grammar_file', type=FileType('r', **k), help='A valid .lark file')
+encoding: Optional[str] = 'utf-8' if sys.version_info > (3, 4) else None
+lalr_argparser.add_argument('-o', '--out', type=FileType('w', encoding=encoding), default=sys.stdout, help='the output file (default=stdout)')
+lalr_argparser.add_argument('grammar_file', type=FileType('r', encoding=encoding), help='A valid .lark file')
 
-for f in flags:
-    if isinstance(f, tuple):
-        options.append(f[1])
-        lalr_argparser.add_argument('-' + f[0], '--' + f[1], action='store_true')
+for flag in flags:
+    if isinstance(flag, tuple):
+        options.append(flag[1])
+        lalr_argparser.add_argument('-' + flag[0], '--' + flag[1], action='store_true')
+    elif isinstance(flag, str):
+        options.append(flag)
+        lalr_argparser.add_argument('--' + flag, action='store_true')
     else:
-        options.append(f)
-        lalr_argparser.add_argument('--' + f, action='store_true')
+        raise NotImplementedError("flags must only contain strings or tuples of strings")
 
 
 def build_lalr(namespace):

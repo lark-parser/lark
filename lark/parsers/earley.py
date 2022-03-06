@@ -11,17 +11,19 @@ is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/spp
 
 from collections import deque
 
+from ..lexer import Token
 from ..tree import Tree
 from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
-from .earley_common import Item, TransitiveItem
-from .earley_forest import ForestSumVisitor, SymbolNode, ForestToParseTree
+from .earley_common import Item
+from .earley_forest import ForestSumVisitor, SymbolNode, TokenNode, ForestToParseTree
 
 class Parser:
-    def __init__(self, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
+    def __init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
         analysis = GrammarAnalyzer(parser_conf)
+        self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
         self.debug = debug
@@ -42,12 +44,20 @@ class Parser:
             if rule.origin not in self.predictions:
                 self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
 
-            ## Detect if any rules have priorities set. If the user specified priority = "none" then
-            #  the priorities will be stripped from all rules before they reach us, allowing us to
+            ## Detect if any rules/terminals have priorities set. If the user specified priority = None, then
+            #  the priorities will be stripped from all rules/terminals before they reach us, allowing us to
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
-            #  on any rules.
+            #  on any rules/terminals.
             if self.forest_sum_visitor is None and rule.options.priority is not None:
                 self.forest_sum_visitor = ForestSumVisitor
+
+        # Check terminals for priorities
+        # Ignore terminal priorities if the basic lexer is used
+        if self.lexer_conf.lexer_type != 'basic' and self.forest_sum_visitor is None:
+            for term in self.lexer_conf.terminals:
+                if term.priority:
+                    self.forest_sum_visitor = ForestSumVisitor
+                    break
 
         self.term_matcher = term_matcher
 
@@ -159,60 +169,8 @@ class Parser:
                 quasi = quasi.advance()
             return True
 
-        def create_leo_transitives(origin, start):
-            visited = set()
-            to_create = []
-            trule = None
-            previous = None
-
-            ### Recursively walk backwards through the Earley sets until we find the
-            #   first transitive candidate. If this is done continuously, we shouldn't
-            #   have to walk more than 1 hop.
-            while True:
-                if origin in transitives[start]:
-                    previous = trule = transitives[start][origin]
-                    break
-
-                is_empty_rule = not self.FIRST[origin]
-                if is_empty_rule:
-                    break
-
-                candidates = [ candidate for candidate in columns[start] if candidate.expect is not None and origin == candidate.expect ]
-                if len(candidates) != 1:
-                    break
-                originator = next(iter(candidates))
-
-                if originator is None or originator in visited:
-                    break
-
-                visited.add(originator)
-                if not is_quasi_complete(originator):
-                    break
-
-                trule = originator.advance()
-                if originator.start != start:
-                    visited.clear()
-
-                to_create.append((origin, start, originator))
-                origin = originator.rule.origin
-                start = originator.start
-
-            # If a suitable Transitive candidate is not found, bail.
-            if trule is None:
-                return
-
-            #### Now walk forwards and create Transitive Items in each set we walked through; and link
-            #    each transitive item to the next set forwards.
-            while to_create:
-                origin, start, originator = to_create.pop()
-                titem = None
-                if previous is not None:
-                        titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
-                else:
-                        titem = TransitiveItem(origin, trule, originator, start)
-                previous = transitives[start][origin] = titem
-
-
+        # def create_leo_transitives(origin, start):
+        #   ...   # removed at commit 4c1cfb2faf24e8f8bff7112627a00b94d261b420 
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.
@@ -232,8 +190,17 @@ class Parser:
                 if match(item.expect, token):
                     new_item = item.advance()
                     label = (new_item.s, new_item.start, i)
+                    # 'terminals' may not contain token.type when using %declare
+                    # Additionally, token is not always a Token
+                    # For example, it can be a Tree when using TreeMatcher
+                    term = terminals.get(token.type) if isinstance(token, Token) else None
+                    # Set the priority of the token node to 0 so that the
+                    # terminal priorities do not affect the Tree chosen by
+                    # ForestSumVisitor after the basic lexer has already
+                    # "used up" the terminal priorities
+                    token_node = TokenNode(token, term, priority=0)
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, SymbolNode(*label))
-                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token)
+                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token_node)
 
                     if new_item.expect in self.TERMINALS:
                         # add (B ::= Aai+1.B, h, y) to Q'
@@ -251,6 +218,8 @@ class Parser:
 
         # Define parser functions
         match = self.term_matcher
+
+        terminals = self.lexer_conf.terminals_by_name
 
         # Cache for nodes & tokens created in a particular parse step.
         transitives = [{}]

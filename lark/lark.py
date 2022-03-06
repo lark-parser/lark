@@ -2,11 +2,12 @@ from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
 from typing import (
-    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional,
+    TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional, Sequence,
     Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
 )
 if TYPE_CHECKING:
     from .parsers.lalr_interactive_parser import InteractiveParser
+    from .tree import ParseTree
     from .visitors import Transformer
     if sys.version_info >= (3, 8):
         from typing import Literal
@@ -17,11 +18,11 @@ from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
 from .tree import Tree
-from .common import LexerConf, ParserConf
+from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
 from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token
 from .parse_tree_builder import ParseTreeBuilder
-from .parser_frontends import get_frontend, _get_lexer_callbacks
+from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
 
 import re
@@ -56,8 +57,8 @@ class LarkOptions(Serialize):
     g_regex_flags: int
     keep_all_tokens: bool
     tree_class: Any
-    parser: 'Literal["earley", "lalr", "cyk", "auto"]'
-    lexer: 'Union[Literal["auto", "basic", "contextual", "dynamic", "dynamic_complete"], Type[Lexer]]'
+    parser: _ParserArgType
+    lexer: _LexerArgType
     ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
     postlex: Optional[PostLex]
     priority: 'Optional[Literal["auto", "normal", "invert"]]'
@@ -73,7 +74,7 @@ class LarkOptions(Serialize):
     start
             The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
     debug
-            Display debug information and extra warnings. Use only when debugging (default: False)
+            Display debug information and extra warnings. Use only when debugging (Default: ``False``)
             When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
@@ -95,7 +96,7 @@ class LarkOptions(Serialize):
     g_regex_flags
             Flags that are applied to all terminals (both regex and strings)
     keep_all_tokens
-            Prevent the tree builder from automagically removing "punctuation" tokens (default: False)
+            Prevent the tree builder from automagically removing "punctuation" tokens (Default: ``False``)
     tree_class
             Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
 
@@ -123,13 +124,13 @@ class LarkOptions(Serialize):
     **=== Misc. / Domain Specific Options ===**
 
     postlex
-            Lexer post-processing (Default: None) Only works with the basic and contextual lexers.
+            Lexer post-processing (Default: ``None``) Only works with the basic and contextual lexers.
     priority
-            How priorities should be evaluated - auto, none, normal, invert (Default: auto)
+            How priorities should be evaluated - "auto", ``None``, "normal", "invert" (Default: "auto")
     lexer_callbacks
             Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     use_bytes
-            Accept an input of type ``bytes`` instead of ``str`` (Python 3 only).
+            Accept an input of type ``bytes`` instead of ``str``.
     edit_terminals
             A callback for editing the terminals before parse.
     import_paths
@@ -169,6 +170,7 @@ class LarkOptions(Serialize):
         'use_bytes': False,
         'import_paths': [],
         'source_path': None,
+        '_plugins': {},
     }
 
     def __init__(self, options_dict):
@@ -219,14 +221,14 @@ class LarkOptions(Serialize):
 
 
 # Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
-# These option are only used outside of `load_grammar`.
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class'}
+# These options are only used outside of `load_grammar`.
+_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class', '_plugins'}
 
 _VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
 _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
-_T = TypeVar('_T')
+_T = TypeVar('_T', bound="Lark")
 
 class Lark(Serialize):
     """Main interface for the library.
@@ -291,7 +293,7 @@ class Lark(Serialize):
                 if self.options.parser != 'lalr':
                     raise ConfigurationError("cache only works with parser='lalr' for now")
 
-                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals')
+                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals', '_plugins')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
@@ -391,13 +393,17 @@ class Lark(Serialize):
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = -rule.options.priority
+            for term in self.terminals:
+                term.priority = -term.priority
         # Else, if the user asked to disable priorities, strip them from the
-        # rules. This allows the Earley parsers to skip an extra forest walk
+        # rules and terminals. This allows the Earley parsers to skip an extra forest walk
         # for improved performance, if you don't need them (or didn't specify any).
         elif self.options.priority is None:
             for rule in self.rules:
                 if rule.options.priority is not None:
                     rule.options.priority = None
+            for term in self.terminals:
+                term.priority = 0
 
         # TODO Deprecate lexer_callbacks?
         self.lexer_conf = LexerConf(
@@ -447,9 +453,15 @@ class Lark(Serialize):
 
     def _build_parser(self):
         self._prepare_callbacks()
-        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        _validate_frontend_args(self.options.parser, self.options.lexer)
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
-        return parser_class(self.lexer_conf, parser_conf, options=self.options)
+        return _construct_parsing_frontend(
+            self.options.parser,
+            self.options.lexer,
+            self.lexer_conf,
+            parser_conf,
+            options=self.options
+        )
 
     def save(self, f, exclude_options: Collection[str] = ()):
         """Saves the instance into the given file object
@@ -498,12 +510,12 @@ class Lark(Serialize):
         self.options = LarkOptions.deserialize(options, memo)
         self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
         self.source_path = '<deserialized>'
-        parser_class = get_frontend(self.options.parser, self.options.lexer)
+        _validate_frontend_args(self.options.parser, self.options.lexer)
         self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
         self.terminals = self.lexer_conf.terminals
         self._prepare_callbacks()
         self._terminals_dict = {t.name: t for t in self.terminals}
-        self.parser = parser_class.deserialize(
+        self.parser = _deserialize_parsing_frontend(
             data['parser'],
             memo,
             self.lexer_conf,
@@ -536,7 +548,7 @@ class Lark(Serialize):
             return cls(f, **options)
 
     @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: Tuple[str, ...]=("",), **options) -> _T:
+    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: 'Sequence[str]'=[""], **options) -> _T:
         """Create an instance of Lark with the grammar loaded from within the package `package`.
         This allows grammar loading from zipapps.
 
@@ -568,7 +580,7 @@ class Lark(Serialize):
             lexer = self._build_lexer(dont_ignore)
         else:
             lexer = self.lexer
-        lexer_thread = LexerThread(lexer, text)
+        lexer_thread = LexerThread.from_text(lexer, text)
         stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)
@@ -592,7 +604,7 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> Tree:
+    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:

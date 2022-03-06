@@ -78,7 +78,7 @@ class TestReconstructor(TestCase):
         stmt: var op var
         !op: ("+" | "-" | "*" | "/")
         var: WORD
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = """
@@ -93,7 +93,7 @@ class TestReconstructor(TestCase):
         ?mult_stmt: sum_stmt ["*" sum_stmt]
         ?sum_stmt: var ["+" var]
         var: WORD
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = ['a', 'a*b', 'a+b', 'a*b+c', 'a+b*c', 'a+b*c+d']
@@ -168,7 +168,7 @@ class TestReconstructor(TestCase):
         stmt: "keyword" var op var
         !op: ("+=" | "-=" | "*=" | "/=")
         var: WORD
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         g2 = """
@@ -176,7 +176,7 @@ class TestReconstructor(TestCase):
         stmt: "குறிப்பு" var op var
         !op: ("+=" | "-=" | "*=" | "/=")
         var: WORD
-        NL: /(\\r?\\n)+\s*/
+        NL: /(\\r?\\n)+\\s*/
         """ + common
 
         code = """

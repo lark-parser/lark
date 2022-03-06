@@ -74,20 +74,20 @@ def extract_sections(lines):
     section = None
     text = []
     sections = defaultdict(list)
-    for l in lines:
-        if l.startswith('###'):
-            if l[3] == '{':
-                section = l[4:].strip()
-            elif l[3] == '}':
+    for line in lines:
+        if line.startswith('###'):
+            if line[3] == '{':
+                section = line[4:].strip()
+            elif line[3] == '}':
                 sections[section] += text
                 section = None
                 text = []
             else:
-                raise ValueError(l)
+                raise ValueError(line)
         elif section:
-            text.append(l)
+            text.append(line)
 
-    return {name:''.join(text) for name, text in sections.items()}
+    return {name: ''.join(text) for name, text in sections.items()}
 
 
 def strip_docstrings(line_gen):
@@ -178,7 +178,7 @@ def main():
     parser = ArgumentParser(prog="prog='python -m lark.tools.standalone'", description="Lark Stand-alone Generator Tool",
                             parents=[lalr_argparser], epilog='Look at the Lark documentation for more info on the options')
     parser.add_argument('-c', '--compress', action='store_true', default=0, help="Enable compression")
-    if len(sys.argv)==1:
+    if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     ns = parser.parse_args()

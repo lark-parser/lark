@@ -45,7 +45,7 @@ class LALR_Parser(Serialize):
 
             while True:
                 if isinstance(e, UnexpectedCharacters):
-                    s = e.interactive_parser.lexer_state.state
+                    s = e.interactive_parser.lexer_thread.state
                     p = s.line_ctr.char_pos
 
                 if not on_error(e):

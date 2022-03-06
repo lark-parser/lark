@@ -1,6 +1,5 @@
 from .utils import logger, NO_VALUE
-from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, \
-    TYPE_CHECKING
+from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import Token
@@ -96,7 +95,7 @@ class UnexpectedInput(LarkError):
         """
         assert self.state is not None, "Not supported for this exception"
 
-        if isinstance(examples, dict):
+        if isinstance(examples, Mapping):
             examples = examples.items()
 
         candidate = (None, False)
@@ -108,11 +107,19 @@ class UnexpectedInput(LarkError):
                     parse_fn(malformed)
                 except UnexpectedInput as ut:
                     if ut.state == self.state:
-                        if use_accepts and hasattr(self, 'accepts') and hasattr(ut, 'accepts') and ut.accepts != self.accepts:
+                        if (
+                            use_accepts
+                            and isinstance(self, UnexpectedToken)
+                            and isinstance(ut, UnexpectedToken)
+                            and ut.accepts != self.accepts
+                        ):
                             logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
                                          (self.state, self.accepts, ut.accepts, i, j))
                             continue
-                        try:
+                        if (
+                            isinstance(self, (UnexpectedToken, UnexpectedEOF))
+                            and isinstance(ut, (UnexpectedToken, UnexpectedEOF))
+                        ):
                             if ut.token == self.token:  # Try exact match first
                                 logger.debug("Exact Match at example [%s][%s]" % (i, j))
                                 return label
@@ -123,8 +130,6 @@ class UnexpectedInput(LarkError):
                                     logger.debug("Token Type Fallback at example [%s][%s]" % (i, j))
                                     candidate = label, True
 
-                        except AttributeError:
-                            pass
                         if candidate[0] is None:
                             logger.debug("Same State match at example [%s][%s]" % (i, j))
                             candidate = label, False
@@ -279,5 +284,9 @@ class VisitError(LarkError):
         self.rule = rule
         self.obj = obj
         self.orig_exc = orig_exc
+
+
+class MissingVariableError(LarkError):
+    pass
 
 ###}

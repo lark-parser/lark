@@ -54,6 +54,11 @@ You can also run the tests using pytest:
 pytest tests
 ```
 
+### Code Style
+
+Lark does not follow a predefined code style.
+We accept any code style that makes sense, as long as it's Pythonic and easy to read.
+
 ### Using setup.py
 
 Another way to run the tests is using setup.py:

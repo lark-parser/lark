@@ -3,7 +3,6 @@ from __future__ import absolute_import
 
 import re
 import unittest
-import logging
 import os
 import sys
 from copy import copy, deepcopy
@@ -35,8 +34,7 @@ from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
-from lark.grammar import Rule
-from lark.lexer import TerminalDef, Lexer, BasicLexer
+from lark.lexer import Lexer, BasicLexer
 from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
@@ -186,7 +184,7 @@ class TestParsers(unittest.TestCase):
         g = """
         start: add+
         add: NUM "+" NUM
-        NUM: /\d+/
+        NUM: /\\d+/
         %ignore " "
         """
         text = "1+2 3+4"
@@ -380,6 +378,15 @@ class TestParsers(unittest.TestCase):
 
         r = p.parse('')
         self.assertEqual(r, Tree('start', [Token('A', 'A')]))
+
+
+    def test_lexer_token_limit(self):
+        "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
+        tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
+        g = """start: %s
+                  %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items()))
+                  
+        p = Lark(g, parser='lalr')
 
 
 
@@ -1590,12 +1597,6 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises(UnexpectedCharacters, g.parse, "C")
 
 
-        def test_lexer_token_limit(self):
-            "Python has a stupid limit of 100 groups in a regular expression. Test that we handle this limitation"
-            tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
-            g = _Lark("""start: %s
-                      %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items())))
-
         def test_float_without_lexer(self):
             expected_error = UnexpectedCharacters if 'dynamic' in LEXER else UnexpectedToken
             if PARSER == 'cyk':
@@ -1736,8 +1737,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        # TODO: Remove after merging priority for Dynamic Earley
-        @unittest.skipIf(LEXER != 'basic', "Only basic lexers care about token priority")
+        @unittest.skipIf(LEXER != 'basic', "basic lexer prioritization differs from dynamic lexer prioritization")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -1789,6 +1789,57 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
+        @unittest.skipIf('dynamic' not in LEXER, "dynamic lexer prioritization differs from basic lexer prioritization")
+        def test_dynamic_lexer_prioritization(self):
+            "Tests effect of priority on result"
+
+            grammar = """
+            start: A B | AB
+            A.2: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['a', 'b'])
+            self.assertNotEqual(res.children, ['ab'])
+
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B: "b"
+            AB.3: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertNotEqual(res.children, ['a', 'b'])
+            self.assertEqual(res.children, ['ab'])
+
+
+            # this case differs from prioritization with a basic lexer
+            grammar = """
+            start: A B | AB
+            A: "a"
+            B.-20: "b"
+            AB.-10: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+            self.assertEqual(res.children, ['ab'])
+
+
+            grammar = """
+            start: A B | AB
+            A.-99999999999999999999999: "a"
+            B: "b"
+            AB: "ab"
+            """
+            l = _Lark(grammar)
+            res = l.parse("ab")
+
+            self.assertEqual(res.children, ['ab'])
 
 
 
@@ -2302,6 +2353,15 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(p.parse("a").children, ['a', None, None])
             self.assertEqual(p.parse("abc").children, ['a', 'b', 'c'])
 
+            p = _Lark(r"""!start: "a" ["b" | "c"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("a").children, ['a', None])
+            self.assertEqual(p.parse("ab").children, ['a', 'b'])
+
+            p = _Lark(r"""!start: "a" ["b" | "c" "d"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("a").children, ['a', None, None])
+            # self.assertEqual(p.parse("ab").children, ['a', 'b', None])        # Not implemented; current behavior is incorrect
+            self.assertEqual(p.parse("acd").children, ['a', 'c', 'd'])
+
 
         def test_escaped_string(self):
             "Tests common.ESCAPED_STRING"
@@ -2401,7 +2461,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual( match_error("ebc"), 2 )
 
 
-        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_class(self):
             "Tests that character classes from the `regex` module work correctly."
             g = _Lark(r"""?start: NAME
@@ -2411,7 +2471,7 @@ def _make_parser_test(LEXER, PARSER):
 
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @unittest.skipIf(not regex or sys.version_info[0] == 2, 'Unicode and Python 2 do not place nicely together.')
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_word(self):
             "Tests that a persistent bug in the `re` module works when `regex` is enabled."
             g = _Lark(r"""?start: NAME
@@ -2458,12 +2518,12 @@ def _make_parser_test(LEXER, PARSER):
 
             ip_copy = ip.copy()
             self.assertEqual(ip_copy.parser_state, ip.parser_state)
-            self.assertEqual(ip_copy.lexer_state.state, ip.lexer_state.state)
+            self.assertEqual(ip_copy.lexer_thread.state, ip.lexer_thread.state)
             self.assertIsNot(ip_copy.parser_state, ip.parser_state)
-            self.assertIsNot(ip_copy.lexer_state.state, ip.lexer_state.state)
-            self.assertIsNot(ip_copy.lexer_state.state.line_ctr, ip.lexer_state.state.line_ctr)
+            self.assertIsNot(ip_copy.lexer_thread.state, ip.lexer_thread.state)
+            self.assertIsNot(ip_copy.lexer_thread.state.line_ctr, ip.lexer_thread.state.line_ctr)
 
-            res = ip.feed_eof(ip.lexer_state.state.last_token)
+            res = ip.feed_eof(ip.lexer_thread.state.last_token)
             self.assertEqual(res, Tree('start', ['a', 'b']))
             self.assertRaises(UnexpectedToken ,ip.feed_eof)
             
@@ -2506,6 +2566,43 @@ def _make_parser_test(LEXER, PARSER):
 
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
+
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser error handling only works with LALR for now")
+        def test_iter_parse(self):
+            ab_grammar = '!start: "a"* "b"*'
+            parser = Lark(ab_grammar, parser="lalr")
+            ip = parser.parse_interactive("aaabb")
+            i = ip.iter_parse()
+            assert next(i) == 'a'
+            assert next(i) == 'a'
+            assert next(i) == 'a'
+            assert next(i) == 'b'
+
+        @unittest.skipIf(PARSER!='lalr', "Tree-less mode is only supported in lalr")
+        def test_default_in_treeless_mode(self):
+            grammar = r"""
+                start: expr
+
+                expr: A B
+                    | A expr B
+
+                A: "a"
+                B: "b"
+
+                %import common.WS
+                %ignore WS
+            """
+            s = 'a a a b b b'
+
+            class AbTransformer(Transformer):
+                def __default__(self, data, children, meta):
+                    return '@', data, children
+
+            parser = _Lark(grammar)
+            a = AbTransformer().transform(parser.parse(s))
+            parser = _Lark(grammar, transformer=AbTransformer())
+            b = parser.parse(s)
+            assert a == b
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

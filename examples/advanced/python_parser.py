@@ -40,9 +40,9 @@ def _read(fn, *args):
 def _get_lib_path():
     if os.name == 'nt':
         if 'PyPy' in sys.version:
-            return os.path.join(sys.prefix, 'lib-python', sys.winver)
+            return os.path.join(sys.base_prefix, 'lib-python', sys.winver)
         else:
-            return os.path.join(sys.prefix, 'Lib')
+            return os.path.join(sys.base_prefix, 'Lib')
     else:
         return [x for x in sys.path if x.endswith('%s.%s' % sys.version_info[:2])][0]
 
@@ -77,4 +77,3 @@ if __name__ == '__main__':
     test_python_lib()
     # test_earley_equals_lalr()
     # python_parser3.parse(_read(sys.argv[1]) + '\n')
-

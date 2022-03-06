@@ -1,9 +1,10 @@
+import inspect
+import textwrap
 from unittest import TestCase, main
 
 from lark import Lark
 from lark.indenter import PythonIndenter
-from lark.exceptions import UnexpectedCharacters, UnexpectedToken
-
+from lark.exceptions import UnexpectedCharacters, UnexpectedToken, ParseError
 
 valid_DEC_NUMBER = [
     "0",
@@ -169,12 +170,70 @@ invalid_number = [
 ]
 
 
+valid_match_statements = [
+    # constant and capture patterns
+    textwrap.dedent("""
+    match greeting:
+        case "":
+            print("Hello!")
+        case name:
+            print(f"Hi {name}!")
+    """),
+
+    # pattern unions
+    textwrap.dedent("""
+    match something:
+        case 0 | 1 | 2:
+            print("Small number")
+        case [] | [_]:
+            print("A short sequence")
+        case str() | bytes():
+            print("Something string-like")
+        case _:
+            print("Something else") 
+    """),
+
+    # guards
+    textwrap.dedent("""
+    match val:
+        case [x, y] if x > 0 and y > 0:
+            return f"A pair of {x} and {y}"
+        case [x, *other]:
+            return f"A sequence starting with {x}"
+        case int():
+            return f"Some integer"
+    """),
+
+    # "as" patterns
+    textwrap.dedent("""
+    match command.split():
+        case ["go", ("north" | "south" | "east" | "west") as direction]:
+            current_room = current_room.neighbor(direction)
+    """)
+]
+
+invalid_match_statements = [
+    # no cases
+    textwrap.dedent("""
+    match val:
+        pass
+    """),
+
+    # cases not indented relative to match
+    textwrap.dedent("""
+    match val:
+    case x:
+        pass
+    """)
+]
+
+
 class TestPythonParser(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.python_parser = Lark.open_from_package(
             "lark", "python.lark", ("grammars",), parser='lalr',
-            postlex=PythonIndenter(), start=["number"])
+            postlex=PythonIndenter(), start=["number", "file_input"])
 
     def _test_parsed_is_this_terminal(self, text, terminal, start):
         tree = self.python_parser.parse(text, start=start)
@@ -182,6 +241,14 @@ class TestPythonParser(TestCase):
         token = tree.children[0]
         self.assertEqual(token.type, terminal)
         self.assertEqual(token.value, text)
+
+    def _test_parsed_is_file_containing_only_this_statement(self, text, statement):
+        tree = self.python_parser.parse(text, start="file_input")
+        self.assertEqual(len(tree.children), 1)
+
+        statement_token = tree.children[0].data
+        self.assertEqual(statement_token.type, "RULE")
+        self.assertEqual(statement_token.value, statement)
 
     def test_DEC_NUMBER(self):
         for case in valid_DEC_NUMBER:
@@ -216,6 +283,30 @@ class TestPythonParser(TestCase):
         for case in invalid_number:
             with self.assertRaises((UnexpectedCharacters, UnexpectedToken)):
                 self.python_parser.parse(case, start="number")
+
+    def test_valid_match_statement(self):
+        for case in valid_match_statements:
+            self._test_parsed_is_file_containing_only_this_statement(case, "match_stmt")
+
+    def test_invalid_match_statement(self):
+        for case in invalid_match_statements:
+            with self.assertRaises(ParseError):
+                self.python_parser.parse(case, start="file_input")
+
+    def test_assign_to_variable_named_match(self):
+        text = textwrap.dedent("""
+        match = re.match(pattern, string)
+        """)
+
+        self._test_parsed_is_file_containing_only_this_statement(text, "assign_stmt")
+
+    def test_assign_expr_with_variable_named_match(self):
+        text = textwrap.dedent("""
+        if match := re.match(pattern, string):
+            do_thing(match)
+        """)
+
+        self._test_parsed_is_file_containing_only_this_statement(text, "if_stmt")
 
 
 if __name__ == '__main__':

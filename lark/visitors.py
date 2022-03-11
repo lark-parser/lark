@@ -22,6 +22,9 @@ class _DiscardType:
     """When the Discard value is returned from a transformer callback,
     that node is discarded and won't appear in the parent.
 
+    Note: This feature is disabled when the transformer is provided to Lark
+          using the ``transformer`` keyword (aka Tree-less LALR mode)
+
     Example:
         ::
 

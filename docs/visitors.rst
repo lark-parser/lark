@@ -111,7 +111,9 @@ merge_transformers
 Discard
 -------
 
-.. autoclass:: lark.visitors.Discard
+``Discard`` is the singleton instance of ``_DiscardType``.
+
+.. autoclass:: lark.visitors._DiscardType
 
 
 VisitError

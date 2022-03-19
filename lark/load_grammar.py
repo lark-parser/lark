@@ -318,7 +318,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         if mx < REPEAT_BREAK_THRESHOLD:
             return ST('expansions', [ST('expansion', [rule] * n) for n in range(mn, mx + 1)])
 
-        # For large repeat values, we break the repetition into sub-rules. 
+        # For large repeat values, we break the repetition into sub-rules.
         # We treat ``rule~mn..mx`` as ``rule~mn rule~0..(diff=mx-mn)``.
         # We then use small_factors to split up mn and diff up into values [(a, b), ...]
         # This values are used with the help of _add_repeat_rule and _add_repeat_rule_opt
@@ -1233,7 +1233,7 @@ class GrammarBuilder:
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
-          
+
         for stmt in tree.children:
             if stmt.data == 'import':
                 dotted_path, base_path, aliases = self._unpack_import(stmt, grammar_name)
@@ -1316,7 +1316,7 @@ class GrammarBuilder:
                 if self.used_files.get(joined_path, h) != h:
                     raise RuntimeError("Grammar file was changed during importing")
                 self.used_files[joined_path] = h
-                    
+
                 gb = GrammarBuilder(self.global_keep_all_tokens, self.import_paths, self.used_files)
                 gb.load_grammar(text, joined_path, mangle)
                 gb._remove_unused(map(mangle, aliases))
@@ -1390,7 +1390,7 @@ def verify_used_files(file_hashes):
                 text = pkgutil.get_data(*path).decode('utf-8')
         if text is None: # We don't know how to load the path. ignore it.
             continue
-            
+
         current = hashlib.md5(text.encode()).hexdigest()
         if old != current:
             logger.info("File %r changed, rebuilding Parser" % path)

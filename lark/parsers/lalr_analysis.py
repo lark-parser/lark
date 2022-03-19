@@ -36,7 +36,6 @@ class ParseTable:
 
     def serialize(self, memo):
         tokens = Enumerator()
-        rules = Enumerator()
 
         states = {
             state: {tokens.get(token): ((1, arg.serialize(memo)) if action is Reduce else (0, arg))
@@ -286,7 +285,7 @@ class LALR_Analyzer(GrammarAnalyzer):
             for rp in state:
                 for start in self.lr0_start_states:
                     if rp.rule.origin.name == ('$root_' + start) and rp.is_satisfied:
-                        assert(not start in end_states)
+                        assert(start not in end_states)
                         end_states[start] = state
 
         _parse_table = ParseTable(states, { start: state.closure for start, state in self.lr0_start_states.items() }, end_states)

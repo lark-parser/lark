@@ -13,7 +13,7 @@ Requirements:
 import sys
 import textwrap
 
-from PyQt5.Qt import *  # noqa
+from PyQt5.Qt import QColor, QApplication, QFont, QFontMetrics
 
 from PyQt5.Qsci import QsciScintilla
 from PyQt5.Qsci import QsciLexerCustom

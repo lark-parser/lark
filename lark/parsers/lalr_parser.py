@@ -3,7 +3,6 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy, copy
-from ..exceptions import UnexpectedInput, UnexpectedToken
 from ..lexer import Token
 from ..utils import Serialize
 
@@ -32,7 +31,7 @@ class LALR_Parser(Serialize):
 
     def serialize(self, memo):
         return self._parse_table.serialize(memo)
-    
+
     def parse_interactive(self, lexer, start):
         return self.parser.parse(lexer, start, start_interactive=True)
 
@@ -169,7 +168,7 @@ class _Parser:
         if start_interactive:
             return InteractiveParser(self, parser_state, parser_state.lexer)
         return self.parse_from_state(parser_state)
-    
+
 
     def parse_from_state(self, state):
         # Main LALR-parser loop

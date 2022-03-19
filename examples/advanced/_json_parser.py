@@ -7,8 +7,6 @@ For an explanation, check out the JSON parser tutorial at /docs/json_tutorial.md
 
 (this is here for use by the other examples)
 """
-import sys
-
 from lark import Lark, Transformer, v_args
 
 json_grammar = r"""
@@ -61,4 +59,3 @@ json_parser = Lark(json_grammar, parser='lalr',
                    maybe_placeholders=False,
                    # Using an internal transformer is faster and more memory efficient
                    transformer=TreeToJson())
-

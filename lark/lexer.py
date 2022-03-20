@@ -304,15 +304,15 @@ class Scanner:
             except AssertionError:  # Yes, this is what Python provides us.. :/
                 return self._build_mres(terminals, max_size//2)
 
-            mres.append((mre, {i: n for n, i in mre.groupindex.items()}))
+            mres.append(mre)
             terminals = terminals[max_size:]
         return mres
 
     def match(self, text, pos):
-        for mre, type_from_index in self._mres:
+        for mre in self._mres:
             m = mre.match(text, pos)
             if m:
-                return m.group(0), type_from_index[m.lastindex]
+                return m.group(0), m.lastgroup
 
 
 def _regexp_has_newline(r: str):

@@ -116,7 +116,7 @@ See the full list of [features here](https://lark-parser.readthedocs.io/en/lates
 
 #### Performance comparison
 
-Lark is the fastest and lightest (lower is better)
+Lark is fast and light (lower is better)
 
 ![Run-time Comparison](docs/_static/comparison_runtime.png)
 
@@ -125,9 +125,7 @@ Lark is the fastest and lightest (lower is better)
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 
-*Note: I really wanted to add PLY to the benchmark, but I couldn't find a working JSON parser anywhere written in PLY. If anyone can point me to one that actually works, I would be happy to add it!*
-
-*Note 2: The parsimonious code has been optimized for this specific test, unlike the other benchmarks (Lark included). Its "real-world" performance may not be as good.*
+For a more thorough and objective comparison, checkout the [Python Parsing Benchmarks](https://github.com/goodmami/python-parsing-benchmarks) repo.
 
 #### Feature comparison
 
@@ -166,7 +164,7 @@ Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more detail
  - [gersemi](https://github.com/BlankSpruce/gersemi) - A CMake code formatter
  - [MistQL](https://github.com/evinism/mistql) - A query language for JSON-like structures
 
-Using Lark? Send me a message and I'll add your project!
+[Full list](https://github.com/lark-parser/lark/network/dependents?package_id=UGFja2FnZS01MjI1OTE0NQ%3D%3D)
 
 ## License
 
@@ -176,7 +174,7 @@ Lark uses the [MIT license](LICENSE).
 
 ## Contributors
 
-Lark is currently accepting pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
+Lark accepts pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
 Big thanks to everyone who contributed so far:
 
@@ -195,5 +193,4 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
-
 

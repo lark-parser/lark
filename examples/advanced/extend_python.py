@@ -8,7 +8,7 @@ to add new syntax to the example Python grammar.
 """
 
 from lark.lark import Lark
-from python_parser import PythonIndenter
+from lark.indenter import PythonIndenter
 
 GRAMMAR = r"""
 %import python (compound_stmt, single_input, file_input, eval_input, test, suite, _NEWLINE, _INDENT, _DEDENT, COMMENT)

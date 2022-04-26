@@ -142,6 +142,20 @@ class Tree(Generic[_Leaf_T]):
         del queue
         return reversed(list(subtrees.values()))
 
+    def iter_subtrees_topdown(self):
+        """Breadth-first iteration.
+
+        Iterates over all the subtrees, return nodes in order like pretty() does.
+        """
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            if not isinstance(node, Tree):
+                continue
+            yield node
+            for child in reversed(node.children):
+                stack.append(child)
+
     def find_pred(self, pred: 'Callable[[Tree[_Leaf_T]], bool]') -> 'Iterator[Tree[_Leaf_T]]':
         """Returns all nodes of the tree that evaluate pred(node) as true."""
         return filter(pred, self.iter_subtrees())
@@ -178,20 +192,6 @@ class Tree(Generic[_Leaf_T]):
             else:
                 if pred(c):
                     yield c
-
-    def iter_subtrees_topdown(self):
-        """Breadth-first iteration.
-
-        Iterates over all the subtrees, return nodes in order like pretty() does.
-        """
-        stack = [self]
-        while stack:
-            node = stack.pop()
-            if not isinstance(node, Tree):
-                continue
-            yield node
-            for child in reversed(node.children):
-                stack.append(child)
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)

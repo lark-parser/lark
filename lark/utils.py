@@ -113,8 +113,13 @@ try:
 except ImportError:
     regex = None
 
-import sre_parse
-import sre_constants
+try:  # Python 3.11
+    import re._parser as sre_parse
+    import re._constants as sre_constants
+except ImportError:
+    import sre_parse
+    import sre_constants
+
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
 
 def get_regexp_width(expr):

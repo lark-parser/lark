@@ -480,19 +480,21 @@ class _VArgsWrapper:
 
     def __get__(self, instance, owner=None):
         try:
-            g = self.base_func.__get__
+            # Use the __get__ attribute of the type instead of the instance
+            # to fully mirror the behavior of getattr
+            g = type(self.base_func).__get__
         except AttributeError:
             return self
         else:
-            return _VArgsWrapper(g(instance, owner), self.visit_wrapper)
+            return _VArgsWrapper(g(self.base_func, instance, owner), self.visit_wrapper)
 
     def __set_name__(self, owner, name):
         try:
-            f = self.base_func.__set_name__
+            f = type(self.base_func).__set_name__
         except AttributeError:
             return
         else:
-            f(owner, name)
+            f(self.base_func, owner, name)
 
 
 def _vargs_inline(f, _data, children, _meta):

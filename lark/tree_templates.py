@@ -67,7 +67,7 @@ class TemplateConf:
         template_var = self.test_var(template)
         if template_var:
             if not isinstance(tree, Tree):
-                raise TypeError(f"Template variables can only match Tree instances. Not {tree}")
+                raise TypeError(f"Template variables can only match Tree instances. Not {tree!r}")
             return {template_var: tree}
 
         if isinstance(template, str):

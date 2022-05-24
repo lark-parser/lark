@@ -1,7 +1,7 @@
 name: Python type check
 on: [push, pull_request]
 jobs:
-  build:
+  type:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -9,3 +9,11 @@ jobs:
           submodules: recursive
       - name: Lint with mypy
         run: pipx run tox -e type
+
+  pre-commit:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - uses: pre-commit/action@v2.0.3

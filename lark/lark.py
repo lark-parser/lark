@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
+import types
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional, Sequence,
     Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
@@ -27,9 +28,10 @@ from .grammar import Rule
 
 import re
 try:
-    import regex  # type: ignore
+    import regex
+    _has_regex = True
 except ImportError:
-    regex = None
+    _has_regex = False
 
 
 ###{standalone
@@ -253,11 +255,12 @@ class Lark(Serialize):
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
+        re_module: types.ModuleType
 
         # Set regex or re module
         use_regex = self.options.regex
         if use_regex:
-            if regex:
+            if _has_regex:
                 re_module = regex
             else:
                 raise ImportError('`regex` module must be installed if calling `Lark(regex=True)`.')
@@ -267,7 +270,7 @@ class Lark(Serialize):
         # Some, but not all file-like objects have a 'name' attribute
         if self.options.source_path is None:
             try:
-                self.source_path = grammar.name
+                self.source_path = grammar.name  # type: ignore[union-attr]
             except AttributeError:
                 self.source_path = '<string>'
         else:
@@ -275,7 +278,7 @@ class Lark(Serialize):
 
         # Drain file-like objects to get their contents
         try:
-            read = grammar.read
+            read = grammar.read  # type: ignore[union-attr]
         except AttributeError:
             pass
         else:

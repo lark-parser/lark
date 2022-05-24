@@ -87,6 +87,12 @@ class TestTreeTemplatesConf(unittest.TestCase):
 
         self.assertEqual({}, template.match(SOME_NON_TEMPLATE_TREE))
 
+    def test_template_match__only_tree(self):
+        "This test might become irrelevant in the future"
+        template_tree = Tree('bar', [Tree("var", children=["$foo"])])
+        template = Template(template_tree)
+        self.assertRaises(TypeError, template.match, Tree('bar', ['BAD']))
+
 
 class TestTreeTemplatesTemplate(unittest.TestCase):
     parser = Lark(SOME_TEMPLATING_GRAMMAR)

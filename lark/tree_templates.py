@@ -9,7 +9,9 @@ from typing import Union, Optional, Mapping, Dict, Tuple, Iterator
 from lark import Tree, Transformer
 from lark.exceptions import MissingVariableError
 
+Branch = Union[Tree[str], str]
 TreeOrCode = Union[Tree[str], str]
+MatchResult = Dict[str, Tree]
 _TEMPLATE_MARKER = '$'
 
 
@@ -17,6 +19,8 @@ class TemplateConf:
     """Template Configuration
 
     Allows customization for different uses of Template
+
+    parse() must return a Tree instance.
     """
 
     def __init__(self, parse=None):
@@ -49,15 +53,21 @@ class TemplateConf:
             assert self._parse
             template = self._parse(template)
 
-        assert isinstance(template, Tree)
+        if not isinstance(template, Tree):
+            raise TypeError("template parser must return a Tree instance")
+
         return template
 
     def __call__(self, template: Tree[str]) -> 'Template':
         return Template(template, conf=self)
 
-    def _match_tree_template(self, template: TreeOrCode, tree: TreeOrCode) -> Optional[Dict[str, TreeOrCode]]:
+    def _match_tree_template(self, template: TreeOrCode, tree: Branch) -> Optional[MatchResult]:
+        """Returns dict of {var: match} if found a match, else None
+        """
         template_var = self.test_var(template)
         if template_var:
+            if not isinstance(tree, Tree):
+                raise TypeError(f"Template variables can only match Tree instances. Not {tree!r}")
             return {template_var: tree}
 
         if isinstance(template, str):
@@ -100,7 +110,7 @@ class _ReplaceVars(Transformer[str, Tree[str]]):
 
 
 class Template:
-    """Represents a tree templates, tied to a specific configuration
+    """Represents a tree template, tied to a specific configuration
 
     A tree template is a tree that contains nodes that are template variables.
     Those variables will match any tree.
@@ -111,7 +121,7 @@ class Template:
         self.conf = conf
         self.tree = conf._get_tree(tree)
 
-    def match(self, tree: TreeOrCode) -> Optional[Dict[str, TreeOrCode]]:
+    def match(self, tree: TreeOrCode) -> Optional[MatchResult]:
         """Match a tree template to a tree.
 
         A tree template without variables will only match ``tree`` if it is equal to the template.
@@ -127,7 +137,7 @@ class Template:
         tree = self.conf._get_tree(tree)
         return self.conf._match_tree_template(self.tree, tree)
 
-    def search(self, tree: TreeOrCode) -> Iterator[Tuple[Tree[str], Dict[str, TreeOrCode]]]:
+    def search(self, tree: TreeOrCode) -> Iterator[Tuple[Tree[str], MatchResult]]:
         """Search for all occurances of the tree template inside ``tree``.
         """
         tree = self.conf._get_tree(tree)

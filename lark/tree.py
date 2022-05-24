@@ -5,6 +5,7 @@ from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, 
 
 if TYPE_CHECKING:
     from .lexer import TerminalDef, Token
+    import rich
     if sys.version_info >= (3, 8):
         from typing import Literal
     else:

@@ -109,9 +109,10 @@ class SerializeMemoizer(Serialize):
 
 
 try:
-    import regex  # type: ignore
+    import regex
+    _has_regex = True
 except ImportError:
-    regex = None
+    _has_regex = False
 
 if sys.version_info >= (3, 11):
     import re._parser as sre_parse
@@ -123,7 +124,7 @@ else:
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
 
 def get_regexp_width(expr):
-    if regex:
+    if _has_regex:
         # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
         # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex
         # match here below.
@@ -135,7 +136,7 @@ def get_regexp_width(expr):
     try:
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
-        if not regex:
+        if not _has_regex:
             raise ValueError(expr)
         else:
             # sre_parse does not support the new features in regex. To not completely fail in that case,
@@ -223,15 +224,16 @@ def combine_alternatives(lists):
 
 try:
     import atomicwrites
+    _has_atomicwrites = True
 except ImportError:
-    atomicwrites = None  # type: ignore[assigment]
+    _has_atomicwrites = False
 
 class FS:
     exists = staticmethod(os.path.exists)
 
     @staticmethod
     def open(name, mode="r", **kwargs):
-        if atomicwrites and "w" in mode:
+        if _has_atomicwrites and "w" in mode:
             return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
         else:
             return open(name, mode, **kwargs)

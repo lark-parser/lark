@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.mypy]
+files = "lark"
+python_version = "3.6"
+show_error_codes = true
+enable_error_code = ["ignore-without-code"]
+exclude = [
+  "^lark/__pyinstaller",
+]
+
+# You can disable imports or control per-module/file settings here
+[[tool.mypy.overrides]]
+module = [ "js2py" ]
+ignore_missing_imports = true

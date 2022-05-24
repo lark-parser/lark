@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import sys, os, pickle, hashlib
 import tempfile
 import types
+import re
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional, Sequence,
     Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
@@ -14,9 +15,11 @@ if TYPE_CHECKING:
         from typing import Literal
     else:
         from typing_extensions import Literal
+    from io import BytesIO
+    from .parser_frontends import ParsingFrontend
         
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
+from .utils import Serialize, SerializeMemoizer, FS, isascii, logger, SerializeMemoizer
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
@@ -26,7 +29,7 @@ from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
 
-import re
+
 try:
     import regex
     _has_regex = True
@@ -175,7 +178,7 @@ class LarkOptions(Serialize):
         '_plugins': {},
     }
 
-    def __init__(self, options_dict):
+    def __init__(self, options_dict: Dict[str, Any]) -> None:
         o = dict(options_dict)
 
         options = {}
@@ -204,21 +207,21 @@ class LarkOptions(Serialize):
         if o:
             raise ConfigurationError("Unknown options: %s" % o.keys())
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         try:
             return self.__dict__['options'][name]
         except KeyError as e:
             raise AttributeError(e)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: str) -> None:
         assert_config(name, self.options.keys(), "%r isn't a valid option. Expected one of: %s")
         self.options[name] = value
 
-    def serialize(self, memo):
+    def serialize(self, memo = None) -> Dict[str, Any]:
         return self.options
 
     @classmethod
-    def deserialize(cls, data, memo):
+    def deserialize(cls, data: Dict[str, Any], memo: Dict[int, Union[TerminalDef, Rule]]) -> "LarkOptions":
         return cls(data)
 
 
@@ -251,7 +254,7 @@ class Lark(Serialize):
     grammar: 'Grammar'
     options: LarkOptions
     lexer: Lexer
-    terminals: List[TerminalDef]
+    terminals: Collection[TerminalDef]
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
@@ -432,7 +435,7 @@ class Lark(Serialize):
 
     __serialize_fields__ = 'parser', 'rules', 'options'
 
-    def _build_lexer(self, dont_ignore=False):
+    def _build_lexer(self, dont_ignore: bool=False) -> BasicLexer:
         lexer_conf = self.lexer_conf
         if dont_ignore:
             from copy import copy
@@ -440,7 +443,7 @@ class Lark(Serialize):
             lexer_conf.ignore = ()
         return BasicLexer(lexer_conf)
 
-    def _prepare_callbacks(self):
+    def _prepare_callbacks(self) -> None:
         self._callbacks = {}
         # we don't need these callbacks if we aren't building a tree
         if self.options.ambiguity != 'forest':
@@ -454,7 +457,7 @@ class Lark(Serialize):
             self._callbacks = self._parse_tree_builder.create_callback(self.options.transformer)
         self._callbacks.update(_get_lexer_callbacks(self.options.transformer, self.terminals))
 
-    def _build_parser(self):
+    def _build_parser(self) -> "ParsingFrontend":
         self._prepare_callbacks()
         _validate_frontend_args(self.options.parser, self.options.lexer)
         parser_conf = ParserConf(self.rules, self._callbacks, self.options.start)
@@ -466,7 +469,7 @@ class Lark(Serialize):
             options=self.options
         )
 
-    def save(self, f, exclude_options: Collection[str] = ()):
+    def save(self, f: "BytesIO", exclude_options: Collection[str] = ()) -> None:
         """Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
@@ -477,7 +480,7 @@ class Lark(Serialize):
         pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
-    def load(cls, f):
+    def load(cls: Type[_T], f: "BytesIO") -> _T:
         """Loads an instance from the given file object
 
         Useful for caching and multiprocessing.
@@ -485,7 +488,7 @@ class Lark(Serialize):
         inst = cls.__new__(cls)
         return inst._load(f)
 
-    def _deserialize_lexer_conf(self, data, memo, options):
+    def _deserialize_lexer_conf(self, data: Dict[str, Any], memo: Dict[int, Union[TerminalDef, Rule]], options: LarkOptions) -> LexerConf:
         lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
         lexer_conf.callbacks = options.lexer_callbacks or {}
         lexer_conf.re_module = regex if options.regex else re
@@ -495,7 +498,7 @@ class Lark(Serialize):
         lexer_conf.postlex = options.postlex
         return lexer_conf
 
-    def _load(self, f, **kwargs):
+    def _load(self: _T, f: Any, **kwargs) -> _T:
         if isinstance(f, dict):
             d = f
         else:
@@ -579,6 +582,7 @@ class Lark(Serialize):
 
         :raises UnexpectedCharacters: In case the lexer cannot find a suitable match.
         """
+        lexer: Lexer
         if not hasattr(self, 'lexer') or dont_ignore:
             lexer = self._build_lexer(dont_ignore)
         else:

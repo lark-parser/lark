@@ -30,7 +30,7 @@ class LALR_Parser(Serialize):
         inst.parser = _Parser(inst._parse_table, callbacks, debug)
         return inst
 
-    def serialize(self, memo = None) -> Dict[str, Any]:
+    def serialize(self, memo: Any = None) -> Dict[str, Any]:
         return self._parse_table.serialize(memo)
 
     def parse_interactive(self, lexer, start):

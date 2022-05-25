@@ -2,7 +2,7 @@ import unicodedata
 import os
 from functools import reduce
 from collections import deque
-from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, TYPE_CHECKING
+from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence, TYPE_CHECKING
 
 ###{standalone
 # Can remove for python 3.7+ and from __future__ import annotations
@@ -172,7 +172,7 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
 _ID_START =    'Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mn', 'Mc', 'Pc'
 _ID_CONTINUE = _ID_START + ('Nd', 'Nl',)
 
-def _test_unicode_category(s: str, categories: Union[Tuple[str, str, str, str, str, str, str, str], Tuple[str, str, str, str, str, str, str, str, str, str]]) -> bool:
+def _test_unicode_category(s: str, categories: Sequence[str]) -> bool:
     if len(s) != 1:
         return all(_test_unicode_category(char, categories) for char in s)
     return s == '_' or unicodedata.category(s) in categories

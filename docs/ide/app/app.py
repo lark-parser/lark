@@ -80,4 +80,3 @@ def start():
 	html5.Body().appendChild(
 		App()
 	)
-

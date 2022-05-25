@@ -17,4 +17,3 @@ Then run using:
 ```bash
 python json_parser_main.py <path-to.json>
 ```
-

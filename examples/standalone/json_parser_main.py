@@ -34,4 +34,3 @@ parser = Lark_StandAlone(transformer=TreeToJson())
 if __name__ == '__main__':
     with open(sys.argv[1]) as f:
         print(parser.parse(f.read()))
-

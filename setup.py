@@ -69,4 +69,3 @@ Since version 1.0, only Python versions 3.6 and up are supported.
         ]
     },
 )
-

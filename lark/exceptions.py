@@ -72,7 +72,7 @@ class UnexpectedInput(LarkError):
             after = text[pos:end].split(b'\n', 1)[0]
             return (before + after + b'\n' + b' ' * len(before.expandtabs()) + b'^\n').decode("ascii", "backslashreplace")
 
-    def match_examples(self, parse_fn: 'Callable[[str], Tree]', 
+    def match_examples(self, parse_fn: 'Callable[[str], Tree]',
                              examples: Union[Mapping[T, Iterable[str]], Iterable[Tuple[T, Iterable[str]]]],
                              token_type_match_fallback: bool=False,
                              use_accepts: bool=True
@@ -168,7 +168,7 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    """An exception that is raised by the lexer, when it cannot match the next 
+    """An exception that is raised by the lexer, when it cannot match the next
     string of characters to any of its terminals.
     """
 
@@ -229,7 +229,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
 
     def __init__(self, token, expected, considered_rules=None, state=None, interactive_parser=None, terminals_by_name=None, token_history=None):
         super(UnexpectedToken, self).__init__()
-        
+
         # TODO considered_rules and expected can be figured out using state
         self.line = getattr(token, 'line', '?')
         self.column = getattr(token, 'column', '?')

@@ -165,4 +165,3 @@ IMAG_NUMBER: (_INT | FLOAT) ("j"|"J")
 %ignore /\\[\t \f]*\r?\n/   // LINE_CONT
 %ignore COMMENT
 %declare _INDENT _DEDENT
-

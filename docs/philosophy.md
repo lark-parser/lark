@@ -62,4 +62,3 @@ In short, "Premature optimization is the root of all evil."
 - Automatically resolve terminal collisions whenever possible
 
 - Automatically keep track of line & column numbers
-

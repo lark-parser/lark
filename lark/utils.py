@@ -31,7 +31,7 @@ NO_VALUE = object()
 T = TypeVar("T")
 
 
-def classify(seq: List[Any], key: Callable[[Any], Any], value: Optional[Callable[[Any], Any]]=None) -> Any:
+def classify(seq: List[Any], key: Optional[Callable[[Any], Any]] = None, value: Optional[Callable[[Any], Any]] = None) -> Any:
     d: Dict[Any, Any] = {}
     for item in seq:
         k = key(item) if (key is not None) else item
@@ -151,7 +151,7 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
             raise ImportError('`regex` module must be installed in order to use Unicode categories.', expr)
         regexp_final = expr
     try:
-        # TODO: bug? Returns an int?
+        # Fixed in next version (past 0.960) of typeshed
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]   # type: ignore[attr-defined]
     except sre_constants.error:
         if not _has_regex:

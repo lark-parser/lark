@@ -4,7 +4,7 @@ This is used as the primary output mechanism for the Earley parser
 in order to store complex ambiguities.
 
 Full reference and more details is here:
-http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
+https://web.archive.org/web/20190616123959/http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/
 """
 
 from random import randint

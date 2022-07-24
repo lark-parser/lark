@@ -770,7 +770,7 @@ class ForestToPyDotVisitor(ForestVisitor):
         graph_node = self.graph.get_node(graph_node_id)[0]
         for child in [node.left, node.right]:
             if child is not None:
-                child_graph_node_id = str(id(child))
+                child_graph_node_id = str(id(child.token if isinstance(child, TokenNode) else child))
                 child_graph_node = self.graph.get_node(child_graph_node_id)[0]
                 self.graph.add_edge(self.pydot.Edge(graph_node, child_graph_node))
             else:

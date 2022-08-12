@@ -328,7 +328,7 @@ class Lark(Serialize):
                     # The cache file doesn't exist; parse and compose the grammar as normal
                     pass
                 except Exception: # We should probably narrow done which errors we catch here.
-                    logger.exception("Failed to load Lark from cache: %r. We will try to carry on." % cache_fn)
+                    logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
                     
                     # In theory, the Lark instance might have been messed up by the call to `_load`.
                     # In practice the only relevant thing that might have been overriden should be `options`
@@ -424,11 +424,14 @@ class Lark(Serialize):
 
         if cache_fn:
             logger.debug('Saving grammar to cache: %s', cache_fn)
-            with FS.open(cache_fn, 'wb') as f:
-                assert cache_md5 is not None
-                f.write(cache_md5.encode('utf8') + b'\n')
-                pickle.dump(used_files, f)
-                self.save(f, _LOAD_ALLOWED_OPTIONS)
+            try:
+                with FS.open(cache_fn, 'wb') as f:
+                    assert cache_md5 is not None
+                    f.write(cache_md5.encode('utf8') + b'\n')
+                    pickle.dump(used_files, f)
+                    self.save(f, _LOAD_ALLOWED_OPTIONS)
+            except Exception:
+                logger.exception("Failed to save Lark to cache: %r.", cache_fn)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC

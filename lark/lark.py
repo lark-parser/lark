@@ -309,7 +309,15 @@ class Lark(Serialize):
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
                         
-                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (getpass.getuser(), cache_md5, *sys.version_info[:2])
+                    try:
+                        username = getpass.getuser()
+                    except Exception:
+                        # The exception raised may be ImportError or OSError in
+                        # the future.  For the cache, we don't care about the
+                        # specific reason - we just want a username.
+                        username = "unknown"
+
+                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (username, cache_md5, *sys.version_info[:2])
 
                 old_options = self.options
                 try:

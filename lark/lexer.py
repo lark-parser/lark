@@ -170,9 +170,9 @@ class Token(str):
         inst.end_pos = end_pos
         return inst
 
-    def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         return Token.new_borrow_pos(
-            type_ if type_ is not None else self.type,
+            type if type is not None else self.type,
             value if value is not None else self.value,
             self
         )
@@ -184,6 +184,10 @@ class Token(str):
     @property
     def type_(self) -> str:
         return self.type
+    
+    @type_.setter
+    def type_(self, value: str) -> None:
+        self.type = value
 
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))

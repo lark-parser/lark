@@ -147,6 +147,8 @@ class Token(str):
     """
     __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
+    __match_args__ = ('type', 'value', 'start_pos', 'line', 'column', 'end_line', 'end_column', 'end_pos')
+
     type: str
     start_pos: int
     value: Any
@@ -156,9 +158,9 @@ class Token(str):
     end_column: int
     end_pos: int
 
-    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    def __new__(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         inst = super(Token, cls).__new__(cls, value)
-        inst.type = type_
+        inst.type = type
         inst.start_pos = start_pos
         inst.value = value
         inst.line = line
@@ -178,6 +180,10 @@ class Token(str):
     @classmethod
     def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
+    
+    @property
+    def type_(self) -> str:
+        return self.type
 
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))

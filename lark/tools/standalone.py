@@ -186,5 +186,9 @@ def main():
     lark_inst, out = build_lalr(ns)
     gen_standalone(lark_inst, out=out, compress=ns.compress)
 
+    ns.out.close()
+    ns.grammar_file.close()
+
+
 if __name__ == '__main__':
     main()

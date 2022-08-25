@@ -151,22 +151,41 @@ class Token(str):
     __match_args__ = ('type', 'value')
 
     type: str
-    start_pos: int
+    start_pos: Optional[int]
     value: Any
-    line: int
-    column: int
-    end_line: int
-    end_column: int
-    end_pos: int
+    line: Optional[int]
+    column: Optional[int]
+    end_line: Optional[int]
+    end_column: Optional[int]
+    end_pos: Optional[int]
 
 
     @overload
-    def __new__(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None) -> 'Token':
+    def __new__(
+        cls,
+        type: str,
+        value: Any,
+        start_pos: Optional[int]=None,
+        line: Optional[int]=None,
+        column: Optional[int]=None,
+        end_line: Optional[int]=None,
+        end_column: Optional[int]=None,
+        end_pos: Optional[int]=None
+    ) -> 'Token':
         ...
     
     @overload
-    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None) -> 'Token':
-        ...
+    def __new__(
+        cls,
+        type_: str,
+        value: Any,
+        start_pos: Optional[int]=None,
+        line: Optional[int]=None,
+        column: Optional[int]=None,
+        end_line: Optional[int]=None,
+        end_column: Optional[int]=None,
+        end_pos: Optional[int]=None
+    ) -> 'Token':        ...
 
     def __new__(cls, *args, **kwargs):
         if "type_" in kwargs:

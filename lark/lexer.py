@@ -189,9 +189,14 @@ class Token(str):
 
     def __new__(cls, *args, **kwargs):
         if "type_" in kwargs:
-            return cls._deprecated_new(*args, **kwargs)
-        
+            warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
+
+            if "type" in kwargs:
+                raise TypeError("Error: using both 'type' and the deprecated 'type_' as arguments.")
+            kwargs["type"] = kwargs.pop("type_")
+
         return cls._future_new(*args, **kwargs)
+
     
     @classmethod
     def _future_new(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
@@ -207,22 +212,6 @@ class Token(str):
         inst.end_pos = end_pos
         return inst 
 
-    @classmethod 
-    def _deprecated_new(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
-        warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
-
-        inst = super(Token, cls).__new__(cls, value)
-
-        inst.type = type_
-        inst.start_pos = start_pos
-        inst.value = value
-        inst.line = line
-        inst.column = column
-        inst.end_line = end_line
-        inst.end_column = end_column
-        inst.end_pos = end_pos
-        return inst
-
     @overload
     def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         ...
@@ -231,20 +220,15 @@ class Token(str):
     def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         ...
 
-    def update(self, *args, **kwargs) -> 'Token':
+    def update(self, *args, **kwargs):
         if "type_" in kwargs:
-            return self._deprecated_update(*args, **kwargs)
-        
-        return self._future_update(*args, **kwargs)
-    
-    def _deprecated_update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
-        warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
+            warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
 
-        return Token.new_borrow_pos(
-            type_ if type_ is not None else self.type,
-            value if value is not None else self.value,
-            self
-        )
+            if "type" in kwargs:
+                raise TypeError("Error: using both 'type' and the deprecated 'type_' as arguments.")
+            kwargs["type"] = kwargs.pop("type_")
+
+        return self._future_update(*args, **kwargs)
 
     def _future_update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         return Token.new_borrow_pos(

@@ -339,7 +339,7 @@ class Lark(Serialize):
                     logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
                     
                     # In theory, the Lark instance might have been messed up by the call to `_load`.
-                    # In practice the only relevant thing that might have been overriden should be `options`
+                    # In practice the only relevant thing that might have been overwritten should be `options`
                     self.options = old_options
 
 
@@ -438,8 +438,8 @@ class Lark(Serialize):
                     f.write(cache_md5.encode('utf8') + b'\n')
                     pickle.dump(used_files, f)
                     self.save(f, _LOAD_ALLOWED_OPTIONS)
-            except Exception:
-                logger.exception("Failed to save Lark to cache: %r.", cache_fn)
+            except IOError as e:
+                logger.exception("Failed to save Lark to cache: %r.", cache_fn, e)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC

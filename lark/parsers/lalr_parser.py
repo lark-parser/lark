@@ -3,8 +3,9 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy, copy
+from typing import Dict, Any
 from ..lexer import Token
-from ..utils import Serialize
+from ..utils import Serialize, SerializeMemoizer
 
 from .lalr_analysis import LALR_Analyzer, Shift, Reduce, IntParseTable
 from .lalr_interactive_parser import InteractiveParser
@@ -29,7 +30,7 @@ class LALR_Parser(Serialize):
         inst.parser = _Parser(inst._parse_table, callbacks, debug)
         return inst
 
-    def serialize(self, memo):
+    def serialize(self, memo: Any = None) -> Dict[str, Any]:
         return self._parse_table.serialize(memo)
 
     def parse_interactive(self, lexer, start):

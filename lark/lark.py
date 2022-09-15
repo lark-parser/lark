@@ -301,7 +301,7 @@ class Lark(Serialize):
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
-                cache_md5 = hashlib.md5(s.encode('utf8')).hexdigest()
+                cache_md5 = hashlib.new("md5", s.encode('utf8'), usedforsecurity=False).hexdigest()
 
                 if isinstance(self.options.cache, str):
                     cache_fn = self.options.cache

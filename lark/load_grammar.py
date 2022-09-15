@@ -1312,7 +1312,7 @@ class GrammarBuilder:
             except IOError:
                 continue
             else:
-                h = hashlib.md5(text.encode('utf8')).hexdigest()
+                h = hashlib.new("md5", text.encode("utf8"), usedforsecurity=False).hexdigest()
                 if self.used_files.get(joined_path, h) != h:
                     raise RuntimeError("Grammar file was changed during importing")
                 self.used_files[joined_path] = h
@@ -1391,7 +1391,7 @@ def verify_used_files(file_hashes):
         if text is None: # We don't know how to load the path. ignore it.
             continue
 
-        current = hashlib.md5(text.encode()).hexdigest()
+        current = hashlib.new("md5", text.encode(), usedforsecurity=False).hexdigest()
         if old != current:
             logger.info("File %r changed, rebuilding Parser" % path)
             return False

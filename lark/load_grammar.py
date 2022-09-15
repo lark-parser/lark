@@ -1413,7 +1413,9 @@ def md5_digest(s: str) -> str:
     """Get the md5 digest of a string
 
     Supports the `usedforsecurity` argument for Python 3.9+ to allow running on
-    a FIPS-enabled system. Use of the `new` constructor here prevents Python 3.8
-    and below from raising an exception when passing in the argument.
+    a FIPS-enabled system.
     """
-    return hashlib.new("md5", s.encode('utf8'), usedforsecurity=False).hexdigest()
+    if sys.version_info >= (3, 9):
+        return hashlib.md5(s.encode('utf8'), usedforsecurity=False).hexdigest()
+    else:
+        return hashlib.md5(s.encode('utf8')).hexdigest()

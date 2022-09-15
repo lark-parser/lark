@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, md5_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
@@ -301,7 +301,7 @@ class Lark(Serialize):
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
-                cache_md5 = hashlib.new("md5", s.encode('utf8'), usedforsecurity=False).hexdigest()
+                cache_md5 = md5_digest(s)
 
                 if isinstance(self.options.cache, str):
                     cache_fn = self.options.cache

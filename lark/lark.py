@@ -16,7 +16,6 @@ if TYPE_CHECKING:
         from typing import Literal
     else:
         from typing_extensions import Literal
-    from io import BytesIO
     from .parser_frontends import ParsingFrontend
         
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
@@ -483,7 +482,7 @@ class Lark(Serialize):
             options=self.options
         )
 
-    def save(self, f: "BytesIO", exclude_options: Collection[str] = ()) -> None:
+    def save(self, f, exclude_options: Collection[str] = ()) -> None:
         """Saves the instance into the given file object
 
         Useful for caching and multiprocessing.
@@ -494,7 +493,7 @@ class Lark(Serialize):
         pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @classmethod
-    def load(cls: Type[_T], f: "BytesIO") -> _T:
+    def load(cls: Type[_T], f) -> _T:
         """Loads an instance from the given file object
 
         Useful for caching and multiprocessing.

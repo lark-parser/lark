@@ -2,20 +2,9 @@ import unicodedata
 import os
 from functools import reduce
 from collections import deque
-from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence, TYPE_CHECKING
+from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence
 
 ###{standalone
-# Can remove for python 3.7+ and from __future__ import annotations
-if TYPE_CHECKING:
-    from .grammar import NonTerminal, Rule
-    from .lexer import TerminalDef, Token
-else:
-    NonTerminal = Any
-    Rule = Any
-    TerminalDef = Any
-    Token = Any
-
-
 import sys, re
 import logging
 
@@ -31,7 +20,7 @@ NO_VALUE = object()
 T = TypeVar("T")
 
 
-def classify(seq: List[Any], key: Optional[Callable[[Any], Any]] = None, value: Optional[Callable[[Any], Any]] = None) -> Any:
+def classify(seq: Sequence, key: Optional[Callable] = None, value: Optional[Callable] = None) -> Dict:
     d: Dict[Any, Any] = {}
     for item in seq:
         k = key(item) if (key is not None) else item
@@ -43,7 +32,7 @@ def classify(seq: List[Any], key: Optional[Callable[[Any], Any]] = None, value: 
     return d
 
 
-def _deserialize(data: Any, namespace: Dict[str, Any], memo: Dict[int, Union[TerminalDef, Rule]]) -> Any:
+def _deserialize(data: Any, namespace: Dict[str, Any], memo: Dict) -> Any:
     if isinstance(data, dict):
         if '__type__' in data:  # Object
             class_ = namespace[data['__type__']]
@@ -67,7 +56,7 @@ class Serialize:
                                         Should include all field types that aren't builtin types.
     """
 
-    def memo_serialize(self, types_to_memoize: List[Union[Type[TerminalDef], Type[Rule]]]) -> Any:
+    def memo_serialize(self, types_to_memoize: List) -> Any:
         memo = SerializeMemoizer(types_to_memoize)
         return self.serialize(memo), memo.serialize()
 
@@ -110,7 +99,7 @@ class SerializeMemoizer(Serialize):
 
     __serialize_fields__ = 'memoized',
 
-    def __init__(self, types_to_memoize: List[Union[Type[TerminalDef], Type[Rule]]]) -> None:
+    def __init__(self, types_to_memoize: List) -> None:
         self.types_to_memoize = tuple(types_to_memoize)
         self.memoized = Enumerator()
 
@@ -121,7 +110,7 @@ class SerializeMemoizer(Serialize):
         return _serialize(self.memoized.reversed(), None)
 
     @classmethod
-    def deserialize(cls, data: Dict[int, Any], namespace: Dict[str, Union[Type[Rule], Type[TerminalDef]]], memo: Dict[Any, Any]) -> Dict[int, Union[TerminalDef, Rule]]:  # type: ignore[override]
+    def deserialize(cls, data: Dict[int, Any], namespace: Dict[str, Any], memo: Dict[Any, Any]) -> Dict[int, Any]:  # type: ignore[override]
         return _deserialize(data, namespace, memo)
 
 
@@ -196,7 +185,6 @@ def dedup_list(l: List[T]) -> List[T]:
     """Given a list (l) will removing duplicates from the list,
        preserving the original order of the list. Assumes that
        the list entries are hashable."""
-       # Types seend are Tree, SlottedTree, Terminal, NonTerminal
     dedup = set()
     # This returns None, but that's expected
     return [x for x in l if not (x in dedup or dedup.add(x))]  # type: ignore[func-returns-value]
@@ -206,9 +194,9 @@ def dedup_list(l: List[T]) -> List[T]:
 
 class Enumerator(Serialize):
     def __init__(self) -> None:
-        self.enums: Dict[Union[Token, Rule, str, TerminalDef], int] = {}
+        self.enums: Dict[Any, int] = {}
 
-    def get(self, item: Union[Token, Rule, str, TerminalDef]) -> int:
+    def get(self, item) -> int:
         if item not in self.enums:
             self.enums[item] = len(self.enums)
         return self.enums[item]
@@ -216,7 +204,7 @@ class Enumerator(Serialize):
     def __len__(self):
         return len(self.enums)
 
-    def reversed(self) -> Dict[int, Union[str, Token, TerminalDef, Rule]]:
+    def reversed(self) -> Dict[int, Any]:
         r = {v: k for k, v in self.enums.items()}
         assert len(r) == len(self.enums)
         return r
@@ -279,7 +267,7 @@ class fzset(frozenset):
         return '{%s}' % ', '.join(map(repr, self))
 
 
-def classify_bool(seq: Union[fzset, List[TerminalDef], List[Rule]], pred: Callable) -> Any:
+def classify_bool(seq: Sequence, pred: Callable) -> Any:
     true_elems = []
     false_elems = []
 
@@ -292,7 +280,7 @@ def classify_bool(seq: Union[fzset, List[TerminalDef], List[Rule]], pred: Callab
     return true_elems, false_elems
 
 
-def bfs(initial: Union[List[NonTerminal], map], expand: Callable) -> Iterator[Union[Token, str, NonTerminal]]:
+def bfs(initial: Sequence, expand: Callable) -> Iterator:
     open_q = deque(list(initial))
     visited = set(open_q)
     while open_q:

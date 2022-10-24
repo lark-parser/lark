@@ -114,7 +114,7 @@ class LarkOptions(Serialize):
             Decides whether or not to use a lexer stage
 
             - "auto" (default): Choose for me based on the parser
-            - "basic": Use a basic lexer
+            - "standard": Use a basic lexer
             - "contextual": Stronger lexer (only works with parser="lalr")
             - "dynamic": Flexible and powerful (only with parser="earley")
             - "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible.

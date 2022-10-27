@@ -241,14 +241,6 @@ class Token(str):
     def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
     
-    @property
-    def type_(self) -> str:
-        return self.type
-    
-    @type_.setter
-    def type_(self, value: str) -> None:
-        self.type = value
-
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
 

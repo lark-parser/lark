@@ -39,12 +39,12 @@ class TestPatternMatching(TestCase):
             case _:
                 assert False
     
-    def test_matches_with_token_kwarg_type_(self):
+    def test_matches_with_bad_token_type(self):
         match self.token:
-            case Token(type_='A'):
-                pass
-            case _:
+            case Token(type='B'):
                 assert False
+            case _:
+                pass
             
 
 

@@ -5,9 +5,10 @@ import re
 from contextlib import suppress
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Pattern as REPattern, ClassVar, TYPE_CHECKING
+    Pattern as REPattern, ClassVar, TYPE_CHECKING, overload
 )
 from types import ModuleType
+import warnings
 if TYPE_CHECKING:
     from .common import LexerConf
 
@@ -147,18 +148,61 @@ class Token(str):
     """
     __slots__ = ('type', 'start_pos', 'value', 'line', 'column', 'end_line', 'end_column', 'end_pos')
 
-    type: str
-    start_pos: int
-    value: Any
-    line: int
-    column: int
-    end_line: int
-    end_column: int
-    end_pos: int
+    __match_args__ = ('type', 'value')
 
-    def __new__(cls, type_, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    type: str
+    start_pos: Optional[int]
+    value: Any
+    line: Optional[int]
+    column: Optional[int]
+    end_line: Optional[int]
+    end_column: Optional[int]
+    end_pos: Optional[int]
+
+
+    @overload
+    def __new__(
+        cls,
+        type: str,
+        value: Any,
+        start_pos: Optional[int]=None,
+        line: Optional[int]=None,
+        column: Optional[int]=None,
+        end_line: Optional[int]=None,
+        end_column: Optional[int]=None,
+        end_pos: Optional[int]=None
+    ) -> 'Token':
+        ...
+    
+    @overload
+    def __new__(
+        cls,
+        type_: str,
+        value: Any,
+        start_pos: Optional[int]=None,
+        line: Optional[int]=None,
+        column: Optional[int]=None,
+        end_line: Optional[int]=None,
+        end_column: Optional[int]=None,
+        end_pos: Optional[int]=None
+    ) -> 'Token':        ...
+
+    def __new__(cls, *args, **kwargs):
+        if "type_" in kwargs:
+            warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
+
+            if "type" in kwargs:
+                raise TypeError("Error: using both 'type' and the deprecated 'type_' as arguments.")
+            kwargs["type"] = kwargs.pop("type_")
+
+        return cls._future_new(*args, **kwargs)
+
+    
+    @classmethod
+    def _future_new(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         inst = super(Token, cls).__new__(cls, value)
-        inst.type = type_
+
+        inst.type = type
         inst.start_pos = start_pos
         inst.value = value
         inst.line = line
@@ -166,11 +210,29 @@ class Token(str):
         inst.end_line = end_line
         inst.end_column = end_column
         inst.end_pos = end_pos
-        return inst
+        return inst 
 
+    @overload
+    def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+        ...
+    
+    @overload
     def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+        ...
+
+    def update(self, *args, **kwargs):
+        if "type_" in kwargs:
+            warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
+
+            if "type" in kwargs:
+                raise TypeError("Error: using both 'type' and the deprecated 'type_' as arguments.")
+            kwargs["type"] = kwargs.pop("type_")
+
+        return self._future_update(*args, **kwargs)
+
+    def _future_update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         return Token.new_borrow_pos(
-            type_ if type_ is not None else self.type,
+            type if type is not None else self.type,
             value if value is not None else self.value,
             self
         )
@@ -178,7 +240,7 @@ class Token(str):
     @classmethod
     def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
-
+    
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
 

@@ -3,9 +3,9 @@
 
 // 1. Source Text
 start: description*
-    
+
 ?description: module
-    
+
 module: "module" name_of_module list_of_ports? ";" module_item* "endmodule"
 
 ?name_of_module: IDENTIFIER
@@ -13,7 +13,7 @@ module: "module" name_of_module list_of_ports? ";" module_item* "endmodule"
 list_of_ports: "(" port ("," port)* ")"
 
 ?port: IDENTIFIER
-    
+
 ?module_item: input_declaration
             | output_declaration
             | net_declaration

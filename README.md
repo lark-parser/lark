@@ -105,7 +105,7 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
  - Grammar composition - Import terminals and rules from other grammars
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
- - Extensive test suite [![codecov](https://codecov.io/gh/lark-parser/lark/branch/master/graph/badge.svg?token=lPxgVhCVPK)](https://codecov.io/gh/lark-parser/lark) 
+ - Extensive test suite [![codecov](https://codecov.io/gh/lark-parser/lark/branch/master/graph/badge.svg?token=lPxgVhCVPK)](https://codecov.io/gh/lark-parser/lark)
  - Type annotations (MyPy support)
  - And much more!
 
@@ -193,4 +193,3 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
-

@@ -45,12 +45,12 @@ def parse_code(s):
 
 #
 # 2. Define translations using templates (each template code is parsed to a template tree)
-# 
+#
 
 pytemplate = TemplateConf(parse=parse_template)
 
 translations_3to2 = {
-    'yield from $a': 
+    'yield from $a':
 	    'for _tmp in $a: yield _tmp',
 
     'raise $e from $x':
@@ -63,7 +63,7 @@ translations_3to2 = {pytemplate(k): pytemplate(v) for k, v in translations_3to2.
 
 #
 # 3. Translate and reconstruct Python 3 code into valid Python 2 code
-# 
+#
 
 python_reconstruct = PythonReconstructor(parser)
 

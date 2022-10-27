@@ -81,7 +81,7 @@ InteractiveParser
 ast_utils
 ---------
 
-For an example of using ``ast_utils``, see `/examples/advanced/create_ast.py`_ 
+For an example of using ``ast_utils``, see `/examples/advanced/create_ast.py`_
 
 .. autoclass:: lark.ast_utils.Ast
 

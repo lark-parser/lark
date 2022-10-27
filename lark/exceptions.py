@@ -168,7 +168,7 @@ class UnexpectedEOF(ParseError, UnexpectedInput):
 
 
 class UnexpectedCharacters(LexError, UnexpectedInput):
-    """An exception that is raised by the lexer, when it cannot match the next 
+    """An exception that is raised by the lexer, when it cannot match the next
     string of characters to any of its terminals.
     """
 

@@ -22,7 +22,7 @@ class TestPatternMatching(TestCase):
                 pass
             case _:
                 assert False
-    
+
     def test_matches_with_token_positional_arg(self):
         match self.token:
             case Token('a'):
@@ -31,21 +31,21 @@ class TestPatternMatching(TestCase):
                 pass
             case _:
                 assert False
-    
+
     def test_matches_with_token_kwarg_type(self):
         match self.token:
             case Token(type='A'):
                 pass
             case _:
                 assert False
-    
+
     def test_matches_with_bad_token_type(self):
         match self.token:
             case Token(type='B'):
                 assert False
             case _:
                 pass
-            
+
 
 
 if __name__ == '__main__':

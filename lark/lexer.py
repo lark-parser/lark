@@ -173,7 +173,7 @@ class Token(str):
         end_pos: Optional[int]=None
     ) -> 'Token':
         ...
-    
+
     @overload
     def __new__(
         cls,
@@ -197,7 +197,7 @@ class Token(str):
 
         return cls._future_new(*args, **kwargs)
 
-    
+
     @classmethod
     def _future_new(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
         inst = super(Token, cls).__new__(cls, value)
@@ -210,12 +210,12 @@ class Token(str):
         inst.end_line = end_line
         inst.end_column = end_column
         inst.end_pos = end_pos
-        return inst 
+        return inst
 
     @overload
     def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         ...
-    
+
     @overload
     def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
         ...
@@ -240,7 +240,7 @@ class Token(str):
     @classmethod
     def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
-    
+
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
 

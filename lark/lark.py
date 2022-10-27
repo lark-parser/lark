@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import getpass
-import sys, os, pickle, hashlib
+import sys, os, pickle
 import tempfile
 import types
 import re
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Literal
     from .parser_frontends import ParsingFrontend
-        
+
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, md5_digest

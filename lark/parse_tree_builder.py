@@ -73,6 +73,8 @@ class PropagatePositions:
                     return c.meta
             elif isinstance(c, Token):
                 return c
+            elif hasattr(c, '__lark_meta__'):
+                return c.__lark_meta__()
 
 def make_propagate_positions(option):
     if callable(option):

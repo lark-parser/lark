@@ -29,4 +29,3 @@
   - Visualize your parse trees as dot or png files ([see_example](https://github.com/lark-parser/lark/blob/master/examples/fruitflies.py))
   - Automatic reconstruction of input from parse-tree (see examples)
   - Use Lark grammars in Julia and Javascript.
-

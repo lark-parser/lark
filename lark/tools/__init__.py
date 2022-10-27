@@ -53,7 +53,7 @@ def showwarning_as_comment(message, category, filename, lineno, file=None, line=
     if file is None:
         file = sys.stderr
         if file is None:
-            return 
+            return
     try:
         file.write(text)
     except OSError:

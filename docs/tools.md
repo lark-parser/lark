@@ -68,4 +68,3 @@ python -m lark.tools.nearley nearley/examples/calculator/arithmetic.ne main near
 - Lark currently cannot export grammars to Nearley
 
 These might get added in the future, if enough users ask for them.
-

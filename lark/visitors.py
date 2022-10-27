@@ -72,7 +72,7 @@ class _Decoratable:
 
 
 class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
-    """Transformers work bottom-up (or depth-first), starting with visiting the leaves and working 
+    """Transformers work bottom-up (or depth-first), starting with visiting the leaves and working
     their way up until ending at the root of the tree.
 
     For each node visited, the transformer will call the appropriate method (callbacks), according to the
@@ -83,7 +83,7 @@ class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
 
     If the transformer cannot find a method with the right name, it will instead call ``__default__``, which by
     default creates a copy of the node.
-    
+
     To discard a node, return Discard (``lark.visitors.Discard``).
 
     ``Transformer`` can do anything ``Visitor`` can do, but because it reconstructs the tree,

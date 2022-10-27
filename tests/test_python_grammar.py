@@ -190,7 +190,7 @@ valid_match_statements = [
         case str() | bytes():
             print("Something string-like")
         case _:
-            print("Something else") 
+            print("Something else")
     """),
 
     # guards

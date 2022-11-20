@@ -526,6 +526,27 @@ def _make_full_earley_test(LEXER):
                 ])
             self.assertEqual(res, expected)
 
+        def test_ambiguous_inlined_rule(self):
+            grammar = """
+            start: _field+
+            _field: f1 | f2 | f3
+            f1: INT
+            f2: INT "M"?
+            f3: INT "M"
+            %import common.INT
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("1M2")
+            expected = {
+                Tree('start', [Tree('f2', ['1']), Tree('f1', ['2'])]),
+                Tree('start', [Tree('f2', ['1']), Tree('f2', ['2'])]),
+                Tree('start', [Tree('f3', ['1']), Tree('f1', ['2'])]),
+                Tree('start', [Tree('f3', ['1']), Tree('f2', ['2'])]),
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
+
         def test_ambiguous_intermediate_node(self):
             grammar = """
             start: ab bc d?

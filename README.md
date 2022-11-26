@@ -63,7 +63,7 @@ Here is a little program to parse "Hello, World!" (Or any other similar phrase):
 ```python
 from lark import Lark
 
-l = Lark('''start: WORD "," WORD "!"
+l = Lark(r'''start: WORD "," WORD "!"
 
             %import common.WORD   // imports from terminal library
             %ignore " "           // Disregard spaces in text

@@ -143,7 +143,7 @@ class Parent(Visitor):
         for subtree in tree.children:
             if isinstance(subtree, Tree):
                 assert not hasattr(subtree, 'parent')
-                subtree.parent = tree
+                subtree.parent = proxy(tree)
 ```
 
 

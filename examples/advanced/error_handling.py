@@ -12,7 +12,7 @@ you can resume the run by returning True.
 
 from lark import Token
 
-from examples.advanced._json_parser import json_parser
+from _json_parser import json_parser
 
 def ignore_errors(e):
     if e.token.type == 'COMMA':

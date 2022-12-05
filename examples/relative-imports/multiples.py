@@ -13,7 +13,7 @@
 
 from lark import Lark, UnexpectedInput
 
-parser = Lark.open('multiples.lark', parser='lalr')
+parser = Lark.open('multiples.lark', rel_to=__file__, parser='lalr')
 
 def is_in_grammar(data):
     try:

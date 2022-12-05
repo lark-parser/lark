@@ -385,7 +385,7 @@ def _regexp_has_newline(r: str):
         - any-char (.) when the flag (?s) exists
         - spaces (\s)
     """
-    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
+    return any(i in r for i in ('\n', '\\n', '\\s', '[^')) or all(i in r for i in ('(?s', '.'))
 
 
 class LexerState:

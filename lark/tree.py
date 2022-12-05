@@ -70,18 +70,15 @@ class Tree(Generic[_Leaf_T]):
     def _pretty(self, level, indent_str):
         yield indent_str*level
         yield self._pretty_label()
-        
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            for i in '\t', '%s' % (self.children[0],), '\n':
-                yield i
+            yield from (i for i in ('\t', '%s' % (self.children[0],), '\n'))
         else:
             yield '\n'
             for n in self.children:
                 if isinstance(n, Tree):
                     yield from n._pretty(level+1, indent_str)
                 else:
-                    for i in indent_str*(level+1), '%s' % (n,), '\n':
-                        yield i
+                    yield from (i for i in (indent_str*(level+1), '%s' % (n,), '\n'))
 
     def pretty(self, indent_str: str='  ') -> str:
         """Returns an indented string representation of the tree.
@@ -152,13 +149,15 @@ class Tree(Generic[_Leaf_T]):
         Iterates over all the subtrees, return nodes in order like pretty() does.
         """
         stack = [self]
+        stack_append = stack.append
+        stack_pop = stack.pop
         while stack:
-            node = stack.pop()
+            node = stack_pop()
             if not isinstance(node, Tree):
                 continue
             yield node
             for child in reversed(node.children):
-                stack.append(child)
+                stack_append(child)
 
     def find_pred(self, pred: 'Callable[[Tree[_Leaf_T]], bool]') -> 'Iterator[Tree[_Leaf_T]]':
         """Returns all nodes of the tree that evaluate pred(node) as true."""

@@ -68,17 +68,20 @@ class Tree(Generic[_Leaf_T]):
         return self.data
 
     def _pretty(self, level, indent_str):
+        yield indent_str*level
+        yield self._pretty_label()
+        
         if len(self.children) == 1 and not isinstance(self.children[0], Tree):
-            return [indent_str*level, self._pretty_label(), '\t', '%s' % (self.children[0],), '\n']
-
-        l = [indent_str*level, self._pretty_label(), '\n']
-        for n in self.children:
-            if isinstance(n, Tree):
-                l += n._pretty(level+1, indent_str)
-            else:
-                l += [indent_str*(level+1), '%s' % (n,), '\n']
-
-        return l
+            for i in '\t', '%s' % (self.children[0],), '\n':
+                yield i
+        else:
+            yield '\n'
+            for n in self.children:
+                if isinstance(n, Tree):
+                    yield from n._pretty(level+1, indent_str)
+                else:
+                    for i in indent_str*(level+1), '%s' % (n,), '\n':
+                        yield i
 
     def pretty(self, indent_str: str='  ') -> str:
         """Returns an indented string representation of the tree.

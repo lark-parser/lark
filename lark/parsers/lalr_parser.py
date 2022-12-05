@@ -171,10 +171,15 @@ class _Parser:
         return self.parse_from_state(parser_state)
 
 
-    def parse_from_state(self, state):
-        # Main LALR-parser loop
+    def parse_from_state(self, state, last_token=None):
+        """Run the main LALR parser loop
+
+        Parameters:
+            state (ParseState) - the initial state. Changed in-place.
+            last_token (optional, Token) - Used only for line information in case of an empty lexer.
+        """
         try:
-            token = None
+            token = last_token
             for token in state.lexer.lex(state):
                 state.feed_token(token)
 

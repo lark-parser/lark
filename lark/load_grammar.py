@@ -94,7 +94,7 @@ TERMINALS = {
     '_NL': r'(\r?\n)+\s*',
     '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
-    'COMMENT': r'\s*//[^\n]*',
+    'COMMENT': r'\s*//[^\n]*|\s*#[^\n]*',
     'BACKSLASH': r'\\[ ]*\n',
     '_TO': '->',
     '_IGNORE': r'%ignore',

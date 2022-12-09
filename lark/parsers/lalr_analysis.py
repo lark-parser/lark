@@ -91,9 +91,7 @@ class IntParseTable(ParseTable):
 def digraph(X, R, G):
     F = {}
     S = []
-    N = {}
-    for x in X:
-        N[x] = 0
+    N = dict.fromkeys(X, 0)
     for x in X:
         # this is always true for the first iteration, but N[x] may be updated in traverse below
         if N[x] == 0:
@@ -247,9 +245,7 @@ class LALR_Analyzer(GrammarAnalyzer):
         m = {}
         reduce_reduce = []
         for state in self.lr0_states:
-            actions = {}
-            for la, next_state in state.transitions.items():
-                actions[la] = (Shift, next_state.closure)
+            actions = {la: (Shift, next_state.closure) for la, next_state in state.transitions.items()}
             for la, rules in state.lookaheads.items():
                 if len(rules) > 1:
                     # Try to resolve conflict based on priority

@@ -197,11 +197,11 @@ AWAIT: "await"
 ?atom: "(" yield_expr ")"
      | "(" _tuple_inner? ")" -> tuple
      | "(" comprehension{test_or_star_expr} ")" -> tuple_comprehension
-     | "[" _testlist_comp? "]"  -> list
+     | "[" _exprlist? "]"  -> list
      | "[" comprehension{test_or_star_expr} "]"  -> list_comprehension
      | "{" _dict_exprlist? "}" -> dict
      | "{" comprehension{key_value} "}" -> dict_comprehension
-     | "{" _set_exprlist "}" -> set
+     | "{" _exprlist "}" -> set
      | "{" comprehension{test} "}" -> set_comprehension
      | name -> var
      | number
@@ -215,9 +215,7 @@ AWAIT: "await"
 
 ?string_concat: string+
 
-_testlist_comp: test | _tuple_inner
 _tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
-
 
 ?test_or_star_expr: test
                  | star_expr
@@ -234,7 +232,7 @@ _dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
 
 key_value: test ":"  test
 
-_set_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
+_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
 
 classdef: "class" name ["(" [arguments] ")"] ":" suite
 

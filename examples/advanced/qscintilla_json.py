@@ -91,7 +91,12 @@ class LexerJson(QsciLexerCustom):
 
     def styleText(self, start, end):
         self.startStyling(start)
-        text = self.parent().text()[start:end]
+        #If we just grab self.parent().text is causes off by one errors
+        # in all downstream tokens, if you have unicode glyphs that
+        # are longer than one byte.
+        text = self.parent().bytes(start,end)
+        text = bytes(text).decode("utf-8")
+
         last_pos = 0
 
         try:
@@ -161,7 +166,7 @@ class EditorAll(QsciScintilla):
 EXAMPLE_TEXT = textwrap.dedent("""\
         {
             "_id": "5b05ffcbcf8e597939b3f5ca",
-            "about": "Excepteur consequat commodo esse voluptate aute aliquip ad sint deserunt commodo eiusmod irure. Sint aliquip sit magna duis eu est culpa aliqua excepteur ut tempor nulla. Aliqua ex pariatur id labore sit. Quis sit ex aliqua veniam exercitation laboris anim adipisicing. Lorem nisi reprehenderit ullamco labore qui sit ut aliqua tempor consequat pariatur proident.",
+            "about": "Excepteur consequat commodo esse voluptate aute aliquip ad sint deserunt commodo eiusmod irure. Sint aliquip sit magna duis eu est culpa aliqua excepteur ut tempor nulla. Aliqua ex pariatur id labore sit. Quis sit ex aliqua veniam exercitation laboris anim adipisicing. Lorem nisi reprehenderit ullamco labore qui sit ut aliqua tempor consequat pariatur proident. ©",
             "address": "665 Malbone Street, Thornport, Louisiana, 243",
             "age": 23,
             "balance": "$3,216.91",

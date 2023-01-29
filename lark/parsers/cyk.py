@@ -250,7 +250,7 @@ def get_any_nt_unit_rule(g):
 
 
 def _remove_unit_rule(g, rule):
-    """Removes 'rule' from 'g' without changing the langugage produced by 'g'."""
+    """Removes 'rule' from 'g' without changing the language produced by 'g'."""
     new_rules = [x for x in g.rules if x != rule]
     refs = [x for x in g.rules if x.lhs == rule.rhs[0]]
     new_rules += [build_unit_skiprule(rule, ref) for ref in refs]

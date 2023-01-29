@@ -390,7 +390,7 @@ def _regexp_has_newline(r: str):
 
 class LexerState:
     """Represents the current state of the lexer as it scans the text
-    (Lexer objects are only instanciated per grammar, not per text)
+    (Lexer objects are only instantiated per grammar, not per text)
     """
 
     __slots__ = 'text', 'line_ctr', 'last_token'

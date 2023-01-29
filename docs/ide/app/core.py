@@ -1001,7 +1001,7 @@ class Widget(object):
 		"""
 		Access children of widget.
 
-		If ``n`` is ommitted, it returns a list of all child-widgets;
+		If ``n`` is omitted, it returns a list of all child-widgets;
 		Else, it returns the N'th child, or None if its out of bounds.
 
 		:param n: Optional offset of child widget to return.

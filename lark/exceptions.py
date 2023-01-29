@@ -217,7 +217,7 @@ class UnexpectedToken(ParseError, UnexpectedInput):
         expected: The set of expected tokens
         considered_rules: Which rules were considered, to deduce the expected tokens
         state: A value representing the parser state. Do not rely on its value or type.
-        interactive_parser: An instance of ``InteractiveParser``, that is initialized to the point of failture,
+        interactive_parser: An instance of ``InteractiveParser``, that is initialized to the point of failure,
                             and can be used for debugging and error handling.
 
     Note: These parameters are available as attributes of the instance.

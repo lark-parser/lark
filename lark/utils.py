@@ -189,7 +189,7 @@ def dedup_list(l: List[T]) -> List[T]:
     dedup = set()
     # This returns None, but that's expected
     return [x for x in l if not (x in dedup or dedup.add(x))]  # type: ignore[func-returns-value]
-    # 2x faster (ordered in PyPy and CPython 3.6+, gaurenteed to be ordered in Python 3.7+)
+    # 2x faster (ordered in PyPy and CPython 3.6+, guaranteed to be ordered in Python 3.7+)
     # return list(dict.fromkeys(l))
 
 
@@ -214,7 +214,7 @@ class Enumerator(Serialize):
 
 def combine_alternatives(lists):
     """
-    Accepts a list of alternatives, and enumerates all their possible concatinations.
+    Accepts a list of alternatives, and enumerates all their possible concatenations.
 
     Examples:
         >>> combine_alternatives([range(2), [4,5]])

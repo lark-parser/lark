@@ -69,7 +69,7 @@ class Reconstructor(TreeMatcher):
         The reconstructor cannot generate values from regexps. If you need to produce discarded
         regexes, such as newlines, use `term_subs` and provide default values for them.
 
-    Paramters:
+    Parameters:
         parser: a Lark instance
         term_subs: a dictionary of [Terminal name as str] to [output text as str]
     """

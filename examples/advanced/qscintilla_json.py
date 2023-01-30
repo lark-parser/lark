@@ -6,14 +6,15 @@ This example shows how to write a syntax-highlighted editor with Qt and Lark
 
 Requirements:
 
-  PyQt5==5.10.1
-  QScintilla==2.10.4
+  PyQt5==5.15.8
+  QScintilla==2.13.4
 """
 
 import sys
 import textwrap
 
-from PyQt5.Qt import QColor, QApplication, QFont, QFontMetrics
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QColor, QFont, QFontMetrics
 
 from PyQt5.Qsci import QsciScintilla
 from PyQt5.Qsci import QsciLexerCustom

@@ -44,7 +44,7 @@ Lark grammars are composed of a list of definitions and directives, each on its 
 
 
 **Comments** start with
-either `//` (C++ style) or `#` (Python style)
+either `//` (C++ style) or `#` (Python style, since version 1.1.6)
 and last to the end of the line.
 
 Lark begins the parse with the rule 'start', unless specified otherwise in the options.

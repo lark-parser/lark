@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
-from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, md5_digest
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
@@ -288,7 +288,7 @@ class Lark(Serialize):
             grammar = read()
 
         cache_fn = None
-        cache_md5 = None
+        cache_sha256 = None
         if isinstance(grammar, str):
             self.source_grammar = grammar
             if self.options.use_bytes:
@@ -303,7 +303,7 @@ class Lark(Serialize):
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
-                cache_md5 = md5_digest(s)
+                cache_sha256 = sha256_digest(s)
 
                 if isinstance(self.options.cache, str):
                     cache_fn = self.options.cache
@@ -319,7 +319,7 @@ class Lark(Serialize):
                         # specific reason - we just want a username.
                         username = "unknown"
 
-                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (username, cache_md5, *sys.version_info[:2])
+                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (username, cache_sha256, *sys.version_info[:2])
 
                 old_options = self.options
                 try:
@@ -328,9 +328,9 @@ class Lark(Serialize):
                         # Remove options that aren't relevant for loading from cache
                         for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
                             del options[name]
-                        file_md5 = f.readline().rstrip(b'\n')
+                        file_sha256 = f.readline().rstrip(b'\n')
                         cached_used_files = pickle.load(f)
-                        if file_md5 == cache_md5.encode('utf8') and verify_used_files(cached_used_files):
+                        if file_sha256 == cache_sha256.encode('utf8') and verify_used_files(cached_used_files):
                             cached_parser_data = pickle.load(f)
                             self._load(cached_parser_data, **options)
                             return
@@ -436,8 +436,8 @@ class Lark(Serialize):
             logger.debug('Saving grammar to cache: %s', cache_fn)
             try:
                 with FS.open(cache_fn, 'wb') as f:
-                    assert cache_md5 is not None
-                    f.write(cache_md5.encode('utf8') + b'\n')
+                    assert cache_sha256 is not None
+                    f.write(cache_sha256.encode('utf8') + b'\n')
                     pickle.dump(used_files, f)
                     self.save(f, _LOAD_ALLOWED_OPTIONS)
             except IOError as e:

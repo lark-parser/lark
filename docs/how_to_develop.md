@@ -63,5 +63,5 @@ pytest tests
 Another way to run the tests is using setup.py:
 
 ```bash
-python setup.py test 
+python setup.py test
 ```

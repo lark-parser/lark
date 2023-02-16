@@ -160,7 +160,7 @@ class TestReconstructor(TestCase):
         This test checks that a parse tree built with a grammar containing only ascii characters can be reconstructed
         with a grammar that has unicode rules (or vice versa). The original bug assigned ANON terminals to unicode
         keywords, which offsets the ANON terminal count in the unicode grammar and causes subsequent identical ANON
-        tokens (e.g., `+=`) to mis-match between the two grammars.
+        tokens (e.g., `+=`) to mismatch between the two grammars.
         """
 
         g1 = """

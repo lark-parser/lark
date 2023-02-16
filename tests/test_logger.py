@@ -45,7 +45,7 @@ class Testlogger(TestCase):
         with capture_log() as log:
             Lark(collision_grammar, parser='lalr', debug=False)
         log = log.getvalue()
-        # no log messge
+        # no log message
         self.assertEqual(len(log), 0)
 
     def test_loglevel_higher(self):
@@ -58,7 +58,7 @@ class Testlogger(TestCase):
         with capture_log() as log:
             Lark(collision_grammar, parser='lalr', debug=True)
         log = log.getvalue()
-        # no log messge
+        # no log message
         self.assertEqual(len(log), 0)
 
 if __name__ == '__main__':

@@ -44,7 +44,7 @@ def create_transformer(ast_module: types.ModuleType,
     Parameters:
         ast_module: A Python module containing all the subclasses of ``ast_utils.Ast``
         transformer (Optional[Transformer]): An initial transformer. Its attributes may be overwritten.
-        decorator_factory (Callable): An optional callable accepting two booleans, inline, and meta, 
+        decorator_factory (Callable): An optional callable accepting two booleans, inline, and meta,
             and returning a decorator for the methods of ``transformer``. (default: ``v_args``).
     """
     t = transformer or Transformer()

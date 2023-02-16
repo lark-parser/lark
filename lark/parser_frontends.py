@@ -74,7 +74,7 @@ class ParsingFrontend(Serialize):
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
-    
+
     def _verify_start(self, start=None):
         if start is None:
             start_decls = self.parser_conf.start
@@ -94,7 +94,7 @@ class ParsingFrontend(Serialize):
         kw = {} if on_error is None else {'on_error': on_error}
         stream = self._make_lexer_thread(text)
         return self.parser.parse(stream, chosen_start, **kw)
-    
+
     def parse_interactive(self, text=None, start=None):
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':

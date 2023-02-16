@@ -83,7 +83,7 @@ class TreeMatcher:
 
     Supports templates and inlined rules (`rule{a, b,..}` and `_rule`)
 
-    Initiialize with an instance of Lark.
+    Initialize with an instance of Lark.
     """
 
     def __init__(self, parser):

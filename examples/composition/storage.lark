@@ -6,4 +6,3 @@ start: (csv__start | json__start _NL?)+
 %import .json.start -> json__start
 
 %import .csv._NL -> _NL
-

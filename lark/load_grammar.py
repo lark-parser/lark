@@ -94,7 +94,7 @@ TERMINALS = {
     '_NL': r'(\r?\n)+\s*',
     '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
-    'COMMENT': r'\s*//[^\n]*',
+    'COMMENT': r'\s*//[^\n]*|\s*#[^\n]*',
     'BACKSLASH': r'\\[ ]*\n',
     '_TO': '->',
     '_IGNORE': r'%ignore',
@@ -1050,6 +1050,8 @@ def _make_rule_tuple(modifiers_tree, name, params, priority_tree, expansions):
     if modifiers_tree.children:
         m ,= modifiers_tree.children
         expand1 = '?' in m
+        if expand1 and name.startswith('_'):
+            raise GrammarError("Inlined rules (_rule) cannot use the ?rule modifier.")
         keep_all_tokens = '!' in m
     else:
         keep_all_tokens = False

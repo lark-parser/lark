@@ -138,7 +138,7 @@ class Template:
         return self.conf._match_tree_template(self.tree, tree)
 
     def search(self, tree: TreeOrCode) -> Iterator[Tuple[Tree[str], MatchResult]]:
-        """Search for all occurances of the tree template inside ``tree``.
+        """Search for all occurrences of the tree template inside ``tree``.
         """
         tree = self.conf._get_tree(tree)
         for subtree in tree.iter_subtrees():
@@ -153,7 +153,7 @@ class Template:
 
 
 def translate(t1: Template, t2: Template, tree: TreeOrCode):
-    """Search tree and translate each occurrance of t1 into t2.
+    """Search tree and translate each occurrence of t1 into t2.
     """
     tree = t1.conf._get_tree(tree)      # ensure it's a tree, parse if necessary and possible
     for subtree, vars in t1.search(tree):

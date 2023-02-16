@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import getpass
-import sys, os, pickle, hashlib
+import sys, os, pickle
 import tempfile
 import types
 import re
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     else:
         from typing_extensions import Literal
     from .parser_frontends import ParsingFrontend
-        
+
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, md5_digest
@@ -310,7 +310,7 @@ class Lark(Serialize):
                 else:
                     if self.options.cache is not True:
                         raise ConfigurationError("cache argument must be bool or str")
-                        
+
                     try:
                         username = getpass.getuser()
                     except Exception:
@@ -339,7 +339,7 @@ class Lark(Serialize):
                     pass
                 except Exception: # We should probably narrow done which errors we catch here.
                     logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
-                    
+
                     # In theory, the Lark instance might have been messed up by the call to `_load`.
                     # In practice the only relevant thing that might have been overwritten should be `options`
                     self.options = old_options
@@ -609,7 +609,7 @@ class Lark(Serialize):
     def get_terminal(self, name: str) -> TerminalDef:
         """Get information about a terminal"""
         return self._terminals_dict[name]
-    
+
     def parse_interactive(self, text: Optional[str]=None, start: Optional[str]=None) -> 'InteractiveParser':
         """Start an interactive parsing session.
 

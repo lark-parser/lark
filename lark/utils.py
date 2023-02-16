@@ -1,6 +1,7 @@
 import unicodedata
 import os
 from functools import reduce
+from itertools import product
 from collections import deque
 from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence
 
@@ -25,9 +26,9 @@ def classify(seq: Sequence, key: Optional[Callable] = None, value: Optional[Call
     for item in seq:
         k = key(item) if (key is not None) else item
         v = value(item) if (value is not None) else item
-        if k in d:
+        try:
             d[k].append(v)
-        else:
+        except KeyError:
             d[k] = [v]
     return d
 
@@ -188,7 +189,7 @@ def dedup_list(l: List[T]) -> List[T]:
     dedup = set()
     # This returns None, but that's expected
     return [x for x in l if not (x in dedup or dedup.add(x))]  # type: ignore[func-returns-value]
-    # 2x faster (ordered in PyPy and CPython 3.6+, gaurenteed to be ordered in Python 3.7+)
+    # 2x faster (ordered in PyPy and CPython 3.6+, guaranteed to be ordered in Python 3.7+)
     # return list(dict.fromkeys(l))
 
 
@@ -213,7 +214,7 @@ class Enumerator(Serialize):
 
 def combine_alternatives(lists):
     """
-    Accepts a list of alternatives, and enumerates all their possible concatinations.
+    Accepts a list of alternatives, and enumerates all their possible concatenations.
 
     Examples:
         >>> combine_alternatives([range(2), [4,5]])
@@ -228,9 +229,7 @@ def combine_alternatives(lists):
     if not lists:
         return [[]]
     assert all(l for l in lists), lists
-    init = [[x] for x in lists[0]]
-    return reduce(lambda a,b: [i+[j] for i in a for j in b], lists[1:], init)
-
+    return list(product(*lists))
 
 try:
     import atomicwrites
@@ -268,15 +267,8 @@ class fzset(frozenset):
 
 
 def classify_bool(seq: Sequence, pred: Callable) -> Any:
-    true_elems = []
     false_elems = []
-
-    for elem in seq:
-        if pred(elem):
-            true_elems.append(elem)
-        else:
-            false_elems.append(elem)
-
+    true_elems = [elem for elem in seq if pred(elem) or false_elems.append(elem)]  # type: ignore[func-returns-value]
     return true_elems, false_elems
 
 

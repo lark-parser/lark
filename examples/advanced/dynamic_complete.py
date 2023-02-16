@@ -56,7 +56,7 @@ def score(tree: Tree):
     """
     Scores an option by how many children (and grand-children, and
     grand-grand-children, ...) it has.
-    This means that the option with fewer large terminals get's selected
+    This means that the option with fewer large terminals gets selected
 
     Between
         object

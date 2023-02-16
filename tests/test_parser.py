@@ -193,11 +193,11 @@ class TestParsers(unittest.TestCase):
             class T(base):
                 def add(self, children):
                     return sum(children if isinstance(children, list) else children.children)
-                
+
                 def NUM(self, token):
                     return int(token)
-                
-            
+
+
             parser = Lark(g, parser='lalr', transformer=T())
             result = parser.parse(text)
             self.assertEqual(result, expected)
@@ -385,7 +385,7 @@ class TestParsers(unittest.TestCase):
         tokens = {'A%d'%i:'"%d"'%i for i in range(300)}
         g = """start: %s
                   %s""" % (' '.join(tokens), '\n'.join("%s: %s"%x for x in tokens.items()))
-                  
+
         p = Lark(g, parser='lalr')
 
 
@@ -430,7 +430,7 @@ def _make_full_earley_test(LEXER):
         def test_earley3(self):
             """Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)
 
-            By default, `+` should immitate regexp greedy-matching
+            By default, `+` should imitate regexp greedy-matching
             """
             grammar = """
             start: A A
@@ -525,6 +525,27 @@ def _make_full_earley_test(LEXER):
                     ])
                 ])
             self.assertEqual(res, expected)
+
+        def test_ambiguous_inlined_rule(self):
+            grammar = """
+            start: _field+
+            _field: f1 | f2 | f3
+            f1: INT
+            f2: INT "M"?
+            f3: INT "M"
+            %import common.INT
+            """
+
+            l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER)
+            ambig_tree = l.parse("1M2")
+            expected = {
+                Tree('start', [Tree('f2', ['1']), Tree('f1', ['2'])]),
+                Tree('start', [Tree('f2', ['1']), Tree('f2', ['2'])]),
+                Tree('start', [Tree('f3', ['1']), Tree('f1', ['2'])]),
+                Tree('start', [Tree('f3', ['1']), Tree('f2', ['2'])]),
+            }
+            self.assertEqual(ambig_tree.data, '_ambig')
+            self.assertEqual(set(ambig_tree.children), expected)
 
         def test_ambiguous_intermediate_node(self):
             grammar = """
@@ -1451,7 +1472,7 @@ def _make_parser_test(LEXER, PARSER):
         #     # This parse raises an exception because the lexer will always try to consume
         #     # "a" first and will never match the regular expression
         #     # This behavior is subject to change!!
-        #     # Thie won't happen with ambiguity handling.
+        #     # This won't happen with ambiguity handling.
         #     g = _Lark("""start: (A | /a?ab/)+
         #                  A: "a"  """)
         #     self.assertRaises(LexError, g.parse, 'aab')
@@ -1722,7 +1743,7 @@ def _make_parser_test(LEXER, PARSER):
 
         def test_reduce_cycle(self):
             """Tests an edge-condition in the LALR parser, in which a transition state looks exactly like the end state.
-            It seems that the correct solution is to explicitely distinguish finalization in the reduce() function.
+            It seems that the correct solution is to explicitly distinguish finalization in the reduce() function.
             """
 
             l = _Lark("""
@@ -2478,7 +2499,7 @@ def _make_parser_test(LEXER, PARSER):
                            NAME: /[\w]+/
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
-        
+
         @unittest.skipIf(not regex, "regex not installed")
         def test_regex_width_fallback(self):
             g = r"""
@@ -2488,7 +2509,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises((GrammarError, LexError, re.error), _Lark, g)
             p = _Lark(g, regex=True)
             self.assertEqual(p.parse("123abc"), Tree('start', ['123', 'abc']))
-            
+
             g = r"""
                 start: NAME NAME?
                 NAME: /(?(?=\d)\d+|\w*)/
@@ -2503,7 +2524,7 @@ def _make_parser_test(LEXER, PARSER):
                 A: "a"
                 B: "b"
             ''')
-            
+
             ip = g.parse_interactive()
 
             self.assertRaises(UnexpectedToken, ip.feed_eof)
@@ -2526,7 +2547,7 @@ def _make_parser_test(LEXER, PARSER):
             res = ip.feed_eof(ip.lexer_thread.state.last_token)
             self.assertEqual(res, Tree('start', ['a', 'b']))
             self.assertRaises(UnexpectedToken ,ip.feed_eof)
-            
+
             self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
             ip_copy.feed_token(Token('B', 'b'))
             res = ip_copy.feed_eof()

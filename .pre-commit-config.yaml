@@ -1,0 +1,32 @@
+# To use:
+#
+#     pre-commit run -a
+#
+# Or:
+#
+#     pre-commit install  # (runs every time you commit in git)
+#
+# To update this file:
+#
+#     pre-commit autoupdate
+#
+# See https://github.com/pre-commit/pre-commit
+
+repos:
+# Standard hooks
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: "v4.2.0"
+  hooks:
+    - id: check-added-large-files
+    - id: check-case-conflict
+    - id: check-merge-conflict
+    - id: check-symlinks
+    - id: check-toml
+    - id: check-yaml
+    - id: debug-statements
+    - id: end-of-file-fixer
+      exclude: '(^tests/.*\.lark|\.svg)$'
+    - id: mixed-line-ending
+    - id: requirements-txt-fixer
+    - id: trailing-whitespace
+      exclude: '(^tests/.*\.lark|\.svg)$'

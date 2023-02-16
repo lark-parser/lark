@@ -50,14 +50,14 @@ lambda_kwparams: "**" name ","?
 ?stmt: simple_stmt | compound_stmt
 ?simple_stmt: small_stmt (";" small_stmt)* [";"] _NEWLINE
 ?small_stmt: (expr_stmt | assign_stmt | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | nonlocal_stmt | assert_stmt)
-expr_stmt: testlist_star_expr 
+expr_stmt: testlist_star_expr
 assign_stmt: annassign | augassign | assign
 
 annassign: testlist_star_expr ":" test ["=" test]
 assign: testlist_star_expr ("=" (yield_expr|testlist_star_expr))+
 augassign: testlist_star_expr augassign_op (yield_expr|testlist)
 !augassign_op: "+=" | "-=" | "*=" | "@=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "//="
-?testlist_star_expr: test_or_star_expr 
+?testlist_star_expr: test_or_star_expr
                    | test_or_star_expr ("," test_or_star_expr)+ ","?  -> tuple
                    | test_or_star_expr ","  -> tuple
 
@@ -95,13 +95,13 @@ for_stmt: "for" exprlist "in" testlist ":" suite ["else" ":" suite]
 try_stmt: "try" ":" suite except_clauses ["else" ":" suite] [finally]
         | "try" ":" suite finally   -> try_finally
 finally: "finally" ":" suite
-except_clauses: except_clause+ 
+except_clauses: except_clause+
 except_clause: "except" [test ["as" name]] ":" suite
 // NB compile.c makes sure that the default except clause is last
 
 
 with_stmt: "with" with_items ":" suite
-with_items: with_item ("," with_item)* 
+with_items: with_item ("," with_item)*
 with_item: test ["as" name]
 
 match_stmt: "match" test ":" _NEWLINE _INDENT case+ _DEDENT
@@ -197,14 +197,14 @@ AWAIT: "await"
 ?atom: "(" yield_expr ")"
      | "(" _tuple_inner? ")" -> tuple
      | "(" comprehension{test_or_star_expr} ")" -> tuple_comprehension
-     | "[" _testlist_comp? "]"  -> list
+     | "[" _exprlist? "]"  -> list
      | "[" comprehension{test_or_star_expr} "]"  -> list_comprehension
      | "{" _dict_exprlist? "}" -> dict
      | "{" comprehension{key_value} "}" -> dict_comprehension
-     | "{" _set_exprlist "}" -> set
+     | "{" _exprlist "}" -> set
      | "{" comprehension{test} "}" -> set_comprehension
      | name -> var
-     | number 
+     | number
      | string_concat
      | "(" test ")"
      | "..." -> ellipsis
@@ -215,9 +215,7 @@ AWAIT: "await"
 
 ?string_concat: string+
 
-_testlist_comp: test | _tuple_inner
 _tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
-            
 
 ?test_or_star_expr: test
                  | star_expr
@@ -234,7 +232,7 @@ _dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
 
 key_value: test ":"  test
 
-_set_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
+_exprlist: test_or_star_expr (","  test_or_star_expr)* [","]
 
 classdef: "class" name ["(" [arguments] ")"] ":" suite
 
@@ -253,7 +251,7 @@ kwargs: "**" test ("," argvalue)*
 
 
 comprehension{comp_result}: comp_result comp_fors [comp_if]
-comp_fors: comp_for+ 
+comp_fors: comp_for+
 comp_for: [ASYNC] "for" exprlist "in" or_test
 ASYNC: "async"
 ?comp_if: "if" test_nocond

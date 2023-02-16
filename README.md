@@ -6,7 +6,7 @@ Lark can parse all context-free languages. To put it simply, it means that it is
 
 **Who is it for?**
 
-   - **Beginners**: Lark is very friendly for experimentation. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs an annotated parse-tree for you, using only the grammar and an input, and it gives you convienient and flexible tools to process that parse-tree.
+   - **Beginners**: Lark is very friendly for experimentation. It can parse any grammar you throw at it, no matter how complicated or ambiguous, and do so efficiently. It also constructs an annotated parse-tree for you, using only the grammar and an input, and it gives you convenient and flexible tools to process that parse-tree.
 
    - **Experts**: Lark implements both Earley(SPPF) and LALR(1), and several different lexers, so you can trade-off power and speed, according to your requirements. It also provides a variety of sophisticated features and utilities.
 
@@ -105,7 +105,7 @@ Lark is great at handling ambiguity. Here is the result of parsing the phrase "f
  - Grammar composition - Import terminals and rules from other grammars
  - Standard library of terminals (strings, numbers, names, etc.)
  - Import grammars from Nearley.js ([read more](/docs/tools.md#importing-grammars-from-nearleyjs))
- - Extensive test suite [![codecov](https://codecov.io/gh/lark-parser/lark/branch/master/graph/badge.svg?token=lPxgVhCVPK)](https://codecov.io/gh/lark-parser/lark) 
+ - Extensive test suite [![codecov](https://codecov.io/gh/lark-parser/lark/branch/master/graph/badge.svg?token=lPxgVhCVPK)](https://codecov.io/gh/lark-parser/lark)
  - Type annotations (MyPy support)
  - And much more!
 
@@ -193,4 +193,3 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
-

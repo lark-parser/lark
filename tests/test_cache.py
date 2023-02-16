@@ -71,12 +71,12 @@ def append_zero(t):
 class TestCache(TestCase):
     g = '''start: "a"'''
 
-    
+
     def setUp(self):
         self.fs = lark_module.FS
         self.mock_fs = MockFS()
         lark_module.FS = self.mock_fs
-        
+
     def tearDown(self):
         self.mock_fs.files = {}
         lark_module.FS = self.fs
@@ -88,7 +88,7 @@ class TestCache(TestCase):
         assert fn in self.mock_fs.files
         parser = Lark(self.g, parser='lalr', cache=fn)
         assert parser.parse('a') == Tree('start', [])
-    
+
     def test_automatic_naming(self):
         assert len(self.mock_fs.files) == 0
         Lark(self.g, parser='lalr', cache=True)
@@ -102,7 +102,7 @@ class TestCache(TestCase):
 
         parser = Lark(self.g, parser='lalr', cache=True)
         assert parser.parse('a') == Tree('start', [])
-    
+
     def test_custom_lexer(self):
 
         parser = Lark(self.g, parser='lalr', lexer=CustomLexer, cache=True)
@@ -115,7 +115,7 @@ class TestCache(TestCase):
         Lark(self.g, parser="lalr", debug=True, cache=True)
         parser = Lark(self.g, parser="lalr", debug=True, cache=True)
         assert parser.options.options['debug']
-    
+
     def test_inline(self):
         # Test inline transformer (tree-less) & lexer_callbacks
         # Note: the Transformer should not be saved to the file,
@@ -136,7 +136,7 @@ class TestCache(TestCase):
         res1 = parser.parse(text)
         res2 = InlineTestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
         assert res0 == res1 == res2 == expected
-    
+
     def test_imports(self):
         g = """
         %import .grammars.ab (startab, expr)
@@ -167,7 +167,7 @@ class TestCache(TestCase):
         # should only have the dummy log
         self.assertCountEqual(cm.output, ["ERROR:lark:dummy message"])
 
-        
+
 
 
 if __name__ == '__main__':

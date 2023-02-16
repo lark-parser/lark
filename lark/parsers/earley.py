@@ -170,7 +170,7 @@ class Parser:
             return True
 
         # def create_leo_transitives(origin, start):
-        #   ...   # removed at commit 4c1cfb2faf24e8f8bff7112627a00b94d261b420 
+        #   ...   # removed at commit 4c1cfb2faf24e8f8bff7112627a00b94d261b420
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.

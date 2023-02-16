@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import logging
 from unittest import TestCase, main, skipIf
 
-from lark import Lark, Tree, Transformer
+from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
@@ -168,7 +168,26 @@ class TestCache(TestCase):
         self.assertCountEqual(cm.output, ["ERROR:lark:dummy message"])
 
 
+    def test_error_message(self):
+        # Checks that error message generation works
+        # This is especially important since sometimes the `str` method fails with
+        # the mysterious "<unprintable UnexpectedCharacters object>" or similar
+        g = r"""
+        start: add+
+        add: /\d+/ "+" /\d+/
+        %ignore " "
+        """
+        texts = ("1+", "+1", "", "1 1+1")
 
+        parser1 = Lark(g, parser='lalr', cache=True)
+        parser2 = Lark(g, parser='lalr', cache=True)
+        assert len(self.mock_fs.files) == 1
+        for text in texts:
+            with self.assertRaises((UnexpectedInput)) as cm1:
+                parser1.parse(text)
+            with self.assertRaises((UnexpectedInput)) as cm2:
+                parser2.parse(text)
+            self.assertEqual(str(cm1.exception), str(cm2.exception))
 
 if __name__ == '__main__':
     main()

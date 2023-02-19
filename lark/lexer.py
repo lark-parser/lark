@@ -63,7 +63,7 @@ class Pattern(Serialize, ABC):
 
 
 class PatternStr(Pattern):
-    __serialize_fields__ = 'value', 'flags'
+    __serialize_fields__ = 'value', 'flags', 'raw'
 
     type: ClassVar[str] = "str"
 
@@ -80,7 +80,7 @@ class PatternStr(Pattern):
 
 
 class PatternRE(Pattern):
-    __serialize_fields__ = 'value', 'flags', '_width'
+    __serialize_fields__ = 'value', 'flags', 'raw', '_width'
 
     type: ClassVar[str] = "re"
 

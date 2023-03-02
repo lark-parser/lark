@@ -3,7 +3,6 @@
 from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
-from time import time
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
     Pattern as REPattern, ClassVar, TYPE_CHECKING, overload
@@ -28,7 +27,7 @@ from copy import copy
 try:
     interegular
 except NameError:
-    interegular = interegular
+    interegular = None
 
 class Pattern(Serialize, ABC):
 
@@ -587,7 +586,6 @@ class ContextualLexer(Lexer):
     root_lexer: BasicLexer
 
     def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
-        start_time = time()
         terminals = list(conf.terminals)
         terminals_by_name = conf.terminals_by_name
 
@@ -615,8 +613,6 @@ class ContextualLexer(Lexer):
 
         assert trad_conf.terminals is terminals
         self.root_lexer = BasicLexer(trad_conf, comparator)
-        end_time = time()
-        logger.debug("ContextualLexer init time: %s" % (end_time - start_time,))
 
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:

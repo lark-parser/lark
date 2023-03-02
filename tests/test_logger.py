@@ -46,7 +46,7 @@ class Testlogger(TestCase):
             Lark(collision_grammar, parser='lalr', debug=False)
         log = log.getvalue()
         # no log message
-        self.assertEqual(len(log), 0)
+        self.assertEqual(log, "")
 
     def test_loglevel_higher(self):
         logger.setLevel(logging.ERROR)

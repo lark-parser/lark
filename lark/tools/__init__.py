@@ -8,8 +8,9 @@ import warnings
 from lark import Lark, logger
 try:
     from interegular import logger as interegular_logger
+    has_interegular = True
 except ImportError:
-    interegular_logger = None
+    has_interegular = False
 
 lalr_argparser = ArgumentParser(add_help=False, epilog='Look at the Lark documentation for more info on the options')
 
@@ -44,7 +45,7 @@ for flag in flags:
 
 def build_lalr(namespace):
     logger.setLevel((ERROR, WARN, INFO, DEBUG)[min(namespace.verbose, 3)])
-    if interegular_logger is not None:
+    if has_interegular:
         interegular_logger.setLevel(logger.getEffectiveLevel())
     if len(namespace.start) == 0:
         namespace.start.append('start')

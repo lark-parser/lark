@@ -12,7 +12,7 @@ import warnings
 try:
     import interegular
 except ImportError:
-    interegular = None
+    pass
 if TYPE_CHECKING:
     from .common import LexerConf
 
@@ -24,10 +24,10 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 ###{standalone
 from copy import copy
 
-try:  # For the standalone parser, we need to make sure that interegular is set to None to avoid NameErrors later on
-    interegular
+try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on
+    has_interegular = bool(interegular)
 except NameError:
-    interegular = None
+    has_interegular = False
 
 class Pattern(Serialize, ABC):
 
@@ -490,7 +490,7 @@ class BasicLexer(Lexer):
             if not (set(conf.ignore) <= {t.name for t in terminals}):
                 raise LexError("Ignore terminals are not defined: %s" % (set(conf.ignore) - {t.name for t in terminals}))
 
-            if interegular:
+            if has_interegular:
                 if not comparator:
                     comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
                 for group in classify(terminal_to_regexp, lambda t:t.priority).values():
@@ -592,7 +592,7 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
-        if interegular and not conf.skip_validation:
+        if has_interegular and not conf.skip_validation:
             comparator = interegular.Comparator.from_regexes({t: t.pattern.to_regexp() for t in terminals})
         else:
             comparator = None

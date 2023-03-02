@@ -24,7 +24,7 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 ###{standalone
 from copy import copy
 
-try:
+try:  # For the standalone parser, we need to make sure that interegular is set to None to avoid NameErrors later on
     interegular
 except NameError:
     interegular = None
@@ -498,8 +498,8 @@ class BasicLexer(Lexer):
                         assert a.priority == b.priority
                         # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
                         comparator.mark(a, b)
-                        # leave it as a warning for the moment
 
+                        # leave it as a warning for the moment
                         # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
                         logger.warning("Collision between Terminals %r and %r: %r" %
                                        (a.name, b.name, comparator.get_example_overlap(a, b)))
@@ -612,6 +612,7 @@ class ContextualLexer(Lexer):
             self.lexers[state] = lexer
 
         assert trad_conf.terminals is terminals
+        trad_conf.skip_validation = True  # We don't need to verify all terminals again
         self.root_lexer = BasicLexer(trad_conf, comparator)
 
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:

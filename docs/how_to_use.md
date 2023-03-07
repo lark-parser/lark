@@ -42,6 +42,27 @@ Usually, by the time you get to a minimal grammar, the problem becomes clear.
 
 But if it doesn't, feel free to ask us on gitter, or even open an issue. Post a reproducing code, with the minimal grammar and input, and we'll do our best to help.
 
+### Regex collisions
+
+Especially if you have multiple complex Regular Expressions, the problem can occur that you have collisions between two Terminals that aren't obvious and therefore hard to notice. If you install `interegular`, an extra library, `lark` will check for collisions and warns about any conflicts it can find:
+
+```
+import logging
+from lark import Lark, logger
+
+logger.setLevel(logging.WARN)
+
+collision_grammar = '''
+start: A | B
+A: /a+/
+B: /[ab]+/
+'''
+p = Lark(collision_grammar, parser='lalr')
+```
+If unresolved, these conflicts can result in hard to find and reproduce bugs, since which one gets chosen is arbitrary and potentially changes with each interpreter restart.
+Note that this only works when the `lexer` is not `dynamic` or `dynamic_complete`.
+
+
 ### LALR
 
 By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `logger` beforehand. For example:

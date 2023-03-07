@@ -36,7 +36,7 @@ class Pattern(Serialize, ABC):
     raw: Optional[str]
     type: ClassVar[str]
 
-    def __init__(self, value: str, flags: Collection[str]=(), raw: Optional[str]=None) -> None:
+    def __init__(self, value: str, flags: Collection[str] = (), raw: Optional[str] = None) -> None:
         self.value = value
         self.flags = frozenset(flags)
         self.raw = raw
@@ -119,7 +119,7 @@ class TerminalDef(Serialize):
     pattern: Pattern
     priority: int
 
-    def __init__(self, name: str, pattern: Pattern, priority: int=TOKEN_DEFAULT_PRIORITY) -> None:
+    def __init__(self, name: str, pattern: Pattern, priority: int = TOKEN_DEFAULT_PRIORITY) -> None:
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
@@ -129,7 +129,7 @@ class TerminalDef(Serialize):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
 
     def user_repr(self) -> str:
-        if self.name.startswith('__'): # We represent a generated terminal
+        if self.name.startswith('__'):  # We represent a generated terminal
             return self.pattern.raw or self.name
         else:
             return self.name
@@ -171,29 +171,29 @@ class Token(str):
 
     @overload
     def __new__(
-        cls,
-        type: str,
-        value: Any,
-        start_pos: Optional[int]=None,
-        line: Optional[int]=None,
-        column: Optional[int]=None,
-        end_line: Optional[int]=None,
-        end_column: Optional[int]=None,
-        end_pos: Optional[int]=None
+            cls,
+            type: str,
+            value: Any,
+            start_pos: Optional[int] = None,
+            line: Optional[int] = None,
+            column: Optional[int] = None,
+            end_line: Optional[int] = None,
+            end_column: Optional[int] = None,
+            end_pos: Optional[int] = None
     ) -> 'Token':
         ...
 
     @overload
     def __new__(
-        cls,
-        type_: str,
-        value: Any,
-        start_pos: Optional[int]=None,
-        line: Optional[int]=None,
-        column: Optional[int]=None,
-        end_line: Optional[int]=None,
-        end_column: Optional[int]=None,
-        end_pos: Optional[int]=None
+            cls,
+            type_: str,
+            value: Any,
+            start_pos: Optional[int] = None,
+            line: Optional[int] = None,
+            column: Optional[int] = None,
+            end_line: Optional[int] = None,
+            end_column: Optional[int] = None,
+            end_pos: Optional[int] = None
     ) -> 'Token':        ...
 
     def __new__(cls, *args, **kwargs):
@@ -222,11 +222,11 @@ class Token(str):
         return inst
 
     @overload
-    def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def update(self, type: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         ...
 
     @overload
-    def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def update(self, type_: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         ...
 
     def update(self, *args, **kwargs):
@@ -239,7 +239,7 @@ class Token(str):
 
         return self._future_update(*args, **kwargs)
 
-    def _future_update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def _future_update(self, type: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         return Token.new_borrow_pos(
             type if type is not None else self.type,
             value if value is not None else self.value,
@@ -373,7 +373,7 @@ class Scanner:
             try:
                 mre = self.re_.compile(pattern, self.g_regex_flags)
             except AssertionError:  # Yes, this is what Python provides us.. :/
-                return self._build_mres(terminals, max_size//2)
+                return self._build_mres(terminals, max_size // 2)
 
             mres.append(mre)
             terminals = terminals[max_size:]
@@ -493,7 +493,7 @@ class BasicLexer(Lexer):
             if has_interegular:
                 if not comparator:
                     comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
-                for group in classify(terminal_to_regexp, lambda t:t.priority).values():
+                for group in classify(terminal_to_regexp, lambda t: t.priority).values():
                     for a, b in comparator.check(group, skip_marked=True):
                         assert a.priority == b.priority
                         # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
@@ -501,8 +501,9 @@ class BasicLexer(Lexer):
 
                         # leave it as a warning for the moment
                         # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
-                        logger.warning("Collision between Terminals %r and %r: %r" %
-                                       (a.name, b.name, comparator.get_example_overlap(a, b)))
+                        example = comparator.get_example_overlap(a, b).format_multiline()
+                        logger.warning(f"Collision between Terminals {a.name} and {b.name}. "
+                                       f"The lexer will choose between them arbitrarily\n" + example)
 
         # Init
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
@@ -544,7 +545,7 @@ class BasicLexer(Lexer):
             while True:
                 yield self.next_token(state, parser_state)
 
-    def next_token(self, lex_state: LexerState, parser_state: Any=None) -> Token:
+    def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
         line_ctr = lex_state.line_ctr
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)

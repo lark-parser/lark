@@ -44,7 +44,11 @@ But if it doesn't, feel free to ask us on gitter, or even open an issue. Post a 
 
 ### Regex collisions
 
-Especially if you have multiple complex Regular Expressions, the problem can occur that you have collisions between two Terminals that aren't obvious and therefore hard to notice. If you install `interegular`, an extra library, `lark` will check for collisions and warns about any conflicts it can find:
+A likely source of bugs occurs when two regexes in a grammar can match the same input. If both terminals have the same priority, most lexers would arbitrarily choose the first one that matches, which isn't always the desired one. (a notable exception is the `dynamic_complete` lexer, which always tries all variations. But its users pay for that with performance.)
+
+These collisions can be hard to notice, and their effects can be difficult to debug, as they are subtle and sometimes hard to reproduce.
+
+To help with these situation, Lark can utilize the a new external library called `interegular`. If it is installed, Lark will use it to check for collisions, and warn about any conflicts that it can find:
 
 ```
 import logging
@@ -59,9 +63,12 @@ B: /[ab]+/
 '''
 p = Lark(collision_grammar, parser='lalr')
 ```
-If unresolved, these conflicts can result in hard to find and reproduce bugs, since which one gets chosen is arbitrary and potentially changes with each interpreter restart.
-Note that this only works when the `lexer` is not `dynamic` or `dynamic_complete`.
 
+You can install interegular for Lark using `pip install 'lark[interegular]'`.
+
+Note 1: Interegular currently only runs when the lexer is `basic` or `contextual`.
+
+Note 2: Some advanced regex features, such as lookahead and lookbehind, may prevent interegular from detecting existing collisions.
 
 ### LALR
 

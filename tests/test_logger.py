@@ -84,7 +84,7 @@ class Testlogger(TestCase):
         self.assertIn("B", log)
 
     @skipIf(interegular is None, "interegular is not installed, can't test regex collisions")
-    def test_regex_no_collision(self):
+    def test_no_regex_collision(self):
         logger.setLevel(logging.WARNING)
         collision_grammar = '''
         start: A " " B

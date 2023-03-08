@@ -11,11 +11,14 @@ import os, os.path
 from io import open
 import glob, time
 
-from lark import Lark
+from lark import Lark, logger
 from lark.indenter import PythonIndenter
+import logging
+
+logger.setLevel(logging.DEBUG)
 
 
-kwargs = dict(postlex=PythonIndenter(), start='file_input')
+kwargs = dict(postlex=PythonIndenter(), start='file_input', cache=False)
 
 # Official Python grammar by Lark
 python_parser3 = Lark.open_from_package('lark', 'python.lark', ['grammars'], parser='lalr', **kwargs)

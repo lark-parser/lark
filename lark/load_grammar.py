@@ -79,7 +79,7 @@ TERMINALS = {
     '_RBRA': r'\]',
     '_LBRACE': r'\{',
     '_RBRACE': r'\}',
-    'OP': '[+*]|[?](?![a-z])',
+    'OP': '[+*]|[?](?![a-z_])',
     '_COLON': ':',
     '_COMMA': ',',
     '_OR': r'\|',

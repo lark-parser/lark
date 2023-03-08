@@ -11,6 +11,7 @@
  - Flexible error handling by using an interactive parser interface (LALR only)
  - Automatic line & column tracking (for both tokens and matched rules)
  - Automatic terminal collision resolution
+  - Warns on regex collisions using the optional `interegular` library. ([read more](how_to_use.html#regex-collisions))
  - Grammar composition - Import terminals and rules from other grammars
  - Standard library of terminals (strings, numbers, names, etc.)
  - Unicode fully supported

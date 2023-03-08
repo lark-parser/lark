@@ -42,6 +42,38 @@ Usually, by the time you get to a minimal grammar, the problem becomes clear.
 
 But if it doesn't, feel free to ask us on gitter, or even open an issue. Post a reproducing code, with the minimal grammar and input, and we'll do our best to help.
 
+### Regex collisions
+
+A likely source of bugs occurs when two regexes in a grammar can match the same input. If both terminals have the same priority, most lexers would arbitrarily choose the first one that matches, which isn't always the desired one. (a notable exception is the `dynamic_complete` lexer, which always tries all variations. But its users pay for that with performance.)
+
+These collisions can be hard to notice, and their effects can be difficult to debug, as they are subtle and sometimes hard to reproduce.
+
+To help with these situations, Lark can utilize a new external library called `interegular`. If it is installed, Lark uses it to check for collisions, and warn about any conflicts that it can find:
+
+```
+import logging
+from lark import Lark, logger
+
+logger.setLevel(logging.WARN)
+
+collision_grammar = '''
+start: A | B
+A: /a+/
+B: /[ab]+/
+'''
+p = Lark(collision_grammar, parser='lalr')
+
+# Output:
+# Collision between Terminals B and A. The lexer will choose between them arbitrarily
+# Example Collision: a
+```
+
+You can install interegular for Lark using `pip install 'lark[interegular]'`.
+
+Note 1: Interegular currently only runs when the lexer is `basic` or `contextual`.
+
+Note 2: Some advanced regex features, such as lookahead and lookbehind, may prevent interegular from detecting existing collisions.
+
 ### LALR
 
 By default Lark silently resolves Shift/Reduce conflicts as Shift. To enable warnings pass `debug=True`. To get the messages printed you have to configure the `logger` beforehand. For example:

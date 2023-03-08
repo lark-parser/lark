@@ -1,2 +1,3 @@
+interegular>=0.2.4
 Js2Py==0.68
 regex

@@ -9,16 +9,25 @@ from typing import (
 )
 from types import ModuleType
 import warnings
+try:
+    import interegular
+except ImportError:
+    pass
 if TYPE_CHECKING:
     from .common import LexerConf
 
-from .utils import classify, get_regexp_width, Serialize
+from .utils import classify, get_regexp_width, Serialize, logger
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
 from .grammar import TOKEN_DEFAULT_PRIORITY
+
 
 ###{standalone
 from copy import copy
 
+try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on
+    has_interegular = bool(interegular)
+except NameError:
+    has_interegular = False
 
 class Pattern(Serialize, ABC):
 
@@ -27,7 +36,7 @@ class Pattern(Serialize, ABC):
     raw: Optional[str]
     type: ClassVar[str]
 
-    def __init__(self, value: str, flags: Collection[str]=(), raw: Optional[str]=None) -> None:
+    def __init__(self, value: str, flags: Collection[str] = (), raw: Optional[str] = None) -> None:
         self.value = value
         self.flags = frozenset(flags)
         self.raw = raw
@@ -110,7 +119,7 @@ class TerminalDef(Serialize):
     pattern: Pattern
     priority: int
 
-    def __init__(self, name: str, pattern: Pattern, priority: int=TOKEN_DEFAULT_PRIORITY) -> None:
+    def __init__(self, name: str, pattern: Pattern, priority: int = TOKEN_DEFAULT_PRIORITY) -> None:
         assert isinstance(pattern, Pattern), pattern
         self.name = name
         self.pattern = pattern
@@ -120,7 +129,7 @@ class TerminalDef(Serialize):
         return '%s(%r, %r)' % (type(self).__name__, self.name, self.pattern)
 
     def user_repr(self) -> str:
-        if self.name.startswith('__'): # We represent a generated terminal
+        if self.name.startswith('__'):  # We represent a generated terminal
             return self.pattern.raw or self.name
         else:
             return self.name
@@ -162,29 +171,29 @@ class Token(str):
 
     @overload
     def __new__(
-        cls,
-        type: str,
-        value: Any,
-        start_pos: Optional[int]=None,
-        line: Optional[int]=None,
-        column: Optional[int]=None,
-        end_line: Optional[int]=None,
-        end_column: Optional[int]=None,
-        end_pos: Optional[int]=None
+            cls,
+            type: str,
+            value: Any,
+            start_pos: Optional[int] = None,
+            line: Optional[int] = None,
+            column: Optional[int] = None,
+            end_line: Optional[int] = None,
+            end_column: Optional[int] = None,
+            end_pos: Optional[int] = None
     ) -> 'Token':
         ...
 
     @overload
     def __new__(
-        cls,
-        type_: str,
-        value: Any,
-        start_pos: Optional[int]=None,
-        line: Optional[int]=None,
-        column: Optional[int]=None,
-        end_line: Optional[int]=None,
-        end_column: Optional[int]=None,
-        end_pos: Optional[int]=None
+            cls,
+            type_: str,
+            value: Any,
+            start_pos: Optional[int] = None,
+            line: Optional[int] = None,
+            column: Optional[int] = None,
+            end_line: Optional[int] = None,
+            end_column: Optional[int] = None,
+            end_pos: Optional[int] = None
     ) -> 'Token':        ...
 
     def __new__(cls, *args, **kwargs):
@@ -213,11 +222,11 @@ class Token(str):
         return inst
 
     @overload
-    def update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def update(self, type: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         ...
 
     @overload
-    def update(self, type_: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def update(self, type_: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         ...
 
     def update(self, *args, **kwargs):
@@ -230,7 +239,7 @@ class Token(str):
 
         return self._future_update(*args, **kwargs)
 
-    def _future_update(self, type: Optional[str]=None, value: Optional[Any]=None) -> 'Token':
+    def _future_update(self, type: Optional[str] = None, value: Optional[Any] = None) -> 'Token':
         return Token.new_borrow_pos(
             type if type is not None else self.type,
             value if value is not None else self.value,
@@ -364,7 +373,7 @@ class Scanner:
             try:
                 mre = self.re_.compile(pattern, self.g_regex_flags)
             except AssertionError:  # Yes, this is what Python provides us.. :/
-                return self._build_mres(terminals, max_size//2)
+                return self._build_mres(terminals, max_size // 2)
 
             mres.append(mre)
             terminals = terminals[max_size:]
@@ -457,7 +466,7 @@ class BasicLexer(Lexer):
     callback: Dict[str, _Callback]
     re: ModuleType
 
-    def __init__(self, conf: 'LexerConf') -> None:
+    def __init__(self, conf: 'LexerConf', comparator=None) -> None:
         terminals = list(conf.terminals)
         assert all(isinstance(t, TerminalDef) for t in terminals), terminals
 
@@ -465,17 +474,36 @@ class BasicLexer(Lexer):
 
         if not conf.skip_validation:
             # Sanitization
+            terminal_to_regexp = {}
             for t in terminals:
+                regexp = t.pattern.to_regexp()
                 try:
-                    self.re.compile(t.pattern.to_regexp(), conf.g_regex_flags)
+                    self.re.compile(regexp, conf.g_regex_flags)
                 except self.re.error:
                     raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
                 if t.pattern.min_width == 0:
                     raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
+                if t.pattern.type == "re":
+                    terminal_to_regexp[t] = regexp
 
             if not (set(conf.ignore) <= {t.name for t in terminals}):
                 raise LexError("Ignore terminals are not defined: %s" % (set(conf.ignore) - {t.name for t in terminals}))
+
+            if has_interegular:
+                if not comparator:
+                    comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
+                for group in classify(terminal_to_regexp, lambda t: t.priority).values():
+                    for a, b in comparator.check(group, skip_marked=True):
+                        assert a.priority == b.priority
+                        # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
+                        comparator.mark(a, b)
+
+                        # leave it as a warning for the moment
+                        # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
+                        example = comparator.get_example_overlap(a, b).format_multiline()
+                        logger.warning(f"Collision between Terminals {a.name} and {b.name}. "
+                                       f"The lexer will choose between them arbitrarily.\n" + example)
 
         # Init
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
@@ -517,7 +545,7 @@ class BasicLexer(Lexer):
             while True:
                 yield self.next_token(state, parser_state)
 
-    def next_token(self, lex_state: LexerState, parser_state: Any=None) -> Token:
+    def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
         line_ctr = lex_state.line_ctr
         while line_ctr.char_pos < len(lex_state.text):
             res = self.match(lex_state.text, line_ctr.char_pos)
@@ -565,6 +593,10 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
+        if has_interegular and not conf.skip_validation:
+            comparator = interegular.Comparator.from_regexes({t: t.pattern.to_regexp() for t in terminals})
+        else:
+            comparator = None
         lexer_by_tokens: Dict[FrozenSet[str], BasicLexer] = {}
         self.lexers = {}
         for state, accepts in states.items():
@@ -575,13 +607,14 @@ class ContextualLexer(Lexer):
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 lexer_conf = copy(trad_conf)
                 lexer_conf.terminals = [terminals_by_name[n] for n in accepts if n in terminals_by_name]
-                lexer = BasicLexer(lexer_conf)
+                lexer = BasicLexer(lexer_conf, comparator)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
         assert trad_conf.terminals is terminals
-        self.root_lexer = BasicLexer(trad_conf)
+        trad_conf.skip_validation = True  # We don't need to verify all terminals again
+        self.root_lexer = BasicLexer(trad_conf, comparator)
 
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:

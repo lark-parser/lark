@@ -503,7 +503,7 @@ class BasicLexer(Lexer):
                         # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
                         example = comparator.get_example_overlap(a, b).format_multiline()
                         logger.warning(f"Collision between Terminals {a.name} and {b.name}. "
-                                       f"The lexer will choose between them arbitrarily\n" + example)
+                                       f"The lexer will choose between them arbitrarily.\n" + example)
 
         # Init
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))

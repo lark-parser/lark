@@ -48,7 +48,7 @@ A likely source of bugs occurs when two regexes in a grammar can match the same 
 
 These collisions can be hard to notice, and their effects can be difficult to debug, as they are subtle and sometimes hard to reproduce.
 
-To help with these situation, Lark can utilize the a new external library called `interegular`. If it is installed, Lark will use it to check for collisions, and warn about any conflicts that it can find:
+To help with these situations, Lark can utilize a new external library called `interegular`. If it is installed, Lark uses it to check for collisions, and warn about any conflicts that it can find:
 
 ```
 import logging
@@ -62,6 +62,10 @@ A: /a+/
 B: /[ab]+/
 '''
 p = Lark(collision_grammar, parser='lalr')
+
+# Output:
+# Collision between Terminals B and A. The lexer will choose between them arbitrarily
+# Example Collision: a
 ```
 
 You can install interegular for Lark using `pip install 'lark[interegular]'`.

@@ -41,7 +41,7 @@ class Testlogger(TestCase):
         self.assertIn("A", log)
 
     def test_non_debug(self):
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.WARNING)
         collision_grammar = '''
         start: as as
         as: a*

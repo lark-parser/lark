@@ -145,8 +145,9 @@ def create_contextual_lexer(lexer_conf, parser, postlex, options):
 
 def create_lalr_parser(lexer_conf, parser_conf, options=None):
     debug = options.debug if options else False
+    strict = options.strict if options else False
     cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
-    return cls(parser_conf, debug=debug)
+    return cls(parser_conf, debug=debug, strict=strict)
 
 _parser_creators['lalr'] = create_lalr_parser
 

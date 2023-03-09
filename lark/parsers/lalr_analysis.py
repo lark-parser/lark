@@ -131,8 +131,8 @@ def traverse(x, S, N, X, R, G, F):
 
 
 class LALR_Analyzer(GrammarAnalyzer):
-    def __init__(self, parser_conf, debug=False):
-        GrammarAnalyzer.__init__(self, parser_conf, debug)
+    def __init__(self, parser_conf, debug=False, strict=False):
+        GrammarAnalyzer.__init__(self, parser_conf, debug, strict)
         self.nonterminal_transitions = []
         self.directly_reads = defaultdict(set)
         self.reads = defaultdict(set)
@@ -256,10 +256,18 @@ class LALR_Analyzer(GrammarAnalyzer):
                         rules = [best[1]]
                     else:
                         reduce_reduce.append((state, la, rules))
+                        continue
+
+                rule ,= rules
                 if la in actions:
-                    if self.debug:
+                    if self.strict:
+                        raise GrammarError(f"Shift/Reduce conflict for terminal {la.name}. [strict-mode]\n ")
+                    elif self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
-                        logger.warning(' * %s', list(rules)[0])
+                        logger.warning(' * %s', rule)
+                    else:
+                        logger.debug('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
+                        logger.debug(' * %s', rule)
                 else:
                     actions[la] = (Reduce, list(rules)[0])
             m[state] = { k.name: v for k, v in actions.items() }

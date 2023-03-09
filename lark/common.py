@@ -38,8 +38,10 @@ class LexerConf(Serialize):
     skip_validation: bool
     use_bytes: bool
     lexer_type: Optional[_LexerArgType]
+    strict: bool
 
-    def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None, callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False):
+    def __init__(self, terminals: Collection[TerminalDef], re_module: ModuleType, ignore: Collection[str]=(), postlex: 'Optional[PostLex]'=None,
+                 callbacks: Optional[Dict[str, _Callback]]=None, g_regex_flags: int=0, skip_validation: bool=False, use_bytes: bool=False, strict: bool=False):
         self.terminals = terminals
         self.terminals_by_name = {t.name: t for t in self.terminals}
         assert len(self.terminals) == len(self.terminals_by_name)
@@ -50,6 +52,7 @@ class LexerConf(Serialize):
         self.re_module = re_module
         self.skip_validation = skip_validation
         self.use_bytes = use_bytes
+        self.strict = strict
         self.lexer_type = None
 
     def _deserialize(self):

@@ -499,11 +499,14 @@ class BasicLexer(Lexer):
                         # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
                         comparator.mark(a, b)
 
-                        # leave it as a warning for the moment
-                        # raise LexError("Collision between Terminals %s and %s" % (a.name, b.name))
+                        # Notify the user
+                        message = f"Collision between Terminals {a.name} and {b.name}. "
                         example = comparator.get_example_overlap(a, b).format_multiline()
-                        logger.warning(f"Collision between Terminals {a.name} and {b.name}. "
-                                       f"The lexer will choose between them arbitrarily.\n" + example)
+                        if conf.strict:
+                            raise LexError(f"{message}\n{example}")
+                        logger.warning("%s The lexer will choose between them arbitrarily.\n%s", message, example)
+            elif conf.strict:
+                raise LexError("interegular must be installed for strict mode. Use `pip install 'lark[interegular]'`.")
 
         # Init
         self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))

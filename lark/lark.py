@@ -54,6 +54,7 @@ class LarkOptions(Serialize):
 
     start: List[str]
     debug: bool
+    strict: bool
     transformer: 'Optional[Transformer]'
     propagate_positions: Union[bool, str]
     maybe_placeholders: bool
@@ -81,6 +82,8 @@ class LarkOptions(Serialize):
     debug
             Display debug information and extra warnings. Use only when debugging (Default: ``False``)
             When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
+    strict
+            Throw an exception on any potential ambiguity, including shift/reduce conflicts, and regex collisions.
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
@@ -156,6 +159,7 @@ class LarkOptions(Serialize):
     # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
     _defaults: Dict[str, Any] = {
         'debug': False,
+        'strict': False,
         'keep_all_tokens': False,
         'tree_class': None,
         'cache': False,
@@ -424,7 +428,7 @@ class Lark(Serialize):
         # TODO Deprecate lexer_callbacks?
         self.lexer_conf = LexerConf(
                 self.terminals, re_module, self.ignore_tokens, self.options.postlex,
-                self.options.lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes
+                self.options.lexer_callbacks, self.options.g_regex_flags, use_bytes=self.options.use_bytes, strict=self.options.strict
             )
 
         if self.options.parser:

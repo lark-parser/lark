@@ -2625,6 +2625,25 @@ def _make_parser_test(LEXER, PARSER):
             b = parser.parse(s)
             assert a == b
 
+        @unittest.skipIf(PARSER!='lalr', "strict mode is only supported in lalr for now")
+        def test_strict(self):
+            # Test regex collision
+            grammar = r"""
+            start: A | B
+
+            A: /e?rez/
+            B: /erez?/
+            """
+
+            self.assertRaises(LexError, _Lark, grammar, strict=True)
+
+            # Test shift-reduce collision
+            grammar = r"""
+            start: a "."
+            a: "."+
+            """
+            self.assertRaises(GrammarError, _Lark, grammar, strict=True)
+
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME

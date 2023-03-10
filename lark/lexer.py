@@ -501,7 +501,13 @@ class BasicLexer(Lexer):
 
                         # Notify the user
                         message = f"Collision between Terminals {a.name} and {b.name}. "
-                        example = comparator.get_example_overlap(a, b).format_multiline()
+                        try:
+                            example = comparator.get_example_overlap(a, b, 10000).format_multiline()
+                        except ValueError:
+                            # Couldn't find an example within 10000 steps.
+                            # This value was chosen since it should still guarantee that get_example_overlap
+                            # terminates within < 1s, but it should be able to provide examples for almost everything
+                            example = "No example could be found fast enough. However, the collision does still exists"
                         if conf.strict:
                             raise LexError(f"{message}\n{example}")
                         logger.warning("%s The lexer will choose between them arbitrarily.\n%s", message, example)

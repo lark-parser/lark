@@ -15,7 +15,7 @@ setup(
         "regex": ["regex"],
         "nearley": ["js2py"],
         "atomic_cache": ["atomicwrites"],
-        "interegular": ["interegular>=0.2.6,<0.3.0"],
+        "interegular": ["interegular>=0.3.1,<0.4.0"],
     },
 
     package_data = {'': ['*.md', '*.lark'], 'lark': ['py.typed']},

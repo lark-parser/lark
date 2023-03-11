@@ -457,8 +457,39 @@ class Lexer(ABC):
         return LexerState(text)
 
 
-class BasicLexer(Lexer):
+def _check_regex_collisions(terminal_to_regexp: Dict[TerminalDef, str], comparator, strict_mode, max_collisions_to_show=8):
+    if not comparator:
+        comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
 
+    # When in strict mode, we only ever try to provide one example, so taking
+    # a long time for that should be fine
+    max_time = 2 if strict_mode else 0.2
+
+    # We don't want to show too many collisions.
+    if comparator.count_marked_pairs() >= max_collisions_to_show:
+        return
+    for group in classify(terminal_to_regexp, lambda t: t.priority).values():
+        for a, b in comparator.check(group, skip_marked=True):
+            assert a.priority == b.priority
+            # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
+            comparator.mark(a, b)
+
+            # Notify the user
+            message = f"Collision between Terminals {a.name} and {b.name}. "
+            try:
+                example = comparator.get_example_overlap(a, b, max_time).format_multiline()
+            except ValueError:
+                # Couldn't find an example within max_time steps.
+                example = "No example could be found fast enough. However, the collision does still exists"
+            if strict_mode:
+                raise LexError(f"{message}\n{example}")
+            logger.warning("%s The lexer will choose between them arbitrarily.\n%s", message, example)
+            if comparator.count_marked_pairs() >= max_collisions_to_show:
+                logger.warning("Found 8 regex collisions, will not check for more.")
+                return
+
+
+class BasicLexer(Lexer):
     terminals: Collection[TerminalDef]
     ignore_types: FrozenSet[str]
     newline_types: FrozenSet[str]
@@ -491,20 +522,7 @@ class BasicLexer(Lexer):
                 raise LexError("Ignore terminals are not defined: %s" % (set(conf.ignore) - {t.name for t in terminals}))
 
             if has_interegular:
-                if not comparator:
-                    comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
-                for group in classify(terminal_to_regexp, lambda t: t.priority).values():
-                    for a, b in comparator.check(group, skip_marked=True):
-                        assert a.priority == b.priority
-                        # Mark this pair to not repeat warnings when multiple different BasicLexers see the same collision
-                        comparator.mark(a, b)
-
-                        # Notify the user
-                        message = f"Collision between Terminals {a.name} and {b.name}. "
-                        example = comparator.get_example_overlap(a, b).format_multiline()
-                        if conf.strict:
-                            raise LexError(f"{message}\n{example}")
-                        logger.warning("%s The lexer will choose between them arbitrarily.\n%s", message, example)
+                _check_regex_collisions(terminal_to_regexp, comparator, conf.strict)
             elif conf.strict:
                 raise LexError("interegular must be installed for strict mode. Use `pip install 'lark[interegular]'`.")
 

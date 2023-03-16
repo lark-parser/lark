@@ -192,4 +192,4 @@ def parse_with_progress(parser: Lark, text: str, start=None):
     return pi.result
 ```
 
-Note that we don't simply wrap the iterable because tqdm would not be able to determine the total.
+Note that we don't simply wrap the iterable because tqdm would not be able to determine the total. Additionally, keep in mind that this implementation relies on the `InteractiveParser` and, therefore, only works with the `LALR(1)` parser, not `earley`.

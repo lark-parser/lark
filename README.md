@@ -31,6 +31,10 @@ Most importantly, Lark will save you time and prevent you from getting parsing h
 - Blog post: [How to write a DSL with Lark](http://blog.erezsh.com/how-to-write-a-dsl-in-python-with-lark/)
 - [Gitter chat](https://gitter.im/lark-parser/Lobby)
 
+### Talks
+- [Using Lark to Parse Text - Robin Reynolds-Haertle (PyCascades 2023)
+](https://www.youtube.com/watch?v=CeOtqlh0UuQ)
+
 ### Install Lark
 
     $ pip install lark --upgrade

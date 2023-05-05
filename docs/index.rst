@@ -89,6 +89,7 @@ Resources
    -  Unofficial
 
       -  `Program Synthesis is Possible`_ - Creates a DSL for Z3
+      -  `Using Lark to Parse Text - Robin Reynolds-Haertle (PyCascades 2023) <https://www.youtube.com/watch?v=CeOtqlh0UuQ>`_ (video presentation)
 
 -  Guides
 

@@ -5,7 +5,10 @@ from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, 
 
 if TYPE_CHECKING:
     from .lexer import TerminalDef, Token
-    import rich
+    try:
+        import rich
+    except ImportError:
+        pass
     if sys.version_info >= (3, 8):
         from typing import Literal
     else:
@@ -86,7 +89,7 @@ class Tree(Generic[_Leaf_T]):
         """
         return ''.join(self._pretty(0, indent_str))
 
-    def __rich__(self, parent:'rich.tree.Tree'=None) -> 'rich.tree.Tree':
+    def __rich__(self, parent:Optional['rich.tree.Tree']=None) -> 'rich.tree.Tree':
         """Returns a tree widget for the 'rich' library.
 
         Example:

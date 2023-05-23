@@ -1,9 +1,7 @@
-import codecs
 import sys
 import json
 
-from lark import Lark
-from lark.grammar import RuleOptions, Rule
+from lark.grammar import Rule
 from lark.lexer import TerminalDef
 from lark.tools import lalr_argparser, build_lalr
 

@@ -4,8 +4,8 @@ from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
 from typing import (
-    TypeVar, Type, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Pattern as REPattern, ClassVar, TYPE_CHECKING, overload
+    TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
+    ClassVar, TYPE_CHECKING, overload
 )
 from types import ModuleType
 import warnings

@@ -1,7 +1,7 @@
 import sys
 from copy import deepcopy
 
-from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, Any, TYPE_CHECKING
+from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .lexer import TerminalDef, Token

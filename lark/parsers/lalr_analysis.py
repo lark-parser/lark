@@ -220,7 +220,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                     if nt2 not in self.reads:
                         continue
                     for j in range(i + 1, len(rp.rule.expansion)):
-                        if not rp.rule.expansion[j] in self.NULLABLE:
+                        if rp.rule.expansion[j] not in self.NULLABLE:
                             break
                     else:
                         includes.append(nt2)

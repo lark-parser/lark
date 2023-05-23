@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize

@@ -145,11 +145,12 @@ For a more thorough and objective comparison, checkout the [Python Parsing Bench
 ### Projects using Lark
 
  - [Poetry](https://github.com/python-poetry/poetry-core) - A utility for dependency management and packaging
- - [tartiflette](https://github.com/dailymotion/tartiflette) - a GraphQL server by Dailymotion
+ - [Vyper](https://github.com/vyperlang/vyper) - Pythonic Smart Contract Language for the EVM
  - [PyQuil](https://github.com/rigetti/pyquil) - Python library for quantum programming using Quil
  - [Preql](https://github.com/erezsh/preql) - An interpreted relational query language that compiles to SQL
  - [Hypothesis](https://github.com/HypothesisWorks/hypothesis) - Library for property-based testing
  - [mappyfile](https://github.com/geographika/mappyfile) - a MapFile parser for working with MapServer configuration
+ - [tartiflette](https://github.com/dailymotion/tartiflette) - GraphQL server by Dailymotion
  - [synapse](https://github.com/vertexproject/synapse) - an intelligence analysis platform
  - [Datacube-core](https://github.com/opendatacube/datacube-core) - Open Data Cube analyses continental scale Earth Observation data through time
  - [SPFlow](https://github.com/SPFlow/SPFlow) - Library for Sum-Product Networks

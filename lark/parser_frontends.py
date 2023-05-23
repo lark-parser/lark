@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional, Collection
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
@@ -38,7 +38,11 @@ _parser_creators: 'Dict[str, Callable[[LexerConf, Any, Any], Any]]' = {}
 class ParsingFrontend(Serialize):
     __serialize_fields__ = 'lexer_conf', 'parser_conf', 'parser'
 
-    def __init__(self, lexer_conf, parser_conf, options, parser=None):
+    lexer_conf: LexerConf
+    parser_conf: ParserConf
+    options: Any
+
+    def __init__(self, lexer_conf: LexerConf, parser_conf: ParserConf, options, parser=None):
         self.parser_conf = parser_conf
         self.lexer_conf = lexer_conf
         self.options = options
@@ -61,16 +65,17 @@ class ParsingFrontend(Serialize):
             self.skip_lexer = True
             return
 
-        try:
+        if isinstance(lexer_type, type):
+            assert issubclass(lexer_type, Lexer)
+            self.lexer = _wrap_lexer(lexer_type)(lexer_conf)
+        elif isinstance(lexer_type, str):
             create_lexer = {
                 'basic': create_basic_lexer,
                 'contextual': create_contextual_lexer,
             }[lexer_type]
-        except KeyError:
-            assert issubclass(lexer_type, Lexer), lexer_type
-            self.lexer = _wrap_lexer(lexer_type)(lexer_conf)
-        else:
             self.lexer = create_lexer(lexer_conf, self.parser, lexer_conf.postlex, options)
+        else:
+            raise TypeError("Bad value for lexer_type: {lexer_type}")
 
         if lexer_conf.postlex:
             self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
@@ -85,17 +90,19 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
-    def _make_lexer_thread(self, text):
+    def _make_lexer_thread(self, text: str):
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
         return text if self.skip_lexer else cls.from_text(self.lexer, text)
 
-    def parse(self, text, start=None, on_error=None):
+    def parse(self, text: str, start=None, on_error=None):
         chosen_start = self._verify_start(start)
         kw = {} if on_error is None else {'on_error': on_error}
         stream = self._make_lexer_thread(text)
         return self.parser.parse(stream, chosen_start, **kw)
 
-    def parse_interactive(self, text=None, start=None):
+    def parse_interactive(self, text: Optional[str]=None, start=None):
+        # TODO BREAK - Change text from Optional[str] to text: str = ''.
+        #   Would break behavior of exhaust_lexer(), which currently raises TypeError, and after the change would just return []
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
@@ -133,17 +140,17 @@ class PostLexConnector:
 
 
 
-def create_basic_lexer(lexer_conf, parser, postlex, options):
+def create_basic_lexer(lexer_conf, parser, postlex, options) -> BasicLexer:
     cls = (options and options._plugins.get('BasicLexer')) or BasicLexer
     return cls(lexer_conf)
 
-def create_contextual_lexer(lexer_conf, parser, postlex, options):
+def create_contextual_lexer(lexer_conf: LexerConf, parser, postlex, options) -> ContextualLexer:
     cls = (options and options._plugins.get('ContextualLexer')) or ContextualLexer
-    states = {idx:list(t.keys()) for idx, t in parser._parse_table.states.items()}
-    always_accept = postlex.always_accept if postlex else ()
+    states: Dict[str, Collection[str]] = {idx:list(t.keys()) for idx, t in parser._parse_table.states.items()}
+    always_accept: Collection[str] = postlex.always_accept if postlex else ()
     return cls(lexer_conf, states, always_accept=always_accept)
 
-def create_lalr_parser(lexer_conf, parser_conf, options=None):
+def create_lalr_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options=None) -> LALR_Parser:
     debug = options.debug if options else False
     strict = options.strict if options else False
     cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
@@ -174,7 +181,7 @@ class EarleyRegexpMatcher:
         return self.regexps[term.name].match(text, index)
 
 
-def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
+def create_earley_parser__dynamic(lexer_conf: LexerConf, parser_conf: ParserConf, **kw):
     if lexer_conf.callbacks:
         raise GrammarError("Earley's dynamic lexer doesn't support lexer_callbacks.")
 
@@ -184,10 +191,10 @@ def create_earley_parser__dynamic(lexer_conf, parser_conf, options=None, **kw):
 def _match_earley_basic(term, token):
     return term.name == token.type
 
-def create_earley_parser__basic(lexer_conf, parser_conf, options, **kw):
+def create_earley_parser__basic(lexer_conf: LexerConf, parser_conf: ParserConf, **kw):
     return earley.Parser(lexer_conf, parser_conf, _match_earley_basic, **kw)
 
-def create_earley_parser(lexer_conf, parser_conf, options):
+def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options) -> earley.Parser:
     resolve_ambiguity = options.ambiguity == 'resolve'
     debug = options.debug if options else False
     tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
@@ -196,12 +203,12 @@ def create_earley_parser(lexer_conf, parser_conf, options):
     if lexer_conf.lexer_type == 'dynamic':
         f = create_earley_parser__dynamic
     elif lexer_conf.lexer_type == 'dynamic_complete':
-        extra['complete_lex'] =True
+        extra['complete_lex'] = True
         f = create_earley_parser__dynamic
     else:
         f = create_earley_parser__basic
 
-    return f(lexer_conf, parser_conf, options, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class, **extra)
+    return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class, **extra)
 
 
 

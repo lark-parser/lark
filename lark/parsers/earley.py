@@ -9,6 +9,8 @@ The Earley parser outputs an SPPF-tree as per that document. The SPPF tree forma
 is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/sppf.html
 """
 
+import typing
+
 from collections import deque
 
 from ..lexer import Token
@@ -20,8 +22,15 @@ from ..grammar import NonTerminal
 from .earley_common import Item
 from .earley_forest import ForestSumVisitor, SymbolNode, TokenNode, ForestToParseTree
 
+if typing.TYPE_CHECKING:
+    from ..common import LexerConf, ParserConf
+
 class Parser:
-    def __init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
+    lexer_conf: 'LexerConf'
+    parser_conf: 'ParserConf'
+    debug: bool
+
+    def __init__(self, lexer_conf: 'LexerConf', parser_conf: 'ParserConf', term_matcher, resolve_ambiguity=True, debug=False, tree_class=Tree):
         analysis = GrammarAnalyzer(parser_conf)
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf

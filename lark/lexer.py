@@ -404,7 +404,11 @@ class LexerState:
 
     __slots__ = 'text', 'line_ctr', 'last_token'
 
-    def __init__(self, text, line_ctr=None, last_token=None):
+    text: str
+    line_ctr: LineCounter
+    last_token: Optional[Token]
+
+    def __init__(self, text: str, line_ctr: Optional[LineCounter]=None, last_token: Optional[Token]=None):
         self.text = text
         self.line_ctr = line_ctr or LineCounter(b'\n' if isinstance(text, bytes) else '\n')
         self.last_token = last_token

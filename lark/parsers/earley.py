@@ -41,7 +41,8 @@ class Parser:
         self.FIRST = analysis.FIRST
         self.NULLABLE = analysis.NULLABLE
         self.callbacks = parser_conf.callbacks
-        self.predictions = {}
+        # TODO add typing info
+        self.predictions = {}   # type: ignore[var-annotated]
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
         #  the slow 'isupper' in is_terminal.

@@ -106,7 +106,7 @@ class ParsingFrontend(Serialize):
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
-        stream = self._make_lexer_thread(text)
+        stream = self._make_lexer_thread(text)  # type: ignore[arg-type]
         return self.parser.parse_interactive(stream, chosen_start)
 
 

@@ -1,6 +1,6 @@
 """Reconstruct text from a tree, based on Lark grammar"""
 
-from typing import List, Dict, Union, Callable, Iterable, Optional
+from typing import Dict, Callable, Iterable, Optional
 
 from .lark import Lark
 from .tree import Tree, ParseTree

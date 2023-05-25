@@ -258,6 +258,7 @@ class Lark(Serialize):
     grammar: 'Grammar'
     options: LarkOptions
     lexer: Lexer
+    parser: 'ParsingFrontend'
     terminals: Collection[TerminalDef]
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:

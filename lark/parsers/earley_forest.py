@@ -15,7 +15,6 @@ from functools import partial
 
 from ..parse_tree_builder import AmbiguousIntermediateExpander
 from ..visitors import Discard
-from ..lexer import Token
 from ..utils import logger
 from ..tree import Tree
 
@@ -85,7 +84,8 @@ class SymbolNode(ForestNode):
     def children(self):
         """Returns a list of this node's children sorted from greatest to
         least priority."""
-        if not self.paths_loaded: self.load_paths()
+        if not self.paths_loaded:
+            self.load_paths()
         return sorted(self._children, key=attrgetter('sort_key'))
 
     def __iter__(self):

@@ -277,7 +277,7 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 
 // Python terminals
 
-!name: NAME | "match" | "case"
+!name: NAME | "match" | "case" | "_"
 NAME: /[^\W\d]\w*/
 COMMENT: /#[^\n]*/
 

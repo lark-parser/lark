@@ -116,7 +116,7 @@ class InteractiveParser:
     def resume_parse(self):
         """Resume automated parsing from the current state.
         """
-        return self.parser.parse_from_state(self.parser_state, last_token=self.lexer_state.state.last_token)
+        return self.parser.parse_from_state(self.parser_state, last_token=self.lexer_thread.state.last_token)
 
 
 

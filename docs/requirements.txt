@@ -1,7 +1,7 @@
 # https://docs.readthedocs.io/en/stable/guides/specifying-dependencies.html#specifying-a-requirements-file
 pillow
 recommonmark
-requests==2.28.1
+requests==2.31.0
 sphinx-gallery
 sphinx_markdown_tables
 sphinx_rtd_theme>=1.2

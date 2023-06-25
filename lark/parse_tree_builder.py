@@ -331,7 +331,7 @@ class ParseTreeBuilder:
         self.ambiguous = ambiguous
         self.maybe_placeholders = maybe_placeholders
 
-        self.rule_builders = list(self._init_builders(rules))
+        self.rule_builders = self._init_builders(rules)
 
     def _init_builders(self, rules):
         propagate_positions = make_propagate_positions(self.propagate_positions)
@@ -341,13 +341,13 @@ class ParseTreeBuilder:
             keep_all_tokens = options.keep_all_tokens
             expand_single_child = options.expand1
 
-            wrapper_chain = list(filter(None, [
+            wrapper_chain = filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
                 maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
                 propagate_positions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
                 self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class)
-            ]))
+            ])
 
             yield rule, wrapper_chain
 
@@ -362,6 +362,8 @@ class ParseTreeBuilder:
             default_callback = self.tree_class
 
         for rule, wrapper_chain in self.rule_builders:
+            if rule in callbacks:
+                raise GrammarError("Rule '%s' already exists" % (rule,))
 
             user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:
@@ -376,9 +378,6 @@ class ParseTreeBuilder:
 
             for w in wrapper_chain:
                 f = w(f)
-
-            if rule in callbacks:
-                raise GrammarError("Rule '%s' already exists" % (rule,))
 
             callbacks[rule] = f
 

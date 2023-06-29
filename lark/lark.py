@@ -87,7 +87,9 @@ class LarkOptions(Serialize):
     transformer
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
-            Propagates (line, column, end_line, end_column) attributes into all tree branches.
+            Propagates positional attributes into the 'meta' attribute of all tree branches.
+            Sets attributes: (line, column, end_line, end_column, start_pos, end_pos,
+                              container_line, container_column, container_end_line, container_end_column)
             Accepts ``False``, ``True``, or a callable, which will filter which nodes to ignore when propagating.
     maybe_placeholders
             When ``True``, the ``[]`` operator returns ``None`` when not matched.

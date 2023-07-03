@@ -50,6 +50,9 @@ class Tree(Generic[_Leaf_T]):
             meta attributes: (line, column, end_line, end_column, start_pos, end_pos,
                               container_line, container_column, container_end_line, container_end_column)
             container_* attributes consider all symbols, including those that have been inlined in the tree.
+            For example, in the rule 'a: _A B _C', the regular attributes will mark the start and end of B,
+            but the container_* attributes will also include _A and _C in the range. However, rules that
+            contain 'a' will consider it in full, including _A and _C for all attributes.
     """
 
     data: str

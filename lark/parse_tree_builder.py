@@ -50,6 +50,7 @@ class PropagatePositions:
 
                 res_meta.container_line = getattr(first_meta, 'container_line', first_meta.line)
                 res_meta.container_column = getattr(first_meta, 'container_column', first_meta.column)
+                res_meta.container_start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)
 
             last_meta = self._pp_get_meta(reversed(children))
             if last_meta is not None:
@@ -61,6 +62,7 @@ class PropagatePositions:
 
                 res_meta.container_end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
                 res_meta.container_end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
+                res_meta.container_end_pos = getattr(first_meta, 'container_end_pos', last_meta.end_pos)
 
         return res
 

@@ -534,6 +534,7 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
 
                 @v_args(meta=True)
                 def mul(self, meta, children):
+                    logger.info(f'mul at line {meta.line}')
                     left, right = children
                     return left * right
 

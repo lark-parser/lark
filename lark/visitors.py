@@ -520,7 +520,7 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
 
     Parameters:
         inline (bool, optional): Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
-        meta (bool, optional): Provides two arguments: ``children`` and ``meta`` (instead of just the first)
+        meta (bool, optional): Provides two arguments: ``meta`` and ``children`` (instead of just the latter)
         tree (bool, optional): Provides the entire tree as the argument, instead of the children.
         wrapper (function, optional): Provide a function to decorate all methods.
 
@@ -531,6 +531,12 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
             class SolveArith(Transformer):
                 def add(self, left, right):
                     return left + right
+
+                @v_args(meta=True)
+                def mul(self, meta, children):
+                    logger.info(f'mul at line {meta.line}')
+                    left, right = children
+                    return left * right
 
 
             class ReverseNotation(Transformer_InPlace):

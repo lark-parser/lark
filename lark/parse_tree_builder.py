@@ -62,7 +62,7 @@ class PropagatePositions:
 
                 res_meta.container_end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
                 res_meta.container_end_column = getattr(last_meta, 'container_end_column', last_meta.end_column)
-                res_meta.container_end_pos = getattr(first_meta, 'container_end_pos', last_meta.end_pos)
+                res_meta.container_end_pos = getattr(last_meta, 'container_end_pos', last_meta.end_pos)
 
         return res
 

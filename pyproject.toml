@@ -68,6 +68,7 @@ packages = [
 include-package-data = true
 
 [tool.setuptools.package-data]
+"*" = ["*.lark"]
 lark = ["py.typed"]
 
 [tool.setuptools.dynamic]

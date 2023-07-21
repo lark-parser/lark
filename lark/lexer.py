@@ -584,23 +584,22 @@ class BasicLexer(Lexer):
 
             value, type_ = res
 
-            if type_ not in self.ignore_types:
+            ignored = type_ in self.ignore_types
+            t = None
+            if not ignored or type_ in self.callback:
                 t = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                line_ctr.feed(value, type_ in self.newline_types)
+            line_ctr.feed(value, type_ in self.newline_types)
+            if t is not None:
                 t.end_line = line_ctr.line
                 t.end_column = line_ctr.column
                 t.end_pos = line_ctr.char_pos
                 if t.type in self.callback:
                     t = self.callback[t.type](t)
+                if not ignored:
                     if not isinstance(t, Token):
                         raise LexError("Callbacks must return a token (returned %r)" % t)
-                lex_state.last_token = t
-                return t
-            else:
-                if type_ in self.callback:
-                    t2 = Token(type_, value, line_ctr.char_pos, line_ctr.line, line_ctr.column)
-                    self.callback[type_](t2)
-                line_ctr.feed(value, type_ in self.newline_types)
+                    lex_state.last_token = t
+                    return t
 
         # EOF
         raise EOFError(self)

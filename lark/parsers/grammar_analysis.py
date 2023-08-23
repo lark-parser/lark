@@ -1,3 +1,5 @@
+"Provides for superficial grammar analysis."
+
 from collections import Counter, defaultdict
 
 from ..utils import bfs, fzset, classify

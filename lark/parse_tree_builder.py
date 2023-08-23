@@ -1,3 +1,5 @@
+"""Provides functions for the automatic building and shaping of the parse-tree."""
+
 from typing import List
 
 from .exceptions import GrammarError, ConfigurationError

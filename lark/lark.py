@@ -494,6 +494,8 @@ class Lark(Serialize):
 
         Useful for caching and multiprocessing.
         """
+        if self.options.parser != 'lalr':
+            raise NotImplementedError("Lark.save() is only implemented for the LALR(1) parser.")
         data, m = self.memo_serialize([TerminalDef, Rule])
         if exclude_options:
             data["options"] = {n: v for n, v in data["options"].items() if n not in exclude_options}

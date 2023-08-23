@@ -214,7 +214,7 @@ def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options
 
 class CYK_FrontEnd:
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self._analysis = GrammarAnalyzer(parser_conf)
+        # self._analysis = GrammarAnalyzer(parser_conf)
         self.parser = cyk.Parser(parser_conf.rules)
 
         self.callbacks = parser_conf.callbacks

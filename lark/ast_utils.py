@@ -1,5 +1,5 @@
 """
-    Module of utilities for transforming a lark.Tree into a custom Abstract Syntax Tree
+    Module of utilities for transforming a lark.Tree into a custom Abstract Syntax Tree (AST defined in classes)
 """
 
 import inspect, re

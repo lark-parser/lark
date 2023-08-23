@@ -1,4 +1,5 @@
-"""Reconstruct text from a tree, based on Lark grammar"""
+"""This is an experimental tool for reconstructing text from a shaped tree, based on a Lark grammar.
+"""
 
 from typing import Dict, Callable, Iterable, Optional
 

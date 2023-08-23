@@ -30,6 +30,7 @@ except NameError:
     has_interegular = False
 
 class Pattern(Serialize, ABC):
+    "An abstraction over regular expressions."
 
     value: str
     flags: Collection[str]
@@ -112,6 +113,7 @@ class PatternRE(Pattern):
 
 
 class TerminalDef(Serialize):
+    "A definition of a terminal"
     __serialize_fields__ = 'name', 'pattern', 'priority'
     __serialize_namespace__ = PatternStr, PatternRE
 
@@ -269,6 +271,8 @@ class Token(str):
 
 
 class LineCounter:
+    "A utility class for keeping track of line & column information"
+
     __slots__ = 'char_pos', 'line', 'column', 'line_start_pos', 'newline_char'
 
     def __init__(self, newline_char):

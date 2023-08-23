@@ -1,4 +1,6 @@
-"""Parses and creates Grammar objects"""
+"""Parses and compiles Lark grammars into an internal representation.
+"""
+
 import hashlib
 import os.path
 import sys

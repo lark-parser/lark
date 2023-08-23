@@ -1,4 +1,4 @@
-"Provides Indentation services for languages with indentation similar to Python"
+"Provides a post-lexer for implementing Python-style indentation."
 
 from abc import ABC, abstractmethod
 from typing import List, Iterator

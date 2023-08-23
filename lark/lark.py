@@ -62,7 +62,7 @@ class LarkOptions(Serialize):
     regex: bool
     g_regex_flags: int
     keep_all_tokens: bool
-    tree_class: Any
+    tree_class: Callable
     parser: _ParserArgType
     lexer: _LexerArgType
     ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
@@ -73,6 +73,7 @@ class LarkOptions(Serialize):
     edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
     import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
     source_path: Optional[str]
+    ordered_sets: bool
 
     OPTIONS_DOC = """
     **===  General Options  ===**
@@ -141,6 +142,8 @@ class LarkOptions(Serialize):
             Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
     use_bytes
             Accept an input of type ``bytes`` instead of ``str``.
+    ordered_sets
+            Should Earley use ordered-sets to achieve stable output (~10%% slower than regular sets. Default: True)
     edit_terminals
             A callback for editing the terminals before parse.
     import_paths
@@ -179,6 +182,7 @@ class LarkOptions(Serialize):
         'edit_terminals': None,
         'g_regex_flags': 0,
         'use_bytes': False,
+        'ordered_sets': True,
         'import_paths': [],
         'source_path': None,
         '_plugins': {},

@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, Optional, Collection
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
-from .utils import get_regexp_width, Serialize
+from .utils import get_regexp_width, Serialize, OrderedSet
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
@@ -208,7 +208,8 @@ def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options
     else:
         f = create_earley_parser__basic
 
-    return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class, **extra)
+    return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity,
+             debug=debug, tree_class=tree_class, ordered_sets=options.ordered_sets, **extra)
 
 
 

@@ -3,4 +3,6 @@ Example Grammars
 
 This directory is a collection of lark grammars, taken from real world projects.
 
-- `Verilog <verilog.lark>`_ - Taken from https://github.com/circuitgraph/circuitgraph/blob/master/circuitgraph/parsing/verilog.lark
+- `Verilog`_ - Taken from https://github.com/circuitgraph/circuitgraph
+
+.. _Verilog: https://github.com/circuitgraph/circuitgraph/blob/main/circuitgraph/parsing/verilog.lark

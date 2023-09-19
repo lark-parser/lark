@@ -39,7 +39,6 @@ from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
 
-__path__ = os.path.dirname(__file__)
 def _read(n, *args):
     with open(os.path.join(__path__, n), *args) as f:
         return f.read()

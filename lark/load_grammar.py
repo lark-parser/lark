@@ -25,7 +25,6 @@ from .tree import Tree, SlottedTree as ST
 from .visitors import Transformer, Visitor, v_args, Transformer_InPlace, Transformer_NonRecursive
 inline_args = v_args(inline=True)
 
-__path__ = os.path.dirname(__file__)
 IMPORT_PATHS = ['grammars']
 
 EXT = '.lark'

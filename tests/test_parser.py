@@ -39,9 +39,6 @@ from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
 
-def _read(n, *args):
-    with open(os.path.join(__path__, n), *args) as f:
-        return f.read()
 
 class TestParsers(unittest.TestCase):
     def test_big_list(self):

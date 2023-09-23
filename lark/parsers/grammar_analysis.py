@@ -1,16 +1,20 @@
 "Provides for superficial grammar analysis."
 
 from collections import Counter, defaultdict
+from typing import List, Dict, Iterator, FrozenSet, Set
 
 from ..utils import bfs, fzset, classify
 from ..exceptions import GrammarError
-from ..grammar import Rule, Terminal, NonTerminal
+from ..grammar import Rule, Terminal, NonTerminal, Symbol
+from ..common import ParserConf
 
 
 class RulePtr:
     __slots__ = ('rule', 'index')
+    rule: Rule
+    index: int
 
-    def __init__(self, rule, index):
+    def __init__(self, rule: Rule, index: int):
         assert isinstance(rule, Rule)
         assert index <= len(rule.expansion)
         self.rule = rule
@@ -22,26 +26,36 @@ class RulePtr:
         return '<%s : %s * %s>' % (self.rule.origin.name, ' '.join(before), ' '.join(after))
 
     @property
-    def next(self):
+    def next(self) -> Symbol:
         return self.rule.expansion[self.index]
 
-    def advance(self, sym):
+    def advance(self, sym: Symbol) -> 'RulePtr':
         assert self.next == sym
         return RulePtr(self.rule, self.index+1)
 
     @property
-    def is_satisfied(self):
+    def is_satisfied(self) -> bool:
         return self.index == len(self.rule.expansion)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, RulePtr):
+            return NotImplemented
         return self.rule == other.rule and self.index == other.index
-    def __hash__(self):
+
+    def __hash__(self) -> int:
         return hash((self.rule, self.index))
 
+
+State = FrozenSet[RulePtr]
 
 # state generation ensures no duplicate LR0ItemSets
 class LR0ItemSet:
     __slots__ = ('kernel', 'closure', 'transitions', 'lookaheads')
+
+    kernel: State
+    closure: State
+    transitions: Dict[Symbol, 'LR0ItemSet']
+    lookaheads: Dict[Symbol, Set[Rule]]
 
     def __init__(self, kernel, closure):
         self.kernel = fzset(kernel)
@@ -124,7 +138,7 @@ def calculate_sets(rules):
 
 
 class GrammarAnalyzer:
-    def __init__(self, parser_conf, debug=False, strict=False):
+    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
         self.debug = debug
         self.strict = strict
 
@@ -132,7 +146,7 @@ class GrammarAnalyzer:
                       for start in parser_conf.start}
 
         rules = parser_conf.rules + list(root_rules.values())
-        self.rules_by_origin = classify(rules, lambda r: r.origin)
+        self.rules_by_origin: Dict[NonTerminal, List[Rule]] = classify(rules, lambda r: r.origin)
 
         if len(rules) != len(set(rules)):
             duplicates = [item for item, count in Counter(rules).items() if count > 1]
@@ -163,14 +177,14 @@ class GrammarAnalyzer:
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-    def expand_rule(self, source_rule, rules_by_origin=None):
+    def expand_rule(self, source_rule: NonTerminal, rules_by_origin=None) -> State:
         "Returns all init_ptrs accessible by rule (recursive)"
 
         if rules_by_origin is None:
             rules_by_origin = self.rules_by_origin
 
         init_ptrs = set()
-        def _expand_rule(rule):
+        def _expand_rule(rule: NonTerminal) -> Iterator[NonTerminal]:
             assert not rule.is_term, rule
 
             for r in rules_by_origin[rule]:
@@ -180,6 +194,7 @@ class GrammarAnalyzer:
                 if r.expansion: # if not empty rule
                     new_r = init_ptr.next
                     if not new_r.is_term:
+                        assert isinstance(new_r, NonTerminal)
                         yield new_r
 
         for _ in bfs([source_rule], _expand_rule):

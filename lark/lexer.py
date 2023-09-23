@@ -436,7 +436,7 @@ class LexerThread:
         self.state = lexer_state
 
     @classmethod
-    def from_text(cls, lexer: 'Lexer', text: str):
+    def from_text(cls, lexer: 'Lexer', text: str) -> 'LexerThread':
         return cls(lexer, LexerState(text))
 
     def lex(self, parser_state):

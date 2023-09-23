@@ -265,13 +265,13 @@ class fzset(frozenset):
         return '{%s}' % ', '.join(map(repr, self))
 
 
-def classify_bool(seq: Sequence, pred: Callable) -> Any:
+def classify_bool(seq: Iterable, pred: Callable) -> Any:
     false_elems = []
     true_elems = [elem for elem in seq if pred(elem) or false_elems.append(elem)]  # type: ignore[func-returns-value]
     return true_elems, false_elems
 
 
-def bfs(initial: Sequence, expand: Callable) -> Iterator:
+def bfs(initial: Iterable, expand: Callable) -> Iterator:
     open_q = deque(list(initial))
     visited = set(open_q)
     while open_q:

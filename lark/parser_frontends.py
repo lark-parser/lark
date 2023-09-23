@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Collection
+from typing import Any, Callable, Dict, Optional, Collection, Union
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize
@@ -90,7 +90,7 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
-    def _make_lexer_thread(self, text: str):
+    def _make_lexer_thread(self, text: str) -> Union[str, LexerThread]:
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
         return text if self.skip_lexer else cls.from_text(self.lexer, text)
 

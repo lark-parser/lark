@@ -3,18 +3,19 @@
 # Author: Erez Shinan (2017)
 # Email : erezshin@gmail.com
 from copy import deepcopy, copy
-from typing import Dict, Any
-from ..lexer import Token
+from typing import Dict, Any, Generic, List, Optional
+from ..lexer import Token, LexerThread
 from ..utils import Serialize
+from ..common import ParserConf, ParserCallbacks
 
-from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable
+from .lalr_analysis import LALR_Analyzer, Shift, IntParseTable, ParseTableBase, StateT
 from .lalr_interactive_parser import InteractiveParser
 from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
 
 ###{standalone
 
 class LALR_Parser(Serialize):
-    def __init__(self, parser_conf, debug=False, strict=False):
+    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
         analysis = LALR_Analyzer(parser_conf, debug=debug, strict=strict)
         analysis.compute_lalr()
         callbacks = parser_conf.callbacks
@@ -33,7 +34,7 @@ class LALR_Parser(Serialize):
     def serialize(self, memo: Any = None) -> Dict[str, Any]:
         return self._parse_table.serialize(memo)
 
-    def parse_interactive(self, lexer, start):
+    def parse_interactive(self, lexer: LexerThread, start: str):
         return self.parser.parse(lexer, start, start_interactive=True)
 
     def parse(self, lexer, start, on_error=None):
@@ -69,10 +70,18 @@ class LALR_Parser(Serialize):
                     e = e2
 
 
-class ParseConf:
+class ParseConf(Generic[StateT]):
     __slots__ = 'parse_table', 'callbacks', 'start', 'start_state', 'end_state', 'states'
 
-    def __init__(self, parse_table, callbacks, start):
+    parse_table: ParseTableBase[StateT]
+    callbacks: ParserCallbacks
+    start: str
+
+    start_state: StateT
+    end_state: StateT
+    states: Dict[StateT, Dict[str, tuple]]
+
+    def __init__(self, parse_table: ParseTableBase[StateT], callbacks: ParserCallbacks, start: str):
         self.parse_table = parse_table
 
         self.start_state = self.parse_table.start_states[start]
@@ -83,21 +92,26 @@ class ParseConf:
         self.start = start
 
 
-class ParserState:
+class ParserState(Generic[StateT]):
     __slots__ = 'parse_conf', 'lexer', 'state_stack', 'value_stack'
 
-    def __init__(self, parse_conf, lexer, state_stack=None, value_stack=None):
+    parse_conf: ParseConf[StateT]
+    lexer: LexerThread
+    state_stack: List[StateT]
+    value_stack: list
+
+    def __init__(self, parse_conf: ParseConf[StateT], lexer: LexerThread, state_stack=None, value_stack=None):
         self.parse_conf = parse_conf
         self.lexer = lexer
         self.state_stack = state_stack or [self.parse_conf.start_state]
         self.value_stack = value_stack or []
 
     @property
-    def position(self):
+    def position(self) -> StateT:
         return self.state_stack[-1]
 
     # Necessary for match_examples() to work
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if not isinstance(other, ParserState):
             return NotImplemented
         return len(self.state_stack) == len(other.state_stack) and self.position == other.position
@@ -110,10 +124,10 @@ class ParserState:
             deepcopy(self.value_stack),
         )
 
-    def copy(self):
+    def copy(self) -> 'ParserState[StateT]':
         return copy(self)
 
-    def feed_token(self, token, is_end=False):
+    def feed_token(self, token: Token, is_end=False) -> Any:
         state_stack = self.state_stack
         value_stack = self.value_stack
         states = self.parse_conf.states
@@ -158,12 +172,16 @@ class ParserState:
                     return value_stack[-1]
 
 class _Parser:
-    def __init__(self, parse_table, callbacks, debug=False):
+    parse_table: ParseTableBase
+    callbacks: ParserCallbacks
+    debug: bool
+
+    def __init__(self, parse_table: ParseTableBase, callbacks: ParserCallbacks, debug: bool=False):
         self.parse_table = parse_table
         self.callbacks = callbacks
         self.debug = debug
 
-    def parse(self, lexer, start, value_stack=None, state_stack=None, start_interactive=False):
+    def parse(self, lexer: LexerThread, start: str, value_stack=None, state_stack=None, start_interactive=False):
         parse_conf = ParseConf(self.parse_table, self.callbacks, start)
         parser_state = ParserState(parse_conf, lexer, state_stack, value_stack)
         if start_interactive:
@@ -171,16 +189,17 @@ class _Parser:
         return self.parse_from_state(parser_state)
 
 
-    def parse_from_state(self, state, last_token=None):
+    def parse_from_state(self, state: ParserState, last_token: Optional[Token]=None):
         """Run the main LALR parser loop
 
         Parameters:
-            state (ParseState) - the initial state. Changed in-place.
-            last_token (optional, Token) - Used only for line information in case of an empty lexer.
+            state - the initial state. Changed in-place.
+            last_token - Used only for line information in case of an empty lexer.
         """
         try:
             token = last_token
             for token in state.lexer.lex(state):
+                assert token is not None
                 state.feed_token(token)
 
             end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)

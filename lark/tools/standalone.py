@@ -25,11 +25,10 @@
 #
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from types import ModuleType
 from typing import (
     TypeVar, Generic, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Union, Iterable, IO, TYPE_CHECKING, overload,
+    Union, Iterable, IO, TYPE_CHECKING, overload, Sequence,
     Pattern as REPattern, ClassVar, Set, Mapping
 )
 ###}

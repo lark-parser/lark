@@ -626,7 +626,7 @@ class ContextualLexer(Lexer):
     lexers: Dict[str, AbstractBasicLexer]
     root_lexer: AbstractBasicLexer
 
-    basic_lexer: Type[AbstractBasicLexer] = BasicLexer
+    BasicLexer: Type[AbstractBasicLexer] = BasicLexer
 
     def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
         terminals = list(conf.terminals)
@@ -649,14 +649,14 @@ class ContextualLexer(Lexer):
                 accepts = set(accepts) | set(conf.ignore) | set(always_accept)
                 lexer_conf = copy(trad_conf)
                 lexer_conf.terminals = [terminals_by_name[n] for n in accepts if n in terminals_by_name]
-                lexer = self.basic_lexer(lexer_conf, comparator)
+                lexer = self.BasicLexer(lexer_conf, comparator)
                 lexer_by_tokens[key] = lexer
 
             self.lexers[state] = lexer
 
         assert trad_conf.terminals is terminals
         trad_conf.skip_validation = True  # We don't need to verify all terminals again
-        self.root_lexer = self.basic_lexer(trad_conf, comparator)
+        self.root_lexer = self.BasicLexer(trad_conf, comparator)
 
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         try:

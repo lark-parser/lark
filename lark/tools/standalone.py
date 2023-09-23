@@ -64,6 +64,7 @@ EXTRACT_STANDALONE_FILES = [
     'common.py',
     'parse_tree_builder.py',
     'parsers/lalr_analysis.py',
+    'parsers/lalr_parser_state.py',
     'parsers/lalr_parser.py',
     'parser_frontends.py',
     'lark.py',

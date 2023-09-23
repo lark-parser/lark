@@ -15,6 +15,7 @@ except ImportError:
     pass
 if TYPE_CHECKING:
     from .common import LexerConf
+    from .parsers.lalr_parser_state import ParserState
 
 from .utils import classify, get_regexp_width, Serialize, logger
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -622,13 +623,12 @@ class BasicLexer(AbstractBasicLexer):
 
 
 class ContextualLexer(Lexer):
-
-    lexers: Dict[str, AbstractBasicLexer]
+    lexers: Dict[int, AbstractBasicLexer]
     root_lexer: AbstractBasicLexer
 
     BasicLexer: Type[AbstractBasicLexer] = BasicLexer
 
-    def __init__(self, conf: 'LexerConf', states: Dict[str, Collection[str]], always_accept: Collection[str]=()) -> None:
+    def __init__(self, conf: 'LexerConf', states: Dict[int, Collection[str]], always_accept: Collection[str]=()) -> None:
         terminals = list(conf.terminals)
         terminals_by_name = conf.terminals_by_name
 
@@ -658,7 +658,7 @@ class ContextualLexer(Lexer):
         trad_conf.skip_validation = True  # We don't need to verify all terminals again
         self.root_lexer = self.BasicLexer(trad_conf, comparator)
 
-    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
+    def lex(self, lexer_state: LexerState, parser_state: 'ParserState') -> Iterator[Token]:
         try:
             while True:
                 lexer = self.lexers[parser_state.position]

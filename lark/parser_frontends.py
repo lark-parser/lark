@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, Optional, Collection
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
-from .utils import get_regexp_width, Serialize, OrderedSet
+from .utils import get_regexp_width, Serialize
 from .parsers.grammar_analysis import GrammarAnalyzer
 from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk

@@ -9,7 +9,7 @@ The Earley parser outputs an SPPF-tree as per that document. The SPPF tree forma
 is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/sppf.html
 """
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Any
 from collections import deque
 
 from ..lexer import Token
@@ -30,7 +30,8 @@ class Parser:
     debug: bool
 
     def __init__(self, lexer_conf: 'LexerConf', parser_conf: 'ParserConf', term_matcher: Callable,
-                 resolve_ambiguity: bool=True, debug: bool=False, tree_class: type=Tree, ordered_sets: bool=True):
+                 resolve_ambiguity: bool=True, debug: bool=False,
+                 tree_class: Optional[type]=Tree, ordered_sets: bool=True):
         analysis = GrammarAnalyzer(parser_conf)
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf

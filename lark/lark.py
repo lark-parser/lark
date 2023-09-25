@@ -62,7 +62,7 @@ class LarkOptions(Serialize):
     regex: bool
     g_regex_flags: int
     keep_all_tokens: bool
-    tree_class: Optional[Callable[[str, Sequence], Any]]
+    tree_class: Optional[Callable[[str, List], Any]]
     parser: _ParserArgType
     lexer: _LexerArgType
     ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'

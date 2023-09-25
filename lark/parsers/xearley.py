@@ -14,7 +14,7 @@ uses regular expressions by necessity, achieving high-performance while maintain
 Earley's power in parsing any CFG.
 """
 
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Any
+from typing import TYPE_CHECKING, Callable, Optional, List, Any
 from collections import defaultdict
 
 from ..tree import Tree
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class Parser(BaseParser):
     def __init__(self, lexer_conf: 'LexerConf', parser_conf: 'ParserConf', term_matcher: Callable,
                  resolve_ambiguity: bool=True, complete_lex: bool=False, debug: bool=False,
-                 tree_class: Optional[type]=Tree, ordered_sets: bool=True):
+                 tree_class: Optional[Callable[[str, List], Any]]=Tree, ordered_sets: bool=True):
         BaseParser.__init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity,
                             debug, tree_class, ordered_sets)
         self.ignore = [Terminal(t) for t in lexer_conf.ignore]

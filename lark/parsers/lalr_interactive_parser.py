@@ -24,12 +24,16 @@ class InteractiveParser:
         warnings.warn("lexer_state will be removed in subsequent releases. Use lexer_thread instead.", DeprecationWarning)
         return self.lexer_thread
 
-    def feed_token(self, token: Token):
+    def feed_token(self, token: Token, no_callbacks=False):
         """Feed the parser with a token, and advance it to the next state, as if it received it from the lexer.
 
         Note that ``token`` has to be an instance of ``Token``.
+
+        When ``no_callbacks`` is used, no callbacks are applied to the values in the stack, which means
+        that no Tree instances are created. This leads to potentially weird results. Should primarily be used
+        if you don't want to use the parsing result and only care if it matches at all.
         """
-        return self.parser_state.feed_token(token, token.type == '$END')
+        return self.parser_state.feed_token(token, token.type == '$END', no_callbacks=no_callbacks)
 
     def iter_parse(self) -> Iterator[Token]:
         """Step through the different stages of the parse, by reading tokens from the lexer
@@ -106,7 +110,7 @@ class InteractiveParser:
             if t.isupper(): # is terminal?
                 new_cursor = copy(self)
                 try:
-                    new_cursor.feed_token(self.lexer_thread._Token(t, ''))
+                    new_cursor.feed_token(self.lexer_thread._Token(t, ''), no_callbacks=True)
                 except UnexpectedToken:
                     pass
                 else:
@@ -130,9 +134,9 @@ class ImmutableInteractiveParser(InteractiveParser):
     def __hash__(self):
         return hash((self.parser_state, self.lexer_thread))
 
-    def feed_token(self, token):
+    def feed_token(self, token, no_callbacks=True):
         c = copy(self)
-        c.result = InteractiveParser.feed_token(c, token)
+        c.result = InteractiveParser.feed_token(c, token, no_callbacks=no_callbacks)
         return c
 
     def exhaust_lexer(self):

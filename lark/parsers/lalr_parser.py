@@ -113,12 +113,12 @@ class ParserState:
     def copy(self):
         return copy(self)
 
-    def feed_token(self, token, is_end=False):
+    def feed_token(self, token, is_end=False, no_callbacks=False):
         state_stack = self.state_stack
         value_stack = self.value_stack
         states = self.parse_conf.states
         end_state = self.parse_conf.end_state
-        callbacks = self.parse_conf.callbacks
+        callbacks = self.parse_conf.callbacks if not no_callbacks else {}
 
         while True:
             state = state_stack[-1]
@@ -147,7 +147,7 @@ class ParserState:
                 else:
                     s = []
 
-                value = callbacks[rule](s)
+                value = callbacks[rule](s) if not no_callbacks else s
 
                 _action, new_state = states[state_stack[-1]][rule.origin.name]
                 assert _action is Shift

@@ -684,7 +684,7 @@ class Grammar:
         self.rule_defs = rule_defs
         self.ignore = ignore
 
-    def compile(self, start, terminals_to_keep):
+    def compile(self, start, terminals_to_keep) -> Tuple[List[TerminalDef], List[Rule], List[str]]:
         # We change the trees in-place (to support huge grammars)
         # So deepcopy allows calling compile more than once.
         term_defs = [(n, (nr_deepcopy_tree(t), p)) for n, (t, p) in self.term_defs]
@@ -733,7 +733,7 @@ class Grammar:
             ebnf_to_bnf.prefix = name
             anon_tokens_transf.rule_options = rule_options
             tree = transformer.transform(rule_tree)
-            res = ebnf_to_bnf.transform(tree)
+            res: Tree = ebnf_to_bnf.transform(tree)
             rules.append((name, res, options))
         rules += ebnf_to_bnf.new_rules
 
@@ -743,7 +743,7 @@ class Grammar:
         rule_tree_to_text = RuleTreeToText()
 
         simplify_rule = SimplifyRule_Visitor()
-        compiled_rules = []
+        compiled_rules: List[Rule] = []
         for rule_content in rules:
             name, tree, options = rule_content
             simplify_rule.visit(tree)
@@ -753,7 +753,7 @@ class Grammar:
                 if alias and name.startswith('_'):
                     raise GrammarError("Rule %s is marked for expansion (it starts with an underscore) and isn't allowed to have aliases (alias=%s)"% (name, alias))
 
-                empty_indices = [x==_EMPTY for x in expansion]
+                empty_indices = tuple(x==_EMPTY for x in expansion)
                 if any(empty_indices):
                     exp_options = copy(options) or RuleOptions()
                     exp_options.empty_indices = empty_indices
@@ -764,6 +764,7 @@ class Grammar:
                 for sym in expansion:
                     assert isinstance(sym, Symbol)
                     if sym.is_term and exp_options and exp_options.keep_all_tokens:
+                        assert isinstance(sym, Terminal)
                         sym.filter_out = False
                 rule = Rule(NonTerminal(name), expansion, i, alias, exp_options)
                 compiled_rules.append(rule)

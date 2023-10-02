@@ -25,11 +25,10 @@
 #
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from types import ModuleType
 from typing import (
     TypeVar, Generic, Type, Tuple, List, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    Union, Iterable, IO, TYPE_CHECKING, overload,
+    Union, Iterable, IO, TYPE_CHECKING, overload, Sequence,
     Pattern as REPattern, ClassVar, Set, Mapping
 )
 ###}
@@ -63,8 +62,9 @@ EXTRACT_STANDALONE_FILES = [
     'lexer.py',
     'common.py',
     'parse_tree_builder.py',
-    'parsers/lalr_parser.py',
     'parsers/lalr_analysis.py',
+    'parsers/lalr_parser_state.py',
+    'parsers/lalr_parser.py',
     'parser_frontends.py',
     'lark.py',
     'indenter.py',

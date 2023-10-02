@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, ClassVar
+from typing import Optional, Tuple, ClassVar, Sequence
 
 from .utils import Serialize
 
@@ -93,7 +93,15 @@ class Rule(Serialize):
     __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
     __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
 
-    def __init__(self, origin, expansion, order=0, alias=None, options=None):
+    origin: NonTerminal
+    expansion: Sequence[Symbol]
+    order: int
+    alias: Optional[str]
+    options: RuleOptions
+    _hash: int
+
+    def __init__(self, origin: NonTerminal, expansion: Sequence[Symbol],
+                 order: int=0, alias: Optional[str]=None, options: Optional[RuleOptions]=None):
         self.origin = origin
         self.expansion = expansion
         self.alias = alias

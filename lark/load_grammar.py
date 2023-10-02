@@ -11,7 +11,7 @@ from ast import literal_eval
 from contextlib import suppress
 from typing import List, Tuple, Union, Callable, Dict, Optional, Sequence
 
-from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors
+from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors, OrderedSet
 from .lexer import Token, TerminalDef, PatternStr, PatternRE
 
 from .parse_tree_builder import ParseTreeBuilder
@@ -781,7 +781,7 @@ class Grammar:
                     assert len({(r.alias, r.order, r.options) for r in dups}) == len(dups)
 
             # Remove duplicates
-            compiled_rules = list(set(compiled_rules))
+            compiled_rules = list(OrderedSet(compiled_rules))
 
         # Filter out unused rules
         while True:

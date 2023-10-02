@@ -208,7 +208,8 @@ def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options
     else:
         f = create_earley_parser__basic
 
-    return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity, debug=debug, tree_class=tree_class, **extra)
+    return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity,
+             debug=debug, tree_class=tree_class, ordered_sets=options.ordered_sets, **extra)
 
 
 

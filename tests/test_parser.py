@@ -2595,6 +2595,28 @@ def _make_parser_test(LEXER, PARSER):
             assert next(i) == 'a'
             assert next(i) == 'b'
 
+        @unittest.skipIf(PARSER!='lalr', "interactive_parser is only implemented for LALR at the moment")
+        def test_interactive_treeless_transformer(self):
+            grammar = r"""
+                start: SYM+
+
+                SYM: "a" | "b"
+            """
+
+            class SYMTransformer(lark.visitors.Transformer):
+                def SYM(self, token):
+                    return {"a": 1, "b": 2}[str(token)]
+
+            parser = _Lark(grammar, transformer=SYMTransformer())
+            res = parser.parse("aba")
+            self.assertEqual(res.children, [1, 2, 1])
+            ip = parser.parse_interactive("aba")
+            ip.exhaust_lexer()
+            # Previously `accepts` would call `SYMTransformer.SYM` with `Token('SYM', '')`, which would cause an error.
+            self.assertEqual(ip.accepts(), {"$END", "SYM"})
+            res = ip.feed_eof()
+            self.assertEqual(res.children, [1, 2, 1])
+
         @unittest.skipIf(PARSER!='lalr', "Tree-less mode is only supported in lalr")
         def test_default_in_treeless_mode(self):
             grammar = r"""

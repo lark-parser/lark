@@ -15,7 +15,7 @@ single_input: _NEWLINE | simple_stmt | compound_stmt _NEWLINE
 file_input: (_NEWLINE | stmt)*
 eval_input: testlist _NEWLINE*
 
-decorator: "@" dotted_name [ "(" [arguments] ")" ] _NEWLINE
+decorator: "@" test _NEWLINE
 decorators: decorator+
 decorated: decorators (classdef | funcdef | async_funcdef)
 
@@ -281,7 +281,7 @@ _NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
 NAME: /[^\W\d]\w*/
 COMMENT: /#[^\n]*/
 
-STRING: /([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+STRING: /([ubf]?r?|r[ubf])("(?!"")([^\\\n"]|\\(.|\n))*"|'(?!'')([^\\\n']|\\(.|\n))*')/i
 LONG_STRING: /([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
 
 _SPECIAL_DEC: "0".."9"        ("_"?  "0".."9"                       )*

@@ -95,8 +95,10 @@ for_stmt: "for" exprlist "in" testlist ":" suite ["else" ":" suite]
 try_stmt: "try" ":" suite except_clauses ["else" ":" suite] [finally]
         | "try" ":" suite finally   -> try_finally
 finally: "finally" ":" suite
-except_clauses: except_clause+
+except_clauses: (except_clause+ | except_star_clause+)
+except_star_clause: EXCEPT_STAR [test ["as" name]] ":" suite
 except_clause: "except" [test ["as" name]] ":" suite
+EXCEPT_STAR.1: "except*"
 // NB compile.c makes sure that the default except clause is last
 
 

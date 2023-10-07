@@ -11,7 +11,7 @@
 // NB: compound_stmt in single_input is followed by extra NEWLINE!
 //
 
-single_input: _NEWLINE | simple_stmt | compound_stmt _NEWLINE
+single_input: _NEWLINE* (simple_stmt | compound_stmt _NEWLINE*)
 file_input: (_NEWLINE | stmt)*
 eval_input: testlist _NEWLINE*
 
@@ -104,7 +104,7 @@ with_stmt: "with" with_items ":" suite
 with_items: with_item ("," with_item)*
 with_item: test ["as" name]
 
-match_stmt: "match" test ":" _NEWLINE _INDENT case+ _DEDENT
+match_stmt: "match" testlist ":" _NEWLINE _INDENT case+ _DEDENT
 
 case: "case" pattern ["if" test] ":" suite
 
@@ -125,11 +125,13 @@ case: "case" pattern ["if" test] ":" suite
 
 literal_pattern: inner_literal_pattern
 
-?inner_literal_pattern: "None" -> const_none
-                      | "True" -> const_true
-                      | "False" -> const_false
-                      | STRING -> string
-                      | number
+!?inner_literal_pattern: "None" -> const_none
+                       | "True" -> const_true
+                       | "False" -> const_false
+                       | STRING -> string
+                       | number
+                       | "-" number -> neg_number
+                       | "-"? number ("+"|"-") number -> complex_number
 
 attr_pattern: NAME ("." NAME)+ -> value
 
@@ -142,11 +144,9 @@ _sequence_pattern: (sequence_item_pattern ("," sequence_item_pattern)* ","?)?
                       | "*" NAME -> star_pattern
 
 class_pattern: name_or_attr_pattern "(" [arguments_pattern ","?] ")"
-arguments_pattern: pos_arg_pattern ["," keyws_arg_pattern]
-                 | keyws_arg_pattern -> no_pos_arguments
+arguments_pattern: as_pattern ("," as_pattern)* ("," keyw_arg_pattern ("," keyw_arg_pattern)*)?
+                 | keyw_arg_pattern ("," keyw_arg_pattern)*
 
-pos_arg_pattern: as_pattern ("," as_pattern)*
-keyws_arg_pattern: keyw_arg_pattern ("," keyw_arg_pattern)*
 keyw_arg_pattern: NAME "=" as_pattern
 
 

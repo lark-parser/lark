@@ -22,19 +22,20 @@ decorated: decorators (classdef | funcdef | async_funcdef)
 async_funcdef: "async" funcdef
 funcdef: "def" name "(" [parameters] ")" ["->" test] ":" suite
 
-parameters: paramvalue ("," paramvalue)* ["," SLASH ("," paramvalue)*] ["," [starparams | kwparams]]
-          | starparams
-          | kwparams
 
-SLASH: "/" // Otherwise the it will completely disappear and it will be undisguisable in the result
-starparams: (starparam | starguard) poststarparams
-starparam: "*" typedparam
-starguard: "*"
-poststarparams: ("," paramvalue)* ["," kwparams]
-kwparams: "**" typedparam ","?
+parameters: slash_params ("," paramvalue)* ("," star_etc?)?
+          | paramvalue ("," paramvalue)* ("," star_etc?)?
+          | star_etc
 
-?paramvalue: typedparam ("=" test)?
-?typedparam: name (":" test)?
+slash_params: paramvalue ("," paramvalue)* "," "/"
+star_etc: kwds ","?
+        | "*" typedstarparam ("," paramvalue)* ("," kwds)? ","?
+        | "*" ("," paramvalue)+ ("," kwds)? ","?
+kwds: "**" typedparam
+
+paramvalue: typedparam ("=" test)?
+typedparam: name (":" test)?
+typedstarparam: name (":" (test | star_expr))?
 
 
 lambdef: "lambda" [lambda_params] ":" test
@@ -224,12 +225,12 @@ _tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
 
 ?subscriptlist: subscript
               | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
-?subscript: test | ([test] ":" [test] [sliceop]) -> slice
+?subscript: test | star_expr | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
 ?exprlist: (expr|star_expr)
          | (expr|star_expr) (("," (expr|star_expr))+ [","]|",")
 ?testlist: test | testlist_tuple
-testlist_tuple: test (("," test)+ [","] | ",")
+testlist_tuple: (test|star_expr) (("," (test|star_expr))+ [","] | ",")
 _dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
 
 key_value: test ":"  test

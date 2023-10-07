@@ -102,7 +102,7 @@ except_clause: "except" [test ["as" name]] ":" suite
 
 with_stmt: "with" with_items ":" suite
 with_items: with_item ("," with_item)*
-with_item: test ["as" name]
+with_item: test ["as" (name|("(" _cs_list{name} ")"))]
 
 match_stmt: "match" testlist ":" _NEWLINE _INDENT case+ _DEDENT
 

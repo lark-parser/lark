@@ -250,14 +250,11 @@ kwargs: "**" test ("," argvalue)*
 ?argvalue: test ("=" test)?
 
 
-comprehension{comp_result}: comp_result comp_fors [comp_if]
-comp_fors: comp_for+
-comp_for: [ASYNC] "for" exprlist "in" or_test
+comprehension{comp_result}: comp_result comp_forifs
+comp_forifs: comp_forif+
+comp_forif: [ASYNC] "for" exprlist "in" or_test comp_if*
 ASYNC: "async"
 ?comp_if: "if" test_nocond
-
-// not used in grammar, but may appear in "node" passed from Parser to Compiler
-encoding_decl: name
 
 yield_expr: "yield" [testlist]
           | "yield" "from" test -> yield_from
@@ -267,7 +264,7 @@ string: STRING | LONG_STRING
 
 // Other terminals
 
-_NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
+_NEWLINE: (COMMENT? /\r?\n[\t ]*/ )+
 
 %ignore /[\t \f]+/  // WS
 %ignore /\\[\t \f]*\r?\n/   // LINE_CONT

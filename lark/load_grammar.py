@@ -9,10 +9,10 @@ from copy import copy, deepcopy
 import pkgutil
 from ast import literal_eval
 from contextlib import suppress
-from typing import List, Tuple, Union, Callable, Dict, Optional, Sequence
+from typing import List, Tuple, Union, Callable, Dict, Optional, Sequence, Generator
 
 from .utils import bfs, logger, classify_bool, is_id_continue, is_id_start, bfs_all_unique, small_factors, OrderedSet
-from .lexer import Token, TerminalDef, PatternStr, PatternRE
+from .lexer import Token, TerminalDef, PatternStr, PatternRE, Pattern
 
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import ParsingFrontend
@@ -195,10 +195,10 @@ REPEAT_BREAK_THRESHOLD = 50
 
 
 class FindRuleSize(Transformer):
-    def __init__(self, keep_all_tokens):
+    def __init__(self, keep_all_tokens: bool):
         self.keep_all_tokens = keep_all_tokens
 
-    def _will_not_get_removed(self, sym):
+    def _will_not_get_removed(self, sym: Symbol) -> bool:
         if isinstance(sym, NonTerminal):
             return not sym.name.startswith('_')
         if isinstance(sym, Terminal):
@@ -207,7 +207,7 @@ class FindRuleSize(Transformer):
             return False
         assert False, sym
 
-    def _args_as_int(self, args):
+    def _args_as_int(self, args: List[Union[int, Symbol]]) -> Generator[int, None, None]:
         for a in args:
             if isinstance(a, int):
                 yield a
@@ -216,10 +216,10 @@ class FindRuleSize(Transformer):
             else:
                 assert False
 
-    def expansion(self, args):
+    def expansion(self, args) -> int:
         return sum(self._args_as_int(args))
 
-    def expansions(self, args):
+    def expansions(self, args) -> int:
         return max(self._args_as_int(args))
 
 
@@ -232,7 +232,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         self.i = 0
         self.rule_options = None
 
-    def _name_rule(self, inner):
+    def _name_rule(self, inner: str):
         new_name = '__%s_%s_%d' % (self.prefix, inner, self.i)
         self.i += 1
         return new_name
@@ -243,7 +243,7 @@ class EBNF_to_BNF(Transformer_InPlace):
         self.rules_cache[key] = t
         return t
 
-    def _add_recurse_rule(self, type_, expr):
+    def _add_recurse_rule(self, type_: str, expr: Tree):
         try:
             return self.rules_cache[expr]
         except KeyError:
@@ -312,7 +312,7 @@ class EBNF_to_BNF(Transformer_InPlace):
             ])
             return self._add_rule(key, new_name, tree)
 
-    def _generate_repeats(self, rule, mn, mx):
+    def _generate_repeats(self, rule: Tree, mn: int, mx: int):
         """Generates a rule tree that repeats ``rule`` exactly between ``mn`` to ``mx`` times.
         """
         # For a small number of repeats, we can take the naive approach
@@ -343,7 +343,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
         return ST('expansions', [ST('expansion', [mn_target] + [diff_opt_target])])
 
-    def expr(self, rule, op, *args):
+    def expr(self, rule: Tree, op: Token, *args):
         if op.value == '?':
             empty = ST('expansion', [])
             return ST('expansions', [rule, empty])
@@ -372,7 +372,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
         assert False, op
 
-    def maybe(self, rule):
+    def maybe(self, rule: Tree):
         keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
         rule_size = FindRuleSize(keep_all_tokens).transform(rule)
         empty = ST('expansion', [_EMPTY] * rule_size)
@@ -382,11 +382,11 @@ class EBNF_to_BNF(Transformer_InPlace):
 class SimplifyRule_Visitor(Visitor):
 
     @staticmethod
-    def _flatten(tree):
+    def _flatten(tree: Tree):
         while tree.expand_kids_by_data(tree.data):
             pass
 
-    def expansion(self, tree):
+    def expansion(self, tree: Tree):
         # rules_list unpacking
         # a : b (c|d) e
         #  -->
@@ -417,7 +417,7 @@ class SimplifyRule_Visitor(Visitor):
             tree.data = 'expansions'
             tree.children = aliases
 
-    def expansions(self, tree):
+    def expansions(self, tree: Tree):
         self._flatten(tree)
         # Ensure all children are unique
         if len(set(tree.children)) != len(tree.children):
@@ -610,7 +610,7 @@ class PrepareLiterals(Transformer_InPlace):
         return ST('pattern', [PatternRE(regexp)])
 
 
-def _make_joined_pattern(regexp, flags_set):
+def _make_joined_pattern(regexp, flags_set) -> PatternRE:
     return PatternRE(regexp, ())
 
 class TerminalTreeToPattern(Transformer_NonRecursive):
@@ -618,15 +618,17 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         p ,= ps
         return p
 
-    def expansion(self, items):
-        assert items
+    def expansion(self, items: List[Pattern]) -> Pattern:
+        if not items:
+            return PatternStr('')
+
         if len(items) == 1:
             return items[0]
 
         pattern = ''.join(i.to_regexp() for i in items)
         return _make_joined_pattern(pattern, {i.flags for i in items})
 
-    def expansions(self, exps):
+    def expansions(self, exps: List[Pattern]) -> Pattern:
         if len(exps) == 1:
             return exps[0]
 
@@ -637,7 +639,8 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
         return _make_joined_pattern(pattern, {i.flags for i in exps})
 
-    def expr(self, args):
+    def expr(self, args) -> Pattern:
+        inner: Pattern
         inner, op = args[:2]
         if op == '~':
             if len(args) == 3:

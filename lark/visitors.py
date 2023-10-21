@@ -267,7 +267,7 @@ class TransformerChain(Generic[_Leaf_T, _Return_T]):
         return TransformerChain(*self.transformers + (other,))
 
 
-class Transformer_InPlace(Transformer):
+class Transformer_InPlace(Transformer[_Leaf_T, _Return_T]):
     """Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
 
     Useful for huge trees. Conservative in memory.
@@ -282,7 +282,7 @@ class Transformer_InPlace(Transformer):
         return self._transform_tree(tree)
 
 
-class Transformer_NonRecursive(Transformer):
+class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
     """Same as Transformer but non-recursive.
 
     Like Transformer, it doesn't change the original tree.

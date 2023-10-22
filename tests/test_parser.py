@@ -2542,7 +2542,7 @@ def _make_parser_test(LEXER, PARSER):
 
             res = ip.feed_eof(ip.lexer_thread.state.last_token)
             self.assertEqual(res, Tree('start', ['a', 'b']))
-            self.assertRaises(UnexpectedToken ,ip.feed_eof)
+            self.assertRaises(UnexpectedToken, ip.feed_eof)
 
             self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
             ip_copy.feed_token(Token('B', 'b'))

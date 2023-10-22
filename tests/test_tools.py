@@ -51,6 +51,46 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
 
+    def test_interactive(self):
+        grammar = """
+                start: A+ B*
+                A: "a"
+                B: "b"
+        """
+        context = self._create_standalone(grammar)
+        parser: Lark = context['Lark_StandAlone']()
+
+        ip = parser.parse_interactive()
+
+        UnexpectedToken = context['UnexpectedToken']
+        Token = context['Token']
+
+        self.assertRaises(UnexpectedToken, ip.feed_eof)
+        self.assertRaises(TypeError, ip.exhaust_lexer)
+        ip.feed_token(Token('A', 'a'))
+        res = ip.feed_eof()
+        self.assertEqual(res, Tree('start', ['a']))
+
+        ip = parser.parse_interactive("ab")
+
+        ip.exhaust_lexer()
+
+        ip_copy = ip.copy()
+        self.assertEqual(ip_copy.parser_state, ip.parser_state)
+        self.assertEqual(ip_copy.lexer_thread.state, ip.lexer_thread.state)
+        self.assertIsNot(ip_copy.parser_state, ip.parser_state)
+        self.assertIsNot(ip_copy.lexer_thread.state, ip.lexer_thread.state)
+        self.assertIsNot(ip_copy.lexer_thread.state.line_ctr, ip.lexer_thread.state.line_ctr)
+
+        res = ip.feed_eof(ip.lexer_thread.state.last_token)
+        self.assertEqual(res, Tree('start', ['a', 'b']))
+        self.assertRaises(UnexpectedToken, ip.feed_eof)
+
+        self.assertRaises(UnexpectedToken, ip_copy.feed_token, Token('A', 'a'))
+        ip_copy.feed_token(Token('B', 'b'))
+        res = ip_copy.feed_eof()
+        self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
+
     def test_contextual(self):
         grammar = """
         start: a b

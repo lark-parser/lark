@@ -24,6 +24,7 @@
 #
 #
 
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from types import ModuleType
 from typing import (
@@ -65,6 +66,7 @@ EXTRACT_STANDALONE_FILES = [
     'parsers/lalr_analysis.py',
     'parsers/lalr_parser_state.py',
     'parsers/lalr_parser.py',
+    'parsers/lalr_interactive_parser.py',
     'parser_frontends.py',
     'lark.py',
     'indenter.py',

@@ -14,7 +14,7 @@ from .tree import ParseTree, Tree
 from .utils import logger
 from .visitors import Discard, Transformer, Transformer_NonRecursive, Visitor, v_args
 
-__version__: str = "1.1.7"
+__version__: str = "1.1.8"
 
 __all__ = (
     "GrammarError",

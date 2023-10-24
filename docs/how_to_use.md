@@ -12,7 +12,7 @@ This is the recommended process for working with Lark:
 
 4. Use Lark's grammar features to [shape the tree](tree_construction.md): Get rid of superfluous rules by inlining them, and use aliases when specific cases need clarification.
 
-  - You can perform steps 1-4 repeatedly, gradually growing your grammar to include more sentences.
+   You can perform steps 1-4 repeatedly, gradually growing your grammar to include more sentences.
 
 5. Create a transformer to evaluate the parse-tree into a structure you'll be comfortable to work with. This may include evaluating literals, merging branches, or even converting the entire tree into your own set of AST classes.
 

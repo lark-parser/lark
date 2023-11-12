@@ -8,23 +8,28 @@ Welcome to Lark's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Overview
-   :hidden:
+   :caption: Tutorial
 
-   philosophy
+   json_tutorial
+   examples/index
    features
-   parsers
+
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials & Guides
-   :hidden:
+   :caption: How-to guides
 
-   json_tutorial
+   recipes
    how_to_use
    how_to_develop
-   recipes
-   examples/index
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Addendum
+
+   philosophy
+   parsers
 
 
 .. toctree::
@@ -38,6 +43,7 @@ Welcome to Lark's documentation!
    visitors
    forest
    tools
+
 
 
 

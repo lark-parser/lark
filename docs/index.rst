@@ -29,6 +29,19 @@ Install Lark
 
 -------
 
+How the documentation is organized
+----------------------------------
+
+A high-level overview of how it’s organized will help you know where to look for certain things:
+
+* Tutorials take you by the hand through a series of steps how to get familiar with Lark. Start here if you’re new to Lark.
+* How-to guides are bite-sized, problem-specific solutions to common tasks.
+* Addendums covers background information to Lark.
+* References contain syntax and semantics reference material for Lark.
+
+
+-------
+
 .. toctree::
    :maxdepth: 2
    :caption: First steps

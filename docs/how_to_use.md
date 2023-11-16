@@ -1,4 +1,4 @@
-# Using Lark
+# Working with Lark
 
 ## Work process
 

@@ -1,4 +1,4 @@
-# Developing Lark
+# Contributing to Lark
 
 There are many ways you can help the project:
 

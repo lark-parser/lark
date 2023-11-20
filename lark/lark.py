@@ -657,5 +657,52 @@ class Lark(Serialize):
         """
         return self.parser.parse(text, start=start, on_error=on_error)
 
+    def scan(self, text: str, start: Optional[str]=None) -> Iterator[Tuple[Tuple[int, int], 'ParseTree']]:
+        """
+        Scans the input text for non-overlapping matches of the rule specified by 'start' and
+        yields the start and end position as well as the resulting tree.
+
+        Only works with parser='lalr' and lexer='contextual'. Works best if the first terminal(s)
+        that can be matched by grammar are unique in the text and always indicate the start of a match.
+
+        Does not raise any exceptions except for invalid arguments/configurations.
+
+        """
+        if self.options.parser != 'lalr' or self.options.lexer != 'contextual':
+            raise ValueError("scan requires parser='lalr' and lexer='contextual'")
+        start_states = self.parser.parser._parse_table.start_states
+        if start is None:
+            if len(start_states) != 1:
+                raise ValueError("Need to specify start")
+            start, = start_states
+        start_state = start_states[start]
+        start_lex: BasicLexer = self.parser.lexer.lexers[start_state]
+        pos = 0
+        while True:
+            start_pos = start_lex.scanner.search(text, pos)
+            if start_pos is None:
+                break
+            valid_end = []
+            ip = self.parse_interactive(text[start_pos:], start=start)
+            tokens = ip.lexer_thread.lex(ip.parser_state)
+            while True:
+                try:
+                    token = next(tokens)
+                    ip.feed_token(token)
+                except (UnexpectedInput, StopIteration):
+                    break
+                if '$END' in ip.choices():
+                    valid_end.append((token, ip.copy()))
+            for (last, pot) in valid_end[::-1]:
+                try:
+                    res = pot.feed_eof(last)
+                except UnexpectedInput:
+                    continue
+                else:
+                    yield ((start_pos, start_pos + last.end_pos), res)
+                    pos = start_pos + last.end_pos
+                    break
+            else:
+                pos = start_pos + 1
 
 ###}

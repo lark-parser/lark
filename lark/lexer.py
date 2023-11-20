@@ -390,6 +390,19 @@ class Scanner:
             if m:
                 return m.group(0), m.lastgroup
 
+    def search(self, text, pos):
+        best = None, float("inf")
+        for mre in self._mres:
+            mre: re.Pattern
+            m = mre.search(text, pos)
+            if m:
+                if m.start() < best[1]:
+                    best = (m.group(0), m.lastgroup), m.start()
+        if best[0] is None:
+            return None
+        else:
+            return best[1]
+
 
 def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:

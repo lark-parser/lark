@@ -149,11 +149,14 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
             # sre_parse does not support the new features in regex. To not completely fail in that case,
             # we manually test for the most important info (whether the empty string is matched)
             c = regex.compile(regexp_final)
+            # Python 3.11.7 introducded sre_parse.MAXWIDTH that is used instead of MAXREPEAT
+            # See lark-parser/lark#1376 and python/cpython#109859
+            MAXWIDTH = getattr(sre_parse, "MAXWIDTH", sre_constants.MAXREPEAT)
             if c.match('') is None:
                 # MAXREPEAT is a none pickable subclass of int, therefore needs to be converted to enable caching
-                return 1, int(sre_constants.MAXREPEAT)
+                return 1, int(MAXWIDTH)
             else:
-                return 0, int(sre_constants.MAXREPEAT)
+                return 0, int(MAXWIDTH)
 
 ###}
 

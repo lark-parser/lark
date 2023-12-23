@@ -39,3 +39,39 @@ A high-level overview of how it’s organized will help you know where to look f
 * Addendums covers background information to Lark.
 * References contain syntax and semantics reference material for Lark.
 
+.. toctree::
+   :maxdepth: 2
+   :caption: First steps
+
+   json_tutorial
+   examples/index
+   features
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: How-to guides
+
+   recipes
+   how_to_use
+   how_to_develop
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Addendum
+
+   philosophy
+   parsers
+   resources
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
+
+   grammar
+   tree_construction
+   classes
+   visitors
+   forest
+   tools

@@ -74,6 +74,7 @@ Lark will parse "((hello world))" as:
 The brackets do not appear in the tree by design. The words appear because they are matched by a named terminal.
 
 
+<a name="shaping_the_tree"></a>
 ## Shaping the tree
 
 Users can alter the automatic construction of the tree using a collection of grammar features.

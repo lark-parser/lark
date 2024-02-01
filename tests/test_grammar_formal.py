@@ -12,7 +12,7 @@ class TestGrammarFormal(TestCase):
     def setUp(self):
         lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
         with open(lark_path, 'r') as f:
-            self.lark_grammar = f.read())
+            self.lark_grammar = f.read()
 
     def test_errors(self):
         l = Lark(self.lark_grammar, parser="lalr")

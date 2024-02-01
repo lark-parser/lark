@@ -62,11 +62,7 @@ Terminals are used to match text into symbols. They can be defined as a combinat
 <NAME> [. <priority>] : <items-to-match>
 ```
 
-Terminal names must be uppercase.  They must start with an underscore (`_`) or a letter (`A` through `Z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Terminal names that start with "_" will not be included in the parse tree, unless the `keep_all_tokens` option is specified.
-
-Literals can be one of:
-
-* Literal range: `"a".."z"`, `"1".."9"`, etc. - Each literal must be a single character, and the range represends all values between the two literals, inclusively.
+Terminal names must be uppercase.  They must start with an underscore (`_`) or a letter (`A` through `Z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Terminal names that start with "_" will not be included in the parse tree, unless the `keep_all_tokens` option is specified, or unless they are part of a containing terminal.
 
 Each item is one of:
 

@@ -12,7 +12,6 @@ from lark.load_grammar import GrammarError
 class TestLarkLark(TestCase):
     def setUp(self):
         lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
-        # lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark-ORIG')
         self.lark_parser = Lark.open(lark_path, parser="lalr")
 
     def test_01_no_alias_in_terminal_lg(self):
@@ -91,14 +90,14 @@ class TestLarkLark(TestCase):
 
     def test_06_no_term_templates_lg(self):
         g = """start: TERM
-        separated{x, sep}: x (sep x)* 
+        separated{x, sep}: x (sep x)*
         TERM: separated{"A", " "}
         """
         self.assertRaises( AssertionError, Lark, g)
 
     def test_06_no_term_templates_ll(self):
         g = """start: TERM
-        separated{x, sep}: x (sep x)* 
+        separated{x, sep}: x (sep x)*
         TERM: separated{"A", " "}
         """
         self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'RULE', 'separated'.", self.lark_parser.parse, g)

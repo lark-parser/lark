@@ -7,16 +7,14 @@ from lark import lark, Lark, UnexpectedToken
 from lark.load_grammar import GrammarError
 
 
-# Based on TestGrammar, with lots of tests that can't be run elided.
+# Based on TestGrammar, with lots of tests that can't be run deleted.
 class TestGrammarFormal(TestCase):
     def setUp(self):
         lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
-        # lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark-ORIG')
         with open(lark_path, 'r') as f:
-            self.lark_grammar = "\n".join(f.readlines())
+            self.lark_grammar = f.read())
 
     def test_errors(self):
-        # raise NotImplementedError("Doesn't work yet.")
         l = Lark(self.lark_grammar, parser="lalr")
 
         # This is an unrolled form of the test_grammar.py:GRAMMAR_ERRORS tests, because the lark.lark messages vary.
@@ -76,39 +74,6 @@ class TestGrammarFormal(TestCase):
         # '%ignore expects a value', '%ignore %import\n'
         self.assertRaisesRegex(UnexpectedToken, 'Unexpected token Token..__ANON_2., .%import..', l.parse, '%ignore %import\n')
 
-    # def test_empty_literal(self):
-        # raise NotImplementedError("Breaks tests/test_parser.py:_TestParser:test_backslash2().")
-
-    # def test_ignore_name(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_override_rule_1(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_override_rule_2(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
-    # def test_override_rule_3(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
-    # def test_override_terminal(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_extend_rule_1(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_extend_rule_2(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
-    # def test_extend_term(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_extend_twice(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_undefined_ignore(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
     def test_alias_in_terminal(self):
         l = Lark(self.lark_grammar, parser="lalr")
         g = """start: TERM
@@ -117,39 +82,6 @@ class TestGrammarFormal(TestCase):
         # self.assertRaisesRegex( GrammarError, "Aliasing not allowed in terminals", Lark, g)
         self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'__ANON_0', '->'.", l.parse, g)
 
-    # def test_undefined_rule(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
-    # def test_undefined_term(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
-    # def test_token_multiline_only_works_with_x_flag(self):
-        # raise NotImplementedError("Can't test regex flags in Lark grammar.")
-
-    # def test_import_custom_sources(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_import_custom_sources2(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_import_custom_sources3(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_my_find_grammar_errors(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_ranged_repeat_terms(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_ranged_repeat_large(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_large_terminal(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
-
-    # def test_list_grammar_imports(self):
-        # raise NotImplementedError("Can't test semantics of grammar, only syntax.")
-
     def test_inline_with_expand_single(self):
         l = Lark(self.lark_grammar, parser="lalr")
         grammar = r"""
@@ -157,12 +89,7 @@ class TestGrammarFormal(TestCase):
         !?_a: "A"
         """
         # self.assertRaisesRegex(GrammarError, "Inlined rules (_rule) cannot use the ?rule modifier.", l.parse, grammar)
-        # TODO Is this really catching the right problem?
         self.assertRaisesRegex(UnexpectedToken, "Unexpected token Token.'OP', '?'.", l.parse, grammar)
-
-
-    # def test_line_breaks(self):
-        # raise NotImplementedError("Can't parse using parsed grammar.")
 
 
 if __name__ == '__main__':

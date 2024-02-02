@@ -51,19 +51,9 @@ Lark begins the parse with the rule 'start', unless specified otherwise in the o
 
 Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects, for the shape of the generated parse-tree, and the automatic construction of the lexer (aka tokenizer, or scanner).
 
+## EBNF Expressions
 
-## Terminals
-
-Terminals are used to match text into symbols. They can be defined as a combination of literals and other terminals.
-
-**Syntax:**
-
-```html
-<NAME> [. <priority>] : <items-to-match>
-```
-
-Terminal names must be uppercase.  They must start with an underscore (`_`) or a letter (`A` through `Z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Terminal names that start with "_" will not be included in the parse tree, unless the `keep_all_tokens` option is specified, or unless they are part of a containing terminal.
-
+The EBNF expression in a Lark termminal definition is a sequence of items to be matched.
 Each item is one of:
 
 * `TERMINAL` - Another terminal, which cannot be defined in terms of this terminal.
@@ -81,7 +71,23 @@ Each item is one of:
 * `item ~ n` - Exactly *n* instances of item
 * `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
 
-Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
+The EBNF expression in a Lark rule definition is also a sequence of the same set of items to be matched, with one addition:
+
+* `rule` - A rule, which can include recursive use of this rule.
+
+## Terminals
+
+Terminals are used to match text into symbols. They can be defined as a combination of literals and other terminals.
+
+**Syntax:**
+
+```html
+<NAME> [. <priority>] : <items-to-match>
+```
+
+Terminal names must be uppercase.  They must start with an underscore (`_`) or a letter (`A` through `Z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Terminal names that start with "_" will not be included in the parse tree, unless the `keep_all_tokens` option is specified, or unless they are part of a containing terminal.  Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
+
+See [EBNF Expressions](#ebnf-expressions) above for the list of items that a terminal can match.
 
 ### Templates
 
@@ -215,24 +221,7 @@ An alias is a name for the specific rule alternative. It affects tree constructi
 
 The affect of a rule on the parse tree can be specified by modifiers.  The `!` modifier causes the rule to keep all its tokens, regardless of whether they are named or not.  The `?` modifier causes the rule to be inlined if it only has a single child.  The `?` modifier cannot be used on rules that are named starting with an underscore.
 
-Each item is one of:
-
-* `rule`
-* `TERMINAL`
-* `"string literal"` - Literal, to be matched as-is.
-* `"string literal"i` - Literal, to be matched case-insensitively.
-* `/regexp literal/` - Regular expression literal.  Can inclde flags.
-* `"character".."character"` - Literal range.  The range represends all values between the two literals, inclusively.
-* template(parameter1, parameter2, ..) - A template to be  expanded with the specified parameters.
-* `(item item ..)` - Group items
-* `(item | item | ..)` - Alternate items.  Note that the items cannot have aliases.
-* `[item item ..]` - Maybe. Same as `(item item ..)?`, but when `maybe_placeholders=True`, generates `None` if there is no match.
-* `[item | item | ..]` - Maybe with alternates. Same as `(item | item | ..)?`, but when `maybe_placeholders=True`, generates `None` if there is no match.  Note that the items cannot have aliases.
-* `item?` - Zero or one instances of item (a "maybe")
-* `item*` - Zero or more instances of item
-* `item+` - One or more instances of item
-* `item ~ n` - Exactly *n* instances of item
-* `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
+See [EBNF Expressions](#ebnf_expressions) above for the list of items that a rule can match.
 
 **Examples:**
 ```perl
@@ -325,8 +314,8 @@ Useful for implementing an inheritance pattern when importing grammars.
 
 **Syntax:**
 ```html
-%override <TERMINAL> ... terminal definition ...
-%override <rule> ... rule definition ...
+%override <terminal definition>
+%override <rule definition>
 ```
 
 **Example:**

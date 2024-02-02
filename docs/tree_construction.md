@@ -78,8 +78,9 @@ The brackets do not appear in the tree by design. The words appear because they 
 
 Users can alter the automatic construction of the tree using a collection of grammar features.
 
+### Inlining rules with `_`
 
-* Rules whose name begins with an underscore will be inlined into their containing rule.
+Rules whose name begins with an underscore will be inlined into their containing rule.
 
 **Example:**
 
@@ -94,8 +95,9 @@ Lark will parse "(hello world)" as:
         "hello"
         "world"
 
+### Conditionally inlining rules with `?`
 
-* Rules that receive a question mark (?) at the beginning of their definition, will be inlined if they have a single child, after filtering.
+Rules that receive a question mark (?) at the beginning of their definition, will be inlined if they have a single child, after filtering.
 
 **Example:**
 
@@ -113,7 +115,9 @@ Lark will parse "hello world (planet)" as:
             "world"
         "planet"
 
-* Rules that begin with an exclamation mark will keep all their terminals (they won't get filtered).
+### Pinning rule terminals with `!`
+
+Rules that begin with an exclamation mark will keep all their terminals (they won't get filtered).
 
 ```perl
     !expr: "(" expr ")"
@@ -136,7 +140,9 @@ Will parse "((hello world))" as:
 
 Using the `!` prefix is usually a "code smell", and may point to a flaw in your grammar design.
 
-* Aliases - options in a rule can receive an alias. It will be then used as the branch name for the option, instead of the rule name.
+### Aliasing rules
+
+Aliases - options in a rule can receive an alias. It will be then used as the branch name for the option, instead of the rule name.
 
 **Example:**
 

@@ -7,66 +7,46 @@ _item: rule
      | token
      | statement
 
-rule: RULE_MODIFIERS? RULE rule_params priority? ":" rule_expansions
-token: TOKEN priority? ":" token_expansions
+rule: RULE rule_params priority? ":" expansions
+token: TOKEN token_params priority? ":" expansions
 
 rule_params: ["{" RULE ("," RULE)* "}"]
+token_params: ["{" TOKEN ("," TOKEN)* "}"]
 
 priority: "." NUMBER
 
-statement: "%ignore" ignore_token                  -> ignore
+statement: "%ignore" expansions                    -> ignore
          | "%import" import_path ["->" name]       -> import
          | "%import" import_path name_list         -> multi_import
          | "%override" rule                        -> override_rule
-         | "%override" token                       -> override_token
          | "%declare" name+                        -> declare
-         | "%extend" rule                          -> extend_rule
-         | "%extend" token                         -> extend_token
-
-ignore_token: ignore_item [ OP | "~" NUMBER [".." NUMBER]]
-ignore_item: STRING | TOKEN | REGEXP
 
 !import_path: "."? name ("." name)*
 name_list: "(" name ("," name)* ")"
 
-?rule_expansions: rule_alias (_VBAR rule_alias)*
+?expansions: alias (_VBAR alias)*
 
-?rule_inner_expansions: rule_expansion (_VBAR rule_expansion)*
+?alias: expansion ["->" RULE]
 
-?rule_alias: rule_expansion ["->" RULE]
+?expansion: expr*
 
-?rule_expansion: rule_expr*
+?expr: atom [OP | "~" NUMBER [".." NUMBER]]
 
-?rule_expr: rule_atom [OP | "~" NUMBER [".." NUMBER]]
-?rule_atom: "(" rule_inner_expansions ")"
-          | "[" rule_inner_expansions "]" -> rule_maybe
-          | rule_value
+?atom: "(" expansions ")"
+     | "[" expansions "]" -> maybe
+     | value
 
-?rule_value: RULE "{" rule_value ("," rule_value)* "}" -> rule_template_usage
-           | RULE
-           | token_value
-
-?token_expansions: token_expansion (_VBAR token_expansion)*
-
-?token_expansion: token_expr*
-
-?token_expr: token_atom [OP | "~" NUMBER [".." NUMBER]]
-
-?token_atom: "(" token_expansions ")"
-           | "[" token_expansions "]" -> token_maybe
-           | token_value
-
-?token_value: STRING ".." STRING -> literal_range
-            | TOKEN
-            | (REGEXP | STRING) -> literal
+?value: STRING ".." STRING -> literal_range
+      | name
+      | (REGEXP | STRING) -> literal
+      | name "{" value ("," value)* "}" -> template_usage
 
 name: RULE
     | TOKEN
 
 _VBAR: _NL? "|"
 OP: /[+*]|[?](?![a-z])/
-RULE: /_?[a-z][_a-z0-9]*/
-RULE_MODIFIERS: /!|![?](?=[a-z])|[?]!?(?=[a-z])/
+RULE: /!?[_?]?[a-z][_a-z0-9]*/
 TOKEN: /_?[A-Z][_A-Z0-9]*/
 STRING: _STRING "i"?
 REGEXP: /\/(?!\/)(\\\/|\\\\|[^\/])*?\/[imslux]*/

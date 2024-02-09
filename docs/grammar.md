@@ -59,7 +59,8 @@ Each item is one of:
 * `TERMINAL` - Another terminal, which cannot be defined in terms of this terminal.
 * `"string literal"` - Literal, to be matched as-is.
 * `"string literal"i` - Literal, to be matched case-insensitively.
-* `/regexp literal/` - Regular expression literal.  Can inclde flags.
+* `/regexp literal/[imslux]` - Regular expression literal.  Can include the Python stdlib's `re` [flags `imslux`](https://docs.python.org/3/library/re.html#contents-of-module-re)
+
 * `"character".."character"` - Literal range.  The range represends all values between the two literals, inclusively.
 * `(item item ..)` - Group items
 * `(item | item | ..)` - Alternate items.
@@ -69,7 +70,7 @@ Each item is one of:
 * `item*` - Zero or more instances of item
 * `item+` - One or more instances of item
 * `item ~ n` - Exactly *n* instances of item
-* `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
+* `item ~ n..m` - Between *n* to *m* instances of item
 
 The EBNF expression in a Lark rule definition is also a sequence of the same set of items to be matched, with one addition:
 

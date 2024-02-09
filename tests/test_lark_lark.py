@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import os
 from unittest import TestCase, main
 
 from lark import lark, Lark, UnexpectedToken
@@ -12,8 +11,7 @@ from lark.lark_validator_visitor import LarkValidatorVisitor
 # grammars/lark.lark have been resolved.
 class TestLarkLark(TestCase):
     def setUp(self):
-        lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
-        self.lark_parser = Lark.open(lark_path, parser="lalr")
+        self.lark_parser = Lark.open_from_package("lark", "grammars/lark.lark", parser="lalr")
 
     def test_01_no_alias_in_terminal_lg(self):
         g = """start: TERM

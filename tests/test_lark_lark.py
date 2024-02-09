@@ -5,9 +5,10 @@ from unittest import TestCase, main
 
 from lark import lark, Lark, UnexpectedToken
 from lark.load_grammar import GrammarError
+from lark.lark_validator_visitor import LarkValidatorVisitor
 
 
-# Test that certain previous differences between load_grammar.py and 
+# Test that certain previous differences between load_grammar.py and
 # grammars/lark.lark have been resolved.
 class TestLarkLark(TestCase):
     def setUp(self):
@@ -21,10 +22,11 @@ class TestLarkLark(TestCase):
         self.assertRaisesRegex( GrammarError, "Aliasing not allowed in terminals", Lark, g)
 
     def test_01_no_alias_in_terminal_ll(self):
+        # lark.lark allows aliases in terminals, and rejects them if you run the LarkValidatorVisitor.
         g = """start: TERM
             TERM: "a" -> alias
             """
-        self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'__ANON_0', '->'.", self.lark_parser.parse, g)
+        self.lark_parser.parse(g)
 
     def test_02_no_rule_aliases_below_top_level_lg(self):
         g = """start: rule
@@ -34,27 +36,12 @@ class TestLarkLark(TestCase):
         self.assertRaisesRegex( GrammarError, "Rule 'alias' used but not defined", Lark, g)
 
     def test_02_no_rule_aliases_below_top_level_ll(self):
+        # lark.lark allows aliases below top-level, and rejects them if you run the LarkValidatorVisitor.
         g = """start: rule
             rule: ("a" -> alias
                  | "b")
             """
-        self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'__ANON_0', '->'.", self.lark_parser.parse, g)
-
-    def test_03_ignore_single_token_lg(self):
-        g = """start: TERM
-        %ignore "a" "b" /c/
-        TERM: "d"
-        """
-        # This SHOULD raise some sort of error, but silently discards the extra tokens instead.
-        # self.assertRaises( UnexpectedToken, Lark, g)
-        Lark(g)
-
-    def test_03_ignore_single_token_ll(self):
-        g = """start: TERM
-        %ignore "a" "b" /c/
-        TERM: "d"
-        """
-        self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'STRING', '.b.'.", self.lark_parser.parse, g)
+        self.lark_parser.parse(g)
 
     def test_04_extend_rule_lg(self):
         g = """
@@ -93,14 +80,15 @@ class TestLarkLark(TestCase):
         separated{x, sep}: x (sep x)*
         TERM: separated{"A", " "}
         """
-        self.assertRaises( AssertionError, Lark, g)
+        self.assertRaisesRegex( AssertionError, "Tree.'template_usage', .NonTerminal.'separated'.", Lark, g)
 
     def test_06_no_term_templates_ll(self):
+        # lark.lark allows templates in terminals, and rejects them if you run the LarkValidatorVisitor.
         g = """start: TERM
         separated{x, sep}: x (sep x)*
         TERM: separated{"A", " "}
         """
-        self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'RULE', 'separated'.", self.lark_parser.parse, g)
+        self.lark_parser.parse(g)
 
     def test_07_term_no_call_rule_lg(self):
         g = """start: TERM
@@ -110,11 +98,12 @@ class TestLarkLark(TestCase):
         self.assertRaisesRegex( GrammarError, "Rules aren't allowed inside terminals", Lark, g)
 
     def test_07_term_no_call_rule_ll(self):
+        # lark.lark allows rules in terminals, and rejects them if you run the LarkValidatorVisitor.
         g = """start: TERM
         TERM: rule
         rule: "a"
         """
-        self.assertRaisesRegex( UnexpectedToken, "Unexpected token Token.'RULE', 'rule'.", self.lark_parser.parse, g)
+        self.lark_parser.parse(g)
 
     def test_08_override_term_lg(self):
         g = """
@@ -159,6 +148,64 @@ class TestLarkLark(TestCase):
             ?!rule2: "a"
         """
         self.lark_parser.parse(g)
+
+    def test_lark_validator_alias_top_level_ok(self):
+        g = """
+            start: rule1
+            rule1: rule2 -> alias2
+        """
+        t = self.lark_parser.parse(g)
+        LarkValidatorVisitor.validate(t)
+
+    def test_lark_validator_alias_inner_bad(self):
+        g = """
+            start: rule1
+            rule1: rule2
+                 | (rule3 -> alias3 | rule4)
+            rule2: "a"
+            rule3: "b"
+            rule4: "c"
+        """
+
+        t = self.lark_parser.parse(g)
+        self.assertRaisesRegex( Exception, "Deep aliasing not allowed", LarkValidatorVisitor.validate, t)
+
+    def test_lark_validator_import_multi_token_bad(self):
+        g = """
+            %ignore A B
+            start: rule1
+            rule1: "c"
+            A: "a"
+            B: "b"
+        """
+        t = self.lark_parser.parse(g)
+        self.assertRaisesRegex(GrammarError, "Bad %ignore - must have a Terminal or other value", LarkValidatorVisitor.validate, t)
+
+    def test_lark_validator_terminal_alias_bad(self):
+        g = """
+            start: rule1
+            rule1: TOKEN2
+            TOKEN2: "a" -> alias2
+        """
+        t = self.lark_parser.parse(g)
+        self.assertRaisesRegex(GrammarError, "Aliasing not allowed in terminals", LarkValidatorVisitor.validate, t)
+
+    def test_lark_validator_terminal_rule_bad(self):
+        g = """start: TERM
+        TERM: rule
+        rule: "a"
+        """
+        t = self.lark_parser.parse(g)
+        self.assertRaisesRegex(GrammarError, "Rules aren't allowed inside terminals", LarkValidatorVisitor.validate, t)
+
+    def test_lark_validator_terminal_template_bad(self):
+        g = """start: TERM
+        separated{x, sep}: x (sep x)*
+        TERM: separated{"A", " "}
+        """
+        t = self.lark_parser.parse(g)
+        self.assertRaisesRegex(GrammarError, "Templates not allowed in terminals", LarkValidatorVisitor.validate, t)
+
 
 if __name__ == '__main__':
     main()

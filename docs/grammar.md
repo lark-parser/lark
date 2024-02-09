@@ -91,26 +91,7 @@ See [EBNF Expressions](#ebnf-expressions) above for the list of items that a ter
 
 ### Templates
 
-Templates are expanded when preprocessing rules in the grammar.  Templates are not allowed with terminals.
-
-Definition syntax:
-
-```ebnf
-  my_template{param1, param2, ...}: <EBNF EXPRESSION>
-```
-
-Use syntax:
-
-```ebnf
-some_rule: my_template{arg1, arg2, ...}
-```
-
-Example:
-```ebnf
-_separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
-
-num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
-```
+Templates are not allowed with terminals.
 
 ### Priority
 
@@ -231,6 +212,29 @@ expr: expr operator expr
     | value               //# Multi-line, belongs to expr
 
 four_words: word ~ 4
+```
+
+### Templates
+
+Templates are expanded when preprocessing rules in the grammar.
+
+Definition syntax:
+
+```ebnf
+  my_template{param1, param2, ...}: <EBNF EXPRESSION>
+```
+
+Use syntax:
+
+```ebnf
+some_rule: my_template{arg1, arg2, ...}
+```
+
+Example:
+```ebnf
+_separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
+
+num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
 ```
 
 ### Priority

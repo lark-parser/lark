@@ -1,5 +1,17 @@
 # Lark grammar of Lark's syntax
 # Note: Lark is not bootstrapped, its parser is implemented in load_grammar.py
+# This grammar matches that one, but does not enfore some rules that it does.
+# If you want to enforce those, you can pass the "LarkValidatorVisitor" over
+# the parse tree, like this:
+
+# import os
+# import lark
+# from lark.lark_validator_visitor import LarkValidatorVisitor
+#
+# lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
+# lark_parser = Lark.open(lark_path, parser="lalr")
+# parse_tree = lark_parser.parse(my_grammar)
+# LarkValidatorVisitor.validate(parse_tree)
 
 start: (_item? _NL)* _item?
 
@@ -7,19 +19,21 @@ _item: rule
      | token
      | statement
 
-rule: RULE rule_params priority? ":" expansions
-token: TOKEN token_params priority? ":" expansions
+rule: rule_modifiers? RULE rule_params priority? ":" expansions
+token: TOKEN priority? ":" expansions
+
+rule_modifiers: RULE_MODIFIERS
 
 rule_params: ["{" RULE ("," RULE)* "}"]
-token_params: ["{" TOKEN ("," TOKEN)* "}"]
 
 priority: "." NUMBER
 
 statement: "%ignore" expansions                    -> ignore
          | "%import" import_path ["->" name]       -> import
          | "%import" import_path name_list         -> multi_import
-         | "%override" rule                        -> override_rule
+         | "%override" (rule | token)              -> override
          | "%declare" name+                        -> declare
+         | "%extend" (rule | token)                -> extend
 
 !import_path: "."? name ("." name)*
 name_list: "(" name ("," name)* ")"
@@ -39,14 +53,15 @@ name_list: "(" name ("," name)* ")"
 ?value: STRING ".." STRING -> literal_range
       | name
       | (REGEXP | STRING) -> literal
-      | name "{" value ("," value)* "}" -> template_usage
+      | RULE "{" value ("," value)* "}" -> template_usage
 
 name: RULE
     | TOKEN
 
 _VBAR: _NL? "|"
 OP: /[+*]|[?](?![a-z])/
-RULE: /!?[_?]?[a-z][_a-z0-9]*/
+RULE_MODIFIERS: /(!|![?]?|[?]!?)(?=[_a-z])/
+RULE: /_?[a-z][_a-z0-9]*/
 TOKEN: /_?[A-Z][_A-Z0-9]*/
 STRING: _STRING "i"?
 REGEXP: /\/(?!\/)(\\\/|\\\\|[^\/])*?\/[imslux]*/

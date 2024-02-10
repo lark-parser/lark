@@ -38,11 +38,11 @@ statement: "%ignore" expansions                    -> ignore
 !import_path: "."? name ("." name)*
 name_list: "(" name ("," name)* ")"
 
-?expansions: alias (_VBAR alias)*
+expansions: alias (_VBAR alias)*
 
 ?alias: expansion ["->" RULE]
 
-?expansion: expr*
+expansion: expr*
 
 ?expr: atom [OP | "~" NUMBER [".." NUMBER]]
 
@@ -50,7 +50,7 @@ name_list: "(" name ("," name)* ")"
      | "[" expansions "]" -> maybe
      | value
 
-?value: STRING ".." STRING -> literal_range
+value: STRING ".." STRING -> literal_range
       | name
       | (REGEXP | STRING) -> literal
       | RULE "{" value ("," value)* "}" -> template_usage

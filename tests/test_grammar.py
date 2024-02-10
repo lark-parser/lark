@@ -6,6 +6,7 @@ from unittest import TestCase, main
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
 from lark.load_grammar import FromPackageLoader
+from lark.lark_validator_visitor import LarkValidatorVisitor
 
 
 class TestGrammar(TestCase):
@@ -295,9 +296,41 @@ class TestGrammar(TestCase):
                 """)
         p.parse('ab')
 
+    def test_declare_rule_lg(self):
+        g = """
+        %declare a
+        start: b
+        b: "c"
+        """
+        self.assertRaisesRegex(GrammarError, "Expecting terminal name", Lark, g)
 
+    def test_declare_rule_ll(self):
+        g = """
+        %declare a
+        start: b
+        b: "c"
+        """
+        l =  Lark.open_from_package("lark", "grammars/lark.lark")
+        t = l.parse(g)
+        self.assertRaisesRegex(GrammarError, "Expecting terminal name", LarkValidatorVisitor.validate, t)
 
+    def test_declare_token_lg(self):
+        g = """
+        %declare A
+        start: b
+        b: "c"
+        """
+        Lark(g)
 
+    def test_declare_token_ll(self):
+        g = """
+        %declare A
+        start: b
+        b: "c"
+        """
+        l =  Lark.open_from_package("lark", "grammars/lark.lark")
+        t = l.parse(g)
+        LarkValidatorVisitor.validate(t)
 
 
 if __name__ == '__main__':

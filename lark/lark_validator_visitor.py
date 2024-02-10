@@ -11,6 +11,14 @@ class LarkValidatorVisitor(Visitor):
         visitor.visit(tree)
         return tree
 
+    def declare(self, tree: Tree):
+        for child in tree.children:
+            assert child.data == "name"
+            assert len(child.children) == 1
+            assert isinstance(child.children[0], Token)
+            if child.children[0].type != "TOKEN":
+                raise GrammarError("Expecting terminal name")
+
     def ignore(self, tree: Tree):
         # Reject everything except 'literal' and 'name' > 'TOKEN'.
         assert len(tree.children) > 0    # The grammar should pass us some things to ignore.

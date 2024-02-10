@@ -1272,13 +1272,14 @@ class GrammarBuilder:
                     self._ignore(*stmt.children)
             elif stmt.data == 'declare':
                 for symbol in stmt.children:
-                    assert isinstance(symbol, Symbol), symbol
-                    is_term = isinstance(symbol, Terminal)
+                    if isinstance(symbol, NonTerminal):
+                        raise GrammarError("Expecting terminal name")
+                    assert isinstance(symbol, Terminal), symbol
                     if mangle is None:
                         name = symbol.name
                     else:
                         name = mangle(symbol.name)
-                    self._define(name, is_term, None)
+                    self._define(name, True, None)
             elif stmt.data == 'import':
                 pass
             else:

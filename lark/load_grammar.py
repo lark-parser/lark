@@ -660,6 +660,9 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
+    def template_usage(self, t):
+        raise GrammarError("Templates not allowed in terminals")
+
     def value(self, v):
         return v[0]
 

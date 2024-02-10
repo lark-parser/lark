@@ -78,7 +78,7 @@ class TestLarkLark(TestCase):
         separated{x, sep}: x (sep x)*
         TERM: separated{"A", " "}
         """
-        self.assertRaisesRegex( AssertionError, "Tree.'template_usage', .NonTerminal.'separated'.", Lark, g)
+        self.assertRaisesRegex( GrammarError, "Templates not allowed in terminals", Lark, g)
 
     def test_06_no_term_templates_ll(self):
         # lark.lark allows templates in terminals, and rejects them if you run the LarkValidatorVisitor.

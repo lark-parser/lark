@@ -11,10 +11,6 @@ class LarkValidatorVisitor(Visitor):
         visitor.visit(tree)
         return tree
 
-    def alias(self, tree: Tree):
-        # Reject alias names in inner 'expansions'.
-        self._reject_aliases(tree.children[0], "Deep aliasing not allowed")
-
     def ignore(self, tree: Tree):
         # Reject everything except 'literal' and 'name' > 'TOKEN'.
         assert len(tree.children) > 0    # The grammar should pass us some things to ignore.
@@ -54,6 +50,19 @@ class LarkValidatorVisitor(Visitor):
                     return
         self._reject_bad_ignore()
 
+    def rule(self, tree: Tree):
+        assert len(tree.children) > 2    # The grammar should pass us at least rule name, rule params, and an item.
+        first_item = 3 if tree.children[1].data == "priority" else 2
+        # Reject alias names in rule definitions below the top level.
+        node = tree.children[first_item]
+        if node.data == "expansions":
+            for child in node.children:
+                for grandchild in child.children:
+                    self._reject_deep_aliases(grandchild)
+        elif node.data == "alias":
+            for child in node.children:
+                self._reject_deep_aliases(child)
+
     def token(self, tree: Tree):
         assert len(tree.children) > 1    # The grammar should pass us at least a token name and an item.
         first_item = 2 if tree.children[1].data == "priority" else 1
@@ -67,6 +76,13 @@ class LarkValidatorVisitor(Visitor):
         # Reject rule references in token definitions.
         for child in tree.children[first_item:]:
             self._reject_rules(child, "Rules aren't allowed inside terminals")
+
+    def _reject_deep_aliases(self, item: Tree|Token):
+        if isinstance(item, Tree):
+            if item.data == "alias" and len(item.children) > 1 and item.children[1] is not None:
+                raise GrammarError("Deep aliasing not allowed")
+            for child in item.children:
+                self._reject_deep_aliases(child)
 
     def _reject_aliases(self, item: Tree|Token, message: str):
         if isinstance(item, Tree):

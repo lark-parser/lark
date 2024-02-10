@@ -40,11 +40,11 @@ name_list: "(" name ("," name)* ")"
 
 expansions: alias (_VBAR alias)*
 
-?alias: expansion ["->" RULE]
+?alias: expansion ("->" RULE)?
 
 expansion: expr*
 
-?expr: atom [OP | "~" NUMBER [".." NUMBER]]
+?expr: atom (OP | "~" NUMBER (".." NUMBER)?)?
 
 ?atom: "(" expansions ")"
      | "[" expansions "]" -> maybe

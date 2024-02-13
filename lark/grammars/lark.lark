@@ -66,6 +66,7 @@ TOKEN: /_?[A-Z][_A-Z0-9]*/
 STRING: _STRING "i"?
 REGEXP: /\/(?!\/)(\\\/|\\\\|[^\/])*?\/[imslux]*/
 _NL: /(\r?\n)+\s*/
+BACKSLASH: /\\[ ]*\n/
 
 %import common.ESCAPED_STRING -> _STRING
 %import common.SIGNED_INT -> NUMBER
@@ -75,3 +76,4 @@ COMMENT: /\s*/ "//" /[^\n]/* | /\s*/ "#" /[^\n]/*
 
 %ignore WS_INLINE
 %ignore COMMENT
+%ignore BACKSLASH

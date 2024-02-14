@@ -32,7 +32,9 @@ repos:
       exclude: '(^tests/.*\.lark|\.svg)$'
 
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.2.2
+  # Configuration for codespell is in pyproject.toml
+  rev: v2.2.6
   hooks:
     - id: codespell
-      args: ["-L", "nd,iif,ot,datas"]
+      additional_dependencies:
+        - tomli

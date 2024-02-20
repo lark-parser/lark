@@ -44,8 +44,6 @@ A high-level overview of how it’s organized will help you know where to look f
    :caption: First steps
 
    json_tutorial
-   examples/index
-   features
 
 
 .. toctree::
@@ -53,6 +51,7 @@ A high-level overview of how it’s organized will help you know where to look f
    :caption: How-to guides
 
    recipes
+   examples/index
    how_to_use
    how_to_develop
 
@@ -62,13 +61,14 @@ A high-level overview of how it’s organized will help you know where to look f
    :caption: Addendum
 
    philosophy
-   parsers
    resources
 
 .. toctree::
    :maxdepth: 2
    :caption: Reference
 
+   features
+   parsers
    grammar
    tree_construction
    classes

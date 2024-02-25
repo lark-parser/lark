@@ -158,7 +158,11 @@ class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
 
     def transform(self, tree: Tree[_Leaf_T]) -> _Return_T:
         "Transform the given tree, and return the final result"
-        return self._transform_tree(tree)
+        res = list(self._transform_children([tree]))
+        if not res:
+            return None     # type: ignore[return-value]
+        assert len(res) == 1
+        return res[0]
 
     def __mul__(
             self: 'Transformer[_Leaf_T, Tree[_Leaf_U]]',

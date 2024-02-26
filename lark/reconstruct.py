@@ -1,6 +1,3 @@
-"""This is an experimental tool for reconstructing text from a shaped tree, based on a Lark grammar.
-"""
-
 from typing import Dict, Callable, Iterable, Optional
 
 from .lark import Lark
@@ -11,14 +8,6 @@ from .grammar import Terminal, NonTerminal, Symbol
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal
 from .utils import is_id_continue
-
-def is_iter_empty(i):
-    try:
-        _ = next(i)
-        return False
-    except StopIteration:
-        return True
-
 
 class WriteTokensTransformer(Transformer_InPlace):
     "Inserts discarded tokens into their correct place, according to the rules of grammar"
@@ -50,17 +39,14 @@ class WriteTokensTransformer(Transformer_InPlace):
             else:
                 x = next(iter_args)
                 if isinstance(x, list):
-                    to_write += x
+                    to_write.extend(x)
                 else:
-                    if isinstance(x, Token):
-                        assert Terminal(x.type) == sym, x
-                    else:
-                        assert NonTerminal(x.data) == sym, (sym, x)
+                    assert (isinstance(x, Token) and Terminal(x.type) == sym) or \
+                           (isinstance(x, NonTerminal) and NonTerminal(x.data) == sym), (sym, x)
                     to_write.append(x)
 
-        assert is_iter_empty(iter_args)
+        assert all(x is None for x in iter_args)
         return to_write
-
 
 class Reconstructor(TreeMatcher):
     """
@@ -88,7 +74,6 @@ class Reconstructor(TreeMatcher):
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:
             if isinstance(item, Tree):
-                # TODO use orig_expansion.rulename to support templates
                 yield from self._reconstruct(item)
             else:
                 yield item
@@ -100,7 +85,7 @@ class Reconstructor(TreeMatcher):
         y = []
         prev_item = ''
         for item in x:
-            if insert_spaces and prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
+            if insert_spaces and prev_item[-1:].isalnum() and item and item[0].isalnum():
                 y.append(' ')
             y.append(item)
             prev_item = item

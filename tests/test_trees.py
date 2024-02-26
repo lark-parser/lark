@@ -447,5 +447,20 @@ class TestTrees(TestCase):
         with self.assertRaises(AttributeError):
             merge_transformers(T1(), module=T3())
 
+    def test_transform_token(self):
+        class MyTransformer(Transformer):
+            def INT(self, value):
+                return int(value)
+
+        t = Token('INT', '123')
+        assert MyTransformer().transform(t) == 123
+
+        class MyTransformer(Transformer):
+            def INT(self, value):
+                return Discard
+
+        assert MyTransformer().transform(t) is None
+
+
 if __name__ == '__main__':
     unittest.main()

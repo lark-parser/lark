@@ -194,3 +194,4 @@ Questions about code are best asked on [gitter](https://gitter.im/lark-parser/Lo
 For anything else, I can be reached by email at erezshin at gmail com.
 
  -- [Erez](https://github.com/erezsh)
+Installating

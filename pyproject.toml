@@ -95,3 +95,9 @@ exclude_lines = [
 ]
 [tool.pyright]
 include = ["lark"]
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git,*.pdf,*.svg'
+check-hidden = true
+ignore-words-list = 'nd,iif,ot,datas,foor'

@@ -19,14 +19,14 @@ _item: rule
      | token
      | statement
 
-rule: rule_modifiers? RULE rule_params priority? ":" expansions
+rule: rule_modifiers RULE rule_params priority ":" expansions
 token: TOKEN priority? ":" expansions
 
-rule_modifiers: RULE_MODIFIERS
+rule_modifiers: RULE_MODIFIERS?
 
 rule_params: ["{" RULE ("," RULE)* "}"]
 
-priority: "." NUMBER
+priority: ("." NUMBER)?
 
 statement: "%ignore" expansions                    -> ignore
          | "%import" import_path ["->" name]       -> import

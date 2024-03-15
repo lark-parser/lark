@@ -1168,7 +1168,9 @@ class GrammarBuilder:
             t = exp_or_name
             if t.data == 'expansions' and len(t.children) == 1:
                 t2 ,= t.children
-                if t2.data=='expansion' and len(t2.children) == 1:
+                if t2.data=='expansion':
+                    if len(t2.children) > 1:
+                        raise GrammarError("Bad %ignore - must have a Terminal or other value.")
                     item ,= t2.children
                     if item.data == 'value':
                         item ,= item.children
@@ -1242,7 +1244,6 @@ class GrammarBuilder:
 
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
-
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
 
         for stmt in tree.children:

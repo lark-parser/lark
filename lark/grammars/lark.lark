@@ -1,17 +1,15 @@
 # Lark grammar of Lark's syntax
 # Note: Lark is not bootstrapped, its parser is implemented in load_grammar.py
 # This grammar matches that one, but does not enfore some rules that it does.
-# If you want to enforce those, you can pass the "LarkValidatorVisitor" over
+# If you want to enforce those, you can pass the "LarkValidator" over
 # the parse tree, like this:
 
-# import os
-# import lark
-# from lark.lark_validator_visitor import LarkValidatorVisitor
+# from lark import Lark
+# from lark.lark_validator import LarkValidator
 #
-# lark_path = os.path.join(os.path.dirname(lark.__file__), 'grammars/lark.lark')
 # lark_parser = Lark.open_from_package("lark", "grammars/lark.lark", parser="lalr")
 # parse_tree = lark_parser.parse(my_grammar)
-# LarkValidatorVisitor.validate(parse_tree)
+# LarkValidator.validate(parse_tree)
 
 start: (_item? _NL)* _item?
 

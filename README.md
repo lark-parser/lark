@@ -164,6 +164,7 @@ For a more thorough and objective comparison, checkout the [Python Parsing Bench
  - [harmalysis](https://github.com/napulen/harmalysis) - A language for harmonic analysis and music theory
  - [gersemi](https://github.com/BlankSpruce/gersemi) - A CMake code formatter
  - [MistQL](https://github.com/evinism/mistql) - A query language for JSON-like structures
+ - [Outlines](https://github.com/outlines-dev/outlines) - Structured generation with Large Language Models
 
 [Full list](https://github.com/lark-parser/lark/network/dependents?package_id=UGFja2FnZS01MjI1OTE0NQ%3D%3D)
 

@@ -54,15 +54,15 @@ class ParserState(Generic[StateT]):
         return len(self.state_stack) == len(other.state_stack) and self.position == other.position
 
     def __copy__(self):
+        return self.copy()
+
+    def copy(self, deepcopy_values=True) -> 'ParserState[StateT]':
         return type(self)(
             self.parse_conf,
             self.lexer, # XXX copy
             copy(self.state_stack),
-            deepcopy(self.value_stack),
+            deepcopy(self.value_stack) if deepcopy_values else copy(self.value_stack),
         )
-
-    def copy(self) -> 'ParserState[StateT]':
-        return copy(self)
 
     def feed_token(self, token: Token, is_end=False) -> Any:
         state_stack = self.state_stack

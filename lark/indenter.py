@@ -13,6 +13,16 @@ class DedentError(LarkError):
     pass
 
 class Indenter(PostLex, ABC):
+    """A postlexer that "injects" indent/dedent tokens based on indentation.
+
+    Note: This is an abstract class. To use it, inherit and implement all its abstract methods:
+        - tab_len
+        - NL_type
+        - OPEN_PAREN_types, CLOSE_PAREN_types
+        - INDENT_type, DEDENT_type
+
+    See also: the ``postlex`` option in `Lark`.
+    """
     paren_level: int
     indent_level: List[int]
 
@@ -73,35 +83,53 @@ class Indenter(PostLex, ABC):
     @property
     @abstractmethod
     def NL_type(self) -> str:
+        "The name of the newline token"
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def OPEN_PAREN_types(self) -> List[str]:
+        "The names of the tokens that open a parenthesis"
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def CLOSE_PAREN_types(self) -> List[str]:
+        """The names of the tokens that close a parenthesis
+        """
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def INDENT_type(self) -> str:
+        """The name of the token that starts an indentation in the grammar.
+
+        See also: %declare
+        """
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def DEDENT_type(self) -> str:
+        """The name of the token that end an indentation in the grammar.
+
+        See also: %declare
+        """
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def tab_len(self) -> int:
+        """How many spaces does a tab equal"""
         raise NotImplementedError()
 
 
 class PythonIndenter(Indenter):
+    """A postlexer that "injects" _INDENT/_DEDENT tokens based on indentation, according to the Python syntax.
+
+    See also: the ``postlex`` option in `Lark`.
+    """
+
     NL_type = '_NEWLINE'
     OPEN_PAREN_types = ['LPAR', 'LSQB', 'LBRACE']
     CLOSE_PAREN_types = ['RPAR', 'RSQB', 'RBRACE']

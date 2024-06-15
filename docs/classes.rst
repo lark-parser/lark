@@ -90,3 +90,9 @@ For an example of using ``ast_utils``, see `/examples/advanced/create_ast.py`_
 .. autofunction:: lark.ast_utils.create_transformer
 
 .. _/examples/advanced/create_ast.py: examples/advanced/create_ast.html
+
+Indenter
+--------
+
+.. autoclass:: lark.indenter.Indenter
+.. autoclass:: lark.indenter.PythonIndenter

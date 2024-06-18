@@ -169,6 +169,7 @@ class Parser:
                         items.append(new_item)
 
     def _parse(self, lexer, columns, to_scan, start_symbol=None):
+
         def is_quasi_complete(item):
             if item.is_complete:
                 return True
@@ -281,7 +282,7 @@ class Parser:
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        solutions = list(OrderedSet([n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]))
         if not solutions:
             expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
@@ -296,13 +297,13 @@ class Parser:
                 debug_walker.visit(solutions[0], "sppf.png")
 
 
-        if len(solutions) > 1:
-            assert False, 'Earley should not generate multiple start symbol items!'
-
         if self.Tree is not None:
             # Perform our SPPF -> AST conversion
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
-            return transformer.transform(solutions[0])
+            solutions = [transformer.transform(s) for s in solutions]
+
+            return solutions[0] if len(solutions) == 1 else self.Tree('_ambig', solutions)
 
         # return the root of the SPPF
+        # TODO return a list of solutions, or join them together somehow
         return solutions[0]

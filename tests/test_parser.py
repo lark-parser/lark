@@ -859,16 +859,24 @@ def _make_full_earley_test(LEXER):
 
         def test_cycle2(self):
             grammar = """
-            start: _operation
-            _operation:  value
-            value: "b"
-                  | "a" value
-                  | _operation
+            start: _recurse
+            _recurse:  v
+            v: "b"
+                  | "a" v
+                  | _recurse
             """
 
             l = Lark(grammar, ambiguity="explicit", lexer=LEXER)
             tree = l.parse("ab")
-            self.assertEqual(tree, Tree('start', [Tree('value', [Tree('value', [])])]))
+            expected = (
+                Tree('start', [
+                    Tree('_ambig', [
+                        Tree('v', [Tree('v', [])]),
+                        Tree('v', [Tree('v', [Tree('v', [])])])
+                    ])
+                ])
+            )
+            self.assertEqual(tree, expected)
 
         def test_cycles(self):
             grammar = """

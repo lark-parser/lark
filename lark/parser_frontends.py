@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING
 
-from .exceptions import ConfigurationError, GrammarError, assert_config
+from .exceptions import ConfigurationError, GrammarError, assert_config, UnexpectedInput
 from .utils import get_regexp_width, Serialize
 from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
@@ -22,8 +22,14 @@ def _wrap_lexer(lexer_class):
         class CustomLexerWrapper(Lexer):
             def __init__(self, lexer_conf):
                 self.lexer = lexer_class(lexer_conf)
+
             def lex(self, lexer_state, parser_state):
+                if lexer_state.line_ctr.char_pos != 0:
+                    raise TypeError("Old Interface Custom Lexer don't support start_pos")
+                if lexer_state.end_pos != len(lexer_state.text):
+                    raise TypeError("Old Interface Custom Lexer don't support end_pos")
                 return self.lexer.lex(lexer_state.text)
+
         return CustomLexerWrapper
 
 
@@ -93,23 +99,31 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
-    def _make_lexer_thread(self, text: str) -> Union[str, LexerThread]:
+    def _make_lexer_thread(self, text: str, *, start_pos: Optional[int] = None,
+                           end_pos: Optional[int] = None) -> Union[str, LexerThread]:
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
-        return text if self.skip_lexer else cls.from_text(self.lexer, text)
+        if self.skip_lexer:
+            if start_pos is not None or end_pos is not None:
+                raise TypeError("lexer='dynamic' does not support start_pos/end_pos")
+            return text
+        return cls.from_text(self.lexer, text, start_pos=start_pos, end_pos=end_pos)
 
-    def parse(self, text: str, start=None, on_error=None):
+    def parse(self, text: str, start=None, on_error=None, *, start_pos=None, end_pos=None):
         chosen_start = self._verify_start(start)
         kw = {} if on_error is None else {'on_error': on_error}
-        stream = self._make_lexer_thread(text)
+        stream = self._make_lexer_thread(text, start_pos=start_pos, end_pos=end_pos)
         return self.parser.parse(stream, chosen_start, **kw)
 
-    def parse_interactive(self, text: Optional[str]=None, start=None):
+    def parse_interactive(self, text: Optional[str]=None, start=None,
+                          *, start_pos: Optional[int] = None, end_pos: Optional[int] = None):
         # TODO BREAK - Change text from Optional[str] to text: str = ''.
         #   Would break behavior of exhaust_lexer(), which currently raises TypeError, and after the change would just return []
+        #   When this is done, also adjust the code in `LexerState.__init__` since it currently works around being
+        #   passed `None` with regard to start_pos and end_pos
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
-        stream = self._make_lexer_thread(text)  # type: ignore[arg-type]
+        stream = self._make_lexer_thread(text, start_pos=start_pos, end_pos=end_pos)  # type: ignore[arg-type]
         return self.parser.parse_interactive(stream, chosen_start)
 
 

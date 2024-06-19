@@ -912,6 +912,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(tree, Tree('a', [Tree('x', [Tree('b', [])])]))
 
 
+
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley
@@ -2584,8 +2585,29 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(GrammarError, _Lark, grammar, strict=True)
 
+        @unittest.skipIf(LEXER in ('dynamic', 'custom_old'), "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
+        def test_subset_parse(self):
+            grammar = r"""
+            start: (WORD|FRAG_END|FRAG_START)+
+            WORD: /\b\w+\b/ # match full word
+            FRAG_END: /\B\w+/ # end of a word, i.e. start is not at a word boundary
+            FRAG_START: /\w+\B/ # start of a word, i.e. end is not at a word boundary
+            %ignore /\s+/
+            """
 
-    _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()
+            parser = _Lark(grammar)
+            self.assertEqual(parser.parse(" abc def ", start_pos=1, end_pos=-1),
+                             Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
+            self.assertEqual(parser.parse("xabc def ", start_pos=1, end_pos=-1),
+                             Tree('start', [Token('FRAG_END', 'abc'), Token('WORD', 'def')]))
+
+            # We match the behavior of python's re module here: It doesn't look ahead beyond `end_pos`,
+            # despite looking behind before `start_pos`
+            self.assertEqual(parser.parse(" abc defx", start_pos=1, end_pos=-1),
+                             Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
+
+
+    _NAME = "TestParser" + PARSER.capitalize() + LEXER.capitalize()
     _TestParser.__name__ = _NAME
     _TestParser.__qualname__ = "tests.test_parser." + _NAME
     globals()[_NAME] = _TestParser

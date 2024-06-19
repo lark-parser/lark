@@ -600,8 +600,8 @@ class Lark(Serialize):
     def __repr__(self):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
-
-    def lex(self, text: str, dont_ignore: bool=False) -> Iterator[Token]:
+    def lex(self, text: str, dont_ignore: bool = False, *, start_pos: Optional[int] = None,
+            end_pos: Optional[int] = None) -> Iterator[Token]:
         """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='basic'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
@@ -613,7 +613,7 @@ class Lark(Serialize):
             lexer = self._build_lexer(dont_ignore)
         else:
             lexer = self.lexer
-        lexer_thread = LexerThread.from_text(lexer, text)
+        lexer_thread = LexerThread.from_text(lexer, text, start_pos=start_pos, end_pos=end_pos)
         stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)
@@ -623,7 +623,8 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
 
-    def parse_interactive(self, text: Optional[str]=None, start: Optional[str]=None) -> 'InteractiveParser':
+    def parse_interactive(self, text: Optional[str] = None, start: Optional[str] = None,
+                          *, start_pos: Optional[int] = None, end_pos: Optional[int] = None) -> 'InteractiveParser':
         """Start an interactive parsing session.
 
         Parameters:
@@ -635,9 +636,11 @@ class Lark(Serialize):
 
         See Also: ``Lark.parse()``
         """
-        return self.parser.parse_interactive(text, start=start)
+        return self.parser.parse_interactive(text, start=start, start_pos=start_pos, end_pos=end_pos)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+    def parse(self, text: str, start: Optional[str] = None,
+              on_error: 'Optional[Callable[[UnexpectedInput], bool]]' = None,
+              *, start_pos: Optional[int] = None, end_pos: Optional[int] = None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:
@@ -655,7 +658,7 @@ class Lark(Serialize):
                 For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
         """
-        return self.parser.parse(text, start=start, on_error=on_error)
+        return self.parser.parse(text, start=start, on_error=on_error, start_pos=start_pos, end_pos=end_pos)
 
     def scan(self, text: str, start: Optional[str]=None) -> Iterator[Tuple[Tuple[int, int], 'ParseTree']]:
         """

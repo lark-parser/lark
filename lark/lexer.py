@@ -1,11 +1,11 @@
 # Lexer Implementation
-
+import sys
 from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload
+    ClassVar, TYPE_CHECKING, overload, Tuple
 )
 from types import ModuleType
 import warnings
@@ -289,7 +289,7 @@ class LineCounter:
 
         return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
-    def feed(self, token: Token, test_newline=True):
+    def feed(self, token: str, test_newline=True):
         """Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
@@ -384,20 +384,20 @@ class Scanner:
             terminals = terminals[max_size:]
         return mres
 
-    def match(self, text, pos):
+    def match(self, text, pos, *, end_pos=sys.maxsize):
         for mre in self._mres:
-            m = mre.match(text, pos)
+            m = mre.match(text, pos, end_pos)
             if m:
                 return m.group(0), m.lastgroup
 
-    def search(self, text, pos):
+    def search(self, text, start_pos, end_pos):
         best = None, float("inf")
         for mre in self._mres:
             mre: re.Pattern
-            m = mre.search(text, pos)
+            m = mre.search(text, start_pos, end_pos)
             if m:
                 if m.start() < best[1]:
-                    best = (m.group(0), m.lastgroup), m.start()
+                    best = m.lastgroup, m.start()
         if best[0] is None:
             return None
         else:
@@ -420,25 +420,46 @@ class LexerState:
     (Lexer objects are only instantiated per grammar, not per text)
     """
 
-    __slots__ = 'text', 'line_ctr', 'last_token'
+    __slots__ = 'text', 'line_ctr', 'end_pos', 'last_token'
 
-    text: str
+    text: Optional[str]
     line_ctr: LineCounter
+    end_pos: int
     last_token: Optional[Token]
 
-    def __init__(self, text: str, line_ctr: Optional[LineCounter]=None, last_token: Optional[Token]=None):
+    def __init__(self, text: Optional[str], line_ctr: Optional[LineCounter] = None, last_token: Optional[Token] = None,
+                 *, start_pos: Optional[int] = None, end_pos: Optional[int] = None):
         self.text = text
         self.line_ctr = line_ctr or LineCounter(b'\n' if isinstance(text, bytes) else '\n')
         self.last_token = last_token
+        # If we are not given a text (i.e. via `parse_interactive`), `start_pos` and `end_pos` are ignored
+        if self.text is None:
+            self.end_pos = sys.maxsize
+            return
+        if start_pos is not None:
+            if start_pos < 0:
+                start_pos += len(text)
+            # We don't call `.feed` here to avoid creating potentially gigantic copies of the text
+            self.line_ctr.char_pos = start_pos
+            self.line_ctr.line += text.count(self.line_ctr.newline_char, 0, start_pos)
+            if self.line_ctr.line != 1:
+                self.line_ctr.line_start_pos = text.rfind(self.line_ctr.newline_char, 0, start_pos)
+            self.line_ctr.column = self.line_ctr.char_pos - self.line_ctr.line_start_pos + 1
+        self.end_pos = end_pos if end_pos is not None else len(self.text)
+        if self.end_pos < 0:
+            self.end_pos += len(text)
 
     def __eq__(self, other):
         if not isinstance(other, LexerState):
             return NotImplemented
 
-        return self.text is other.text and self.line_ctr == other.line_ctr and self.last_token == other.last_token
+        return (self.text is other.text and
+                self.line_ctr == other.line_ctr and
+                self.end_pos == other.end_pos and
+                self.last_token == other.last_token)
 
     def __copy__(self):
-        return type(self)(self.text, copy(self.line_ctr), self.last_token)
+        return type(self)(self.text, copy(self.line_ctr), self.last_token, end_pos=self.end_pos)
 
 
 class LexerThread:
@@ -450,8 +471,9 @@ class LexerThread:
         self.state = lexer_state
 
     @classmethod
-    def from_text(cls, lexer: 'Lexer', text: str) -> 'LexerThread':
-        return cls(lexer, LexerState(text))
+    def from_text(cls, lexer: 'Lexer', text: str, *, start_pos: Optional[int] = None,
+                  end_pos: Optional[int] = None) -> 'LexerThread':
+        return cls(lexer, LexerState(text, start_pos=start_pos, end_pos=end_pos))
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
@@ -597,13 +619,13 @@ class BasicLexer(AbstractBasicLexer):
             self._build_scanner()
         return self._scanner
 
-    def match(self, text, pos):
-        return self.scanner.match(text, pos)
+    def match(self, text, pos, *, end_pos):
+        return self.scanner.match(text, pos, end_pos=end_pos)
 
     def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
         line_ctr = lex_state.line_ctr
-        while line_ctr.char_pos < len(lex_state.text):
-            res = self.match(lex_state.text, line_ctr.char_pos)
+        while line_ctr.char_pos < lex_state.end_pos:
+            res = self.match(lex_state.text, line_ctr.char_pos, end_pos=lex_state.end_pos)
             if not res:
                 allowed = self.scanner.allowed_types - self.ignore_types
                 if not allowed:

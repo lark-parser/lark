@@ -404,17 +404,17 @@ class Scanner:
                 return m.group(0), m.lastgroup
 
     def search(self, text, start_pos, end_pos):
-        best = None, float("inf")
+        best = None
         for mre in self._mres:
             mre: re.Pattern
             m = mre.search(text, start_pos, end_pos)
             if m:
-                if m.start() < best[1]:
-                    best = (m.group(0), m.lastgroup), m.start()
-        if best[0] is None:
-            return None
-        else:
+                if best is None or m.start() < best.start():
+                    best = m
+        if best is None:
             return best
+        else:
+            return (best.group(0), best.lastgroup), best.start()
 
 
 def _regexp_has_newline(r: str):

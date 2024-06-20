@@ -2599,6 +2599,8 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
             self.assertEqual(parser.parse(" abc def ", start_pos=1, end_pos=-1),
                              Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
+            self.assertEqual(parser.parse(" abc def ", start_pos=1-9, end_pos=-1+9),
+                             Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
             self.assertEqual(parser.parse("xabc def ", start_pos=1, end_pos=-1),
                              Tree('start', [Token('FRAG_END', 'abc'), Token('WORD', 'def')]))
 

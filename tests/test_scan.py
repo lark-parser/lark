@@ -18,6 +18,20 @@ class TestScan(unittest.TestCase):
                                  ((21, 30), Tree('expr', ['c', Tree('expr', [Tree('expr', ['d'])])])),
                                  ])
 
+    def test_scan_basic_lexer(self):
+        parser = Lark(r"""
+        expr: "(" (WORD|expr)* ")"
+        %ignore / +/
+        WORD: /\w+/
+        """, parser='lalr', start="expr", lexer='basic')
+
+        text = "|() | (a) | ((//)) | (c ((d))) |"
+        finds = list(parser.scan(text))
+        self.assertEqual(finds, [((1, 3), Tree('expr', [])),
+                                 ((6, 9), Tree('expr', ['a'])),
+                                 ((21, 30), Tree('expr', ['c', Tree('expr', [Tree('expr', ['d'])])])),
+                                 ])
+
     def test_scan_meta(self):
         parser = Lark(r"""
         expr: "(" (WORD|expr)* ")"
@@ -70,3 +84,24 @@ class TestScan(unittest.TestCase):
             ((15, 18), Tree('start', [Tree('expr', ['e'])])),
             ((22, 25), Tree('start', [Tree('expr', ['f'])])),
         ])
+
+    def test_scan_subset(self):
+        parser = Lark(r"""
+        expr: "(" (WORD|expr)* ")"
+        %ignore /\s+/
+        WORD: /\w+/
+        """, parser='lalr', start="expr", propagate_positions=True)
+
+        text = "()\n()(a)\n(b)\n (\n) | \n(\n)"
+        finds = list(parser.scan(text, start_pos=5, end_pos=-1))
+        self.assertEqual(finds, [((5, 8), Tree('expr', ['a'])),
+                                 ((9, 12), Tree('expr', ['b'])),
+                                 ((14, 17), Tree('expr', []))])
+        self.assertEqual(2, finds[0][1].meta.line)
+
+        text = "()\n()(a)\n(b)\n (\n) | \n(\n)"
+        finds = list(parser.scan(text, start_pos=5-len(text), end_pos=-1+len(text)))
+        self.assertEqual(finds, [((5, 8), Tree('expr', ['a'])),
+                                 ((9, 12), Tree('expr', ['b'])),
+                                 ((14, 17), Tree('expr', []))])
+        self.assertEqual(2, finds[0][1].meta.line)

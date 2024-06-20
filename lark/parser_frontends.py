@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, NamedTuple, Iterable, Tuple
 
 from .exceptions import ConfigurationError, GrammarError, assert_config, UnexpectedInput
 from .utils import get_regexp_width, Serialize
@@ -13,6 +13,12 @@ if TYPE_CHECKING:
 
 
 ###{standalone
+
+
+class ScanMatch(NamedTuple):
+    range: Tuple[int, int]
+    tree: Tree
+
 
 def _wrap_lexer(lexer_class):
     future_interface = getattr(lexer_class, '__future_interface__', False)
@@ -128,13 +134,13 @@ class ParsingFrontend(Serialize):
 
 
     def scan(self, text: str, start: Optional[str]=None, *, start_pos: Optional[int] = None,
-             end_pos: Optional[int] = None):
+             end_pos: Optional[int] = None) -> Iterable[ScanMatch]:
         """
         In contrast to the other functions here, this one actually does work. See `Lark.scan`
         for a description of what this function is for.
         """
         if self.options.parser != 'lalr':
-            raise ValueError("scan requires parser='lalr' and lexer='contextual'")
+            raise ValueError("scan requires parser='lalr'")
         start_states = self.parser._parse_table.start_states
         chosen_start = self._verify_start(start)
         start_state = start_states[chosen_start]
@@ -143,8 +149,7 @@ class ParsingFrontend(Serialize):
         if pos < 0:
             pos += len(text)
         if end_pos < 0:
-            pos += len(text)
-        del start_pos
+            end_pos += len(text)
         while True:
             # Find the next candidate location
             found = self.lexer.search_start(text, start_state, pos, end_pos)
@@ -175,7 +180,7 @@ class ParsingFrontend(Serialize):
                 except UnexpectedInput:
                     continue
                 else:
-                    yield ((found.start_pos, last.end_pos), res)
+                    yield ScanMatch((found.start_pos, last.end_pos), res)
                     pos = last.end_pos
                     break
             else:

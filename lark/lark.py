@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         from typing import Literal
     else:
         from typing_extensions import Literal
-    from .parser_frontends import ParsingFrontend
+    from .parser_frontends import ParsingFrontend, ScanMatch
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
@@ -661,7 +661,7 @@ class Lark(Serialize):
         return self.parser.parse(text, start=start, on_error=on_error, start_pos=start_pos, end_pos=end_pos)
 
     def scan(self, text: str, start: Optional[str] = None, *, start_pos: Optional[int] = None,
-             end_pos: Optional[int] = None) -> Iterator[Tuple[Tuple[int, int], 'ParseTree']]:
+             end_pos: Optional[int] = None) -> Iterable['ScanMatch']:
         """
         Scans the input text for non-overlapping matches of the rule specified by 'start' and
         yields the start and end position as well as the resulting tree.

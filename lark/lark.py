@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         from typing import Literal
     else:
         from typing_extensions import Literal
-    from .parser_frontends import ParsingFrontend
+    from .parser_frontends import ParsingFrontend, ScanMatch
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
@@ -600,8 +600,8 @@ class Lark(Serialize):
     def __repr__(self):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
-
-    def lex(self, text: str, dont_ignore: bool=False) -> Iterator[Token]:
+    def lex(self, text: str, dont_ignore: bool = False, *, start_pos: Optional[int] = None,
+            end_pos: Optional[int] = None) -> Iterator[Token]:
         """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='basic'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
@@ -613,7 +613,7 @@ class Lark(Serialize):
             lexer = self._build_lexer(dont_ignore)
         else:
             lexer = self.lexer
-        lexer_thread = LexerThread.from_text(lexer, text)
+        lexer_thread = LexerThread.from_text(lexer, text, start_pos=start_pos, end_pos=end_pos)
         stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)
@@ -623,21 +623,26 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
 
-    def parse_interactive(self, text: Optional[str]=None, start: Optional[str]=None) -> 'InteractiveParser':
+    def parse_interactive(self, text: Optional[str] = None, start: Optional[str] = None,
+                          *, start_pos: Optional[int] = None, end_pos: Optional[int] = None) -> 'InteractiveParser':
         """Start an interactive parsing session.
 
         Parameters:
             text (str, optional): Text to be parsed. Required for ``resume_parse()``.
             start (str, optional): Start symbol
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
 
         Returns:
             A new InteractiveParser instance.
 
         See Also: ``Lark.parse()``
         """
-        return self.parser.parse_interactive(text, start=start)
+        return self.parser.parse_interactive(text, start=start, start_pos=start_pos, end_pos=end_pos)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+    def parse(self, text: str, start: Optional[str] = None,
+              on_error: 'Optional[Callable[[UnexpectedInput], bool]]' = None,
+              *, start_pos: Optional[int] = None, end_pos: Optional[int] = None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:
@@ -645,6 +650,13 @@ class Lark(Serialize):
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
                 LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
+                Both of these don't work with lexer='dynamic'/'dynamic_complete'
+                Their behavior mirrors the behavior of the corresponding parameters in the Standard Library re module,
+                which most notably means that look behinds in regex will look behind start_pos, but lookaheads
+                won't look after end_pos. See [re.search](https://docs.python.org/3/library/re.html#re.Pattern.search)
+                for more information
 
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the
@@ -655,7 +667,32 @@ class Lark(Serialize):
                 For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
         """
-        return self.parser.parse(text, start=start, on_error=on_error)
+        return self.parser.parse(text, start=start, on_error=on_error, start_pos=start_pos, end_pos=end_pos)
 
+    def scan(self, text: str, start: Optional[str] = None, *, start_pos: Optional[int] = None,
+             end_pos: Optional[int] = None) -> Iterable['ScanMatch']:
+        """
+        Scans the input text for non-overlapping matches of this grammar.
+
+        Only works with parser='lalr'. Works best if the first terminal(s)
+        that can be matched by grammar are unique in the text and always indicate the start of a match.
+
+        A found match will never start or end with an ignored terminal.
+
+        Does not raise any exceptions except for invalid arguments/configurations.
+
+        Parameters:
+            text (str, optional): Text to be parsed. Required for ``resume_parse()``.
+            start (str, optional): Start symbol
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
+
+        Returns:
+            An Iterable of `ScanMatch` instances, which contain two attributes: `range` a tuple with
+            the indices of the start and end of the found match, and `tree`, the parsed Tree object.
+
+        See Also: ``Lark.parse()``
+        """
+        return self.parser.scan(text, start=start, start_pos=start_pos, end_pos=end_pos)
 
 ###}

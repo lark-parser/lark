@@ -474,8 +474,7 @@ class _VArgsWrapper:
     def __init__(self, func: Callable, visit_wrapper: Callable[[Callable, str, list, Any], Any]):
         if isinstance(func, _VArgsWrapper):
             func = func.base_func
-        # https://github.com/python/mypy/issues/708
-        self.base_func = func  # type: ignore[assignment]
+        self.base_func = func
         self.visit_wrapper = visit_wrapper
         update_wrapper(self, func)
 

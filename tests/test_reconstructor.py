@@ -154,7 +154,6 @@ class TestReconstructor(TestCase):
         for code in examples:
             self.assert_reconstruct(g, code, keep_all_tokens=True)
 
-    @unittest.skipIf(sys.version_info < (3, 0), "Python 2 does not play well with Unicode.")
     def test_switch_grammar_unicode_terminal(self):
         """
         This test checks that a parse tree built with a grammar containing only ascii characters can be reconstructed

@@ -8,10 +8,7 @@ if TYPE_CHECKING:
     from .lexer import Lexer
     from .grammar import Rule
     from typing import Union, Type
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
     if sys.version_info >= (3, 10):
         from typing import TypeAlias
     else:

@@ -9,13 +9,9 @@ if TYPE_CHECKING:
         import rich
     except ImportError:
         pass
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
 
 ###{standalone
-from collections import OrderedDict
 
 class Meta:
 
@@ -140,11 +136,10 @@ class Tree(Generic[_Leaf_T]):
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
         """
         queue = [self]
-        subtrees = OrderedDict()
+        subtrees = dict()
         for subtree in queue:
             subtrees[id(subtree)] = subtree
-            # Reason for type ignore https://github.com/python/mypy/issues/10999
-            queue += [c for c in reversed(subtree.children)  # type: ignore[misc]
+            queue += [c for c in reversed(subtree.children)
                       if isinstance(c, Tree) and id(c) not in subtrees]
 
         del queue
@@ -242,7 +237,7 @@ def pydot__tree_to_graph(tree: Tree, rankdir="LR", **kwargs):
     possible attributes, see https://www.graphviz.org/doc/info/attrs.html.
     """
 
-    import pydot  # type: ignore[import]
+    import pydot  # type: ignore[import-not-found]
     graph = pydot.Dot(graph_type='digraph', rankdir=rankdir, **kwargs)
 
     i = [0]

@@ -7,8 +7,6 @@ import os
 import sys
 from copy import copy, deepcopy
 
-from lark.utils import isascii
-
 from lark import Token, Transformer_NonRecursive, LexError
 
 from io import (
@@ -968,7 +966,7 @@ class DualBytesLark:
     def __init__(self, g, *args, **kwargs):
         self.text_lexer = Lark(g, *args, use_bytes=False, **kwargs)
         g = self.text_lexer.grammar_source.lower()
-        if '\\u' in g or not isascii(g):
+        if '\\u' in g or not g.isascii():
             # Bytes re can't deal with uniode escapes
             self.bytes_lark = None
         else:
@@ -977,7 +975,7 @@ class DualBytesLark:
 
     def parse(self, text, start=None):
         # TODO: Easy workaround, more complex checks would be beneficial
-        if not isascii(text) or self.bytes_lark is None:
+        if not text.isascii() or self.bytes_lark is None:
             return self.text_lexer.parse(text, start)
         try:
             rv = self.text_lexer.parse(text, start)

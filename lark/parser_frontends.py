@@ -127,6 +127,60 @@ class ParsingFrontend(Serialize):
         return self.parser.parse_interactive(stream, chosen_start)
 
 
+    def scan(self, text: str, start: Optional[str]=None, *, start_pos: Optional[int] = None,
+             end_pos: Optional[int] = None):
+        """
+        In contrast to the other functions here, this one actually does work. See `Lark.scan`
+        for a description of what this function is for.
+        """
+        if self.options.parser != 'lalr':
+            raise ValueError("scan requires parser='lalr' and lexer='contextual'")
+        start_states = self.parser._parse_table.start_states
+        chosen_start = self._verify_start(start)
+        start_state = start_states[chosen_start]
+        pos = start_pos if start_pos is not None else 0
+        end_pos = end_pos if end_pos is not None else len(text)
+        if pos < 0:
+            pos += len(text)
+        if end_pos < 0:
+            pos += len(text)
+        del start_pos
+        while True:
+            # Find the next candidate location
+            found = self.lexer.search_start(text, start_state, pos, end_pos)
+            # No more valid candidates
+            if found is None:
+                break
+            assert found.end_pos <= end_pos
+            # Collect the potential end points found for this parse
+            # We need to keep track of multiple options in case there are false `$END`s in the `ip.choices()`
+            # We don't want to check early since this can be expensive.
+            valid_end = []
+            ip = self.parse_interactive(text, start=chosen_start, start_pos=found.start_pos, end_pos=end_pos)
+            tokens = ip.lexer_thread.lex(ip.parser_state)
+            while True:
+                try:
+                    token = next(tokens)
+                    ip.feed_token(token)
+                except (UnexpectedInput, StopIteration):
+                    # Either we couldn't parse the characters or the resulting token wasn't valid.
+                    # Either way, stop
+                    break
+                if '$END' in ip.choices():
+                    valid_end.append((token, ip.copy()))
+            # Check through all potential ending points and see if passing in `$END` actually works
+            for (last, pot) in valid_end[::-1]:
+                try:
+                    res = pot.feed_eof(last)
+                except UnexpectedInput:
+                    continue
+                else:
+                    yield ((found.start_pos, last.end_pos), res)
+                    pos = last.end_pos
+                    break
+            else:
+                pos = found.start_pos + 1
+
 def _validate_frontend_args(parser, lexer) -> None:
     assert_config(parser, ('lalr', 'earley', 'cyk'))
     if not isinstance(lexer, type):     # not custom lexer?
@@ -146,7 +200,7 @@ def _get_lexer_callbacks(transformer, terminals):
             result[terminal.name] = callback
     return result
 
-class PostLexConnector:
+class PostLexConnector(Lexer):
     def __init__(self, lexer, postlexer):
         self.lexer = lexer
         self.postlexer = postlexer

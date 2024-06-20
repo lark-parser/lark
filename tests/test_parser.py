@@ -40,16 +40,6 @@ from lark.indenter import Indenter
 __all__ = ['TestParsers']
 
 
-def xFailIf(condition, reason):
-    if condition:
-        if pytest is not None:
-            return pytest.mark.xfail(reason=reason)
-        # unittest's expected Failure system does not support a reason
-        return unittest.expectedFailure
-    else:
-        return lambda f: f
-
-
 class TestParsers(unittest.TestCase):
     def test_big_list(self):
         Lark(r"""
@@ -410,7 +400,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual( g.parse('abc').children[0], 'abc')
 
 
-        @xFailIf(LEXER=='basic', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_earley(self):
             g = Lark("""start: A "b" c
                         A: "a"+
@@ -433,7 +423,7 @@ def _make_full_earley_test(LEXER):
             l = Lark(grammar, parser='earley', lexer=LEXER)
             l.parse(program)
 
-        @xFailIf(LEXER != 'dynamic_complete', "Only relevant for the dynamic_complete parser")
+        @unittest.skipIf(LEXER != 'dynamic_complete', "Only relevant for the dynamic_complete parser")
         def test_earley3(self):
             """Tests prioritization and disambiguation for pseudo-terminals (there should be only one result)
 
@@ -479,7 +469,7 @@ def _make_full_earley_test(LEXER):
             empty_tree = Tree('empty', [Tree('empty2', [])])
             self.assertSequenceEqual(res.children, ['a', empty_tree, empty_tree, 'b'])
 
-        @xFailIf(LEXER=='basic', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_earley_explicit_ambiguity(self):
             # This was a sneaky bug!
 
@@ -495,7 +485,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual( ambig_tree.data, '_ambig')
             self.assertEqual( len(ambig_tree.children), 2)
 
-        @xFailIf(LEXER=='basic', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_ambiguity1(self):
             grammar = """
             start: cd+ "e"
@@ -511,7 +501,7 @@ def _make_full_earley_test(LEXER):
             assert ambig_tree.data == '_ambig', ambig_tree
             assert len(ambig_tree.children) == 2
 
-        @xFailIf(LEXER=='basic', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_ambiguity2(self):
             grammar = """
             ANY:  /[a-zA-Z0-9 ]+/
@@ -770,7 +760,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(set(ambig_tree.children), expected)
 
 
-        @xFailIf(LEXER=='basic', "Requires dynamic lexer")
+        @unittest.skipIf(LEXER=='basic', "Requires dynamic lexer")
         def test_fruitflies_ambig(self):
             grammar = """
                 start: noun verb noun        -> simple
@@ -808,7 +798,7 @@ def _make_full_earley_test(LEXER):
             self.assertEqual(set(tree.children), set(expected.children))
 
 
-        @xFailIf(LEXER!='dynamic_complete', "Only relevant for the dynamic_complete parser")
+        @unittest.skipIf(LEXER!='dynamic_complete', "Only relevant for the dynamic_complete parser")
         def test_explicit_ambiguity2(self):
             grammar = r"""
             start: NAME+
@@ -925,24 +915,6 @@ def _make_full_earley_test(LEXER):
             tree = l.parse('');
             self.assertEqual(tree, Tree('a', [Tree('x', [Tree('b', [])])]))
 
-
-
-
-
-        # @unittest.skipIf(LEXER=='dynamic', "Not implemented in Dynamic Earley yet")  # TODO
-        # def test_not_all_derivations(self):
-        #     grammar = """
-        #     start: cd+ "e"
-
-        #     !cd: "c"
-        #        | "d"
-        #        | "cd"
-
-        #     """
-        #     l = Lark(grammar, parser='earley', ambiguity='explicit', lexer=LEXER, earley__all_derivations=False)
-        #     x = l.parse('cde')
-        #     assert x.data != '_ambig', x
-        #     assert len(x.children) == 1
 
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
@@ -1260,7 +1232,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_expand1_list(self):
             g = _Lark(r"""start: list
                             ?list: item*
@@ -1279,7 +1251,7 @@ def _make_parser_test(LEXER, PARSER):
             [list] = r.children
             self.assertSequenceEqual([item.data for item in list.children], ())
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_expand1_list_2(self):
             g = _Lark(r"""start: list
                             ?list: item* "!"?
@@ -1299,7 +1271,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertSequenceEqual([item.data for item in list.children], ())
 
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty_flatten_list(self):
             g = _Lark(r"""start: list
                             list: | item "," list
@@ -1426,20 +1398,6 @@ def _make_parser_test(LEXER, PARSER):
             x1 = g.parse("ABBc")
             x2 = g.parse("abdE")
 
-        # def test_string_priority(self):
-        #     g = _Lark("""start: (A | /a?bb/)+
-        #                  A: "a"  """)
-        #     x = g.parse('abb')
-        #     self.assertEqual(len(x.children), 2)
-
-        #     # This parse raises an exception because the lexer will always try to consume
-        #     # "a" first and will never match the regular expression
-        #     # This behavior is subject to change!!
-        #     # This won't happen with ambiguity handling.
-        #     g = _Lark("""start: (A | /a?ab/)+
-        #                  A: "a"  """)
-        #     self.assertRaises(LexError, g.parse, 'aab')
-
         def test_rule_collision(self):
             g = _Lark("""start: "a"+ "b"
                              | "a"+ """)
@@ -1474,7 +1432,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(x.children), 1)
             self.assertEqual(x.children[0].type, "A", "A isn't associated with /a/")
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_maybe(self):
             g = _Lark("""start: ["a"] """)
             x = g.parse('a')
@@ -1528,14 +1486,7 @@ def _make_parser_test(LEXER, PARSER):
                       """)
             x = g.parse('\n')
 
-
-        # def test_token_recurse(self):
-        #     g = _Lark("""start: A
-        #                  A: B
-        #                  B: A
-        #               """)
-
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_empty(self):
             # Fails an Earley implementation without special handling for empty rules,
             # or re-processing of already completed rules.
@@ -1616,13 +1567,6 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aA')
             self.assertEqual(tree.children, ['a', 'A'])
 
-            # g = """!start: "a"i "a"
-            #     """
-            # self.assertRaises(GrammarError, _Lark, g)
-
-            # g = """!start: /a/i /a/
-            #     """
-            # self.assertRaises(GrammarError, _Lark, g)
 
             g = """start: NAME "," "a"
                    NAME: /[a-z_]/i /[a-z0-9_]/i*
@@ -1632,6 +1576,26 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tree.children, ['ab'])
             tree = l.parse('AB,a')
             self.assertEqual(tree.children, ['AB'])
+
+        @unittest.skipIf(LEXER in ('basic', 'custom_old', 'custom_new'), "Requires context sensitive terminal selection")
+        def test_token_flags_collision(self):
+
+            g = """!start: "a"i "a"
+                """
+            l = _Lark(g)
+            print(l.terminals)
+            self.assertEqual(l.parse('aa').children, ['a', 'a'])
+            self.assertEqual(l.parse('Aa').children, ['A', 'a'])
+            self.assertRaises(UnexpectedInput, l.parse, 'aA')
+            self.assertRaises(UnexpectedInput, l.parse, 'AA')
+
+            g = """!start: /a/i /a/
+                """
+            l = _Lark(g)
+            self.assertEqual(l.parse('aa').children, ['a', 'a'])
+            self.assertEqual(l.parse('Aa').children, ['A', 'a'])
+            self.assertRaises(UnexpectedInput, l.parse, 'aA')
+            self.assertRaises(UnexpectedInput, l.parse, 'AA')
 
         def test_token_flags3(self):
             l = _Lark("""!start: ABC+
@@ -1666,7 +1630,7 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?
                 """
@@ -1721,7 +1685,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(len(tree.children), 2)
 
 
-        @xFailIf('dynamic' in LEXER, "basic lexer prioritization differs from dynamic lexer prioritization")
+        @unittest.skipIf('dynamic' in LEXER, "basic lexer prioritization differs from dynamic lexer prioritization")
         def test_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -1773,7 +1737,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res.children, ['ab'])
 
 
-        @xFailIf('dynamic' not in LEXER, "dynamic lexer prioritization differs from basic lexer prioritization")
+        @unittest.skipIf('dynamic' not in LEXER, "dynamic lexer prioritization differs from basic lexer prioritization")
         def test_dynamic_lexer_prioritization(self):
             "Tests effect of priority on result"
 
@@ -1982,7 +1946,7 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(IOError, _Lark, grammar)
 
-        @xFailIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
+        @unittest.skipIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
         def test_postlex_declare(self): # Note: this test does a lot. maybe split it up?
             class TestPostLexer:
                 def process(self, stream):
@@ -2005,7 +1969,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = parser.parse(test_file)
             self.assertEqual(tree.children, [Token('B', 'A')])
 
-        @xFailIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
+        @unittest.skipIf('dynamic' in LEXER, "%declare/postlex doesn't work with dynamic")
         def test_postlex_indenter(self):
             class CustomIndenter(Indenter):
                 NL_type = 'NEWLINE'
@@ -2028,7 +1992,7 @@ def _make_parser_test(LEXER, PARSER):
             parser.parse("a\n    b\n")
 
 
-        @xFailIf(PARSER == 'cyk', "Doesn't work for CYK")
+        @unittest.skipIf(PARSER == 'cyk', "Doesn't work for CYK")
         def test_prioritization(self):
             "Tests effect of priority on result"
 
@@ -2072,7 +2036,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @xFailIf(PARSER != 'earley' or 'dynamic' not in LEXER, "Currently only Earley supports priority sum in rules")
+        @unittest.skipIf(PARSER != 'earley' or 'dynamic' not in LEXER, "Currently only Earley supports priority sum in rules")
         def test_prioritization_sum(self):
             "Tests effect of priority on result"
 
@@ -2144,7 +2108,7 @@ def _make_parser_test(LEXER, PARSER):
 
 
 
-        @xFailIf(PARSER == 'cyk', "No empty rules")
+        @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_ignore(self):
             grammar = r"""
             COMMENT: /(!|(\/\/))[^\n]*/
@@ -2266,7 +2230,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tok.end_line, 2)
             self.assertEqual(tok.end_column, 6)
 
-        @xFailIf(PARSER=='cyk', "Empty rules")
+        @unittest.skipIf(PARSER=='cyk', "Empty rules")
         def test_empty_end(self):
             p = _Lark("""
                 start: b c d
@@ -2277,7 +2241,7 @@ def _make_parser_test(LEXER, PARSER):
             res = p.parse('B')
             self.assertEqual(len(res.children), 3)
 
-        @xFailIf(PARSER=='cyk', "Empty rules")
+        @unittest.skipIf(PARSER=='cyk', "Empty rules")
         def test_maybe_placeholders(self):
             # Anonymous tokens shouldn't count
             p = _Lark("""start: ["a"] ["b"] ["c"] """, maybe_placeholders=True)
@@ -2373,7 +2337,7 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
 
 
-        @xFailIf(PARSER!='lalr' or LEXER == 'custom_old', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
+        @unittest.skipIf(PARSER!='lalr' or LEXER == 'custom_old', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -2419,7 +2383,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @xFailIf(PARSER=='cyk' or LEXER=='custom_old', "match_examples() not supported for CYK/old custom lexer")
+        @unittest.skipIf(PARSER=='cyk' or LEXER=='custom_old', "match_examples() not supported for CYK/old custom lexer")
         def test_match_examples(self):
             p = _Lark(r"""
                 start: "a" "b" "c"
@@ -2444,7 +2408,7 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual( match_error("ebc"), 2 )
 
 
-        @xFailIf(not regex, "regex not installed")
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_class(self):
             "Tests that character classes from the `regex` module work correctly."
             g = _Lark(r"""?start: NAME
@@ -2454,7 +2418,7 @@ def _make_parser_test(LEXER, PARSER):
 
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @xFailIf(not regex, "regex not installed")
+        @unittest.skipIf(not regex, "regex not installed")
         def test_unicode_word(self):
             "Tests that a persistent bug in the `re` module works when `regex` is enabled."
             g = _Lark(r"""?start: NAME
@@ -2462,7 +2426,7 @@ def _make_parser_test(LEXER, PARSER):
                         """, regex=True)
             self.assertEqual(g.parse('வணக்கம்'), 'வணக்கம்')
 
-        @xFailIf(not regex, "regex not installed")
+        @unittest.skipIf(not regex, "regex not installed")
         def test_regex_width_fallback(self):
             g = r"""
                 start: NAME NAME?
@@ -2478,7 +2442,7 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises((GrammarError, LexError, re.error), _Lark, g, regex=True)
 
-        @xFailIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
+        @unittest.skipIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
         def test_parser_interactive_parser(self):
 
             g = _Lark(r'''
@@ -2515,7 +2479,7 @@ def _make_parser_test(LEXER, PARSER):
             res = ip_copy.feed_eof()
             self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
-        @xFailIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
+        @unittest.skipIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
         def test_error_with_interactive_parser(self):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):
@@ -2550,7 +2514,7 @@ def _make_parser_test(LEXER, PARSER):
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
 
-        @xFailIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
+        @unittest.skipIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
         def test_iter_parse(self):
             ab_grammar = '!start: "a"* "b"*'
             parser = _Lark(ab_grammar)
@@ -2561,7 +2525,7 @@ def _make_parser_test(LEXER, PARSER):
             assert next(i) == 'a'
             assert next(i) == 'b'
 
-        @xFailIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
+        @unittest.skipIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
         def test_interactive_treeless_transformer(self):
             grammar = r"""
                 start: SYM+
@@ -2583,7 +2547,7 @@ def _make_parser_test(LEXER, PARSER):
             res = ip.feed_eof()
             self.assertEqual(res.children, [1, 2, 1])
 
-        @xFailIf(PARSER == 'earley', "Tree-less mode is not supported in earley")
+        @unittest.skipIf(PARSER == 'earley', "Tree-less mode is not supported in earley")
         def test_default_in_treeless_mode(self):
             grammar = r"""
                 start: expr
@@ -2609,7 +2573,7 @@ def _make_parser_test(LEXER, PARSER):
             b = parser.parse(s)
             assert a == b
 
-        @xFailIf(PARSER != 'lalr', "strict mode is only supported in lalr for now")
+        @unittest.skipIf(PARSER != 'lalr', "strict mode is only supported in lalr for now")
         def test_strict(self):
             # Test regex collision
             grammar = r"""

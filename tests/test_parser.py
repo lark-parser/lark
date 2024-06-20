@@ -23,10 +23,6 @@ try:
 except ImportError:
     regex = None
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 import lark
 from lark import logger
@@ -931,9 +927,6 @@ class CustomLexerNew(Lexer):
     def lex(self, lexer_state, parser_state):
         return self.lexer.lex(lexer_state, parser_state)
 
-    def make_lexer_state(self, text):
-        return self.lexer.make_lexer_state(text)
-
     __future_interface__ = True
 
 class CustomLexerOld(Lexer):
@@ -1583,7 +1576,6 @@ def _make_parser_test(LEXER, PARSER):
             g = """!start: "a"i "a"
                 """
             l = _Lark(g)
-            print(l.terminals)
             self.assertEqual(l.parse('aa').children, ['a', 'a'])
             self.assertEqual(l.parse('Aa').children, ['A', 'a'])
             self.assertRaises(UnexpectedInput, l.parse, 'aA')

@@ -2585,7 +2585,8 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(GrammarError, _Lark, grammar, strict=True)
 
-        @unittest.skipIf(LEXER in ('dynamic', 'custom_old'), "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
+        @unittest.skipIf(LEXER in ('dynamic', 'dynamic_complete', 'custom_old'),
+                         "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
         def test_subset_parse(self):
             grammar = r"""
             start: (WORD|FRAG_END|FRAG_START)+

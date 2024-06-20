@@ -630,6 +630,8 @@ class Lark(Serialize):
         Parameters:
             text (str, optional): Text to be parsed. Required for ``resume_parse()``.
             start (str, optional): Start symbol
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
 
         Returns:
             A new InteractiveParser instance.
@@ -648,6 +650,13 @@ class Lark(Serialize):
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
                 LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
+                Both of these don't work with lexer='dynamic'/'dynamic_complete'
+                Their behavior mirrors the behavior of the corresponding parameters in the Standard Library re module,
+                which most notably means that look behinds in regex will look behind start_pos, but lookaheads
+                won't look after end_pos. See [re.search](https://docs.python.org/3/library/re.html#re.Pattern.search)
+                for more information
 
         Returns:
             If a transformer is supplied to ``__init__``, returns whatever is the
@@ -663,14 +672,26 @@ class Lark(Serialize):
     def scan(self, text: str, start: Optional[str] = None, *, start_pos: Optional[int] = None,
              end_pos: Optional[int] = None) -> Iterable['ScanMatch']:
         """
-        Scans the input text for non-overlapping matches of the rule specified by 'start' and
-        yields the start and end position as well as the resulting tree.
+        Scans the input text for non-overlapping matches of this grammar.
 
-        Only works with parser='lalr' and lexer='contextual'. Works best if the first terminal(s)
+        Only works with parser='lalr'. Works best if the first terminal(s)
         that can be matched by grammar are unique in the text and always indicate the start of a match.
+
+        A found match will never start or end with an ignored terminal.
 
         Does not raise any exceptions except for invalid arguments/configurations.
 
+        Parameters:
+            text (str, optional): Text to be parsed. Required for ``resume_parse()``.
+            start (str, optional): Start symbol
+            start_pos (int, optional): Position at which the parser starts. Defaults to 0.
+            end_pos (int, optional): Position at which the parser stops. Defaults to len(text).
+
+        Returns:
+            An Iterable of `ScanMatch` instances, which contain two attributes: `range` a tuple with
+            the indices of the start and end of the found match, and `tree`, the parsed Tree object.
+
+        See Also: ``Lark.parse()``
         """
         return self.parser.scan(text, start=start, start_pos=start_pos, end_pos=end_pos)
 

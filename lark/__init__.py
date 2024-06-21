@@ -9,7 +9,7 @@ from .exceptions import (
     UnexpectedToken,
 )
 from .lark import Lark
-from .lexer import Token
+from .lexer import Token, TextSlice
 from .tree import ParseTree, Tree
 from .utils import logger
 from .visitors import Discard, Transformer, Transformer_NonRecursive, Visitor, v_args
@@ -27,6 +27,7 @@ __all__ = (
     "UnexpectedToken",
     "Lark",
     "Token",
+    "TextSlice",
     "ParseTree",
     "Tree",
     "logger",

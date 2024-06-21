@@ -35,7 +35,8 @@ __all__ = [
 
 
 class TestTreeTemplatesConf(unittest.TestCase):
-    parser = Lark(SOME_TEMPLATING_GRAMMAR)
+    def setUp(self):
+        self.parser = Lark(SOME_TEMPLATING_GRAMMAR)
 
     def test_conf_test_var__not_var(self):
         conf = TemplateConf(self.parser.parse)
@@ -95,8 +96,9 @@ class TestTreeTemplatesConf(unittest.TestCase):
 
 
 class TestTreeTemplatesTemplate(unittest.TestCase):
-    parser = Lark(SOME_TEMPLATING_GRAMMAR)
-    conf = TemplateConf(parser.parse)
+    def setUp(self):
+        self.parser = Lark(SOME_TEMPLATING_GRAMMAR)
+        self.conf = TemplateConf(self.parser.parse)
 
     def test_template_match__same_tree_no_template__empty_dictionary(self):
         template = Template(SOME_NON_TEMPLATE_TREE, conf=self.conf)
@@ -193,8 +195,9 @@ class TestTreeTemplatesTemplate(unittest.TestCase):
 
 
 class TestTreeTemplatesTemplateTranslator(unittest.TestCase):
-    parser = Lark(SOME_TEMPLATING_GRAMMAR)
-    conf = TemplateConf(parser.parse)
+    def setUp(self):
+        self.parser = Lark(SOME_TEMPLATING_GRAMMAR)
+        self.conf = TemplateConf(self.parser.parse)
 
     def test_translate__empty_translations__same_tree(self):
         # no translations to match, so doesn't replace anything & can't error

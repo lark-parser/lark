@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from lark import Lark, Tree
+from lark import Lark, Tree, TextSlice
 
 
 class TestLexer(TestCase):
@@ -25,10 +25,10 @@ class TestLexer(TestCase):
             %ignore " "
         """)
 
-        res = list(p.lex("xxxabc cba ddxx", start_pos=3, end_pos=-2))
+        res = list(p.lex(TextSlice("xxxabc cba ddxx", 3, -2)))
         assert res == list('abccbadd')
 
-        res = list(p.lex("aaaabc cba dddd", start_pos=3, end_pos=-2))
+        res = list(p.lex(TextSlice("aaaabc cba dddd", 3, -2)))
         assert res == list('abccbadd')
 
 

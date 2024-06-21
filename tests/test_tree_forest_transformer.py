@@ -16,9 +16,9 @@ class TestTreeForestTransformer(unittest.TestCase):
     !bc: "B"? "C"?
     !cd: "C"? "D"
     """
-
-    parser = Lark(grammar, parser='earley', ambiguity='forest')
-    forest = parser.parse("ABCD")
+    def setUp(self):
+        self.parser = Lark(self.grammar, parser='earley', ambiguity='forest')
+        self.forest = self.parser.parse("ABCD")
 
     def test_identity_resolve_ambiguity(self):
         l = Lark(self.grammar, parser='earley', ambiguity='resolve')

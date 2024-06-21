@@ -3,9 +3,10 @@ import sys
 from abc import abstractmethod, ABC
 import re
 from contextlib import suppress
+from dataclasses import dataclass
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload, Tuple
+    ClassVar, TYPE_CHECKING, overload, Tuple, AnyStr, Generic, Union
 )
 from types import ModuleType
 import warnings
@@ -136,6 +137,33 @@ class TerminalDef(Serialize):
             return self.pattern.raw or self.name
         else:
             return self.name
+
+
+@dataclass(frozen=True)
+class TextSlice(Generic[AnyStr]):
+    text: AnyStr
+    start: int
+    end: int
+
+    def __post_init__(self):
+        if self.start < 0:
+            object.__setattr__(self, 'start', self.start + len(self.text))
+        if self.end < 0:
+            object.__setattr__(self, 'end', self.end + len(self.text))
+
+    @classmethod
+    def from_text(cls, text: Union[AnyStr, 'TextSlice[AnyStr]']) -> 'TextSlice[AnyStr]':
+        if isinstance(text, TextSlice):
+            return text
+        else:
+            return cls(text, 0, len(text))
+
+    def is_complete_text(self):
+        return self.start == 0 and self.end == len(self.text)
+
+    def start_from(self, pos: int):
+        return TextSlice(self.text, pos, self.end)
+
 
 _T = TypeVar('_T', bound="Token")
 
@@ -286,7 +314,8 @@ class LineCounter:
         self.line = 1
         self.column = 1
         self.line_start_pos = 0
-
+    def __repr__(self):
+        return f"<Linecounter at {self.char_pos} {self.line}:{self.column}>"
     def __eq__(self, other):
         if not isinstance(other, LineCounter):
             return NotImplemented
@@ -322,9 +351,9 @@ class UnlessCallback:
         self.scanner = scanner
 
     def __call__(self, t):
-        res = self.scanner.match(t.value, 0)
-        if res:
-            _value, t.type = res
+        res = self.scanner.fullmatch(t.value)
+        if res is not None:
+            t.type = res
         return t
 
 
@@ -360,19 +389,18 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
+            callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, use_bytes=use_bytes))
 
     new_terminals = [t for t in terminals if t not in embedded_strs]
     return new_terminals, callback
 
 
 class Scanner:
-    def __init__(self, terminals, g_regex_flags, re_, use_bytes, match_whole=False):
+    def __init__(self, terminals, g_regex_flags, re_, use_bytes):
         self.terminals = terminals
         self.g_regex_flags = g_regex_flags
         self.re_ = re_
         self.use_bytes = use_bytes
-        self.match_whole = match_whole
 
         self.allowed_types = {t.name for t in self.terminals}
 
@@ -382,10 +410,9 @@ class Scanner:
         # Python sets an unreasonable group limit (currently 100) in its re module
         # Worse, the only way to know we reached it is by catching an AssertionError!
         # This function recursively tries less and less groups until it's successful.
-        postfix = '$' if self.match_whole else ''
         mres = []
         while terminals:
-            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp()) for t in terminals[:max_size])
             if self.use_bytes:
                 pattern = pattern.encode('latin-1')
             try:
@@ -397,24 +424,30 @@ class Scanner:
             terminals = terminals[max_size:]
         return mres
 
-    def match(self, text, pos, *, end_pos=sys.maxsize):
+    def fullmatch(self, text: str):
         for mre in self._mres:
-            m = mre.match(text, pos, end_pos)
+            m = mre.fullmatch(text)
+            if m:
+                return m.lastgroup
+
+
+    def match(self, text: TextSlice, pos: int):
+        assert pos >= text.start
+        for mre in self._mres:
+            m = mre.match(text.text, pos, text.end)
             if m:
                 return m.group(0), m.lastgroup
 
-    def search(self, text, start_pos, end_pos):
-        best = None
-        for mre in self._mres:
-            mre: re.Pattern
-            m = mre.search(text, start_pos, end_pos)
-            if m:
-                if best is None or m.start() < best.start():
-                    best = m
-        if best is None:
-            return best
-        else:
-            return (best.group(0), best.lastgroup), best.start()
+    def search(self, text: TextSlice, pos: int):
+        results = list(filter(None, [
+            mre.search(text.text, pos, text.end)
+            for mre in self._mres
+        ]))
+        if not results:
+            return None
+
+        best = min(results, key=lambda m: m.start())
+        return (best.group(0), best.lastgroup), best.start()
 
 
 def _regexp_has_newline(r: str):
@@ -435,39 +468,27 @@ class LexerState:
 
     __slots__ = 'text', 'line_ctr', 'end_pos', 'last_token'
 
-    text: str
+    text: TextSlice
     line_ctr: LineCounter
-    end_pos: int
     last_token: Optional[Token]
 
-    def __init__(self, text: Optional[str], line_ctr: Optional[LineCounter] = None, last_token: Optional[Token] = None,
-                 *, start_pos: Optional[int] = None, end_pos: Optional[int] = None):
+    def __init__(self, text: Optional[TextSlice], line_ctr: Optional[LineCounter] = None, last_token: Optional[Token] = None):
         self.text = text  # type: ignore[assignment]
         self.line_ctr = line_ctr or LineCounter(b'\n' if isinstance(text, bytes) else '\n')
+        if text is not None and text.start != 0:
+            self.line_ctr.feed_substring(text.text, 0, text.start)
         self.last_token = last_token
-        # If we are not given a text (i.e. via `parse_interactive`), `start_pos` and `end_pos` are ignored
-        if text is None:
-            self.end_pos = sys.maxsize
-            return
-        self.end_pos = end_pos if end_pos is not None else len(self.text)
-        if start_pos is not None:
-            if start_pos < 0:
-                start_pos += len(text)
-            self.line_ctr.feed_substring(text, 0, start_pos)
-        if self.end_pos < 0:
-            self.end_pos += len(text)
 
     def __eq__(self, other):
         if not isinstance(other, LexerState):
             return NotImplemented
 
-        return (self.text is other.text and
+        return (self.text == other.text and
                 self.line_ctr == other.line_ctr and
-                self.end_pos == other.end_pos and
-                self.last_token == other.last_token)
+                self.end_pos == other.end_pos)
 
     def __copy__(self):
-        return type(self)(self.text, copy(self.line_ctr), self.last_token, end_pos=self.end_pos)
+        return type(self)(self.text, copy(self.line_ctr), self.last_token)
 
 
 class LexerThread:
@@ -479,9 +500,8 @@ class LexerThread:
         self.state = lexer_state
 
     @classmethod
-    def from_text(cls, lexer: 'Lexer', text: str, *, start_pos: Optional[int] = None,
-                  end_pos: Optional[int] = None) -> 'LexerThread':
-        return cls(lexer, LexerState(text, start_pos=start_pos, end_pos=end_pos))
+    def from_text(cls, lexer: 'Lexer', text: TextSlice) -> 'LexerThread':
+        return cls(lexer, LexerState(text))
 
     def lex(self, parser_state):
         return self.lexer.lex(self.state, parser_state)
@@ -502,9 +522,9 @@ class Lexer(ABC):
     """
     @abstractmethod
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
-        return NotImplemented
+        raise NotImplementedError
 
-    def search_start(self, text: str, start_state, start_pos: int, end_pos: int) -> Optional[Token]:
+    def search_start(self, text: TextSlice, start_state, pos: int) -> Optional[Token]:
         raise TypeError("This lexer can not be used for searching in text")
 
     def make_lexer_state(self, text):
@@ -631,18 +651,18 @@ class BasicLexer(AbstractBasicLexer):
         assert self._scanner is not None
         return self._scanner
 
-    def match(self, text, pos, *, end_pos):
-        return self.scanner.match(text, pos, end_pos=end_pos)
+    def match(self, text: TextSlice, pos: int) -> Optional[Tuple[str, str]]:
+        return self.scanner.match(text, pos)
 
     def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
         line_ctr = lex_state.line_ctr
-        while line_ctr.char_pos < lex_state.end_pos:
-            res = self.match(lex_state.text, line_ctr.char_pos, end_pos=lex_state.end_pos)
+        while line_ctr.char_pos < lex_state.text.end:
+            res = self.match(lex_state.text, line_ctr.char_pos)
             if not res:
                 allowed = self.scanner.allowed_types - self.ignore_types
                 if not allowed:
                     allowed = {"<END-OF-FILE>"}
-                raise UnexpectedCharacters(lex_state.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
+                raise UnexpectedCharacters(lex_state.text.text, line_ctr.char_pos, line_ctr.line, line_ctr.column,
                                            allowed=allowed, token_history=lex_state.last_token and [lex_state.last_token],
                                            state=parser_state, terminals_by_name=self.terminals_by_name)
 
@@ -668,16 +688,16 @@ class BasicLexer(AbstractBasicLexer):
         # EOF
         raise EOFError(self)
 
-    def search_start(self, text: str, start_state, start_pos: int, end_pos: int) -> Optional[Token]:
+    def search_start(self, text: TextSlice, start_state, pos: int) -> Optional[Token]:
         while True:
-            res = self.scanner.search(text, start_pos, end_pos)
+            res = self.scanner.search(text, pos)
             if not res:
                 return None
             (value, type_), actual_pos = res
             if type_ in self.ignore_types:
-                start_pos = actual_pos + len(value)
+                pos = actual_pos + len(value)
                 continue
-            t = Token(type_, value, actual_pos, end_pos=start_pos + len(value))
+            t = Token(type_, value, actual_pos, end_pos=actual_pos + len(value))
             return t
 
 
@@ -735,8 +755,8 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-    def search_start(self, text: str, start_state, start_pos: int, end_pos: int) -> Optional[Token]:
-        return self.lexers[start_state].search_start(text, start_state, start_pos, end_pos)
+    def search_start(self, text: TextSlice, start_state, pos: int) -> Optional[Token]:
+        return self.lexers[start_state].search_start(text, start_state, pos)
 
 
 ###}

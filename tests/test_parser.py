@@ -30,7 +30,7 @@ from lark.lark import Lark
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
-from lark.lexer import Lexer, BasicLexer
+from lark.lexer import Lexer, BasicLexer, TextSlice
 from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
@@ -2597,16 +2597,16 @@ def _make_parser_test(LEXER, PARSER):
             """
 
             parser = _Lark(grammar)
-            self.assertEqual(parser.parse(" abc def ", start_pos=1, end_pos=-1),
+            self.assertEqual(parser.parse(TextSlice(" abc def ", 1, -1)),
                              Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
-            self.assertEqual(parser.parse(" abc def ", start_pos=1-9, end_pos=-1+9),
+            self.assertEqual(parser.parse(TextSlice(" abc def ", 1-9, -1+9)),
                              Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
-            self.assertEqual(parser.parse("xabc def ", start_pos=1, end_pos=-1),
+            self.assertEqual(parser.parse(TextSlice("xabc def ", 1, -1)),
                              Tree('start', [Token('FRAG_END', 'abc'), Token('WORD', 'def')]))
 
             # We match the behavior of python's re module here: It doesn't look ahead beyond `end_pos`,
             # despite looking behind before `start_pos`
-            self.assertEqual(parser.parse(" abc defx", start_pos=1, end_pos=-1),
+            self.assertEqual(parser.parse(TextSlice(" abc defx", 1, -1)),
                              Tree('start', [Token('WORD', 'abc'), Token('WORD', 'def')]))
 
 

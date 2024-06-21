@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKI
 
 from .exceptions import ConfigurationError, GrammarError, assert_config, UnexpectedInput
 from .utils import get_regexp_width, Serialize
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, TextSlice
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -21,22 +21,34 @@ class ScanMatch(NamedTuple):
 
 
 def _wrap_lexer(lexer_class):
-    future_interface = getattr(lexer_class, '__future_interface__', False)
-    if future_interface:
+    future_interface = getattr(lexer_class, '__future_interface__', 0)
+    if future_interface == 2:
         return lexer_class
-    else:
+    elif future_interface == 1:
         class CustomLexerWrapper(Lexer):
             def __init__(self, lexer_conf):
                 self.lexer = lexer_class(lexer_conf)
 
             def lex(self, lexer_state, parser_state):
-                if lexer_state.line_ctr.char_pos != 0:
-                    raise TypeError("Old Interface Custom Lexer don't support start_pos")
-                if lexer_state.end_pos != len(lexer_state.text):
-                    raise TypeError("Old Interface Custom Lexer don't support end_pos")
-                return self.lexer.lex(lexer_state.text)
-
+                if not lexer_state.text.is_complete_text():
+                    raise TypeError("Interface=1 Custom Lexer don't support TextSlice")
+                lexer_state.text = lexer_state.text.text
+                return self.lexer.lex(lexer_state, parser_state)
         return CustomLexerWrapper
+    elif future_interface == 0:
+        class CustomLexerWrapper(Lexer):
+            def __init__(self, lexer_conf):
+                self.lexer = lexer_class(lexer_conf)
+
+            def lex(self, lexer_state, parser_state):
+                if not lexer_state.text.is_complete_text():
+                    raise TypeError("Interface=0 Custom Lexer don't support TextSlice")
+                return self.lexer.lex(lexer_state.text.text)
+        return CustomLexerWrapper
+    else:
+        raise ValueError(f"Unknown __future_interface__ value {future_interface}, integer 0-2 expected")
+
+
 
 
 def _deserialize_parsing_frontend(data, memo, lexer_conf, callbacks, options):
@@ -105,36 +117,36 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("Unknown start rule %s. Must be one of %r" % (start, self.parser_conf.start))
         return start
 
-    def _make_lexer_thread(self, text: str, *, start_pos: Optional[int] = None,
-                           end_pos: Optional[int] = None) -> Union[str, LexerThread]:
+    def _make_lexer_thread(self, text: Union[str, TextSlice]) -> Union[str, LexerThread]:
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
         if self.skip_lexer:
-            if start_pos is not None or end_pos is not None:
-                raise TypeError("lexer='dynamic' does not support start_pos/end_pos")
+            if isinstance(text, TextSlice):
+                if not text.is_complete_text():
+                    raise TypeError("lexer='dynamic' does not support TextSlice")
+                return text.text
             return text
-        return cls.from_text(self.lexer, text, start_pos=start_pos, end_pos=end_pos)
+        text = TextSlice.from_text(text)
+        return cls.from_text(self.lexer, text)
 
-    def parse(self, text: str, start=None, on_error=None, *, start_pos=None, end_pos=None):
+    def parse(self, text: Union[str, TextSlice], start=None, on_error=None):
         chosen_start = self._verify_start(start)
         kw = {} if on_error is None else {'on_error': on_error}
-        stream = self._make_lexer_thread(text, start_pos=start_pos, end_pos=end_pos)
+        stream = self._make_lexer_thread(text)
         return self.parser.parse(stream, chosen_start, **kw)
 
-    def parse_interactive(self, text: Optional[str]=None, start=None,
-                          *, start_pos: Optional[int] = None, end_pos: Optional[int] = None):
+    def parse_interactive(self, text: Union[None, str, TextSlice]=None, start=None):
         # TODO BREAK - Change text from Optional[str] to text: str = ''.
         #   Would break behavior of exhaust_lexer(), which currently raises TypeError, and after the change would just return []
         #   When this is done, also adjust the code in `LexerState.__init__` since it currently works around being
-        #   passed `None` with regard to start_pos and end_pos
+        #   passed `None`
         chosen_start = self._verify_start(start)
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
-        stream = self._make_lexer_thread(text, start_pos=start_pos, end_pos=end_pos)  # type: ignore[arg-type]
+        stream = self._make_lexer_thread(text)  # type: ignore[arg-type]
         return self.parser.parse_interactive(stream, chosen_start)
 
 
-    def scan(self, text: str, start: Optional[str]=None, *, start_pos: Optional[int] = None,
-             end_pos: Optional[int] = None) -> Iterable[ScanMatch]:
+    def scan(self, text: Union[str, TextSlice], start: Optional[str]=None) -> Iterable[ScanMatch]:
         """
         In contrast to the other functions here, this one actually does work. See `Lark.scan`
         for a description of what this function is for.
@@ -144,24 +156,20 @@ class ParsingFrontend(Serialize):
         start_states = self.parser._parse_table.start_states
         chosen_start = self._verify_start(start)
         start_state = start_states[chosen_start]
-        pos = start_pos if start_pos is not None else 0
-        end_pos = end_pos if end_pos is not None else len(text)
-        if pos < 0:
-            pos += len(text)
-        if end_pos < 0:
-            end_pos += len(text)
+        text: TextSlice = TextSlice.from_text(text)  # ignore[no-redef]
+        pos = text.start
         while True:
             # Find the next candidate location
-            found = self.lexer.search_start(text, start_state, pos, end_pos)
+            found = self.lexer.search_start(text, start_state, pos)
             # No more valid candidates
             if found is None:
                 break
-            assert found.end_pos <= end_pos
+            assert found.end_pos <= text.end
             # Collect the potential end points found for this parse
             # We need to keep track of multiple options in case there are false `$END`s in the `ip.choices()`
             # We don't want to check early since this can be expensive.
             valid_end = []
-            ip = self.parse_interactive(text, start=chosen_start, start_pos=found.start_pos, end_pos=end_pos)
+            ip = self.parse_interactive(text.start_from(pos), start=chosen_start)
             tokens = ip.lexer_thread.lex(ip.parser_state)
             while True:
                 try:

@@ -24,7 +24,7 @@ from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
-from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token
+from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token, TextSlice
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
@@ -600,8 +600,7 @@ class Lark(Serialize):
     def __repr__(self):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
-    def lex(self, text: str, dont_ignore: bool = False, *, start_pos: Optional[int] = None,
-            end_pos: Optional[int] = None) -> Iterator[Token]:
+    def lex(self, text: Union[str, 'TextSlice'], dont_ignore: bool = False) -> Iterator[Token]:
         """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='basic'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
@@ -613,7 +612,8 @@ class Lark(Serialize):
             lexer = self._build_lexer(dont_ignore)
         else:
             lexer = self.lexer
-        lexer_thread = LexerThread.from_text(lexer, text, start_pos=start_pos, end_pos=end_pos)
+        text = TextSlice.from_text(text)
+        lexer_thread = LexerThread.from_text(lexer, text)
         stream = lexer_thread.lex(None)
         if self.options.postlex:
             return self.options.postlex.process(stream)
@@ -640,9 +640,8 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start, start_pos=start_pos, end_pos=end_pos)
 
-    def parse(self, text: str, start: Optional[str] = None,
-              on_error: 'Optional[Callable[[UnexpectedInput], bool]]' = None,
-              *, start_pos: Optional[int] = None, end_pos: Optional[int] = None) -> 'ParseTree':
+    def parse(self, text: Union[str, 'TextSlice'], start: Optional[str] = None,
+              on_error: 'Optional[Callable[[UnexpectedInput], bool]]' = None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:
@@ -667,10 +666,9 @@ class Lark(Serialize):
                 For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
         """
-        return self.parser.parse(text, start=start, on_error=on_error, start_pos=start_pos, end_pos=end_pos)
+        return self.parser.parse(text, start=start, on_error=on_error)
 
-    def scan(self, text: str, start: Optional[str] = None, *, start_pos: Optional[int] = None,
-             end_pos: Optional[int] = None) -> Iterable['ScanMatch']:
+    def scan(self, text: Union[str, TextSlice], start: Optional[str] = None) -> Iterable['ScanMatch']:
         """
         Scans the input text for non-overlapping matches of this grammar.
 
@@ -693,6 +691,6 @@ class Lark(Serialize):
 
         See Also: ``Lark.parse()``
         """
-        return self.parser.scan(text, start=start, start_pos=start_pos, end_pos=end_pos)
+        return self.parser.scan(text, start=start)
 
 ###}

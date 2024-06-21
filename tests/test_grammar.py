@@ -19,7 +19,6 @@ class LarkDotLark:
         if "start" in options and options["start"] != "start":
             # We're not going to parse with the parser, so just override it.
             options["start"] = "start"
-        options["propagate_positions"] = True
         lark_parser = Lark.open_from_package("lark", "grammars/lark.lark", **options)
         tree = lark_parser.parse(grammar)
         LarkValidator.validate(tree)

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import re
 
 import os
-from unittest import TestCase, main, SkipTest
+from unittest import TestCase, main, skipIf, SkipTest
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
@@ -30,10 +30,8 @@ class LarkDotLark:
 
 def _make_tests(parser):
     class _TestGrammar(TestCase):
+        @skipIf(parser == LarkDotLark, 'test_errors needs rewriting to work with lark.lark')
         def test_errors(self):
-            # TODO test_errors needs a lot of work for lark.lark.
-            if parser == LarkDotLark:
-                self.skipTest("test_errors needs a lot of work for lark.lark.")
             for msg, examples in GRAMMAR_ERRORS:
                 for example in examples:
                     with self.subTest(example=example):
@@ -53,10 +51,10 @@ def _make_tests(parser):
             assert p.parse("a b") == p.parse("a    b")
             assert len(spaces) == 5
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_override_rule1(self):
             # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
             # Thus extending it beyond its original capacity
-            self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser("""
                 %import .test_templates_import (start, sep)
 
@@ -68,9 +66,8 @@ def _make_tests(parser):
             b = p.parse('[1, 2, 3, ]')
             assert a == b
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_override_rule2(self):
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             self.assertRaisesRegex(GrammarError, "Rule 'delim' used but not defined \(in rule sep\)", parser, """
                 %import .test_templates_import (start, sep)
 
@@ -82,9 +79,8 @@ def _make_tests(parser):
                 %override sep{item}: item (delim item)* delim?
             """, source_path=__file__)
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_override_terminal(self):
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser("""
 
                 %import .grammars.ab (startab, A, B)
@@ -96,9 +92,8 @@ def _make_tests(parser):
             a = p.parse('cd')
             self.assertEqual(a.children[0].children, [Token('A', 'c'), Token('B', 'd')])
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_extend_rule1(self):
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser("""
                 %import .grammars.ab (startab, A, B, expr)
 
@@ -112,9 +107,8 @@ def _make_tests(parser):
                 %extend expr: B A
             """)
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_extend_term(self):
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser("""
                 %import .grammars.ab (startab, A, B, expr)
 
@@ -169,6 +163,7 @@ def _make_tests(parser):
                         """
             self.assertRaisesRegex( GrammarError, "You can only use newlines in regular expressions with the `x` \(verbose\) flag", parser, g)
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_import_custom_sources1(self):
             custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
@@ -178,12 +173,11 @@ def _make_tests(parser):
             %import ab.startab
             """
 
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser(grammar, import_paths=[custom_loader])
             self.assertEqual(p.parse('ab'),
                                 Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_import_custom_sources2(self):
             custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
@@ -192,24 +186,22 @@ def _make_tests(parser):
 
             %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
             """
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser(grammar, import_paths=[custom_loader])
             x = p.parse('N')
             self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
 
+        @skipIf(parser == LarkDotLark, 'Test fails for lark.lark because it does not execute %import.')
         def test_import_custom_sources3(self):
             custom_loader2 = FromPackageLoader(__name__)
             grammar = """
             %import .test_relative_import (start, WS)
             %ignore WS
             """
-            if parser == LarkDotLark:
-                self.skipTest("Test fails for lark.lark because it doesn't execute %import.")
             p = parser(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
             x = p.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 
+        @skipIf(parser == LarkDotLark, 'Test forces use of Lark.')
         def test_find_grammar_errors1(self):
             text = """
             a: rule
@@ -218,11 +210,10 @@ def _make_tests(parser):
             B.: "hello" f
             D: "okay"
             """
-            if parser == LarkDotLark:
-                self.skipTest("Test forces use of Lark.")
 
             assert [e.line for e, _s in find_grammar_errors(text)] == [3, 5]
 
+        @skipIf(parser == LarkDotLark, 'Test forces use of Lark.')
         def test_find_grammar_errors2(self):
             text = """
             a: rule
@@ -233,10 +224,9 @@ def _make_tests(parser):
             D: "okay"
             """
 
-            if parser == LarkDotLark:
-                self.skipTest("Test forces use of Lark.")
             assert [e.line for e, _s in find_grammar_errors(text)] == [3, 4, 6]
 
+        @skipIf(parser == LarkDotLark, 'Test forces use of Lark.')
         def test_find_grammar_errors3(self):
             text = """
             a: rule @#$#@$@&&
@@ -247,8 +237,6 @@ def _make_tests(parser):
             D: "okay"
             """
 
-            if parser == LarkDotLark:
-                self.skipTest("Test forces use of Lark.")
             x = find_grammar_errors(text)
             assert [e.line for e, _s in find_grammar_errors(text)] == [2, 6]
 
@@ -275,12 +263,11 @@ def _make_tests(parser):
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'ABB')
             self.assertRaises((ParseError, UnexpectedInput), l.parse, u'AAAABB')
 
+        @skipIf(parser == LarkDotLark, 'Test depends on Lark.')
         def test_ranged_repeat_large1(self):
             g = u"""!start: "A"~60
                 """
             l = parser(g, parser='lalr')
-            if parser == LarkDotLark:
-                self.skipTest("Test depends on Lark.")
             self.assertGreater(len(l.rules), 1, "Expected that more than one rule will be generated")
             self.assertEqual(l.parse(u'A' * 60), Tree('start', ["A"] * 60))
             self.assertRaises(ParseError, l.parse, u'A' * 59)
@@ -317,6 +304,7 @@ def _make_tests(parser):
                 with self.subTest(i=i):
                     self.assertRaises(UnexpectedInput, l.parse, str(i))
 
+        @skipIf(parser == LarkDotLark, 'Test forces use of Lark.')
         def test_list_grammar_imports(self):
             grammar = """
             %import .test_templates_import (start, sep)
@@ -325,8 +313,6 @@ def _make_tests(parser):
             %ignore " "
             """
 
-            if parser == LarkDotLark:
-                self.skipTest("test_list_grammar_imports forces use of Lark.")
             imports = list_grammar_imports(grammar, [os.path.dirname(__file__)])
             self.assertEqual({os.path.split(i)[-1] for i in imports}, {'test_templates_import.lark', 'templates.lark'})
 

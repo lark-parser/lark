@@ -13,9 +13,36 @@ class Definition:
         self.params = tuple(params)
 
 class LarkValidator:
+    """
+    Checks a grammar parsed by `lark.lark` for validity using a variety of checks similar to what
+    `load_grammar.py` does on parser creation. The only stable public entry point is
+    `LarkValidator.validate(tree)`.
+
+    Checks:
+    - Illegal constructs not prevented by the grammar:
+      - `alias` not in the top expansions of a rule
+      - Incorrect `%ignore` lines
+      - Invalid literals (like newlines inside of regex without the `x` flag)
+      - Rules used inside of Terminals
+    - Undefined symbols
+    - Incorrectly used templates
+    """
 
     @classmethod
     def validate(cls, tree: Tree, options: Dict[str, Any] = {}):
+        """
+        Checks a grammar parsed by `lark.lark` for validity using a variety of checks similar to what
+        `load_grammar.py` does on parser creation.
+
+        Checks:
+        - Illegal constructs not prevented by the grammar:
+          - `alias` not in the top expansions of a rule
+          - Incorrect `%ignore` lines
+          - Invalid literals (like newlines inside of regex without the `x` flag)
+          - Rules used inside of Terminals
+        - Undefined symbols
+        - Incorrectly used templates
+        """
         visitor = cls(tree, options)
         visitor._cross_check_symbols()
         visitor._resolve_term_references()

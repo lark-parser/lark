@@ -294,7 +294,8 @@ class Parser:
             except ImportError:
                 logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
             else:
-                debug_walker.visit(solutions[0], "sppf.png")
+                for i, s in enumerate(solutions):
+                    debug_walker.visit(s, f"sppf{i}.png")
 
 
         if self.Tree is not None:
@@ -302,7 +303,11 @@ class Parser:
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
             solutions = [transformer.transform(s) for s in solutions]
 
-            return solutions[0] if len(solutions) == 1 else self.Tree('_ambig', solutions)
+            if len(solutions) > 1:
+                t: Tree = self.Tree('_ambig', solutions)
+                t.expand_kids_by_data('_ambig')     # solutions may themselves be _ambig nodes
+                return t
+            return solutions[0]
 
         # return the root of the SPPF
         # TODO return a list of solutions, or join them together somehow

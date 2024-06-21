@@ -1,6 +1,6 @@
 # Lark grammar of Lark's syntax
 # Note: Lark is not bootstrapped, its parser is implemented in load_grammar.py
-# This grammar matches that one, but does not enfore some rules that it does.
+# This grammar matches that one, but does not enforce some rules that it does.
 # If you want to enforce those, you can pass the "LarkValidator" over
 # the parse tree, like this:
 

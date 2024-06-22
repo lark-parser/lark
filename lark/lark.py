@@ -12,14 +12,11 @@ if TYPE_CHECKING:
     from .parsers.lalr_interactive_parser import InteractiveParser
     from .tree import ParseTree
     from .visitors import Transformer
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
     from .parser_frontends import ParsingFrontend
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, isascii, logger
+from .utils import Serialize, SerializeMemoizer, FS, logger
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
@@ -303,7 +300,7 @@ class Lark(Serialize):
         if isinstance(grammar, str):
             self.source_grammar = grammar
             if self.options.use_bytes:
-                if not isascii(grammar):
+                if not grammar.isascii():
                     raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
 
             if self.options.cache:

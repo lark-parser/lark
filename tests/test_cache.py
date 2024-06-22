@@ -7,17 +7,14 @@ from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
+from io import BytesIO
 
 try:
     import regex
 except ImportError:
     regex = None
 
-class MockFile(StringIO):
+class MockFile(BytesIO):
     def close(self):
         pass
     def __enter__(self):

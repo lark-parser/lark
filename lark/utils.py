@@ -68,7 +68,7 @@ class Serialize:
         res = {f: _serialize(getattr(self, f), memo) for f in fields}
         res['__type__'] = type(self).__name__
         if hasattr(self, '_serialize'):
-            self._serialize(res, memo)  # type: ignore[attr-defined]
+            self._serialize(res, memo)
         return res
 
     @classmethod
@@ -89,7 +89,7 @@ class Serialize:
                 raise KeyError("Cannot find key for class", cls, e)
 
         if hasattr(inst, '_deserialize'):
-            inst._deserialize()  # type: ignore[attr-defined]
+            inst._deserialize()
 
         return inst
 
@@ -141,7 +141,7 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
         regexp_final = expr
     try:
         # Fixed in next version (past 0.960) of typeshed
-        return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]   # type: ignore[attr-defined]
+        return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]
     except sre_constants.error:
         if not _has_regex:
             raise ValueError(expr)
@@ -188,11 +188,7 @@ def dedup_list(l: Sequence[T]) -> List[T]:
     """Given a list (l) will removing duplicates from the list,
        preserving the original order of the list. Assumes that
        the list entries are hashable."""
-    dedup = set()
-    # This returns None, but that's expected
-    return [x for x in l if not (x in dedup or dedup.add(x))]  # type: ignore[func-returns-value]
-    # 2x faster (ordered in PyPy and CPython 3.6+, guaranteed to be ordered in Python 3.7+)
-    # return list(dict.fromkeys(l))
+    return list(dict.fromkeys(l))
 
 
 class Enumerator(Serialize):
@@ -234,8 +230,7 @@ def combine_alternatives(lists):
     return list(product(*lists))
 
 try:
-    # atomicwrites doesn't have type bindings
-    import atomicwrites     # type: ignore[import]
+    import atomicwrites
     _has_atomicwrites = True
 except ImportError:
     _has_atomicwrites = False
@@ -249,19 +244,6 @@ class FS:
             return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
         else:
             return open(name, mode, **kwargs)
-
-
-
-def isascii(s: str) -> bool:
-    """ str.isascii only exists in python3.7+ """
-    if sys.version_info >= (3, 7):
-        return s.isascii()
-    else:
-        try:
-            s.encode('ascii')
-            return True
-        except (UnicodeDecodeError, UnicodeEncodeError):
-            return False
 
 
 class fzset(frozenset):

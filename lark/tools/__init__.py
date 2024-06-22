@@ -28,9 +28,8 @@ options = ['start', 'lexer']
 lalr_argparser.add_argument('-v', '--verbose', action='count', default=0, help="Increase Logger output level, up to three times")
 lalr_argparser.add_argument('-s', '--start', action='append', default=[])
 lalr_argparser.add_argument('-l', '--lexer', default='contextual', choices=('basic', 'contextual'))
-encoding: Optional[str] = 'utf-8' if sys.version_info > (3, 4) else None
-lalr_argparser.add_argument('-o', '--out', type=FileType('w', encoding=encoding), default=sys.stdout, help='the output file (default=stdout)')
-lalr_argparser.add_argument('grammar_file', type=FileType('r', encoding=encoding), help='A valid .lark file')
+lalr_argparser.add_argument('-o', '--out', type=FileType('w', encoding='utf-8'), default=sys.stdout, help='the output file (default=stdout)')
+lalr_argparser.add_argument('grammar_file', type=FileType('r', encoding='utf-8'), help='A valid .lark file')
 
 for flag in flags:
     if isinstance(flag, tuple):

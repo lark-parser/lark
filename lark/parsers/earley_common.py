@@ -20,13 +20,13 @@ class Item:
             self.s = (rule, ptr)
             self.expect = rule.expansion[ptr]
             self.previous = rule.expansion[ptr - 1] if ptr > 0 and len(rule.expansion) else None
-        self._hash = hash((self.s, self.start))
+        self._hash = hash((self.s, self.start, self.rule))
 
     def advance(self):
         return Item(self.rule, self.ptr + 1, self.start)
 
     def __eq__(self, other):
-        return self is other or (self.s == other.s and self.start == other.start)
+        return self is other or (self.s == other.s and self.start == other.start and self.rule == other.rule)
 
     def __hash__(self):
         return self._hash

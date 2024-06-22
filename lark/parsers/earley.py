@@ -15,7 +15,7 @@ from collections import deque
 from ..lexer import Token
 from ..tree import Tree
 from ..exceptions import UnexpectedEOF, UnexpectedToken
-from ..utils import logger, OrderedSet
+from ..utils import logger, OrderedSet, dedup_list
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item
@@ -169,6 +169,7 @@ class Parser:
                         items.append(new_item)
 
     def _parse(self, lexer, columns, to_scan, start_symbol=None):
+
         def is_quasi_complete(item):
             if item.is_complete:
                 return True
@@ -281,7 +282,7 @@ class Parser:
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
+        solutions = dedup_list(n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0)
         if not solutions:
             expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
@@ -293,16 +294,21 @@ class Parser:
             except ImportError:
                 logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
             else:
-                debug_walker.visit(solutions[0], "sppf.png")
+                for i, s in enumerate(solutions):
+                    debug_walker.visit(s, f"sppf{i}.png")
 
-
-        if len(solutions) > 1:
-            assert False, 'Earley should not generate multiple start symbol items!'
 
         if self.Tree is not None:
             # Perform our SPPF -> AST conversion
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity)
-            return transformer.transform(solutions[0])
+            solutions = [transformer.transform(s) for s in solutions]
+
+            if len(solutions) > 1:
+                t: Tree = self.Tree('_ambig', solutions)
+                t.expand_kids_by_data('_ambig')     # solutions may themselves be _ambig nodes
+                return t
+            return solutions[0]
 
         # return the root of the SPPF
+        # TODO return a list of solutions, or join them together somehow
         return solutions[0]

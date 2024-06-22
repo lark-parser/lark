@@ -15,7 +15,7 @@ from collections import deque
 from ..lexer import Token
 from ..tree import Tree
 from ..exceptions import UnexpectedEOF, UnexpectedToken
-from ..utils import logger, OrderedSet
+from ..utils import logger, OrderedSet, dedup_list
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
 from .earley_common import Item
@@ -282,7 +282,7 @@ class Parser:
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = list(OrderedSet([n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]))
+        solutions = dedup_list(n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0)
         if not solutions:
             expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))

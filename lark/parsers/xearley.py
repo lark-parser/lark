@@ -104,7 +104,7 @@ class Parser(BaseParser):
                     token.end_pos = i + 1
 
                     new_item = item.advance()
-                    label = (new_item.s, new_item.start, i)
+                    label = (new_item.s, new_item.start, i + 1)
                     token_node = TokenNode(token, terminals[token.type])
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token_node)

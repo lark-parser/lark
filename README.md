@@ -125,7 +125,7 @@ Lark is fast and light (lower is better)
 
 Check out the [JSON tutorial](/docs/json_tutorial.md#conclusion) for more details on how the comparison was made.
 
-For a more thorough and objective comparison, checkout the [Python Parsing Benchmarks](https://github.com/goodmami/python-parsing-benchmarks) repo.
+For thorough 3rd-party benchmarks, checkout the [Python Parsing Benchmarks](https://github.com/goodmami/python-parsing-benchmarks) repo.
 
 #### Feature comparison
 
@@ -180,8 +180,8 @@ Lark accepts pull-requests. See [How to develop Lark](/docs/how_to_develop.md)
 
 Big thanks to everyone who contributed so far:
 
-<a href="https://github.com/lark-parser/lark/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=lark-parser/lark" />
+<a href="https://github.com/lark-parser/lark/graphs/contributors">
 </a>
 
 ## Sponsor

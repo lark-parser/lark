@@ -933,6 +933,27 @@ def _make_full_earley_test(LEXER):
             tree = l.parse('');
             self.assertEqual(tree, Tree('a', [Tree('x', [Tree('b', [])])]))
 
+        @unittest.skipIf(LEXER=='basic', "start/end values work differently for the basic lexer")
+        def test_symbol_node_start_end_dynamic_lexer(self):
+            grammar = """
+            start: "ABC"
+            """
+
+            l = Lark(grammar, ambiguity='forest', lexer=LEXER)
+            node = l.parse('ABC')
+            self.assertEqual(node.start, 0)
+            self.assertEqual(node.end, 3)
+
+            grammar2 = """
+            start: abc
+            abc: "ABC"
+            """
+
+            l = Lark(grammar2, ambiguity='forest', lexer=LEXER)
+            node = l.parse('ABC')
+            self.assertEqual(node.start, 0)
+            self.assertEqual(node.end, 3)
+
 
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME

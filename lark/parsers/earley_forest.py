@@ -38,15 +38,15 @@ class SymbolNode(ForestNode):
 
     Parameters:
         s: A Symbol, or a tuple of (rule, ptr) for an intermediate node.
-        start: The index of the start of the substring matched by this symbol (inclusive).
-        end: The index of the end of the substring matched by this symbol (exclusive).
+        start: For dynamic lexers, the index of the start of the substring matched by this symbol (inclusive).
+        end: For dynamic lexers, the index of the end of the substring matched by this symbol (exclusive).
 
     Properties:
         is_intermediate: True if this node is an intermediate node.
         priority: The priority of the node's symbol.
     """
     Set: Type[AbstractSet] = set   # Overridden by StableSymbolNode
-    __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate', '_hash')
+    __slots__ = ('s', 'start', 'end', '_children', 'paths', 'paths_loaded', 'priority', 'is_intermediate')
     def __init__(self, s, start, end):
         self.s = s
         self.start = start
@@ -59,7 +59,6 @@ class SymbolNode(ForestNode):
         #   unlike None or float('NaN'), and sorts appropriately.
         self.priority = float('-inf')
         self.is_intermediate = isinstance(s, tuple)
-        self._hash = hash((self.s, self.start, self.end))
 
     def add_family(self, lr0, rule, start, left, right):
         self._children.add(PackedNode(self, lr0, rule, start, left, right))
@@ -92,14 +91,6 @@ class SymbolNode(ForestNode):
 
     def __iter__(self):
         return iter(self._children)
-
-    def __eq__(self, other):
-        if not isinstance(other, SymbolNode):
-            return False
-        return self is other or (type(self.s) == type(other.s) and self.s == other.s and self.start == other.start and self.end is other.end)
-
-    def __hash__(self):
-        return self._hash
 
     def __repr__(self):
         if self.is_intermediate:

@@ -609,9 +609,10 @@ class ForestToParseTree(ForestTransformer):
                 children.append(data.left)
         if data.right is not PackedData.NO_DATA:
             children.append(data.right)
-        if node.parent.is_intermediate:
-            return self._cache.setdefault(id(node), children)
-        return self._cache.setdefault(id(node), self._call_rule_func(node, children))
+        transformed = children if node.parent.is_intermediate else self._call_rule_func(node, children)
+        if self._use_cache:
+            self._cache[id(node)] = transformed
+        return transformed
 
     def visit_symbol_node_in(self, node):
         super(ForestToParseTree, self).visit_symbol_node_in(node)

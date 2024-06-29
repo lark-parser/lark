@@ -300,7 +300,10 @@ class Parser:
 
         if self.Tree is not None:
             # Perform our SPPF -> AST conversion
-            transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, not self.resolve_ambiguity)
+            # Disable the ForestToParseTree cache when ambiguity='resolve'
+            # to prevent a tree construction bug. See issue #1283
+            use_cache = not self.resolve_ambiguity
+            transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, use_cache)
             solutions = [transformer.transform(s) for s in solutions]
 
             if len(solutions) > 1:

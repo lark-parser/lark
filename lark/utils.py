@@ -343,4 +343,4 @@ class OrderedSet(AbstractSet[T]):
         return len(self.d)
 
     def __repr__(self):
-        return f"{type(self).__name__}({', '.join(map(str,self))})"
+        return f"{type(self).__name__}({', '.join(map(repr,self))})"

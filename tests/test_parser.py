@@ -975,6 +975,19 @@ def _make_full_earley_test(LEXER):
             tree = l.parse("")
             self.assertEqual(tree, Tree('start', [Tree('x', [])]))
 
+
+        def test_consistent_derivation_order1(self):
+            # Should return the same result for any hash-seed
+            parser = Lark('''
+                start: a a
+                a: "." | b
+                b: "."
+            ''', lexer=LEXER)
+
+            tree = parser.parse('..')
+            n = Tree('a', [Tree('b', [])])
+            assert tree == Tree('start', [n, n])
+
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley

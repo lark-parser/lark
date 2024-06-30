@@ -3,7 +3,7 @@
 from collections import Counter, defaultdict
 from typing import List, Dict, Iterator, FrozenSet, Set
 
-from ..utils import bfs, fzset, classify
+from ..utils import bfs, fzset, classify, OrderedSet
 from ..exceptions import GrammarError
 from ..grammar import Rule, Terminal, NonTerminal, Symbol
 from ..common import ParserConf
@@ -177,13 +177,13 @@ class GrammarAnalyzer:
 
         self.FIRST, self.FOLLOW, self.NULLABLE = calculate_sets(rules)
 
-    def expand_rule(self, source_rule: NonTerminal, rules_by_origin=None) -> State:
+    def expand_rule(self, source_rule: NonTerminal, rules_by_origin=None) -> OrderedSet[RulePtr]:
         "Returns all init_ptrs accessible by rule (recursive)"
 
         if rules_by_origin is None:
             rules_by_origin = self.rules_by_origin
 
-        init_ptrs = set()
+        init_ptrs = OrderedSet[RulePtr]()
         def _expand_rule(rule: NonTerminal) -> Iterator[NonTerminal]:
             assert not rule.is_term, rule
 
@@ -200,4 +200,4 @@ class GrammarAnalyzer:
         for _ in bfs([source_rule], _expand_rule):
             pass
 
-        return fzset(init_ptrs)
+        return init_ptrs

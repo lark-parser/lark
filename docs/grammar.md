@@ -51,6 +51,30 @@ Lark begins the parse with the rule 'start', unless specified otherwise in the o
 
 Names of rules are always in lowercase, while names of terminals are always in uppercase. This distinction has practical effects, for the shape of the generated parse-tree, and the automatic construction of the lexer (aka tokenizer, or scanner).
 
+## EBNF Expressions
+
+The EBNF expression in a Lark termminal definition is a sequence of items to be matched.
+Each item is one of:
+
+* `TERMINAL` - Another terminal, which cannot be defined in terms of this terminal.
+* `"string literal"` - Literal, to be matched as-is.
+* `"string literal"i` - Literal, to be matched case-insensitively.
+* `/regexp literal/[imslux]` - Regular expression literal.  Can include the Python stdlib's `re` [flags `imslux`](https://docs.python.org/3/library/re.html#contents-of-module-re)
+
+* `"character".."character"` - Literal range.  The range represends all values between the two literals, inclusively.
+* `(item item ..)` - Group items
+* `(item | item | ..)` - Alternate items.
+* `[item item ..]` - Maybe. Same as `(item item ..)?`, but when `maybe_placeholders=True`, generates `None` if there is no match.
+* `[item | item | ..]` - Maybe with alternates. Same as `(item | item | ..)?`, but when `maybe_placeholders=True`, generates `None` if there is no match.
+* `item?` - Zero or one instances of item (a "maybe")
+* `item*` - Zero or more instances of item
+* `item+` - One or more instances of item
+* `item ~ n` - Exactly *n* instances of item
+* `item ~ n..m` - Between *n* to *m* instances of item
+
+The EBNF expression in a Lark rule definition is also a sequence of the same set of items to be matched, with one addition:
+
+* `rule` - A rule, which can include recursive use of this rule.
 
 ## Terminals
 
@@ -59,45 +83,16 @@ Terminals are used to match text into symbols. They can be defined as a combinat
 **Syntax:**
 
 ```html
-<NAME> [. <priority>] : <literals-and-or-terminals>
+<NAME> [. <priority>] : <items-to-match>
 ```
 
-Terminal names must be uppercase.
+Terminal names must be uppercase.  They must start with an underscore (`_`) or a letter (`A` through `Z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Terminal names that start with "_" will not be included in the parse tree, unless the `keep_all_tokens` option is specified, or unless they are part of a containing terminal.  Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
 
-Literals can be one of:
-
-* `"string"`
-* `/regular expression+/`
-* `"case-insensitive string"i`
-* `/re with flags/imulx`
-* Literal range: `"a".."z"`, `"1".."9"`, etc.
-
-Terminals also support grammar operators, such as `|`, `+`, `*` and `?`.
-
-Terminals are a linear construct, and therefore may not contain themselves (recursion isn't allowed).
+See [EBNF Expressions](#ebnf-expressions) above for the list of items that a terminal can match.
 
 ### Templates
 
-Templates are expanded when preprocessing the grammar.
-
-Definition syntax:
-
-```ebnf
-  my_template{param1, param2, ...}: <EBNF EXPRESSION>
-```
-
-Use syntax:
-
-```ebnf
-some_rule: my_template{arg1, arg2, ...}
-```
-
-Example:
-```ebnf
-_separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
-
-num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
-```
+Templates are not allowed with terminals.
 
 ### Priority
 
@@ -122,7 +117,7 @@ SIGNED_INTEGER: /
  /x
 ```
 
-Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
+Supported flags are one of: `imslux`. See Python's [regex documentation](https://docs.python.org/3/library/re.html#regular-expression-syntax) for more details on each one.
 
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 
@@ -196,29 +191,19 @@ _ambig
 
 **Syntax:**
 ```html
-<name> : <items-to-match>  [-> <alias> ]
+<modifiers><name> : <items-to-match>  [-> <alias> ]
        | ...
 ```
 
-Names of rules and aliases are always in lowercase.
+Names of rules and aliases are always in lowercase.  They must start with an underscore (`_`) or a letter (`a` through `z`), and may be composed of letters, underscores, and digits (`0` through `9`).  Rule names that start with "_" will be inlined into their containing rule.
 
 Rule definitions can be extended to the next line by using the OR operator (signified by a pipe: `|` ).
 
-An alias is a name for the specific rule alternative. It affects tree construction.
+An alias is a name for the specific rule alternative. It affects tree construction (see [Shaping the tree](tree_construction#shaping_the_tree).
 
+The affect of a rule on the parse tree can be specified by modifiers.  The `!` modifier causes the rule to keep all its tokens, regardless of whether they are named or not.  The `?` modifier causes the rule to be inlined if it only has a single child.  The `?` modifier cannot be used on rules that are named starting with an underscore.
 
-Each item is one of:
-
-* `rule`
-* `TERMINAL`
-* `"string literal"` or `/regexp literal/`
-* `(item item ..)` - Group items
-* `[item item ..]` - Maybe. Same as `(item item ..)?`, but when `maybe_placeholders=True`, generates `None` if there is no match.
-* `item?` - Zero or one instances of item ("maybe")
-* `item*` - Zero or more instances of item
-* `item+` - One or more instances of item
-* `item ~ n` - Exactly *n* instances of item
-* `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
+See [EBNF Expressions](#ebnf_expressions) above for the list of items that a rule can match.
 
 **Examples:**
 ```perl
@@ -228,6 +213,29 @@ expr: expr operator expr
     | value               //# Multi-line, belongs to expr
 
 four_words: word ~ 4
+```
+
+### Templates
+
+Templates are expanded when preprocessing rules in the grammar.
+
+Definition syntax:
+
+```ebnf
+  my_template{param1, param2, ...}: <EBNF EXPRESSION>
+```
+
+Use syntax:
+
+```ebnf
+some_rule: my_template{arg1, arg2, ...}
+```
+
+Example:
+```ebnf
+_separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
+
+num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
 ```
 
 ### Priority
@@ -297,11 +305,23 @@ Note that `%ignore` directives cannot be imported. Imported rules will abide by 
 
 Declare a terminal without defining it. Useful for plugins.
 
+**Syntax:**
+```html
+%declare <TERMINAL>
+%declare <rule>
+```
+
 ### %override
 
 Override a rule or terminals, affecting all references to it, even in imported grammars.
 
 Useful for implementing an inheritance pattern when importing grammars.
+
+**Syntax:**
+```html
+%override <terminal definition>
+%override <rule definition>
+```
 
 **Example:**
 ```perl
@@ -318,6 +338,12 @@ Extend the definition of a rule or terminal, e.g. add a new option on what it ca
 Useful for splitting up a definition of a complex rule with many different options over multiple files.
 
 Can also be used to implement a plugin system where a core grammar is extended by others.
+
+**Syntax:**
+```html
+%extend <TERMINAL> ... additional terminal alternate ...
+%extend <rule> ... additional rule alternate ...
+```
 
 
 **Example:**

@@ -660,6 +660,9 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
     def alias(self, t):
         raise GrammarError("Aliasing not allowed in terminals (You used -> in the wrong place)")
 
+    def template_usage(self, t):
+        raise GrammarError("Templates not allowed in terminals")
+
     def value(self, v):
         return v[0]
 
@@ -1099,9 +1102,10 @@ class GrammarBuilder:
         self._definitions: Dict[str, Definition] = {}
         self._ignore_names: List[str] = []
 
-    def _grammar_error(self, is_term, msg, *names):
+    def _grammar_error(self, msg, *subs):
         args = {}
-        for i, name in enumerate(names, start=1):
+        for i, sub in enumerate(subs, start=1):
+            name, is_term = sub
             postfix = '' if i == 1 else str(i)
             args['name' + postfix] = name
             args['type' + postfix] = lowercase_type = ("rule", "terminal")[is_term]
@@ -1127,28 +1131,28 @@ class GrammarBuilder:
     def _define(self, name, is_term, exp, params=(), options=None, *, override=False):
         if name in self._definitions:
             if not override:
-                self._grammar_error(is_term, "{Type} '{name}' defined more than once", name)
+                self._grammar_error("{Type} '{name}' defined more than once", (name, is_term))
         elif override:
-            self._grammar_error(is_term, "Cannot override a nonexisting {type} {name}", name)
+            self._grammar_error("Cannot override a nonexisting {type} {name}", (name, is_term))
 
         if name.startswith('__'):
-            self._grammar_error(is_term, 'Names starting with double-underscore are reserved (Error at {name})', name)
+            self._grammar_error('Names starting with double-underscore are reserved (Error at {name})', (name, is_term))
 
         self._definitions[name] = Definition(is_term, exp, params, self._check_options(is_term, options))
 
     def _extend(self, name, is_term, exp, params=(), options=None):
         if name not in self._definitions:
-            self._grammar_error(is_term, "Can't extend {type} {name} as it wasn't defined before", name)
+            self._grammar_error("Can't extend {type} {name} as it wasn't defined before", (name, is_term))
 
         d = self._definitions[name]
 
         if is_term != d.is_term:
-            self._grammar_error(is_term, "Cannot extend {type} {name} - one is a terminal, while the other is not.", name)
+            self._grammar_error("Cannot extend {type} {name} - one is a terminal, while the other is not.", (name, is_term))
         if tuple(params) != d.params:
-            self._grammar_error(is_term, "Cannot extend {type} with different parameters: {name}", name)
+            self._grammar_error("Cannot extend {type} with different parameters: {name}", (name, is_term))
 
         if d.tree is None:
-            self._grammar_error(is_term, "Can't extend {type} {name} - it is abstract.", name)
+            self._grammar_error("Can't extend {type} {name} - it is abstract.", (name, is_term))
 
         # TODO: think about what to do with 'options'
         base = d.tree
@@ -1164,7 +1168,9 @@ class GrammarBuilder:
             t = exp_or_name
             if t.data == 'expansions' and len(t.children) == 1:
                 t2 ,= t.children
-                if t2.data=='expansion' and len(t2.children) == 1:
+                if t2.data=='expansion':
+                    if len(t2.children) > 1:
+                        raise GrammarError("Bad %ignore - must have a Terminal or other value.")
                     item ,= t2.children
                     if item.data == 'value':
                         item ,= item.children
@@ -1238,7 +1244,6 @@ class GrammarBuilder:
 
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
         tree = _parse_grammar(grammar_text, grammar_name)
-
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}
 
         for stmt in tree.children:
@@ -1269,13 +1274,14 @@ class GrammarBuilder:
                     self._ignore(*stmt.children)
             elif stmt.data == 'declare':
                 for symbol in stmt.children:
-                    assert isinstance(symbol, Symbol), symbol
-                    is_term = isinstance(symbol, Terminal)
+                    if isinstance(symbol, NonTerminal):
+                        raise GrammarError("Expecting terminal name")
+                    assert isinstance(symbol, Terminal), symbol
                     if mangle is None:
                         name = symbol.name
                     else:
                         name = mangle(symbol.name)
-                    self._define(name, is_term, None)
+                    self._define(name, True, None)
             elif stmt.data == 'import':
                 pass
             else:
@@ -1358,15 +1364,15 @@ class GrammarBuilder:
                 args = temp.children[1:]
                 if sym not in params:
                     if sym not in self._definitions:
-                        self._grammar_error(d.is_term, "Template '%s' used but not defined (in {type} {name})" % sym, name)
+                        self._grammar_error("Template '%s' used but not defined (in {type} {name})" % sym, (name, d.is_term))
                     if len(args) != len(self._definitions[sym].params):
                         expected, actual = len(self._definitions[sym].params), len(args)
-                        self._grammar_error(d.is_term, "Wrong number of template arguments used for {name} "
-                                            "(expected %s, got %s) (in {type2} {name2})" % (expected, actual), sym, name)
+                        self._grammar_error("Wrong number of template arguments used for {name} "
+                                            "(expected %s, got %s) (in {type2} {name2})" % (expected, actual), (sym, sym.isupper()), (name, d.is_term))
 
             for sym in _find_used_symbols(exp):
                 if sym not in self._definitions and sym not in params:
-                    self._grammar_error(d.is_term, "{Type} '{name}' used but not defined (in {type2} {name2})", sym, name)
+                    self._grammar_error("{Type} '{name}' used but not defined (in {type2} {name2})", (sym, sym.isupper()), (name, d.is_term))
 
         if not set(self._definitions).issuperset(self._ignore_names):
             raise GrammarError("Terminals %s were marked to ignore but were not defined!" % (set(self._ignore_names) - set(self._definitions)))

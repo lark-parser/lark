@@ -841,6 +841,11 @@ def _make_full_earley_test(LEXER):
             )
             self.assertEqual(tree, expected)
 
+            l = Lark(grammar, ambiguity='resolve', lexer=LEXER)
+            tree = l.parse('x')
+            assert tree == Tree('start', ['x'])
+
+
         def test_cycle(self):
             grammar = """
             start: start?

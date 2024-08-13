@@ -306,7 +306,7 @@ class Parser:
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, use_cache)
             solutions = [transformer.transform(s) for s in solutions]
 
-            if len(solutions) > 1:
+            if len(solutions) > 1 and not self.resolve_ambiguity:
                 t: Tree = self.Tree('_ambig', solutions)
                 t.expand_kids_by_data('_ambig')     # solutions may themselves be _ambig nodes
                 return t

@@ -282,10 +282,15 @@ class Parser:
         # If the parse was successful, the start
         # symbol should have been completed in the last step of the Earley cycle, and will be in
         # this column. Find the item for the start_symbol, which is the root of the SPPF tree.
-        solutions = dedup_list(n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0)
+        solutions = [n.node for n in columns[-1] if n.is_complete and n.node is not None and n.s == start_symbol and n.start == 0]
         if not solutions:
             expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
+
+        if self.resolve_ambiguity:
+            solutions = solutions[:1]
+        else:
+            solutions = dedup_list(solutions)
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
@@ -306,12 +311,9 @@ class Parser:
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, use_cache)
             solutions = [transformer.transform(s) for s in solutions]
 
-            if len(solutions) > 1 and not self.resolve_ambiguity:
+            if len(solutions) > 1:
                 t: Tree = self.Tree('_ambig', solutions)
                 t.expand_kids_by_data('_ambig')     # solutions may themselves be _ambig nodes
                 return t
-            return solutions[0]
 
-        # return the root of the SPPF
-        # TODO return a list of solutions, or join them together somehow
         return solutions[0]

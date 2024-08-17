@@ -127,7 +127,7 @@ class Parser(BaseParser):
                                            considered_rules=considered_rules
                                            )
 
-            return next_to_scan
+            return next_to_scan, node_cache
 
 
         delayed_matches = defaultdict(list)
@@ -146,10 +146,11 @@ class Parser(BaseParser):
         # processed down to terminals/empty nodes to be added to the scanner for the next
         # step.
         i = 0
+        node_cache = {}
         for token in stream:
-            self.predict_and_complete(i, to_scan, columns, transitives)
+            self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
 
-            to_scan = scan(i, to_scan)
+            to_scan, node_cache = scan(i, to_scan)
 
             if token == '\n':
                 text_line += 1
@@ -158,7 +159,7 @@ class Parser(BaseParser):
                 text_column += 1
             i += 1
 
-        self.predict_and_complete(i, to_scan, columns, transitives)
+        self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1

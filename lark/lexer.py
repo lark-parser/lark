@@ -305,13 +305,13 @@ class LineCounter:
 
 
 class UnlessCallback:
-    def __init__(self, scanner):
+    def __init__(self, scanner: 'Scanner'):
         self.scanner = scanner
 
-    def __call__(self, t):
-        res = self.scanner.match(t.value, 0)
-        if res:
-            _value, t.type = res
+    def __call__(self, t: Token):
+        res = self.scanner.fullmatch(t.value)
+        if res is not None:
+            t.type = res
         return t
 
 
@@ -347,19 +347,18 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
                 if strtok.pattern.flags <= retok.pattern.flags:
                     embedded_strs.add(strtok)
         if unless:
-            callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, match_whole=True, use_bytes=use_bytes))
+            callback[retok.name] = UnlessCallback(Scanner(unless, g_regex_flags, re_, use_bytes=use_bytes))
 
     new_terminals = [t for t in terminals if t not in embedded_strs]
     return new_terminals, callback
 
 
 class Scanner:
-    def __init__(self, terminals, g_regex_flags, re_, use_bytes, match_whole=False):
+    def __init__(self, terminals, g_regex_flags, re_, use_bytes):
         self.terminals = terminals
         self.g_regex_flags = g_regex_flags
         self.re_ = re_
         self.use_bytes = use_bytes
-        self.match_whole = match_whole
 
         self.allowed_types = {t.name for t in self.terminals}
 
@@ -369,10 +368,9 @@ class Scanner:
         # Python sets an unreasonable group limit (currently 100) in its re module
         # Worse, the only way to know we reached it is by catching an AssertionError!
         # This function recursively tries less and less groups until it's successful.
-        postfix = '$' if self.match_whole else ''
         mres = []
         while terminals:
-            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp() + postfix) for t in terminals[:max_size])
+            pattern = u'|'.join(u'(?P<%s>%s)' % (t.name, t.pattern.to_regexp()) for t in terminals[:max_size])
             if self.use_bytes:
                 pattern = pattern.encode('latin-1')
             try:
@@ -390,6 +388,12 @@ class Scanner:
             if m:
                 return m.group(0), m.lastgroup
 
+
+    def fullmatch(self, text: str) -> Optional[str]:
+        for mre in self._mres:
+            m = mre.fullmatch(text)
+            if m:
+                return m.lastgroup
 
 def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:

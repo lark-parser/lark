@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .parser_frontends import ParsingFrontend
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, logger
+from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
@@ -598,7 +598,7 @@ class Lark(Serialize):
         return 'Lark(open(%r), parser=%r, lexer=%r, ...)' % (self.source_path, self.options.parser, self.options.lexer)
 
 
-    def lex(self, text: str, dont_ignore: bool=False) -> Iterator[Token]:
+    def lex(self, text: TextOrSlice, dont_ignore: bool=False) -> Iterator[Token]:
         """Only lex (and postlex) the text, without parsing it. Only relevant when lexer='basic'
 
         When dont_ignore=True, the lexer will return all tokens, even those marked for %ignore.
@@ -620,7 +620,7 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
 
-    def parse_interactive(self, text: Optional[str]=None, start: Optional[str]=None) -> 'InteractiveParser':
+    def parse_interactive(self, text: Optional[TextOrSlice]=None, start: Optional[str]=None) -> 'InteractiveParser':
         """Start an interactive parsing session.
 
         Parameters:
@@ -634,7 +634,7 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: str, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+    def parse(self, text: TextOrSlice, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:

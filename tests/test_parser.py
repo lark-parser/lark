@@ -1008,7 +1008,19 @@ class CustomLexerNew(Lexer):
 
     __future_interface__ = 2
 
-class CustomLexerOld(Lexer):
+class CustomLexerOld1(Lexer):
+    """
+    Purpose of this custom lexer is to test the integration,
+    so it uses the traditionalparser as implementation without custom lexing behaviour.
+    """
+    def __init__(self, lexer_conf):
+        self.lexer = BasicLexer(copy(lexer_conf))
+    def lex(self, lexer_state, parser_state):
+        return self.lexer.lex(lexer_state, parser_state)
+
+    __future_interface__ = 1
+
+class CustomLexerOld0(Lexer):
     """
     Purpose of this custom lexer is to test the integration,
     so it uses the traditionalparser as implementation without custom lexing behaviour.
@@ -1095,7 +1107,8 @@ class DualBytesLark:
 def _make_parser_test(LEXER, PARSER):
     lexer_class_or_name = {
         'custom_new': CustomLexerNew,
-        'custom_old': CustomLexerOld,
+        'custom_old1': CustomLexerOld1,
+        'custom_old0': CustomLexerOld0,
     }.get(LEXER, LEXER)
 
     def _Lark(grammar, **kwargs):
@@ -1649,7 +1662,7 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('AB,a')
             self.assertEqual(tree.children, ['AB'])
 
-        @unittest.skipIf(LEXER in ('basic', 'custom_old', 'custom_new'), "Requires context sensitive terminal selection")
+        @unittest.skipIf(LEXER in ('basic', 'custom_old0', 'custom_old1', 'custom_new'), "Requires context sensitive terminal selection")
         def test_token_flags_collision(self):
 
             g = """!start: "a"i "a"
@@ -2408,7 +2421,7 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark(grammar)
 
 
-        @unittest.skipIf(PARSER!='lalr' or LEXER == 'custom_old', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
+        @unittest.skipIf(PARSER!='lalr' or LEXER == 'custom_old0', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
         def test_serialize(self):
             grammar = """
                 start: _ANY b "C"
@@ -2454,7 +2467,7 @@ def _make_parser_test(LEXER, PARSER):
                 self.assertEqual(a.line, 1)
                 self.assertEqual(b.line, 2)
 
-        @unittest.skipIf(PARSER=='cyk' or LEXER=='custom_old', "match_examples() not supported for CYK/old custom lexer")
+        @unittest.skipIf(PARSER=='cyk' or LEXER=='custom_old0', "match_examples() not supported for CYK/old custom lexer")
         def test_match_examples(self):
             p = _Lark(r"""
                 start: "a" "b" "c"
@@ -2668,7 +2681,7 @@ def _make_parser_test(LEXER, PARSER):
             """
             self.assertRaises(GrammarError, _Lark, grammar, strict=True)
 
-        @unittest.skipIf(LEXER in ('dynamic', 'dynamic_complete', 'custom_old'),
+        @unittest.skipIf(LEXER in ('dynamic', 'dynamic_complete', 'custom_old0', 'custom_old1'),
                          "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
         def test_parse_textslice(self):
             grammar = r"""
@@ -2712,7 +2725,7 @@ def _make_parser_test(LEXER, PARSER):
             assert t.line == 9
 
 
-        @unittest.skipIf(LEXER not in ('dynamic', 'dynamic_complete', 'custom_old'),
+        @unittest.skipIf(LEXER not in ('dynamic', 'dynamic_complete', 'custom_old0', 'custom_old1'),
                          "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
         def test_parse_textslice_fails(self):
             parser = _Lark("start: ")
@@ -2738,7 +2751,8 @@ _TO_TEST = [
 
         ('custom_new', 'lalr'),
         ('custom_new', 'cyk'),
-        ('custom_old', 'earley'),
+        ('custom_old0', 'earley'),
+        ('custom_old1', 'earley'),
 ]
 
 for _LEXER, _PARSER in _TO_TEST:

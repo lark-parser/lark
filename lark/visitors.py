@@ -511,9 +511,9 @@ def _vargs_tree(f, data, children, meta):
 
 
 def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper: Optional[Callable] = None) -> Callable[[_DECORATED], _DECORATED]:
-    """A convenience decorator factory for modifying the behavior of user-supplied visitor methods of ``Transformer`` classes.
+    """A convenience decorator factory for modifying the behavior of user-supplied callback methods of ``Transformer`` classes.
 
-    By default, visitor callback methods accept one argument - a list of the node's children.
+    By default, transformer callback methods accept one argument - a list of the node's children.
 
     ``v_args`` can modify this behavior. When used on a ``Transformer`` class definition, it applies to
     all the callback methods inside it.

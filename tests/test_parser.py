@@ -836,14 +836,14 @@ def _make_full_earley_test(LEXER):
             tree = l.parse('x')
 
             expected = Tree('_ambig', [
+                Tree('start', [Tree('a', ['x'])]),
                 Tree('start', ['x']),
-                Tree('start', [Tree('a', ['x'])])]
-            )
+            ])
             self.assertEqual(tree, expected)
 
             l = Lark(grammar, ambiguity='resolve', lexer=LEXER)
             tree = l.parse('x')
-            assert tree == Tree('start', ['x'])
+            assert tree == Tree('start', [Tree('a', ['x'])])
 
 
         def test_cycle(self):
@@ -872,10 +872,7 @@ def _make_full_earley_test(LEXER):
             tree = l.parse("ab")
             expected = (
                 Tree('start', [
-                    Tree('_ambig', [
-                        Tree('v', [Tree('v', [])]),
-                        Tree('v', [Tree('v', [Tree('v', [])])])
-                    ])
+                    Tree('v', [Tree('v', [])]),
                 ])
             )
             self.assertEqual(tree, expected)
@@ -990,7 +987,7 @@ def _make_full_earley_test(LEXER):
             ''', lexer=LEXER)
 
             tree = parser.parse('..')
-            n = Tree('a', [Tree('b', [])])
+            n = Tree('a', [])
             assert tree == Tree('start', [n, n])
 
     _NAME = "TestFullEarley" + LEXER.capitalize()

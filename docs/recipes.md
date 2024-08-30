@@ -176,7 +176,7 @@ except VisitError as e:
 
 ## Adding a Progress Bar to Parsing with tqdm
 
-Parsing large files can take a long time, even with the `parser='lalr'` option. To make this process more user-friendly, it's useful to add a progress bar. One way to achieve this is to use the `InteractiveParser` to display each token as it is processed. In this example, we use [tqdm](https://github.com/tqdm/tqdm), but a similar approach should work with GUIs.
+Parsing large files can take a long time, even with the `parser='lalr'` option. To make this process more user-friendly, it's useful to add a progress bar. One way to achieve this is to use the `InteractiveParser` to display each token as it is processed. In this example, we use [tqdm](https://github.com/tqdm/tqdm), but it should be easy to adapt to other kinds of progress bars.
 
 ```python
 from tqdm import tqdm
@@ -189,7 +189,7 @@ def parse_with_progress(parser: Lark, text: str, start=None):
         if token.end_pos is not None:
             progress.update(token.end_pos - last)
             last = token.end_pos
-    return pi.result
+    return pi.resume_parse()    # Finish up and get the result
 ```
 
-Note that we don't simply wrap the iterable because tqdm would not be able to determine the total. Additionally, keep in mind that this implementation relies on the `InteractiveParser` and, therefore, only works with the `LALR(1)` parser, not `earley`.
+Keep in mind that this implementation relies on the `InteractiveParser` and, therefore, only works with the `LALR(1)` parser, and not `Earley`.

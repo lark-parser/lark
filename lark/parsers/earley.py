@@ -286,6 +286,9 @@ class Parser:
         if not solutions:
             expected_terminals = [t.expect.name for t in to_scan]
             raise UnexpectedEOF(expected_terminals, state=frozenset(i.s for i in to_scan))
+        if len(solutions) > 1:
+            raise RuntimeError('Earley should not generate multiple start symbol items! Please report this bug.')
+        solution ,= solutions
 
         if self.debug:
             from .earley_forest import ForestToPyDotVisitor
@@ -294,10 +297,8 @@ class Parser:
             except ImportError:
                 logger.warning("Cannot find dependency 'pydot', will not generate sppf debug image")
             else:
-                debug_walker.visit(solutions[0], "sppf.png")
+                debug_walker.visit(solution, "sppf.png")
 
-        if len(solutions) > 1:
-            assert False, 'Earley should not generate multiple start symbol items!'
 
         if self.Tree is not None:
             # Perform our SPPF -> AST conversion
@@ -305,7 +306,7 @@ class Parser:
             # to prevent a tree construction bug. See issue #1283
             use_cache = not self.resolve_ambiguity
             transformer = ForestToParseTree(self.Tree, self.callbacks, self.forest_sum_visitor and self.forest_sum_visitor(), self.resolve_ambiguity, use_cache)
-            return transformer.transform(solutions[0])
+            return transformer.transform(solution)
 
         # return the root of the SPPF
-        return solutions[0]
+        return solution

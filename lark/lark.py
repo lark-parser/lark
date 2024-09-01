@@ -652,6 +652,8 @@ class Lark(Serialize):
                 For convenience, these sub-exceptions also inherit from ``ParserError`` and ``LexerError``.
 
         """
+        if on_error is not None and self.options.parser != 'lalr':
+            raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
         return self.parser.parse(text, start=start, on_error=on_error)
 
 

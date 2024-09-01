@@ -2584,6 +2584,11 @@ def _make_parser_test(LEXER, PARSER):
             s = "[0 1, 2,@, 3,,, 4, 5 6 ]$"
             tree = g.parse(s, on_error=ignore_errors)
 
+        @unittest.skipIf(PARSER == 'lalr', "test on_error only works with lalr")
+        def test_on_error_without_lalr(self):
+            p = _Lark(r"""start: "A" """)
+            self.assertRaises(NotImplementedError, p.parse, "", on_error=print)
+
         @unittest.skipIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
         def test_iter_parse(self):
             ab_grammar = '!start: "a"* "b"*'

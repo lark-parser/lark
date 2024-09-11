@@ -171,6 +171,10 @@ class Tree(Generic[_Leaf_T]):
 
 ###}
 
+    def find_token(self, typ: str) -> Iterator[_Leaf_T]:
+        """Returns all tokens whose type equals the given typ."""
+        return self.scan_values(lambda v: isinstance(v, Token) and v.type == typ)
+
     def expand_kids_by_data(self, *data_values):
         """Expand (inline) children with any of the given data values. Returns True if anything changed"""
         changed = False

@@ -621,7 +621,7 @@ class Lark(Serialize):
         return self._terminals_dict[name]
 
     def parse_interactive(self, text: Optional[TextOrSlice]=None, start: Optional[str]=None) -> 'InteractiveParser':
-        """Start an interactive parsing session.
+        """Start an interactive parsing session. Only works when parser='lalr'.
 
         Parameters:
             text (TextOrSlice, optional): Text to be parsed. Required for ``resume_parse()``.
@@ -638,9 +638,11 @@ class Lark(Serialize):
         """Parse the given text, according to the options provided.
 
         Parameters:
-            text (TextOrSlice): Text to be parsed.
+            text (TextOrSlice): Text to be parsed, as `str` or `bytes`.
+                TextSlice may also be used, but only when lexer='basic' or 'contextual'.
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
-            on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
+            on_error (function, optional): if provided, will be called on UnexpectedInput error,
+                with the exception as its argument. Return true to resume parsing, or false to raise the exception.
                 LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.
 
         Returns:

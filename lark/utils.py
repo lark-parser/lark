@@ -163,6 +163,30 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
 
 @dataclass(frozen=True)
 class TextSlice(Generic[AnyStr]):
+    """A view of a string or bytes object, between the start and end indices.
+
+    Never creates a copy.
+
+    Lark accepts instances of TextSlice as input (instead of a string),
+    when the lexer is 'basic' or 'contextual'.
+
+    Args:
+        text (str or bytes): The text to slice.
+        start (int): The start index. Negative indices are supported.
+        end (int): The end index. Negative indices are supported.
+
+    Raises:
+        TypeError: If `text` is not a `str` or `bytes`.
+        AssertionError: If `start` or `end` are out of bounds.
+
+    Examples:
+        >>> TextSlice("Hello, World!", 7, -1)
+        TextSlice(text='Hello, World!', start=7, end=12)
+
+        >>> TextSlice("Hello, World!", 7, None).count("o")
+        1
+
+    """
     text: AnyStr
     start: int
     end: int

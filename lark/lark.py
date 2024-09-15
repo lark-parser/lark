@@ -624,7 +624,7 @@ class Lark(Serialize):
         """Start an interactive parsing session.
 
         Parameters:
-            text (str, optional): Text to be parsed. Required for ``resume_parse()``.
+            text (TextOrSlice, optional): Text to be parsed. Required for ``resume_parse()``.
             start (str, optional): Start symbol
 
         Returns:
@@ -638,7 +638,7 @@ class Lark(Serialize):
         """Parse the given text, according to the options provided.
 
         Parameters:
-            text (str): Text to be parsed.
+            text (TextOrSlice): Text to be parsed.
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedToken error. Return true to resume parsing.
                 LALR only. See examples/advanced/error_handling.py for an example of how to use on_error.

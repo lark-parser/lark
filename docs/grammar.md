@@ -20,13 +20,13 @@ EBNF is basically a short-hand for common BNF patterns.
 
 Optionals are expanded:
 
-```ebnf
+```ruby
   a b? c    ->    (a c | a b c)
 ```
 
 Repetition is extracted into a recursion:
 
-```ebnf
+```ruby
   a: b*    ->    a: _b_tag
                  _b_tag: (_b_tag b)?
 ```
@@ -35,11 +35,11 @@ And so on.
 
 Lark grammars are composed of a list of definitions and directives, each on its own line. A definition is either a named rule, or a named terminal, with the following syntax, respectively:
 
-```c
-  rule: <EBNF EXPRESSION>
+```html
+  rule: <EBNF-EXPRESSION>
       | etc.
 
-  TERM: <EBNF EXPRESSION>   // Rules aren't allowed
+  TERM: <EBNF-EXPRESSION>   // Rules aren't allowed
 ```
 
 
@@ -82,18 +82,18 @@ Templates are expanded when preprocessing the grammar.
 
 Definition syntax:
 
-```ebnf
+```javascript
   my_template{param1, param2, ...}: <EBNF EXPRESSION>
 ```
 
 Use syntax:
 
-```ebnf
+```javascript
 some_rule: my_template{arg1, arg2, ...}
 ```
 
 Example:
-```ebnf
+```javascript
 _separated{x, sep}: x (sep x)*  // Define a sequence of 'x sep x sep x ...'
 
 num_list: "[" _separated{NUMBER, ","} "]"   // Will match "[1, 2, 3]" etc.
@@ -173,9 +173,9 @@ Tree('start', [Token('A', 'ab')])
 
 This is happening because Python's regex engine always returns the best matching option. There is no way to access the alternatives.
 
-If you find yourself in this situation, the recommended solution is to use rules instead.
+If you find yourself in this situation, the recommended solution is to either use the "dynamic_complete" lexer, or use rules instead.
 
-Example:
+Example using rules:
 
 ```python
 >>> p = Lark("""start: (a | b)+
@@ -191,6 +191,25 @@ _ambig
     b   b
 ```
 
+Example using dynamic-complete:
+
+```python
+>>> g = """
+...     start: (A | B)+
+...     A    : "a" | "ab"
+...     B    : "b"
+... """
+>>> p = Lark(g, ambiguity="explicit", lexer="dynamic_complete")
+>>> rich.print(p.parse("ab"))
+_ambig
+├── start
+│   └── ab
+└── start
+    ├── a
+    └── b
+```
+
+(note: the dynamic-complete lexer can significantly affect the performance of the parser)
 
 ## Rules
 
@@ -265,7 +284,7 @@ COMMENT: "#" /[^\n]/*
 
 Allows one to import terminals and rules from lark grammars.
 
-When importing rules, all their dependencies will be imported into a namespace, to avoid collisions. It's not possible to override their dependencies (e.g. like you would when inheriting a class).
+When importing rules, all their dependencies will be imported into a namespace, to avoid collisions. To override any of their dependencies (e.g. like you would override methods when inheriting a class), use the ``%override`` directive.
 
 **Syntax:**
 ```html
@@ -276,11 +295,11 @@ When importing rules, all their dependencies will be imported into a namespace, 
 %import <module> (<TERM1>, <TERM2>, <rule1>, <rule2>)
 ```
 
-If the module path is absolute, Lark will attempt to load it from the built-in directory (which currently contains `common.lark`, `python.lark`, and `unicode.lark`).
+If the module path is absolute, Lark will attempt to load it from the built-in directory (which currently contains `common.lark`, `lark.lark`, `python.lark`, and `unicode.lark`).
 
 If the module path is relative, such as `.path.to.file`, Lark will attempt to load it from the current working directory. Grammars must have the `.lark` extension.
 
-The rule or terminal can be imported under another name with the `->` syntax.
+The rule or terminal can be imported under another name (an alias) with the `->` syntax.
 
 **Example:**
 ```perl
@@ -288,7 +307,7 @@ The rule or terminal can be imported under another name with the `->` syntax.
 
 %import .terminals_file (A, B, C)
 
-%import .rules_file.rulea -> ruleb
+%import .rules_file.rule_a -> rule_b
 ```
 
 Note that `%ignore` directives cannot be imported. Imported rules will abide by the `%ignore` directives declared in the main grammar.
@@ -328,4 +347,4 @@ Can also be used to implement a plugin system where a core grammar is extended b
 %extend NUMBER: /0x\w+/
 ```
 
-For both `%extend` and `%override`, there is not requirement for a rule/terminal to come from another file, but that is probably the most common usecase
+For both `%extend` and `%override`, there is not requirement for a rule/terminal to come from another file, but that is probably the most common use-case.

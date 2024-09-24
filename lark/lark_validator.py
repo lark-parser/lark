@@ -29,7 +29,7 @@ class LarkValidator:
     """
 
     @classmethod
-    def validate(cls, tree: Tree, options: Dict[str, Any] = {}):
+    def validate(cls, tree: Tree):
         """
         Checks a grammar parsed by `lark.lark` for validity using a variety of checks similar to what
         `load_grammar.py` does on parser creation.
@@ -43,13 +43,13 @@ class LarkValidator:
         - Undefined symbols
         - Incorrectly used templates
         """
-        visitor = cls(tree, options)
+        visitor = cls(tree)
         visitor._cross_check_symbols()
         visitor._resolve_term_references()
         visitor._check_literals(tree)
         return tree
 
-    def __init__(self, tree: Tree, options: Dict[str, Any]):
+    def __init__(self, tree: Tree):
         self._definitions: Dict[str, Definition] = {}
         self._ignore_names: List[str] = []
         self._load_grammar(tree)

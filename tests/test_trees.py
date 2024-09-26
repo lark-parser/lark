@@ -17,6 +17,11 @@ from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, 
 class TestTrees(TestCase):
     def setUp(self):
         self.tree1 = Tree('a', [Tree(x, y) for x, y in zip('bcd', 'xyz')])
+        self.tree2 = Tree('a', [
+            Tree('b', [Token('T', 'x')]),
+            Tree('c', [Token('T', 'y')]),
+            Tree('d', [Tree('z', [Token('T', 'zz')])]),
+        ])
 
     def test_eq(self):
         assert self.tree1 == self.tree1
@@ -47,6 +52,11 @@ class TestTrees(TestCase):
                     Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]
         nodes = list(self.tree1.iter_subtrees_topdown())
         self.assertEqual(nodes, expected)
+
+    def test_find_token(self):
+        expected = [Token('T', 'x'), Token('T', 'y'), Token('T', 'zz')]
+        tokens = list(self.tree2.find_token('T'))
+        self.assertEqual(tokens, expected)
 
     def test_visitor(self):
         class Visitor1(Visitor):

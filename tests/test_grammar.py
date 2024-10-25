@@ -6,7 +6,7 @@ from unittest import TestCase, main
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
 from lark.load_grammar import FromPackageLoader
-
+from lark.grammar import Symbol
 
 class TestGrammar(TestCase):
     def setUp(self):
@@ -296,8 +296,11 @@ class TestGrammar(TestCase):
         p.parse('ab')
 
 
+    def test_symbol_eq(self):
+        a = None
+        b = Symbol("abc")
 
-
+        self.assertNotEqual(a, b)
 
 
 if __name__ == '__main__':

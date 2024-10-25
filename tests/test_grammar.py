@@ -302,6 +302,14 @@ class TestGrammar(TestCase):
 
         self.assertNotEqual(a, b)
 
+        a = dict()
+
+        self.assertRaisesRegex(
+            NotImplementedError,
+            r"Comparing a Symbol with type dict is not implemented",
+            lambda: a == b,
+        )
+
 
 if __name__ == '__main__':
     main()

@@ -16,8 +16,12 @@ class Symbol(Serialize):
         self.name = name
 
     def __eq__(self, other):
-        if not isinstance(other, Symbol):
+        if other is None:
             return False
+        if not isinstance(other, Symbol):
+            raise NotImplementedError(
+                f"Comparing a Symbol with type {type(other).__name__} is not implemented"
+            )
         return self.is_term == other.is_term and self.name == other.name
 
     def __ne__(self, other):

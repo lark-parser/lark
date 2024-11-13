@@ -523,7 +523,7 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
 
     Parameters:
         inline (bool, optional): Children are provided as ``*args`` instead of a list argument (not recommended for very long lists).
-        meta (bool, optional): Provides two arguments: ``meta`` and ``children`` (instead of just the latter)
+        meta (bool, optional): Provides two arguments: ``meta`` and ``children`` (instead of just the latter); ``meta`` isn't available for transformers supplied to Lark using the ``transformer`` parameter (aka internal transformers).
         tree (bool, optional): Provides the entire tree as the argument, instead of the children.
         wrapper (function, optional): Provide a function to decorate all methods.
 

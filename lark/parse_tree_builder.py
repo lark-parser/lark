@@ -320,7 +320,7 @@ def inplace_transformer(func):
 
 def apply_visit_wrapper(func, name, wrapper):
     if wrapper is _vargs_meta or wrapper is _vargs_meta_inline:
-        raise NotImplementedError("Meta args not supported for internal transformer")
+        raise NotImplementedError("Meta args not supported for internal transformer; use YourTransformer().transform(parser.parse()) instead")
 
     @wraps(func)
     def f(children):

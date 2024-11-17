@@ -396,6 +396,7 @@ class LongestMatchScanner:
         self.terminals = terminals
         self.g_regex_flags = g_regex_flags
         self.use_bytes = use_bytes
+        self.allowed_types = {t.name for t in self.terminals}
 
         self.name_regex = {}
         for t in self.terminals:

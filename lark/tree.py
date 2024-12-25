@@ -51,10 +51,10 @@ class Tree(Generic[_Leaf_T]):
             contain 'a' will consider it in full, including _A and _C for all attributes.
     """
 
-    data: str
+    data: Union[str, "Token"]
     children: 'List[Branch[_Leaf_T]]'
 
-    def __init__(self, data: str, children: 'List[Branch[_Leaf_T]]', meta: Optional[Meta]=None) -> None:
+    def __init__(self, data: Union[str, "Token"], children: 'List[Branch[_Leaf_T]]', meta: Optional[Meta]=None) -> None:
         self.data = data
         self.children = children
         self._meta = meta

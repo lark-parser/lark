@@ -79,6 +79,7 @@ Prints out:
 
 *Note: We don't have to return a token, because comments are ignored*
 
+
 ## CollapseAmbiguities
 
 Parsing ambiguous texts with earley and `ambiguity='explicit'` produces a single tree with `_ambig` nodes to mark where the ambiguity occurred.
@@ -193,3 +194,13 @@ def parse_with_progress(parser: Lark, text: str, start=None):
 ```
 
 Keep in mind that this implementation relies on the `InteractiveParser` and, therefore, only works with the `LALR(1)` parser, and not `Earley`.
+
+
+## Parsing a Language with Significant Whitespace
+
+If your grammar needs to support significant whitespace, you will need to use the `Indenter` class.
+Take a look at the [indented tree example][indent] as well as the [Python grammar][python] for
+inspiration.
+
+[indent]: /examples/indented_tree.py
+[python]: https://github.com/lark-parser/lark/blob/master/lark/grammars/python.lark

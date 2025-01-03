@@ -65,3 +65,15 @@ Another way to run the tests is using setup.py:
 ```bash
 python setup.py test
 ```
+
+## Building the Documentation
+
+To build the documentation:
+
+```sh
+cd docs/
+pip install -r requirements.txt
+make html
+```
+
+To review the result, open the built HTML files under `_build/html/` in your browser.

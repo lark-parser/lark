@@ -20,7 +20,7 @@ class TestTrees(TestCase):
         self.tree2 = Tree('a', [
             Tree('b', [Token('T', 'x')]),
             Tree('c', [Token('T', 'y')]),
-            Tree('d', [Tree('z', [Token('T', 'zz')])]),
+            Tree('d', [Tree('z', [Token('T', 'zz'), Tree('zzz', 'zzz')])]),
         ])
 
     def test_eq(self):

@@ -40,7 +40,7 @@ class Terminal(Symbol):
 
     is_term: ClassVar[bool] = True
 
-    def __init__(self, name, filter_out=False):
+    def __init__(self, name: str, filter_out: bool = False) -> None:
         self.name = name
         self.filter_out = filter_out
 

@@ -196,11 +196,11 @@ def parse_with_progress(parser: Lark, text: str, start=None):
 Keep in mind that this implementation relies on the `InteractiveParser` and, therefore, only works with the `LALR(1)` parser, and not `Earley`.
 
 
-## Parsing a Language with Significant Whitespace
+## Parsing a Language with Significant Indentation
 
-If your grammar needs to support significant whitespace, you will need to use the `Indenter` class.
-Take a look at the [indented tree example][indent] as well as the [Python grammar][python] for
-inspiration.
+If your grammar needs to support significant indentation (e.g. Python, YAML), you will need to use
+the `Indenter` class. Take a look at the [indented tree example][indent] as well as the
+[Python grammar][python] for inspiration.
 
 [indent]: examples/indented_tree.html
 [python]: https://github.com/lark-parser/lark/blob/master/lark/grammars/python.lark

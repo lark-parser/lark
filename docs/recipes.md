@@ -202,5 +202,5 @@ If your grammar needs to support significant whitespace, you will need to use th
 Take a look at the [indented tree example][indent] as well as the [Python grammar][python] for
 inspiration.
 
-[indent]: /examples/indented_tree.py
+[indent]: examples/indented_tree.html
 [python]: https://github.com/lark-parser/lark/blob/master/lark/grammars/python.lark

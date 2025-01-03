@@ -3,19 +3,19 @@ Parsing Indentation
 ===================
 
 A demonstration of parsing indentation (“whitespace significant” language)
-and the usage of the `Indenter` class.
+and the usage of the ``Indenter`` class.
 
 Since indentation is context-sensitive, a postlex stage is introduced to
-manufacture `INDENT`/`DEDENT` tokens.
+manufacture ``INDENT``/``DEDENT`` tokens.
 
-It is crucial for the indenter that the `NL_type` matches the spaces (and
+It is crucial for the indenter that the ``NL_type`` matches the spaces (and
 tabs) after the newline.
 
-If your whitespace-significant grammar supports comments, then `NL_type`
+If your whitespace-significant grammar supports comments, then ``NL_type``
 must match those comments too. Otherwise, comments that appear in the middle
-of a line will [confuse Lark][1].
+of a line will `confuse Lark`_.
 
-[1]: https://github.com/lark-parser/lark/issues/863
+.. _`confuse Lark`: https://github.com/lark-parser/lark/issues/863
 """
 from lark import Lark
 from lark.indenter import Indenter

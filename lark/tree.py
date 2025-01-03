@@ -3,8 +3,10 @@ from copy import deepcopy
 
 from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, TYPE_CHECKING
 
+from .lexer import Token
+
 if TYPE_CHECKING:
-    from .lexer import TerminalDef, Token
+    from .lexer import TerminalDef
     try:
         import rich
     except ImportError:
@@ -179,7 +181,7 @@ class Tree(Generic[_Leaf_T]):
         Example:
             >>> term_tokens = tree.find_token('TERM')
         """
-        return self.scan_values(lambda v: not isinstance(v, Tree) and v.type == token_type)
+        return self.scan_values(lambda v: isinstance(v, Token) and v.type == token_type)
 
     def expand_kids_by_data(self, *data_values):
         """Expand (inline) children with any of the given data values. Returns True if anything changed"""

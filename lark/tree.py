@@ -3,8 +3,10 @@ from copy import deepcopy
 
 from typing import List, Callable, Iterator, Union, Optional, Generic, TypeVar, TYPE_CHECKING
 
+from .lexer import Token
+
 if TYPE_CHECKING:
-    from .lexer import TerminalDef, Token
+    from .lexer import TerminalDef
     try:
         import rich
     except ImportError:
@@ -170,6 +172,16 @@ class Tree(Generic[_Leaf_T]):
         return self.find_pred(lambda t: t.data == data)
 
 ###}
+
+    def find_token(self, token_type: str) -> Iterator[_Leaf_T]:
+        """Returns all tokens whose type equals the given token_type.
+
+        This is a recursive function that will find tokens in all the subtrees.
+
+        Example:
+            >>> term_tokens = tree.find_token('TERM')
+        """
+        return self.scan_values(lambda v: isinstance(v, Token) and v.type == token_type)
 
     def expand_kids_by_data(self, *data_values):
         """Expand (inline) children with any of the given data values. Returns True if anything changed"""

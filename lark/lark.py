@@ -454,7 +454,7 @@ class Lark(Serialize):
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
-    __serialize_fields__ = 'parser', 'rules', 'options'
+    __serialize_fields__ = 'parser', 'rules', 'options', 'grammar'
 
     def _build_lexer(self, dont_ignore: bool=False) -> BasicLexer:
         lexer_conf = self.lexer_conf
@@ -531,6 +531,7 @@ class Lark(Serialize):
 
         assert memo_json
         memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
+        self.grammar = Grammar.deserialize(data['grammar'], memo)
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ConfigurationError("Some options are not allowed when loading a Parser: {}"

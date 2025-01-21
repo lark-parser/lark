@@ -13,7 +13,6 @@ from .test_tree_forest_transformer import TestTreeForestTransformer
 from .test_lexer import TestLexer
 from .test_python_grammar import TestPythonParser
 from .test_tree_templates import *  # We define __all__ to list which TestSuites to run
-from .test_lark_validator import TestLarkValidator
 
 try:
     from .test_nearley.test_nearley import TestNearley

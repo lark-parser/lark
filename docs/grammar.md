@@ -239,6 +239,9 @@ Each item is one of:
 * `item ~ n` - Exactly *n* instances of item
 * `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
 
+Despite `~ n` being written with spaces, its binding power is the same as that of other operators,
+for instance `a b ~ 3` parses as `a (b ~ 4)`, and `a ~ 2 b ~ 3` is parsed as `(a ~ 2) (b ~ 3)`.
+
 **Examples:**
 ```perl
 hello_world: "hello" "world"

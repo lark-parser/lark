@@ -264,7 +264,7 @@ class TestTrees(TestCase):
             ab_partialmethod = partialmethod(ab_for_partialmethod, 1)
             set_union = set(["a"]).union
             static_add = staticmethod(add)
-            partial_reduce_mul = partial(reduce, mul)
+            partial_reduce_mul = staticmethod(partial(reduce, mul))
 
             custom_callable = CustomCallable()
 
@@ -365,8 +365,8 @@ class TestTrees(TestCase):
 
         @v_args(inline=True)
         class T(Transformer):
-            a = functools.partial(test, "@", postfix="!")
-            b = functools.partial(lambda s: s + "!")
+            a = staticmethod(functools.partial(test, "@", postfix="!"))
+            b = staticmethod(functools.partial(lambda s: s + "!"))
 
         res = T().transform(tree)
         assert res.children == ["@TEST1!", "test2!"]

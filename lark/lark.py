@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger
-from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
+from .load_grammar import load_grammar, _deserialize_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
@@ -56,6 +56,7 @@ class LarkOptions(Serialize):
     propagate_positions: Union[bool, str]
     maybe_placeholders: bool
     cache: Union[bool, str]
+    cache_grammar: bool
     regex: bool
     g_regex_flags: int
     keep_all_tokens: bool
@@ -165,6 +166,7 @@ class LarkOptions(Serialize):
         'keep_all_tokens': False,
         'tree_class': None,
         'cache': False,
+        'cache_grammar': False,
         'postlex': None,
         'parser': 'earley',
         'lexer': 'auto',
@@ -210,6 +212,9 @@ class LarkOptions(Serialize):
         if self.parser == 'earley' and self.transformer:
             raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm. '
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
+
+        if self.cache_grammar and not self.cache:
+            raise ConfigurationError('cache_grammar cannot be set when cache is disabled')
 
         if o:
             raise ConfigurationError("Unknown options: %s" % o.keys())
@@ -264,8 +269,12 @@ class Lark(Serialize):
     parser: 'ParsingFrontend'
     terminals: Collection[TerminalDef]
 
+    __serialize_fields__ = ['parser', 'rules', 'options']
+
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
+        if self.options.cache_grammar:
+            self.__serialize_fields__ += 'grammar'
         re_module: types.ModuleType
 
         # Set regex or re module
@@ -454,8 +463,6 @@ class Lark(Serialize):
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
 
-    __serialize_fields__ = 'parser', 'rules', 'options', 'grammar'
-
     def _build_lexer(self, dont_ignore: bool=False) -> BasicLexer:
         lexer_conf = self.lexer_conf
         if dont_ignore:
@@ -531,7 +538,8 @@ class Lark(Serialize):
 
         assert memo_json
         memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
-        self.grammar = Grammar.deserialize(data['grammar'], memo)
+        if 'grammar' in data:
+            self.grammar = _deserialize_grammar(data['grammar'], memo)
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ConfigurationError("Some options are not allowed when loading a Parser: {}"

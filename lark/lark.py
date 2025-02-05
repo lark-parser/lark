@@ -100,6 +100,10 @@ class LarkOptions(Serialize):
             - When ``False``, does nothing (default)
             - When ``True``, caches to a temporary file in the local directory
             - When given a string, caches to the path pointed by the string
+    cache_grammar
+            For use with ``cache`` option. When ``True``, the unanalyzed grammar is also included in the cache.
+            Useful for classes that require the ``Lark.grammar`` to be present (e.g. Reconstructor).
+            (default= ``False``)
     regex
             When True, uses the ``regex`` module instead of the stdlib ``re``.
     g_regex_flags
@@ -336,7 +340,9 @@ class Lark(Serialize):
                         # specific reason - we just want a username.
                         username = "unknown"
 
-                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (username, cache_sha256, *sys.version_info[:2])
+
+                    cache_fn = tempfile.gettempdir() + "/.lark_%s_%s_%s_%s_%s_%s.tmp" % (
+                        "cache_grammar" if self.options.cache_grammar else "cache", username, cache_sha256, *sys.version_info[:2])
 
                 old_options = self.options
                 try:

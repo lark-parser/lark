@@ -3,6 +3,7 @@
 
 from typing import Dict, Callable, Iterable, Optional
 
+from .exceptions import ConfigurationError
 from .lark import Lark
 from .tree import Tree, ParseTree
 from .visitors import Transformer_InPlace
@@ -79,6 +80,9 @@ class Reconstructor(TreeMatcher):
 
     def __init__(self, parser: Lark, term_subs: Optional[Dict[str, Callable[[Symbol], str]]]=None) -> None:
         TreeMatcher.__init__(self, parser)
+
+        if not hasattr(parser, 'grammar') and parser.options.cache:
+            raise ConfigurationError('Unanalyzed grammar not available from cached parser, use cache_grammar=True')
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
 

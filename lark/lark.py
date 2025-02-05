@@ -278,7 +278,7 @@ class Lark(Serialize):
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
         if self.options.cache_grammar:
-            self.__serialize_fields__ += 'grammar'
+            self.__serialize_fields__.append('grammar')
         re_module: types.ModuleType
 
         # Set regex or re module
@@ -341,7 +341,7 @@ class Lark(Serialize):
                         username = "unknown"
 
 
-                    cache_fn = tempfile.gettempdir() + "/.lark_%s_%s_%s_%s_%s_%s.tmp" % (
+                    cache_fn = tempfile.gettempdir() + "/.lark_%s_%s_%s_%s_%s.tmp" % (
                         "cache_grammar" if self.options.cache_grammar else "cache", username, cache_sha256, *sys.version_info[:2])
 
                 old_options = self.options

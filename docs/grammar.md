@@ -239,6 +239,9 @@ Each item is one of:
 * `item ~ n` - Exactly *n* instances of item
 * `item ~ n..m` - Between *n* to *m* instances of item (not recommended for wide ranges, due to performance issues)
 
+Note that all operators, including `~ n`, apply directly to the item on their left.
+For instance `a ~ 2 b ~ 3` is parsed as `(a ~ 2) (b ~ 3)`.
+
 **Examples:**
 ```perl
 hello_world: "hello" "world"

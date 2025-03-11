@@ -333,7 +333,7 @@ class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
         return cast(_Return_T, result)
 
 
-class Transformer_InPlaceRecursive(Transformer):
+class Transformer_InPlaceRecursive(Transformer[_Leaf_T, _Return_T]):
     "Same as Transformer, recursive, but changes the tree in-place instead of returning new instances"
     def _transform_tree(self, tree):
         tree.children = list(self._transform_children(tree.children))

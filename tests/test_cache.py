@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import logging
 from unittest import TestCase, main, skipIf
+from .configurations import import_test
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.lexer import Lexer, Token
@@ -134,16 +135,23 @@ class TestCache(TestCase):
         res2 = InlineTestT().transform(Lark(g, parser="lalr", cache=True, lexer_callbacks={'NUM': append_zero}).parse(text))
         assert res0 == res1 == res2 == expected
 
-    def test_imports(self):
+    @import_test
+    def test_imports(self, test_type: str):
+        initial = len(self.mock_fs.files)
         g = """
         %import .grammars.ab (startab, expr)
+
+        start: startab
         """
-        parser = Lark(g, parser='lalr', start='startab', cache=True, source_path=__file__)
-        assert len(self.mock_fs.files) == 1
-        parser = Lark(g, parser='lalr', start='startab', cache=True, source_path=__file__)
-        assert len(self.mock_fs.files) == 1
+        parser = Lark(g, parser='lalr', start='start', cache=True, source_path=__file__, legacy_import=(test_type == "legacy"))
+        assert len(self.mock_fs.files) == (initial + 1)
+        parser = Lark(g, parser='lalr', start='start', cache=True, source_path=__file__, legacy_import=(test_type == "legacy"))
+        assert len(self.mock_fs.files) == (initial + 1)
         res = parser.parse("ab")
-        self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
+        if test_type == "new":
+            self.assertEqual(res, Tree(Token('RULE', 'start'), [Tree('grammars__ab__startab', [Tree('grammars__ab__expr', [Token('grammars__ab__A', 'a'), Token('grammars__ab__B', 'b')])])]))
+        else:
+            self.assertEqual(res, Tree(Token('RULE', 'start'), [Tree(Token('RULE', 'startab'), [Tree(Token('RULE', 'expr'), [Token('grammars__ab__A', 'a'), Token('grammars__ab__B', 'b')])])]))
 
     @skipIf(regex is None, "'regex' lib not installed")
     def test_recursive_pattern(self):

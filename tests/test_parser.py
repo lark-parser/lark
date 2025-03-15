@@ -6,6 +6,7 @@ import unittest
 import os
 import sys
 from copy import copy, deepcopy
+from .configurations import import_test
 
 from lark import Token, Transformer_NonRecursive, LexError
 
@@ -1910,60 +1911,128 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(x.children, ['12', 'lions'])
 
 
-        def test_relative_rule_import(self):
-            l = _Lark_open('test_relative_rule_import.lark', rel_to=__file__)
+        @import_test
+        def test_relative_rule_import(self, test_type: str):
+            l = _Lark_open('test_relative_rule_import.lark', rel_to=__file__, legacy_import=(test_type == "legacy"))
             x = l.parse('xaabby')
-            self.assertEqual(x.children, [
+
+            expected = [
+                Token('X', 'x'),
+                Tree('grammars__ab__expr', [
+                    Token('grammars__ab__A', 'a'),
+                    Tree('grammars__ab__expr', [
+                        Token('grammars__ab__A', 'a'),
+                        Token('grammars__ab__B', 'b')
+                    ]),
+                    Token('grammars__ab__B', 'b')
+                ]),
+                Token('Y', 'y')
+            ] if test_type == "new" else [
                 'x',
                 Tree('expr', ['a', Tree('expr', ['a', 'b']), 'b']),
-                'y'])
+                'y'
+            ]
+
+            self.assertEqual(x.children, expected)
 
 
-        def test_relative_rule_import_drop_ignore(self):
+        @import_test
+        def test_relative_rule_import_drop_ignore(self, test_type: str):
             # %ignore rules are dropped on import
             l = _Lark_open('test_relative_rule_import_drop_ignore.lark',
-                           rel_to=__file__)
+                           rel_to=__file__,
+                           legacy_import=(test_type == "legacy"))
             self.assertRaises((ParseError, UnexpectedInput),
                               l.parse, 'xa abby')
 
 
-        def test_relative_rule_import_subrule(self):
+        @import_test
+        def test_relative_rule_import_subrule(self, test_type: str):
             l = _Lark_open('test_relative_rule_import_subrule.lark',
-                           rel_to=__file__)
+                           rel_to=__file__,
+                           legacy_import=(test_type == "legacy"))
             x = l.parse('xaabby')
-            self.assertEqual(x.children, [
+
+            expected = [
+                Token('X', 'x'),
+                Tree('grammars__ab__startab', [
+                    Tree('grammars__ab__expr', [
+                        Token('grammars__ab__A', 'a'),
+                        Tree('grammars__ab__expr', [
+                            Token('grammars__ab__A', 'a'),
+                            Token('grammars__ab__B', 'b')
+                        ]),
+                    Token('grammars__ab__B', 'b')
+                    ])
+                ]),
+                Token('Y', 'y')
+            ] if test_type == "new" else [
                 'x',
                 Tree('startab', [
                     Tree('grammars__ab__expr', [
                         'a', Tree('grammars__ab__expr', ['a', 'b']), 'b',
                     ]),
                 ]),
-                'y'])
+                'y'
+            ]
+
+            self.assertEqual(x.children, expected)
 
 
-        def test_relative_rule_import_subrule_no_conflict(self):
+        @import_test
+        def test_relative_rule_import_subrule_no_conflict(self, test_type: str):
             l = _Lark_open(
                 'test_relative_rule_import_subrule_no_conflict.lark',
-                rel_to=__file__)
+                rel_to=__file__,
+                legacy_import=(test_type == "legacy"))
             x = l.parse('xaby')
-            self.assertEqual(x.children, [Tree('expr', [
-                'x',
-                Tree('startab', [
-                    Tree('grammars__ab__expr', ['a', 'b']),
-                ]),
-                'y'])])
+
+            expected = [
+                Tree(Token('RULE', 'expr'), [
+                    Token('X', 'x'),
+                    Tree('grammars__ab__startab', [Tree('grammars__ab__expr', [Token('grammars__ab__A', 'a'), Token('grammars__ab__B', 'b')])]),
+                    Token('Y', 'y')
+                ])
+            ] if test_type == "new" else [
+                Tree('expr', [
+                    'x',
+                    Tree('startab', [
+                        Tree('grammars__ab__expr', ['a', 'b']),
+                    ]),
+                    'y'
+                ])
+            ]
+
+            self.assertEqual(x.children, expected)
             self.assertRaises((ParseError, UnexpectedInput),
                               l.parse, 'xaxabyby')
 
 
-        def test_relative_rule_import_rename(self):
+        @import_test
+        def test_relative_rule_import_rename(self, test_type: str):
             l = _Lark_open('test_relative_rule_import_rename.lark',
-                           rel_to=__file__)
+                           rel_to=__file__,
+                           legacy_import=(test_type == "legacy"))
             x = l.parse('xaabby')
-            self.assertEqual(x.children, [
+
+            expected = [
+                Token('X', 'x'),
+                Tree('grammars__ab__expr', [
+                    Token('grammars__ab__A', 'a'),
+                    Tree('grammars__ab__expr', [
+                        Token('grammars__ab__A', 'a'),
+                        Token('grammars__ab__B', 'b')
+                    ]),
+                    Token('grammars__ab__B', 'b')
+                ]),
+                Token('Y', 'y')
+            ] if test_type == "new" else [
                 'x',
                 Tree('ab', ['a', Tree('ab', ['a', 'b']), 'b']),
-                'y'])
+                'y'
+            ]
+
+            self.assertEqual(x.children, expected)
 
 
         def test_multi_import(self):
@@ -1984,22 +2053,40 @@ def _make_parser_test(LEXER, PARSER):
             x = l.parse('12 capybaras')
             self.assertEqual(x.children, ['12', 'capybaras'])
 
-        def test_relative_import_preserves_leading_underscore(self):
-            l = _Lark_open("test_relative_import_preserves_leading_underscore.lark", rel_to=__file__)
+        @import_test
+        def test_relative_import_preserves_leading_underscore(self, test_type: str):
+            l = _Lark_open("test_relative_import_preserves_leading_underscore.lark", rel_to=__file__, legacy_import=(test_type == "legacy"))
             x = l.parse('Ax')
-            self.assertEqual(next(x.find_data('c')).children, ['A'])
 
-        def test_relative_import_of_nested_grammar(self):
-            l = _Lark_open("grammars/test_relative_import_of_nested_grammar.lark", rel_to=__file__)
+            if test_type == "new":
+                self.assertEqual(next(x.find_data('grammars__leading_underscore_grammar__c')).children, ['A'])
+            else:
+                self.assertEqual(next(x.find_data('c')).children, ['A'])
+
+        @import_test
+        def test_relative_import_of_nested_grammar(self, test_type: str):
+            l = _Lark_open("grammars/test_relative_import_of_nested_grammar.lark", rel_to=__file__, legacy_import=(test_type == "legacy"))
             x = l.parse('N')
-            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
 
-        def test_relative_import_rules_dependencies_imported_only_once(self):
-            l = _Lark_open("test_relative_import_rules_dependencies_imported_only_once.lark", rel_to=__file__)
+            if test_type == "new":
+                self.assertEqual(next(x.find_data('test_relative_import_of_nested_grammar__grammar_to_import__rule_to_import')).children, ['N'])
+            else:
+                self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
+
+
+        @import_test
+        def test_relative_import_rules_dependencies_imported_only_once(self, test_type: str):
+            l = _Lark_open("test_relative_import_rules_dependencies_imported_only_once.lark", rel_to=__file__, legacy_import=(test_type == "legacy"))
             x = l.parse('AAA')
-            self.assertEqual(next(x.find_data('a')).children, ['A'])
-            self.assertEqual(next(x.find_data('b')).children, ['A'])
-            self.assertEqual(next(x.find_data('d')).children, ['A'])
+
+            if test_type == "new":
+                self.assertEqual(next(x.find_data('grammars__three_rules_using_same_token__a')).children, ['A'])
+                self.assertEqual(next(x.find_data('grammars__three_rules_using_same_token__b')).children, ['A'])
+                self.assertEqual(next(x.find_data('grammars__three_rules_using_same_token__c')).children, ['A'])
+            else:
+                self.assertEqual(next(x.find_data('a')).children, ['A'])
+                self.assertEqual(next(x.find_data('b')).children, ['A'])
+                self.assertEqual(next(x.find_data('d')).children, ['A'])
 
         def test_import_errors(self):
             grammar = """
@@ -2550,7 +2637,8 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
         @unittest.skipIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
-        def test_error_with_interactive_parser(self):
+        @import_test
+        def test_error_with_interactive_parser(self, test_type: str):
             def ignore_errors(e):
                 if isinstance(e, UnexpectedCharacters):
                     # Skip bad character
@@ -2560,7 +2648,7 @@ def _make_parser_test(LEXER, PARSER):
                 if e.token.type == 'COMMA':
                     # Skip comma
                     return True
-                elif e.token.type == 'SIGNED_NUMBER':
+                elif e.token.type == ('common__SIGNED_NUMBER' if test_type == "new" else "SIGNED_NUMBER"):
                     # Try to feed a comma and retry the number
                     e.interactive_parser.feed_token(Token('COMMA', ','))
                     e.interactive_parser.feed_token(e.token)
@@ -2575,7 +2663,7 @@ def _make_parser_test(LEXER, PARSER):
                 ?num: SIGNED_NUMBER
                 %import common.SIGNED_NUMBER
                 %ignore " "
-            ''')
+            ''', legacy_import=(test_type == "legacy"))
             s = "[0 1, 2,, 3,,, 4, 5 6 ]"
             tree = g.parse(s, on_error=ignore_errors)
             res = [int(x) for x in tree.children]

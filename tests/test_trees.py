@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import sys
 import unittest
 from functools import partial, reduce, partialmethod
 from operator import add, mul
@@ -471,6 +472,47 @@ class TestTrees(TestCase):
 
         assert MyTransformer().transform(t) is None
 
+    def test_pattern_match(self):
+        # match statements are only available in Python 3.10+
+        if sys.version < "3.10":
+            return
+
+        match self.tree1:
+            case Tree('X', []):
+                self.fail()
+            case Tree('a', []):
+                self.fail()
+            case Tree(_, 'b'):
+                self.fail()
+            case Tree('X', _):
+                self.fail()
+        tree = Tree('q', [Token('T', 'x')])
+        match tree:
+            case Tree('q', [Token('T', 'x')]):
+                pass
+            case _:
+                self.fail()
+        tr = Tree('a', [Tree('b', [Token('T', 'a')])])
+        match tr:
+            case Tree('a', [Tree('b', [Token('T', 'a')])]):
+                pass
+            case _:
+                self.fail()
+        # test nested trees
+        match self.tree2:
+            case Tree('a', [
+                    Tree('b', [Token('T', 'x')]),
+                    Tree('c', [Token('T', 'y')]),
+                    Tree('d', [
+                        Tree('z', [
+                            Token('T', 'zz'),
+                            Tree('zzz', 'zzz')
+                        ])
+                    ])
+            ]):
+                pass
+            case _:
+                self.fail()
 
 if __name__ == '__main__':
     unittest.main()

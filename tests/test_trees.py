@@ -474,7 +474,8 @@ class TestTrees(TestCase):
 
     def test_pattern_match(self):
         # match statements are only available in Python 3.10+
-        if sys.version < "3.10":
+        major, minor, _, _, _ = sys.version_info
+        if major < 3 or minor < 10:
             return
 
         match self.tree1:

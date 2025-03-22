@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import sys
 import unittest
 from functools import partial, reduce, partialmethod
 from operator import add, mul

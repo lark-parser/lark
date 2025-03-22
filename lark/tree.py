@@ -69,7 +69,7 @@ class Tree(Generic[_Leaf_T]):
 
     def __repr__(self):
         return 'Tree(%r, %r)' % (self.data, self.children)
-    
+
     __match_args__ = ("data", "children")
 
     def _pretty_label(self):

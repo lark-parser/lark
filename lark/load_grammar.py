@@ -1230,7 +1230,7 @@ class GrammarBuilder:
         else:  # Relative import
             if grammar_name == '<string>':  # Import relative to script file path if grammar is coded in script
                 try:
-                    base_file = os.path.abspath(sys.modules['__main__'].__file__)
+                    base_file = os.path.abspath(cast(str, sys.modules['__main__'].__file__))
                 except AttributeError:
                     base_file = None
             else:

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import os
 from unittest import TestCase, main
+from .configurations import import_test
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
 from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
@@ -41,7 +42,9 @@ class TestGrammar(TestCase):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter
         # Thus extending it beyond its original capacity
         p = Lark("""
-            %import .test_templates_import (start, sep)
+            %import .test_templates_import.sep
+            %import .test_templates_import.start -> _start
+            start: _start
 
             %override sep{item, delim}: item (delim item)* delim?
             %ignore " "
@@ -52,7 +55,9 @@ class TestGrammar(TestCase):
         assert a == b
 
         self.assertRaises(GrammarError, Lark, """
-            %import .test_templates_import (start, sep)
+            %import .test_templates_import.sep
+            %import .test_templates_import.start -> _start
+            start: _start
 
             %override sep{item}: item (delim item)* delim?
         """, source_path=__file__)
@@ -61,39 +66,103 @@ class TestGrammar(TestCase):
             %override sep{item}: item (delim item)* delim?
         """, source_path=__file__)
 
-    def test_override_terminal(self):
+    @import_test
+    def test_override_terminal(self, test_type: str):
         p = Lark("""
 
             %import .grammars.ab (startab, A, B)
 
+            start: startab
+
             %override A: "c"
             %override B: "d"
-        """, start='startab', source_path=__file__)
+        """, start='start', source_path=__file__, legacy_import=(test_type == "legacy"))
 
         a = p.parse('cd')
-        self.assertEqual(a.children[0].children, [Token('A', 'c'), Token('B', 'd')])
 
-    def test_extend_rule(self):
+        expected = [
+            Tree('grammars__ab__expr', [
+                Token('grammars__ab__A', 'c'),
+                Token('grammars__ab__B', 'd')
+            ])
+        ] if test_type == "new" else [
+            Tree('grammars__ab__expr', [
+                Token(Token('TERMINAL', 'A'), 'c'),
+                Token(Token('TERMINAL', 'B'), 'd')
+            ])
+        ]
+
+        self.assertEqual(a.children[0].children, expected)
+
+    @import_test
+    def test_extend_rule(self, test_type: str):
         p = Lark("""
             %import .grammars.ab (startab, A, B, expr)
 
+            start: startab
+
             %extend expr: B A
-        """, start='startab', source_path=__file__)
+        """, start='start', source_path=__file__, legacy_import=(test_type == "legacy"))
         a = p.parse('abab')
-        self.assertEqual(a.children[0].children, ['a', Tree('expr', ['b', 'a']), 'b'])
+
+        expected = [
+            Tree('grammars__ab__expr', [
+                Token('grammars__ab__A', 'a'),
+                Tree('grammars__ab__expr', [
+                    Token('grammars__ab__B', 'b'),
+                    Token('grammars__ab__A', 'a')
+                ]),
+                Token('grammars__ab__B', 'b')
+            ])
+        ] if test_type == "new" else [
+            Tree(Token('RULE', 'expr'), [
+                Token(Token('TERMINAL', 'A'), 'a'),
+                Tree(Token('RULE', 'expr'), [
+                    Token('B', 'b'),
+                    Token('A', 'a')
+                ]),
+                Token(Token('TERMINAL', 'B'), 'b')
+            ])
+        ]
+
+        self.assertEqual(a.children[0].children, expected)
 
         self.assertRaises(GrammarError, Lark, """
             %extend expr: B A
         """)
 
-    def test_extend_term(self):
+    @import_test
+    def test_extend_term(self, test_type: str):
         p = Lark("""
             %import .grammars.ab (startab, A, B, expr)
 
+            start: startab
+
             %extend A: "c"
-        """, start='startab', source_path=__file__)
+        """, start='start', source_path=__file__, legacy_import=(test_type == "legacy"))
         a = p.parse('acbb')
-        self.assertEqual(a.children[0].children, ['a', Tree('expr', ['c', 'b']), 'b'])
+
+        expected = [
+            Tree('grammars__ab__expr', [
+                Token('grammars__ab__A', 'a'),
+                Tree('grammars__ab__expr', [
+                    Token('grammars__ab__A', 'c'),
+                    Token('grammars__ab__B', 'b')
+                ]),
+                Token('grammars__ab__B', 'b')
+            ])
+        ] if test_type == "new" else [
+            Tree(Token('RULE', 'expr'), [
+                Token(Token('TERMINAL', 'A'), 'a'),
+                Tree(Token('RULE', 'expr'), [
+                    Token(Token('TERMINAL', 'A'), 'c'),
+                    Token(Token('TERMINAL', 'B'), 'b')
+                ]),
+                Token(Token('TERMINAL', 'B'), 'b')
+            ])
+        ]
+
+        self.assertEqual(a.children[0].children, expected)
 
     def test_extend_twice(self):
         p = Lark("""
@@ -140,7 +209,8 @@ class TestGrammar(TestCase):
                     """
         self.assertRaises( GrammarError, Lark, g)
 
-    def test_import_custom_sources(self):
+    @import_test
+    def test_import_custom_sources(self, test_type: str):
         custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
         grammar = """
@@ -149,11 +219,28 @@ class TestGrammar(TestCase):
         %import ab.startab
         """
 
-        p = Lark(grammar, import_paths=[custom_loader])
-        self.assertEqual(p.parse('ab'),
-                            Tree('start', [Tree('startab', [Tree('ab__expr', [Token('ab__A', 'a'), Token('ab__B', 'b')])])]))
+        p = Lark(grammar, import_paths=[custom_loader], legacy_import=(test_type == "legacy"))
 
-    def test_import_custom_sources2(self):
+        expected = Tree(Token('RULE', 'start'), [
+            Tree('ab__startab', [
+                Tree('ab__expr', [
+                    Token('ab__A', 'a'),
+                    Token('ab__B', 'b')
+                ])
+            ])
+        ]) if test_type == "new" else Tree('start', [
+            Tree('startab', [
+                Tree('ab__expr', [
+                    Token('ab__A', 'a'),
+                    Token('ab__B', 'b')
+                ])
+            ])
+        ])
+
+        self.assertEqual(p.parse('ab'), expected)
+
+    @import_test
+    def test_import_custom_sources2(self, test_type: str):
         custom_loader = FromPackageLoader(__name__, ('grammars', ))
 
         grammar = """
@@ -161,19 +248,29 @@ class TestGrammar(TestCase):
 
         %import test_relative_import_of_nested_grammar__grammar_to_import.rule_to_import
         """
-        p = Lark(grammar, import_paths=[custom_loader])
+        p = Lark(grammar, import_paths=[custom_loader], legacy_import=(test_type == "legacy"))
         x = p.parse('N')
-        self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
 
-    def test_import_custom_sources3(self):
+        if test_type == "new":
+            self.assertEqual(next(x.find_data('test_relative_import_of_nested_grammar__grammar_to_import__rule_to_import')).children, ['N'])
+        else:
+            self.assertEqual(next(x.find_data('rule_to_import')).children, ['N'])
+
+    @import_test
+    def test_import_custom_sources3(self, test_type: str):
         custom_loader2 = FromPackageLoader(__name__)
         grammar = """
-        %import .test_relative_import (start, WS)
+        %import .test_relative_import.WS
+        %import .test_relative_import.start -> _start
+        start: _start
         %ignore WS
         """
-        p = Lark(grammar, import_paths=[custom_loader2], source_path=__file__) # import relative to current file
+        p = Lark(grammar, import_paths=[custom_loader2], source_path=__file__, legacy_import=(test_type == "legacy")) # import relative to current file
         x = p.parse('12 capybaras')
-        self.assertEqual(x.children, ['12', 'capybaras'])
+        if test_type == "new":
+            self.assertEqual(x.children, [Tree('test_relative_import__start', [Token('test_relative_import__grammars__test__NUMBER', '12'), Token('test_relative_import__common__WORD', 'capybaras')])])
+        else:
+            self.assertEqual(x.children, [Token('test_relative_import__NUMBER', '12'), Token('test_relative_import__WORD', 'capybaras')])
 
     def test_find_grammar_errors(self):
         text = """

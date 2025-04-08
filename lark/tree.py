@@ -222,7 +222,7 @@ class Tree(Generic[_Leaf_T]):
                 self.replace_nodes(pred)
             elif isinstance(child, Token):
                 result = pred(child)
-                if isinstance(result, Token):
+                if result is not None:
                     self.children[index] = result
         
     def __deepcopy__(self, memo):

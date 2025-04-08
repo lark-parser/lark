@@ -211,15 +211,15 @@ class Tree(Generic[_Leaf_T]):
                 if pred(c):
                     yield c
                     
-    def replace_nodes(self, pred: 'Callable[[Token], Optional[Token]]') -> None:
+    def replace_tokens(self, pred: 'Callable[[Token], Optional[Token]]') -> None:
         """replace tokens in the tree using the result of pred(token) when it is not none.
 
         Example:
-            >>> tree.replace_nodes(lambda v: v.update(value=v.rstrip("\n")) if v.endswith("\n") else None)
+            >>> tree.replace_tokens(lambda v: v.update(value=v.rstrip("\n")) if v.endswith("\n") else None)
         """
         for index, child in enumerate(self.children):
             if isinstance(child, Tree):
-                child.replace_nodes(pred)
+                child.replace_tokens(pred)
             elif isinstance(child, Token):
                 result = pred(child)
                 if result is not None:

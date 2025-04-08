@@ -219,7 +219,7 @@ class Tree(Generic[_Leaf_T]):
         """
         for index, child in enumerate(self.children):
             if isinstance(child, Tree):
-                self.replace_nodes(pred)
+                child.replace_nodes(pred)
             elif isinstance(child, Token):
                 result = pred(child)
                 if result is not None:

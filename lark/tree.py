@@ -210,7 +210,7 @@ class Tree(Generic[_Leaf_T]):
             else:
                 if pred(c):
                     yield c
-                    
+
     def replace_tokens(self, pred: 'Callable[[_Leaf_T], Optional[_Leaf_T]]') -> None:
         """replace tokens in the tree using the result of pred(token) when it is not none.
 
@@ -224,7 +224,7 @@ class Tree(Generic[_Leaf_T]):
                 result = pred(child)
                 if result is not None:
                     self.children[index] = result
-        
+
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
 

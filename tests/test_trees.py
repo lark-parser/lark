@@ -59,7 +59,7 @@ class TestTrees(TestCase):
         self.assertEqual(tokens, expected)
 
     def test_replace_tokens(self):
-        tree2 = copy.copy(self.tree2)
+        tree2 = copy.deepcopy(self.tree2)
         expected = Tree('a', [
             Tree('b', [Token('T', 'y')]),
             Tree('c', [Token('T', 'y')]),

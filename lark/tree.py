@@ -211,7 +211,7 @@ class Tree(Generic[_Leaf_T]):
                 if pred(c):
                     yield c
                     
-    def replace_tokens(self, pred: 'Callable[[Token], Optional[Token]]') -> None:
+    def replace_tokens(self, pred: 'Callable[[_Leaf_T], Optional[_Leaf_T]]') -> None:
         """replace tokens in the tree using the result of pred(token) when it is not none.
 
         Example:
@@ -220,7 +220,7 @@ class Tree(Generic[_Leaf_T]):
         for index, child in enumerate(self.children):
             if isinstance(child, Tree):
                 child.replace_tokens(pred)
-            elif isinstance(child, Token):
+            else:
                 result = pred(child)
                 if result is not None:
                     self.children[index] = result

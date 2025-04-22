@@ -16,6 +16,7 @@ except ImportError:
 if TYPE_CHECKING:
     from .common import LexerConf
     from .parsers.lalr_parser_state import ParserState
+    from .lark import PostLex
 
 from .utils import classify, get_regexp_width, Serialize, logger, TextSlice, TextOrSlice
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -466,6 +467,25 @@ class LexerThread:
         return type(self)(self.lexer, copy(self.state))
 
     _Token = Token
+
+
+class PostLexThread(LexerThread):
+    def __init__(self, lexer: 'Lexer', lexer_state: LexerState, postlex: 'PostLex'):
+        super().__init__(lexer, lexer_state)
+        self.postlex = postlex
+
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: 'PostLex') -> 'PostLexThread':
+        text = TextSlice.cast_from(text_or_slice)
+        return cls(lexer, LexerState(text), postlex)
+
+    def lex(self, parser_state):
+        # Get tokens from the underlying lexer and process with postlex
+        tokens = super().lex(parser_state)
+        return self.postlex.process(tokens)
+
+    def __copy__(self):
+        return type(self)(self.lexer, copy(self.state), self.postlex)
 
 
 _Callback = Callable[[Token], Token]

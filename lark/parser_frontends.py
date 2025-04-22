@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKI
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer, PostLexThread
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -95,8 +95,7 @@ class ParsingFrontend(Serialize):
         else:
             raise TypeError("Bad value for lexer_type: {lexer_type}")
 
-        if lexer_conf.postlex:
-            self.lexer = PostLexConnector(self.lexer, lexer_conf.postlex)
+        self.postlex: PostLex | None = lexer_conf.postlex  # Store the postlex separately
 
     def _verify_start(self, start=None):
         if start is None:
@@ -109,8 +108,18 @@ class ParsingFrontend(Serialize):
         return start
 
     def _make_lexer_thread(self, text: Optional[TextOrSlice]) -> Union[TextOrSlice, LexerThread, None]:
+        if self.skip_lexer:
+            return text
+
         cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
-        return text if self.skip_lexer else cls(self.lexer, None) if text is None else cls.from_text(self.lexer, text)
+        
+        thread = cls(self.lexer, text) if text is None else cls.from_text(self.lexer, text)
+
+        # If we have a postlex, wrap the thread
+        if self.postlex is not None:
+            return PostLexThread(self.lexer, thread.state, self.postlex)
+
+        return thread
 
     def parse(self, text: Optional[TextOrSlice], start=None, on_error=None):
         if self.lexer_conf.lexer_type in ("dynamic", "dynamic_complete"):
@@ -150,15 +159,6 @@ def _get_lexer_callbacks(transformer, terminals):
         if callback is not None:
             result[terminal.name] = callback
     return result
-
-class PostLexConnector:
-    def __init__(self, lexer, postlexer):
-        self.lexer = lexer
-        self.postlexer = postlexer
-
-    def lex(self, lexer_state, parser_state):
-        i = self.lexer.lex(lexer_state, parser_state)
-        return self.postlexer.process(i)
 
 
 

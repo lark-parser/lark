@@ -23,7 +23,7 @@ class CustomTransformer(TreeForestTransformer):
         return Discard
 
     def __default_token__(self, token):
-        return token.capitalize()
+        return token.value.capitalize()
 
 grammar = """
     sentence: noun verb noun        -> simple

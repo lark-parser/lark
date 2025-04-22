@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Type
 
 from .exceptions import ConfigurationError, GrammarError, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice
@@ -10,6 +10,7 @@ from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
 if TYPE_CHECKING:
     from .parsers.lalr_analysis import ParseTableBase
+    from .lark import PostLex
 
 
 ###{standalone
@@ -95,7 +96,7 @@ class ParsingFrontend(Serialize):
         else:
             raise TypeError("Bad value for lexer_type: {lexer_type}")
 
-        self.postlex: PostLex | None = lexer_conf.postlex  # Store the postlex separately
+        self.postlex: Union['PostLex', None] = lexer_conf.postlex  # Store the postlex separately
 
     def _verify_start(self, start=None):
         if start is None:
@@ -111,15 +112,15 @@ class ParsingFrontend(Serialize):
         if self.skip_lexer:
             return text
 
-        cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
-        
-        thread = cls(self.lexer, text) if text is None else cls.from_text(self.lexer, text)
+        cls: Type[LexerThread]
 
         # If we have a postlex, wrap the thread
         if self.postlex is not None:
-            return PostLexThread(self.lexer, thread.state, self.postlex)
+            cls = PostLexThread
+            return cls(self.lexer, text, self.postlex) if text is None else cls.from_text(self.lexer, text, self.postlex)
 
-        return thread
+        cls = (self.options and self.options._plugins.get('LexerThread')) or LexerThread
+        return cls(self.lexer, text) if text is None else cls.from_text(self.lexer, text)
 
     def parse(self, text: Optional[TextOrSlice], start=None, on_error=None):
         if self.lexer_conf.lexer_type in ("dynamic", "dynamic_complete"):

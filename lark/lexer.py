@@ -5,7 +5,7 @@ import re
 from contextlib import suppress
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload
+    ClassVar, TYPE_CHECKING, overload, Union
 )
 from types import ModuleType
 import warnings
@@ -470,12 +470,24 @@ class LexerThread:
 
 
 class PostLexThread(LexerThread):
-    def __init__(self, lexer: 'Lexer', lexer_state: LexerState, postlex: 'PostLex'):
+    def __init__(self, lexer: 'Lexer', lexer_state: Optional[LexerState], postlex: 'PostLex'):
         super().__init__(lexer, lexer_state)
         self.postlex = postlex
 
+    @overload
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: None = None) -> 'LexerThread':
+        pass
+
+    @overload
     @classmethod
     def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: 'PostLex') -> 'PostLexThread':
+        pass
+
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: Union['PostLex', None] = None) -> Union['LexerThread', 'PostLexThread']:
+        if postlex is None:
+            return super().from_text(lexer, text_or_slice)
         text = TextSlice.cast_from(text_or_slice)
         return cls(lexer, LexerState(text), postlex)
 

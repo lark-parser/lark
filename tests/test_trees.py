@@ -58,6 +58,16 @@ class TestTrees(TestCase):
         tokens = list(self.tree2.find_token('T'))
         self.assertEqual(tokens, expected)
 
+    def test_replace_tokens(self):
+        tree2 = copy.deepcopy(self.tree2)
+        expected = Tree('a', [
+            Tree('b', [Token('T', 'y')]),
+            Tree('c', [Token('T', 'y')]),
+            Tree('d', [Tree('z', [Token('T', 'zz'), Tree('zzz', 'zzz')])]),
+        ])
+        tree2.replace_tokens(lambda v: v.update(value="y") if v == "x" else None)
+        self.assertEqual(tree2, expected)
+
     def test_visitor(self):
         class Visitor1(Visitor):
             def __init__(self):

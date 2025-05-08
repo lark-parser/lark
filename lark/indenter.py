@@ -40,7 +40,7 @@ class Indenter(PostLex, ABC):
 
         yield token
 
-        indent_str = token.rsplit('\n', 1)[1] # Tabs and spaces
+        indent_str = token.value.rsplit('\n', 1)[1] # Tabs and spaces
         indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
 
         if indent > self.indent_level[-1]:

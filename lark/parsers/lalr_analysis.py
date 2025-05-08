@@ -286,7 +286,7 @@ class LALR_Analyzer(GrammarAnalyzer):
                 if la in actions:
                     if self.strict:
                         msg = f'Shift/Reduce conflict for terminal {la.name}. [strict-mode]\n' \
-                               ' * {rule}\n'
+                              f' * {rule}\n'
                         raise GrammarError(msg)
                     elif self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)

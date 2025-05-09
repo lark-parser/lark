@@ -71,6 +71,7 @@ class LarkOptions(Serialize):
     edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
     import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
     source_path: Optional[str]
+    legacy_import: bool
 
     OPTIONS_DOC = r"""
     **===  General Options  ===**
@@ -107,6 +108,8 @@ class LarkOptions(Serialize):
             Prevent the tree builder from automagically removing "punctuation" tokens (Default: ``False``)
     tree_class
             Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
+    legacy_import
+            Lark will use the old import system where imported rules are not namespaced.
 
     **=== Algorithm Options ===**
 
@@ -183,6 +186,7 @@ class LarkOptions(Serialize):
         'import_paths': [],
         'source_path': None,
         '_plugins': {},
+        'legacy_import': True,
     }
 
     def __init__(self, options_dict: Dict[str, Any]) -> None:
@@ -354,7 +358,13 @@ class Lark(Serialize):
 
 
             # Parse the grammar file and compose the grammars
-            self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
+            self.grammar, used_files = load_grammar(
+                grammar,
+                self.source_path,
+                self.options.import_paths,
+                self.options.keep_all_tokens,
+                legacy_import=self.options.legacy_import
+            )
         else:
             assert isinstance(grammar, Grammar)
             self.grammar = grammar

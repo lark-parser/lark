@@ -52,6 +52,7 @@ Example:
     ::
 
         class IncreaseSomeOfTheNumbers(Interpreter):
+            @visit_children_decor
             def number(self, tree):
                 tree.children[0] += 1
 

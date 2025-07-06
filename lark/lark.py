@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice
-from .load_grammar import load_grammar, _deserialize_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
+from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
@@ -273,13 +273,15 @@ class Lark(Serialize):
     parser: 'ParsingFrontend'
     terminals: Collection[TerminalDef]
 
-    __serialize_fields__ = ['parser', 'rules', 'options']
+    __serialize_fields__ = 'parser', 'rules', 'options'
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
-        if self.options.cache_grammar:
-            self.__serialize_fields__.append('grammar')
         re_module: types.ModuleType
+
+        # Update which fields are serialized
+        if self.options.cache_grammar:
+            self.__serialize_fields__ = self.__serialize_fields__ + ('grammar',)
 
         # Set regex or re module
         use_regex = self.options.regex
@@ -545,7 +547,7 @@ class Lark(Serialize):
         assert memo_json
         memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
         if 'grammar' in data:
-            self.grammar = _deserialize_grammar(data['grammar'], memo)
+            self.grammar = Grammar.deserialize(data['grammar'], memo)
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ConfigurationError("Some options are not allowed when loading a Parser: {}"

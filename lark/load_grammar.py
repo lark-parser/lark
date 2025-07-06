@@ -979,9 +979,6 @@ def _parse_grammar(text, name, start='start'):
 
     return PrepareGrammar().transform(tree)
 
-def _deserialize_grammar(data, memo) -> Grammar:
-    return Grammar.deserialize(data, memo)
-
 def _error_repr(error):
     if isinstance(error, UnexpectedToken):
         error2 = _translate_parser_exception(_get_parser().parse, error)

@@ -273,7 +273,7 @@ class Lark(Serialize):
     parser: 'ParsingFrontend'
     terminals: Collection[TerminalDef]
 
-    __serialize_fields__ = 'parser', 'rules', 'options'
+    __serialize_fields__ = ['parser', 'rules', 'options']
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
@@ -281,7 +281,7 @@ class Lark(Serialize):
 
         # Update which fields are serialized
         if self.options.cache_grammar:
-            self.__serialize_fields__ = self.__serialize_fields__ + ('grammar',)
+            self.__serialize_fields__ = self.__serialize_fields__ + ['grammar']
 
         # Set regex or re module
         use_regex = self.options.regex
@@ -414,7 +414,7 @@ class Lark(Serialize):
             raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         if self.options.parser is None:
-            terminals_to_keep = '*'
+            terminals_to_keep = '*'     # For lexer-only mode, keep all terminals
         elif self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
         else:

@@ -2,7 +2,6 @@
 
 from abc import abstractmethod, ABC
 import re
-from contextlib import suppress
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
     ClassVar, TYPE_CHECKING, overload
@@ -23,6 +22,7 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 
 
 ###{standalone
+from contextlib import suppress
 from copy import copy
 
 try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on

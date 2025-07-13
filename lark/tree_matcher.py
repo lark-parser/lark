@@ -1,10 +1,12 @@
 """Tree matcher based on Lark grammar"""
 
 import re
+from typing import List, Dict
 from collections import defaultdict
 
-from . import Tree, Token
+from . import Tree, Token, Lark
 from .common import ParserConf
+from .exceptions import ConfigurationError
 from .parsers import earley
 from .grammar import Rule, Terminal, NonTerminal
 
@@ -39,7 +41,7 @@ def _best_from_group(seq, group_key, cmp_key):
     return list(d.values())
 
 
-def _best_rules_from_group(rules):
+def _best_rules_from_group(rules: List[Rule]) -> List[Rule]:
     rules = _best_from_group(rules, lambda r: r, lambda r: -len(r.expansion))
     rules.sort(key=lambda r: len(r.expansion))
     return rules
@@ -85,12 +87,23 @@ class TreeMatcher:
 
     Initialize with an instance of Lark.
     """
+    rules_for_root: Dict[str, List[Rule]]
+    rules: List[Rule]
+    parser: Lark
 
-    def __init__(self, parser):
+    def __init__(self, parser: Lark):
         # XXX TODO calling compile twice returns different results!
         assert not parser.options.maybe_placeholders
-        # XXX TODO: we just ignore the potential existence of a postlexer
-        self.tokens, rules, _extra = parser.grammar.compile(parser.options.start, set())
+
+        if parser.options.postlex and parser.options.postlex.always_accept:
+            # If postlexer's always_accept is used, we need to recompile the grammar with empty terminals-to-keep
+            if not hasattr(parser, 'grammar'):
+                raise ConfigurationError('Source grammar not available from cached parser, use cache_grammar=True'
+                                         if parser.options.cache else "Source grammar not available!")
+            self.tokens, rules, _extra = parser.grammar.compile(parser.options.start, set())
+        else:
+            self.tokens = list(parser.terminals)
+            rules = list(parser.rules)
 
         self.rules_for_root = defaultdict(list)
 
@@ -101,9 +114,9 @@ class TreeMatcher:
         self.rules = _best_rules_from_group(self.rules)
 
         self.parser = parser
-        self._parser_cache = {}
+        self._parser_cache: Dict[str, earley.Parser] = {}
 
-    def _build_recons_rules(self, rules):
+    def _build_recons_rules(self, rules: List[Rule]):
         "Convert tree-parsing/construction rules to tree-matching rules"
         expand1s = {r.origin for r in rules if r.options.expand1}
 
@@ -145,7 +158,7 @@ class TreeMatcher:
                 yield make_recons_rule_to_term(origin, NonTerminal(alias))
             yield make_recons_rule_to_term(origin, origin)
 
-    def match_tree(self, tree, rulename):
+    def match_tree(self, tree: Tree, rulename: str) -> Tree:
         """Match the elements of `tree` to the symbols of rule `rulename`.
 
         Parameters:
@@ -159,7 +172,7 @@ class TreeMatcher:
             UnexpectedToken: If no match was found.
 
         Note:
-            It's the callers' responsibility match the tree recursively.
+            It's the callers' responsibility to match the tree recursively.
         """
         if rulename:
             # validate
@@ -176,11 +189,11 @@ class TreeMatcher:
 
             # TODO pass callbacks through dict, instead of alias?
             callbacks = {rule: rule.alias for rule in rules}
-            conf = ParserConf(rules, callbacks, [rulename])
+            conf = ParserConf(rules, callbacks, [rulename]) # type: ignore[arg-type]
             parser = earley.Parser(self.parser.lexer_conf, conf, _match, resolve_ambiguity=True)
             self._parser_cache[rulename] = parser
 
         # find a full derivation
-        unreduced_tree = parser.parse(ChildrenLexer(tree.children), rulename)
+        unreduced_tree: Tree = parser.parse(ChildrenLexer(tree.children), rulename)
         assert unreduced_tree.data == rulename
         return unreduced_tree

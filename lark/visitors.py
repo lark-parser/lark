@@ -423,10 +423,6 @@ class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
         # visiting child trees.
         return self._visit_tree(tree)
 
-    def visit_topdown(self, tree: Tree[_Leaf_T]):
-        "Interpreters only work top-down. This method is identical to `visit()`."
-        return self.visit(tree)
-
     def _visit_tree(self, tree: Tree[_Leaf_T]):
         f = getattr(self, tree.data)
         wrapper = getattr(f, 'visit_wrapper', None)

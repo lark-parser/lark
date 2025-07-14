@@ -417,10 +417,15 @@ class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
     """
 
     def visit(self, tree: Tree[_Leaf_T]) -> _Return_T:
+        "Visit the tree, starting with the root and finally the leaves (top-down)."
         # There are no guarantees on the type of the value produced by calling a user func for a
         # child will produce. So only annotate the public method and use an internal method when
         # visiting child trees.
         return self._visit_tree(tree)
+
+    def visit_topdown(self, tree: Tree[_Leaf_T]):
+        "Interpreters only work top-down. This method is identical to `visit()`."
+        return self.visit(tree)
 
     def _visit_tree(self, tree: Tree[_Leaf_T]):
         f = getattr(self, tree.data)
@@ -431,22 +436,45 @@ class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
             return f(tree)
 
     def visit_children(self, tree: Tree[_Leaf_T]) -> List:
-        return [self._visit_tree(child) if isinstance(child, Tree) else child
-                for child in tree.children]
+        "Visit all the children of this tree and return the results as a list."
+        return [
+            self._visit_tree(child)
+            if isinstance(child, Tree)
+            else child
+            for child in tree.children
+        ]
 
     def __getattr__(self, name):
         return self.__default__
 
     def __default__(self, tree):
+        """
+        Default function that is called if there is no attribute matching ``tree.data``.
+
+        Can be overridden. Defaults to visiting all the tree's children.
+        """
         return self.visit_children(tree)
 
 
 _InterMethod = Callable[[Type[Interpreter], _Return_T], _R]
 
 def visit_children_decor(func: _InterMethod) -> _InterMethod:
-    "See Interpreter"
+    """
+    A wrapper around Interpreter methods. It makes the wrapped node method automatically visit the
+    node's children before proceeding with the logic you have defined for that node.
+
+    Example:
+        ::
+
+            class ProcessQuery(Interpreter):
+                @visit_children_decor
+                def query(self, tree):
+                    pass
+    """
     @wraps(func)
     def inner(cls, tree):
+        if not isinstance(cls, Interpreter):
+            raise TypeError("visit_children_decor can only be applied to Interpreter methods.")
         values = cls.visit_children(tree)
         return func(cls, values)
     return inner
@@ -511,11 +539,12 @@ def _vargs_tree(f, data, children, meta):
 
 
 def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper: Optional[Callable] = None) -> Callable[[_DECORATED], _DECORATED]:
-    """A convenience decorator factory for modifying the behavior of user-supplied callback methods of ``Transformer`` classes.
+    """A convenience decorator factory for modifying the behavior of user-supplied callback methods
+    of ``Transformer`` or ``Interpreter`` classes.
 
-    By default, transformer callback methods accept one argument - a list of the node's children.
+    By default, the callback methods for these classes accept one argument - a list of the node's children.
 
-    ``v_args`` can modify this behavior. When used on a ``Transformer`` class definition, it applies to
+    ``v_args`` can modify this behavior. When used on the class definition, it applies to
     all the callback methods inside it.
 
     ``v_args`` can be applied to a single method, or to an entire class. When applied to both,
@@ -567,6 +596,18 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
         func = wrapper
 
     def _visitor_args_dec(obj):
+        from inspect import isclass
+        if isclass(obj) and issubclass(obj, Visitor):
+            raise TypeError("v_args cannot be applied to Visitor classes.")
+        if callable(obj) and not isclass(obj):
+            @wraps(obj)
+            def method_wrapper(*args, **kwargs):
+                if args:
+                    self_instance = args[0]
+                    if isinstance(self_instance, Visitor):
+                        raise TypeError("v_args cannot be applied to Visitor methods.")
+                return obj(*args, **kwargs)
+            return _apply_v_args(method_wrapper, func)
         return _apply_v_args(obj, func)
     return _visitor_args_dec
 

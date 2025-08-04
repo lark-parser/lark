@@ -4,7 +4,7 @@ Transformers & Visitors
 Transformers & Visitors provide a convenient interface to process the
 parse-trees that Lark returns.
 
-They are used by inheriting from the correct class (visitor or transformer),
+They are used by inheriting from one of the classes described here,
 and implementing methods corresponding to the rule you wish to process. Each
 method accepts the children as an argument. That can be modified using the
 ``v_args`` decorator, which allows one to inline the arguments (akin to ``*args``),
@@ -17,9 +17,8 @@ See: `visitors.py`_
 Visitor
 -------
 
-Visitors visit each node of the tree, and run the appropriate method on it according to the node's data.
-
-They work bottom-up, starting with the leaves and ending at the root of the tree.
+Visitors visit each node of the tree and run the appropriate method on it according to the node's data.
+They can work top-down or bottom-up, depending on what method you use.
 
 There are two classes that implement the visitor interface:
 
@@ -45,11 +44,11 @@ Example:
 Interpreter
 -----------
 
-.. autoclass:: lark.visitors.Interpreter
-
-
 Example:
     ::
+
+        from lark.visitors import Interpreter
+
 
         class IncreaseSomeOfTheNumbers(Interpreter):
             def number(self, tree):
@@ -59,7 +58,12 @@ Example:
                 # skip this subtree. don't change any number node inside it.
                 pass
 
-            IncreaseSomeOfTheNumbers().visit(parse_tree)
+
+        IncreaseSomeOfTheNumbers().visit(parse_tree)
+
+
+.. autoclass:: lark.visitors.Interpreter
+    :members: visit, visit_children, __default__
 
 Transformer
 -----------
@@ -98,14 +102,11 @@ Example:
 
 .. autoclass:: lark.visitors.Transformer_InPlaceRecursive
 
-v_args
-------
+Useful Utilities
+----------------
 
 .. autofunction:: lark.visitors.v_args
-
-merge_transformers
-------------------
-
+.. autofunction:: lark.visitors.visit_children_decor
 .. autofunction:: lark.visitors.merge_transformers
 
 Discard

@@ -195,7 +195,6 @@ class Tree(Generic[_Leaf_T]):
                 changed = True
         return changed
 
-
     def scan_values(self, pred: 'Callable[[Branch[_Leaf_T]], bool]') -> Iterator[_Leaf_T]:
         """Return all values in the tree that evaluate pred(value) as true.
 
@@ -211,6 +210,20 @@ class Tree(Generic[_Leaf_T]):
             else:
                 if pred(c):
                     yield c
+
+    def replace_tokens(self, pred: 'Callable[[_Leaf_T], Optional[_Leaf_T]]') -> None:
+        """replace tokens in the tree using the result of pred(token) when it is not none.
+
+        Example:
+            >>> tree.replace_tokens(lambda v: v.update(value=v.rstrip("\n")) if v.endswith("\n") else None)
+        """
+        for index, child in enumerate(self.children):
+            if isinstance(child, Tree):
+                child.replace_tokens(pred)
+            else:
+                result = pred(child)
+                if result is not None:
+                    self.children[index] = result
 
     def __deepcopy__(self, memo):
         return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)

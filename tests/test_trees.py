@@ -131,6 +131,10 @@ class TestTrees(TestCase):
                 return 'C'
 
         self.assertEqual(Interp3().visit(t), list('BCd'))
+        self.assertEqual(
+            Interp3().visit(t),
+            Interp3().visit_topdown(t),
+        )
 
     def test_transformer(self):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
@@ -471,6 +475,30 @@ class TestTrees(TestCase):
 
         assert MyTransformer().transform(t) is None
 
+    def test_incorrect_use_of_decorators(self):
+        class TestVisitor1(Visitor):
+            @visit_children_decor
+            def a(self, tree):
+                pass
+
+            @v_args(inline=True)
+            def b(self, tree):
+                pass
+
+        with self.assertRaises(TypeError) as e:
+            TestVisitor1().visit_topdown(self.tree1)
+        self.assertIn("visit_children_decor", str(e.exception))
+        self.assertIn("Interpreter", str(e.exception))
+        with self.assertRaises(TypeError) as e:
+            TestVisitor1().visit(self.tree1)
+        self.assertIn("v_args", str(e.exception))
+
+        with self.assertRaises(TypeError) as e:
+            @v_args(inline=True)
+            class TestVisitor2(Visitor):
+                def a(self, tree):
+                    pass
+        self.assertIn("v_args", str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

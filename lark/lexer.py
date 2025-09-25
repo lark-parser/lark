@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 import re
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload
+    ClassVar, TYPE_CHECKING, overload, Union
 )
 from types import ModuleType
 import warnings
@@ -15,6 +15,7 @@ except ImportError:
 if TYPE_CHECKING:
     from .common import LexerConf
     from .parsers.lalr_parser_state import ParserState
+    from .lark import PostLex
 
 from .utils import classify, get_regexp_width, Serialize, logger, TextSlice, TextOrSlice
 from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
@@ -466,6 +467,37 @@ class LexerThread:
         return type(self)(self.lexer, copy(self.state))
 
     _Token = Token
+
+
+class PostLexThread(LexerThread):
+    def __init__(self, lexer: 'Lexer', lexer_state: Optional[LexerState], postlex: 'PostLex'):
+        super().__init__(lexer, lexer_state)
+        self.postlex = postlex
+
+    @overload
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: None = None) -> 'LexerThread':
+        pass
+
+    @overload
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: 'PostLex') -> 'PostLexThread':
+        pass
+
+    @classmethod
+    def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice, postlex: Union['PostLex', None] = None) -> Union['LexerThread', 'PostLexThread']:
+        if postlex is None:
+            return super().from_text(lexer, text_or_slice)
+        text = TextSlice.cast_from(text_or_slice)
+        return cls(lexer, LexerState(text), postlex)
+
+    def lex(self, parser_state):
+        # Get tokens from the underlying lexer and process with postlex
+        tokens = super().lex(parser_state)
+        return self.postlex.process(tokens)
+
+    def __copy__(self):
+        return type(self)(self.lexer, copy(self.state), self.postlex)
 
 
 _Callback = Callable[[Token], Token]

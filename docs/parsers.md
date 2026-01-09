@@ -3,7 +3,7 @@ Lark implements the following parsing algorithms: Earley, LALR(1), and CYK
 
 ## Earley
 
-An [Earley Parser](https://www.wikiwand.com/en/Earley_parser) is a chart parser capable of parsing any context-free grammar at O(n^3), and O(n^2) when the grammar is unambiguous. It can parse most LR grammars at O(n). Most programming languages are LR, and can be parsed at a linear time.
+An [Earley Parser](https://en.wikipedia.org/wiki/Earley_parser) is a chart parser capable of parsing any context-free grammar at O(n^3), and O(n^2) when the grammar is unambiguous. It can parse most LR grammars at O(n). Most programming languages are LR, and can be parsed at a linear time.
 
 Lark's Earley implementation runs on top of a skipping chart parser, which allows it to use regular expressions, instead of matching characters one-by-one. This is a huge improvement to Earley that is unique to Lark. This feature is used by default, but can also be requested explicitly using `lexer='dynamic'`.
 
@@ -40,7 +40,7 @@ Warning: This lexer can be much slower, especially for open-ended terminals such
 
 ## LALR(1)
 
-[LALR(1)](https://www.wikiwand.com/en/LALR_parser) is a very efficient, true-and-tested parsing algorithm. It's incredibly fast and requires very little memory. It can parse most programming languages (For example: Python and Java).
+[LALR(1)](https://en.wikipedia.org/wiki/LALR_parser) is a very efficient, true-and-tested parsing algorithm. It's incredibly fast and requires very little memory. It can parse most programming languages (For example: Python and Java).
 
 LALR(1) stands for:
 
@@ -76,6 +76,6 @@ For a better understanding of these constraints, it's recommended to learn how a
 
 ## CYK Parser
 
-A [CYK parser](https://www.wikiwand.com/en/CYK_algorithm) can parse any context-free grammar at O(n^3*|G|).
+A [CYK parser](https://en.wikipedia.org/wiki/CYK_algorithm) can parse any context-free grammar at O(n^3*|G|).
 
 Its too slow to be practical for simple grammars, but it offers good performance for highly ambiguous grammars.

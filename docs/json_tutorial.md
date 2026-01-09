@@ -17,7 +17,7 @@ Knowledge assumed:
 
 ## Part 1 - The Grammar
 
-Lark accepts its grammars in a format called [EBNF](https://www.wikiwand.com/en/Extended_Backus%E2%80%93Naur_form). It basically looks like this:
+Lark accepts its grammars in a format called [EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form). It basically looks like this:
 
     rule_name : list of rules and TERMINALS to match
               | another possible list of items

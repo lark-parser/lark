@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: coproduct-opensource/nucleus@v1.0.2
+      - uses: coproduct-opensource/nucleus@main
         with:
           issue-number: ${{ inputs.issue-number }}
           api-key: ${{ secrets.ANTHROPIC_API_KEY }}

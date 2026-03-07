@@ -1,0 +1,36 @@
+name: Nucleus Fix Issue
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: 'Issue number to fix'
+        required: true
+      profile:
+        description: 'Permission profile'
+        required: false
+        default: 'safe_pr_fixer'
+      model:
+        description: 'LLM model'
+        required: false
+        default: 'claude-sonnet-4-20250514'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  fix:
+    name: Fix issue #${{ inputs.issue-number }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: coproduct-opensource/nucleus@main
+        with:
+          issue-number: ${{ inputs.issue-number }}
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          profile: ${{ inputs.profile }}
+          timeout: '600'
+          model: ${{ inputs.model }}

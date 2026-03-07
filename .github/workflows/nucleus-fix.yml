@@ -27,10 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: coproduct-opensource/nucleus@main
+      - uses: coproduct-opensource/nucleus@v1.0.2
         with:
           issue-number: ${{ inputs.issue-number }}
           api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GH_PAT }}
           profile: ${{ inputs.profile }}
           timeout: '600'
           model: ${{ inputs.model }}

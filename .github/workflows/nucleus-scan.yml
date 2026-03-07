@@ -1,0 +1,27 @@
+name: Nucleus Security Scan
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.claude/**'
+      - '.mcp.json'
+  pull_request:
+    paths:
+      - '.claude/**'
+      - '.mcp.json'
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan Agent Configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan Claude Code settings
+        uses: coproduct-opensource/nucleus/scan@v1.0.8
+        with:
+          claude-settings: .claude/settings.json

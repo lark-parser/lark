@@ -15,8 +15,8 @@ _Return_V = TypeVar('_Return_V')
 _Leaf_T = TypeVar('_Leaf_T')
 _Leaf_U = TypeVar('_Leaf_U')
 _R = TypeVar('_R')
-_FUNC = Callable[..., _Return_T]
-_DECORATED = Union[_FUNC, type]
+_DECORATED = Union[Callable[..., _Return_T], Type[_Return_T]]
+_DECORATOR = Callable[[_DECORATED[_Return_T]], _DECORATED[_Return_T]]
 
 class _DiscardType:
     """When the Discard value is returned from a transformer callback,
@@ -510,7 +510,7 @@ def _vargs_tree(f, data, children, meta):
     return f(Tree(data, children, meta))
 
 
-def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper: Optional[Callable] = None) -> Callable[[_DECORATED], _DECORATED]:
+def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper: Optional[Callable] = None) -> _DECORATOR:
     """A convenience decorator factory for modifying the behavior of user-supplied callback methods of ``Transformer`` classes.
 
     By default, transformer callback methods accept one argument - a list of the node's children.

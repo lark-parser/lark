@@ -1782,6 +1782,19 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
+        def test_token_flags_ascii(self):
+            g = _Lark(r"""start: ASCII_WORD
+                          ASCII_WORD: /\w+/a
+                      """)
+            self.assertEqual(g.parse('abc').children, ['abc'])
+            self.assertRaises(UnexpectedCharacters, g.parse, 'é')
+
+        def test_token_flags_locale_bytes(self):
+            g = _Lark(r"""start: WORD
+                          WORD: /\w+/L
+                      """, use_bytes=True)
+            self.assertEqual(g.parse(b'abc').children[0].value, b'abc')
+
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?

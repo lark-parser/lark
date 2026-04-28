@@ -69,7 +69,7 @@ Literals can be one of:
 * `"string"`
 * `/regular expression+/`
 * `"case-insensitive string"i`
-* `/re with flags/imulx`
+* `/re with flags/imulxaL`
 * Literal range: `"a".."z"`, `"1".."9"`, etc.
 
 Terminals also support grammar operators, such as `|`, `+`, `*` and `?`.
@@ -122,7 +122,7 @@ SIGNED_INTEGER: /
  /x
 ```
 
-Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
+Supported flags are one of: `imsluxaL`. See Python's regex documentation for more details on each one. Note that Python's `L` locale flag is only valid for bytes patterns, and can therefore only be used with `use_bytes=True`.
 
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 

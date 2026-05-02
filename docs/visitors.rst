@@ -18,7 +18,7 @@ Visitor
 -------
 
 Visitors visit each node of the tree and run the appropriate method on it according to the node's data.
-They can work top-down or bottom-up, depending on what method you use.
+They can traverse top-down or bottom-up, depending on the class and method.
 
 There are two classes that implement the visitor interface:
 

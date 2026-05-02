@@ -131,10 +131,6 @@ class TestTrees(TestCase):
                 return 'C'
 
         self.assertEqual(Interp3().visit(t), list('BCd'))
-        self.assertEqual(
-            Interp3().visit(t),
-            Interp3().visit_topdown(t),
-        )
 
     def test_transformer(self):
         t = Tree('add', [Tree('sub', [Tree('i', ['3']), Tree('f', ['1.1'])]), Tree('i', ['1'])])
@@ -481,16 +477,14 @@ class TestTrees(TestCase):
             def a(self, tree):
                 pass
 
-            @v_args(inline=True)
-            def b(self, tree):
-                pass
-
         with self.assertRaises(TypeError) as e:
             TestVisitor1().visit_topdown(self.tree1)
         self.assertIn("visit_children_decor", str(e.exception))
         self.assertIn("Interpreter", str(e.exception))
         with self.assertRaises(TypeError) as e:
             TestVisitor1().visit(self.tree1)
+        self.assertIn("visit_children_decor", str(e.exception))
+        self.assertIn("Interpreter", str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

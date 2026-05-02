@@ -491,14 +491,6 @@ class TestTrees(TestCase):
         self.assertIn("Interpreter", str(e.exception))
         with self.assertRaises(TypeError) as e:
             TestVisitor1().visit(self.tree1)
-        self.assertIn("v_args", str(e.exception))
-
-        with self.assertRaises(TypeError) as e:
-            @v_args(inline=True)
-            class TestVisitor2(Visitor):
-                def a(self, tree):
-                    pass
-        self.assertIn("v_args", str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

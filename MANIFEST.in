@@ -1,1 +1,10 @@
-include README.md LICENSE docs/* examples/*.py examples/*.png examples/*.lark tests/*.py tests/*.lark tests/grammars/* tests/test_nearley/*.py tests/test_nearley/grammars/*
+# By default, all files tracked by git are included in the sdist via setuptools-scm
+# This manifest is used to exclude certain files and include files from git submodules
+recursive-exclude .github *
+recursive-exclude docs/ide *
+exclude .gitignore .gitmodules .pre-commit-config.yaml
+
+# Include nearley grammars from the nearley submodule
+# Many of them are used by tests/test_nearley/test_nearley.py
+recursive-include tests/test_nearley/nearley *.ne
+include tests/test_nearley/nearley/LICENSE.txt

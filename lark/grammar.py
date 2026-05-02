@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, ClassVar, Sequence
+from typing import Any, Dict, Optional, Tuple, ClassVar, Sequence
 
 from .utils import Serialize
 
@@ -56,6 +56,11 @@ class NonTerminal(Symbol):
     __serialize_fields__ = 'name',
 
     is_term: ClassVar[bool] = False
+
+    def serialize(self, memo=None) -> Dict[str, Any]:
+        # TODO this is here because self.name can be a Token instance.
+        #      remove this function when the issue is fixed. (backwards-incompatible)
+        return {'name': str(self.name), '__type__': 'NonTerminal'}
 
 
 class RuleOptions(Serialize):

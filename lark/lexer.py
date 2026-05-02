@@ -2,7 +2,6 @@
 
 from abc import abstractmethod, ABC
 import re
-from contextlib import suppress
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
     ClassVar, TYPE_CHECKING, overload
@@ -23,6 +22,7 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 
 
 ###{standalone
+from contextlib import suppress
 from copy import copy
 
 try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on
@@ -419,15 +419,16 @@ class LexerState:
     last_token: Optional[Token]
 
     def __init__(self, text: TextSlice, line_ctr: Optional[LineCounter] = None, last_token: Optional[Token]=None):
-        if line_ctr is None:
-            line_ctr = LineCounter(b'\n' if isinstance(text.text, bytes) else '\n')
+        if isinstance(text, TextSlice):
+            if line_ctr is None:
+                line_ctr = LineCounter(b'\n' if isinstance(text.text, bytes) else '\n')
 
-            if text.start > 0:
-                # Advance the line-count until line_ctr.char_pos == text.start
-                line_ctr.feed(TextSlice(text.text, 0, text.start))
+                if text.start > 0:
+                    # Advance the line-count until line_ctr.char_pos == text.start
+                    line_ctr.feed(TextSlice(text.text, 0, text.start))
 
-        if not (text.start <= line_ctr.char_pos <= text.end):
-            raise ValueError("LineCounter.char_pos is out of bounds")
+            if not (text.start <= line_ctr.char_pos <= text.end):
+                raise ValueError("LineCounter.char_pos is out of bounds")
 
         self.text = text
         self.line_ctr = line_ctr
@@ -455,6 +456,10 @@ class LexerThread:
     @classmethod
     def from_text(cls, lexer: 'Lexer', text_or_slice: TextOrSlice) -> 'LexerThread':
         text = TextSlice.cast_from(text_or_slice)
+        return cls(lexer, LexerState(text))
+
+    @classmethod
+    def from_custom_input(cls, lexer: 'Lexer', text: Any) -> 'LexerThread':
         return cls(lexer, LexerState(text))
 
     def lex(self, parser_state):

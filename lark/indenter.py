@@ -55,6 +55,7 @@ class Indenter(PostLex, ABC):
                 raise DedentError('Unexpected dedent to column %s. Expected dedent to %s' % (indent, self.indent_level[-1]))
 
     def _process(self, stream):
+        token = None
         for token in stream:
             if token.type == self.NL_type:
                 yield from self.handle_NL(token)
@@ -69,7 +70,7 @@ class Indenter(PostLex, ABC):
 
         while len(self.indent_level) > 1:
             self.indent_level.pop()
-            yield Token(self.DEDENT_type, '')
+            yield Token.new_borrow_pos(self.DEDENT_type, '', token) if token else Token(self.DEDENT_type, '', 0, 0, 0, 0, 0, 0)
 
         assert self.indent_level == [0], self.indent_level
 

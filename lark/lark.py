@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .parser_frontends import ParsingFrontend
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice
+from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
@@ -56,6 +56,7 @@ class LarkOptions(Serialize):
     propagate_positions: Union[bool, str]
     maybe_placeholders: bool
     cache: Union[bool, str]
+    cache_grammar: bool
     regex: bool
     g_regex_flags: int
     keep_all_tokens: bool
@@ -99,6 +100,10 @@ class LarkOptions(Serialize):
             - When ``False``, does nothing (default)
             - When ``True``, caches to a temporary file in the local directory
             - When given a string, caches to the path pointed by the string
+    cache_grammar
+            For use with ``cache`` option. When ``True``, the unanalyzed grammar is also included in the cache.
+            Useful for classes that require the ``Lark.grammar`` to be present (e.g. Reconstructor).
+            (default= ``False``)
     regex
             When True, uses the ``regex`` module instead of the stdlib ``re``.
     g_regex_flags
@@ -165,6 +170,7 @@ class LarkOptions(Serialize):
         'keep_all_tokens': False,
         'tree_class': None,
         'cache': False,
+        'cache_grammar': False,
         'postlex': None,
         'parser': 'earley',
         'lexer': 'auto',
@@ -210,6 +216,9 @@ class LarkOptions(Serialize):
         if self.parser == 'earley' and self.transformer:
             raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm. '
                              'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
+
+        if self.cache_grammar and not self.cache:
+            raise ConfigurationError('cache_grammar cannot be set when cache is disabled')
 
         if o:
             raise ConfigurationError("Unknown options: %s" % o.keys())
@@ -264,9 +273,15 @@ class Lark(Serialize):
     parser: 'ParsingFrontend'
     terminals: Collection[TerminalDef]
 
+    __serialize_fields__ = ['parser', 'rules', 'options']
+
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
         re_module: types.ModuleType
+
+        # Update which fields are serialized
+        if self.options.cache_grammar:
+            self.__serialize_fields__ = self.__serialize_fields__ + ['grammar']
 
         # Set regex or re module
         use_regex = self.options.regex
@@ -327,7 +342,9 @@ class Lark(Serialize):
                         # specific reason - we just want a username.
                         username = "unknown"
 
-                    cache_fn = tempfile.gettempdir() + "/.lark_cache_%s_%s_%s_%s.tmp" % (username, cache_sha256, *sys.version_info[:2])
+
+                    cache_fn = tempfile.gettempdir() + "/.lark_%s_%s_%s_%s_%s.tmp" % (
+                        "cache_grammar" if self.options.cache_grammar else "cache", username, cache_sha256, *sys.version_info[:2])
 
                 old_options = self.options
                 try:
@@ -397,7 +414,7 @@ class Lark(Serialize):
             raise ConfigurationError("invalid ambiguity option: %r. Must be one of %r" % (self.options.ambiguity, _VALID_AMBIGUITY_OPTIONS))
 
         if self.options.parser is None:
-            terminals_to_keep = '*'
+            terminals_to_keep = '*'     # For lexer-only mode, keep all terminals
         elif self.options.postlex is not None:
             terminals_to_keep = set(self.options.postlex.always_accept)
         else:
@@ -453,8 +470,6 @@ class Lark(Serialize):
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
-
-    __serialize_fields__ = 'parser', 'rules', 'options'
 
     def _build_lexer(self, dont_ignore: bool=False) -> BasicLexer:
         lexer_conf = self.lexer_conf
@@ -531,6 +546,8 @@ class Lark(Serialize):
 
         assert memo_json
         memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
+        if 'grammar' in data:
+            self.grammar = Grammar.deserialize(data['grammar'], memo)
         options = dict(data['options'])
         if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
             raise ConfigurationError("Some options are not allowed when loading a Parser: {}"
@@ -620,11 +637,11 @@ class Lark(Serialize):
         """Get information about a terminal"""
         return self._terminals_dict[name]
 
-    def parse_interactive(self, text: Optional[TextOrSlice]=None, start: Optional[str]=None) -> 'InteractiveParser':
+    def parse_interactive(self, text: Optional[LarkInput]=None, start: Optional[str]=None) -> 'InteractiveParser':
         """Start an interactive parsing session. Only works when parser='lalr'.
 
         Parameters:
-            text (TextOrSlice, optional): Text to be parsed. Required for ``resume_parse()``.
+            text (LarkInput, optional): Text to be parsed. Required for ``resume_parse()``.
             start (str, optional): Start symbol
 
         Returns:
@@ -634,12 +651,13 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: TextOrSlice, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+    def parse(self, text: LarkInput, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
         """Parse the given text, according to the options provided.
 
         Parameters:
-            text (TextOrSlice): Text to be parsed, as `str` or `bytes`.
+            text (LarkInput): Text to be parsed, as `str` or `bytes`.
                 TextSlice may also be used, but only when lexer='basic' or 'contextual'.
+                If Lark was created with a custom lexer, this may be an object of any type.
             start (str, optional): Required if Lark was given multiple possible start symbols (using the start option).
             on_error (function, optional): if provided, will be called on UnexpectedInput error,
                 with the exception as its argument. Return true to resume parsing, or false to raise the exception.

@@ -22,6 +22,7 @@ from ..exceptions import UnexpectedCharacters
 from ..lexer import Token
 from ..grammar import Terminal
 from .earley import Parser as BaseParser
+from .earley_common import Item
 from .earley_forest import TokenNode
 
 if TYPE_CHECKING:
@@ -109,7 +110,14 @@ class Parser(BaseParser):
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token_node)
                 else:
-                    new_item = item
+                    # Handle items carried over due to ignores
+                    new_item = Item(item.rule, item.ptr, item.start)
+                    label = (new_item.s, new_item.start, i + 1)
+                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
+                    if item.node:
+                        # new_item.node and item.node both represent the same symbol, so merge their children
+                        for child in item.node.children:
+                            new_item.node.add_family(new_item.s, child.rule, new_item.start, child.left, child.right)
 
                 if new_item.expect in self.TERMINALS:
                     # add (B ::= Aai+1.B, h, y) to Q'

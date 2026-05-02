@@ -60,8 +60,7 @@ class UnexpectedInput(LarkError):
             The parser doesn't hold a copy of the text it has to parse,
             so you have to provide it again
         """
-        assert self.pos_in_stream is not None, self
-        pos = self.pos_in_stream
+        pos = self.pos_in_stream or 0
         start = max(pos - span, 0)
         end = pos + span
         if not isinstance(text, bytes):
@@ -138,6 +137,7 @@ class UnexpectedInput(LarkError):
         return candidate[0]
 
     def _format_expected(self, expected):
+        expected = sorted(expected)
         if self._terminals_by_name:
             d = self._terminals_by_name
             expected = [d[t_name].user_repr() if t_name in d else t_name for t_name in expected]

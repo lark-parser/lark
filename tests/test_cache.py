@@ -4,8 +4,11 @@ import logging
 from unittest import TestCase, main, skipIf
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
+from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
+from lark.reconstruct import Reconstructor
+from . import test_reconstructor
 
 from io import BytesIO
 
@@ -185,6 +188,46 @@ class TestCache(TestCase):
             with self.assertRaises((UnexpectedInput)) as cm2:
                 parser2.parse(text)
             self.assertEqual(str(cm1.exception), str(cm2.exception))
+
+    def test_cache_grammar(self):
+        with self.assertRaises(ConfigurationError):
+            Lark(self.g, parser='lalr', cache=False, cache_grammar=True)
+
+        assert len(self.mock_fs.files) == 0
+        parser1 = Lark(self.g, parser='lalr', cache=True, cache_grammar=True)
+        parser2 = Lark(self.g, parser='lalr', cache=True, cache_grammar=True)
+        assert parser2.parse('a') == Tree('start', [])
+
+        # Assert that the cache file was created, and uses a different name than regular cache
+        assert len(self.mock_fs.files) == 1
+        assert 'cache_grammar' in list(self.mock_fs.files)[0]
+
+        # Assert the cached grammar is equal to the original grammar
+        assert parser1.grammar is not parser2.grammar
+        assert parser1.grammar.term_defs == parser2.grammar.term_defs
+        # Using repr() because RuleOptions doesn't implement __eq__
+        assert repr(parser1.grammar.rule_defs) == repr(parser2.grammar.rule_defs)
+
+    def test_reconstruct(self):
+        # Test that Reconstructor works with cached parsers (using cache_grammar)
+        grammar = """
+        start: (rule | NL)*
+        rule: WORD ":" NUMBER
+        NL: /(\\r?\\n)+\\s*/
+        """ + test_reconstructor.common
+
+        code = """
+        Elephants: 12
+        """
+
+        _parser = Lark(grammar, parser='lalr', maybe_placeholders=False, cache=True, cache_grammar=True)
+        assert len(self.mock_fs.files) == 1
+        parser = Lark(grammar, parser='lalr', maybe_placeholders=False, cache=True, cache_grammar=True)
+        assert _parser.grammar is not parser.grammar
+        tree = parser.parse(code)
+        new = Reconstructor(parser).reconstruct(tree)
+        self.assertEqual(test_reconstructor._remove_ws(code), test_reconstructor._remove_ws(new))
+
 
 if __name__ == '__main__':
     main()

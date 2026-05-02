@@ -226,6 +226,7 @@ class TextSlice(Generic[AnyStr]):
 
 
 TextOrSlice = Union[AnyStr, 'TextSlice[AnyStr]']
+LarkInput = Union[AnyStr, TextSlice[AnyStr], Any]
 
 ###}
 

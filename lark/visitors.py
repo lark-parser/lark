@@ -592,18 +592,6 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
         func = wrapper
 
     def _visitor_args_dec(obj):
-        from inspect import isclass
-        if isclass(obj) and issubclass(obj, Visitor):
-            raise TypeError("v_args cannot be applied to Visitor classes.")
-        if callable(obj) and not isclass(obj):
-            @wraps(obj)
-            def method_wrapper(*args, **kwargs):
-                if args:
-                    self_instance = args[0]
-                    if isinstance(self_instance, Visitor):
-                        raise TypeError("v_args cannot be applied to Visitor methods.")
-                return obj(*args, **kwargs)
-            return _apply_v_args(method_wrapper, func)
         return _apply_v_args(obj, func)
     return _visitor_args_dec
 

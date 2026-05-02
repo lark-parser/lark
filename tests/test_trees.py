@@ -471,6 +471,20 @@ class TestTrees(TestCase):
 
         assert MyTransformer().transform(t) is None
 
+    def test_incorrect_use_of_decorators(self):
+        class TestVisitor1(Visitor):
+            @visit_children_decor
+            def a(self, tree):
+                pass
+
+        for visit_method in [
+            TestVisitor1().visit,
+            TestVisitor1().visit_topdown,
+        ]:
+            with self.assertRaises(TypeError) as e:
+                visit_method(self.tree1)
+            self.assertIn("visit_children_decor", str(e.exception))
+            self.assertIn("Interpreter", str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

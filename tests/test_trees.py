@@ -477,14 +477,14 @@ class TestTrees(TestCase):
             def a(self, tree):
                 pass
 
-        with self.assertRaises(TypeError) as e:
-            TestVisitor1().visit_topdown(self.tree1)
-        self.assertIn("visit_children_decor", str(e.exception))
-        self.assertIn("Interpreter", str(e.exception))
-        with self.assertRaises(TypeError) as e:
-            TestVisitor1().visit(self.tree1)
-        self.assertIn("visit_children_decor", str(e.exception))
-        self.assertIn("Interpreter", str(e.exception))
+        for visit_method in [
+            TestVisitor1().visit,
+            TestVisitor1().visit_topdown,
+        ]:
+            with self.assertRaises(TypeError) as e:
+                visit_method(self.tree1)
+            self.assertIn("visit_children_decor", str(e.exception))
+            self.assertIn("Interpreter", str(e.exception))
 
 if __name__ == '__main__':
     unittest.main()

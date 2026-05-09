@@ -88,6 +88,9 @@ exclude = [
 module = [ "js2py" ]
 ignore_missing_imports = true
 
+[tool.coverage.run]
+omit = ["tests/test_typing.py"]
+
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",

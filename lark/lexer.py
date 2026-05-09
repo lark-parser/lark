@@ -398,6 +398,16 @@ class Scanner:
                 return m.lastgroup
         return None
 
+    def search(self, text: TextSlice, pos: int):
+        "Find earliest match, starting at pos"
+        best = None
+        for mre in self._mres:
+            m = mre.search(text.text, pos, text.end)
+            if m and (best is None or m.start() < best.start()):
+                best = m
+        if best is not None:
+            return (best.group(0), best.lastgroup), best.start()
+
 def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
@@ -486,6 +496,9 @@ class Lexer(ABC):
     @abstractmethod
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         return NotImplemented
+
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
+        raise TypeError("This lexer cannot be used for searching in text")
 
     def make_lexer_state(self, text: str):
         "Deprecated"
@@ -647,6 +660,17 @@ class BasicLexer(AbstractBasicLexer):
         # EOF
         raise EOFError(self)
 
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
+        while True:
+            res = self.scanner.search(text, pos)
+            if not res:
+                return None
+            (value, type_), actual_pos = res
+            if type_ in self.ignore_types:
+                pos = actual_pos + len(value)
+                continue
+            return Token(type_, value, actual_pos, end_pos=actual_pos + len(value))
+
 
 class ContextualLexer(Lexer):
     lexers: Dict[int, AbstractBasicLexer]
@@ -700,5 +724,8 @@ class ContextualLexer(Lexer):
                 raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
+
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
+        return self.lexers[start_state].search_start(text, start_state, pos)
 
 ###}

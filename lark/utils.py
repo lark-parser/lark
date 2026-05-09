@@ -215,6 +215,9 @@ class TextSlice(Generic[AnyStr]):
     def is_complete_text(self):
         return self.start == 0 and self.end == len(self.text)
 
+    def start_from(self, pos: int) -> 'TextSlice[AnyStr]':
+        return TextSlice(self.text, pos, self.end)
+
     def __len__(self):
         return self.end - self.start
 

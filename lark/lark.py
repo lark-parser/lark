@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .tree import ParseTree
     from .visitors import Transformer
     from typing import Literal
-    from .parser_frontends import ParsingFrontend
+    from .parser_frontends import ParsingFrontend, ScanMatch
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
@@ -735,6 +735,37 @@ class Lark(Serialize, Generic[_Return_T]):
         if on_error is not None and self.options.parser != 'lalr':
             raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
         return self.parser.parse(text, start=start, on_error=on_error)
+
+    def scan(self, text: TextOrSlice, start: Optional[str]=None) -> Iterable['ScanMatch[_Return_T]']:
+        """Scan the input text for non-overlapping matches of this grammar.
+        Only works when ``parser='lalr'`` and without ``postlex``.
+
+        Greedy parsing: Where multiple end positions are valid, the longest is returned.
+
+        Does not raise on lex or parse errors — invalid input is silently skipped.
+        Exceptions from user callbacks may still propagate.
+        When a lexer callback raises ``ValueError``, scan() will treat it as a lex error and abort scanning the match.
+
+        For best performance, ensure the first terminal(s) that can be matched by the grammar are unique
+        in the text and always indicate the start of a match.
+
+        A returned match will never start or end with an ignored terminal.
+
+        User ``lexer_callbacks`` must preserve source positions on returned tokens — use
+        ``Token.update()`` rather than constructing a fresh ``Token``.
+
+        Parameters:
+            text (TextOrSlice): Text to be scanned, as ``str``, ``bytes``, or a ``TextSlice`` instance.
+            start (str, optional): Start symbol. Required if Lark was initialized with multiple start symbols.
+
+        Yields:
+            ``ScanMatch`` instances, each with a ``range`` (a (start, end) tuple)
+            and a ``value`` attribute. ``value`` is a ``Tree`` by default, or
+            whatever the ``transformer`` returns when one was supplied.
+
+        See Also: ``Lark.parse()``
+        """
+        return self.parser.scan(text, start=start)
 
 
 ###}

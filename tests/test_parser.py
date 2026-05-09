@@ -35,6 +35,17 @@ from lark.indenter import Indenter
 __all__ = ['TestParsers']
 
 
+class SerializeTestT(Transformer[Token, int]):
+    def __init__(self):
+        self.count = iter(range(2))
+
+    def NUMBER(self, token):
+        return next(self.count)
+
+    def start(self, children):
+        return children[0]
+
+
 class TestParsers(unittest.TestCase):
     def test_big_list(self):
         Lark(r"""
@@ -2502,6 +2513,20 @@ def _make_parser_test(LEXER, PARSER):
             s.seek(0)
             parser2 = Lark.load(s)
             self.assertEqual(parser2.parse('ABC'), Tree('start', [Tree('b', [])]) )
+
+        @unittest.skipIf(PARSER!='lalr' or LEXER == 'custom_old0', "Serialize currently only works for LALR parsers without custom lexers (though it should be easy to extend)")
+        def test_serialize_with_transformer(self):
+            grammar = r"""
+                start: NUMBER
+                NUMBER: /\d+/
+            """
+            parser = _Lark(grammar, transformer=SerializeTestT())
+            self.assertEqual(parser.parse('123'), 0)
+            s = BytesIO()
+            parser.save(s)
+            s.seek(0)
+            parser2 = Lark.load(s)
+            self.assertEqual(parser2.parse('123'), 1)
 
         def test_multi_start(self):
             parser = _Lark('''

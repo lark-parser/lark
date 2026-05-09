@@ -75,7 +75,7 @@ lark = ["py.typed"]
 version = {attr = "lark.__version__"}
 
 [tool.mypy]
-files = "lark"
+files = ["lark", "tests/test_typing.py"]
 python_version = "3.8"
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "unused-ignore"]
@@ -87,6 +87,9 @@ exclude = [
 [[tool.mypy.overrides]]
 module = [ "js2py" ]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+omit = ["tests/test_typing.py"]
 
 [tool.coverage.report]
 exclude_lines = [

@@ -6,7 +6,7 @@ import types
 import re
 from typing import (
     TypeVar, Type, List, Dict, Iterator, Callable, Union, Optional, Sequence,
-    Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection
+    Tuple, Iterable, IO, Any, TYPE_CHECKING, Collection, Generic, overload,
 )
 if TYPE_CHECKING:
     from .parsers.lalr_interactive_parser import InteractiveParser
@@ -18,10 +18,12 @@ if TYPE_CHECKING:
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
+
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
 
 from .lexer import Lexer, BasicLexer, TerminalDef, LexerThread, Token
+from .visitors import _Return_T
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
@@ -250,8 +252,9 @@ _VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
 
 
 _T = TypeVar('_T', bound="Lark")
+_InitReturn_T = TypeVar('_InitReturn_T') # __init__ self annotations must use a new type-var
 
-class Lark(Serialize):
+class Lark(Serialize, Generic[_Return_T]):
     """Main interface for the library.
 
     It's mostly a thin wrapper for the many different parsers, and for the tree constructor.
@@ -274,6 +277,22 @@ class Lark(Serialize):
     terminals: Collection[TerminalDef]
 
     __serialize_fields__ = ['parser', 'rules', 'options']
+
+    @overload
+    def __init__(
+        self: 'Lark[_InitReturn_T]',
+        grammar: 'Union[Grammar, str, IO[str]]',
+        *,
+        transformer: 'Transformer[Token, _InitReturn_T]',
+        **options: Any,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: 'Lark[ParseTree]',
+        grammar: 'Union[Grammar, str, IO[str]]',
+        **options: Any,
+    ) -> None: ...
 
     def __init__(self, grammar: 'Union[Grammar, str, IO[str]]', **options) -> None:
         self.options = LarkOptions(options)
@@ -575,8 +594,28 @@ class Lark(Serialize):
         inst = cls.__new__(cls)
         return inst._load({'data': data, 'memo': memo}, **kwargs)
 
+    @overload
     @classmethod
-    def open(cls: Type[_T], grammar_filename: str, rel_to: Optional[str]=None, **options) -> _T:
+    def open(
+        cls,
+        grammar_filename: str,
+        rel_to: Optional[str] = None,
+        *,
+        transformer: 'Transformer[Token, _Return_T]',
+        **options: Any,
+    ) -> 'Lark[_Return_T]': ...
+
+    @overload
+    @classmethod
+    def open(
+        cls,
+        grammar_filename: str,
+        rel_to: Optional[str] = None,
+        **options: Any,
+    ) -> 'Lark[ParseTree]': ...
+
+    @classmethod
+    def open(cls, grammar_filename: str, rel_to: Optional[str]=None, **options) -> 'Lark':
         """Create an instance of Lark with the grammar given by its filename
 
         If ``rel_to`` is provided, the function will find the grammar filename in relation to it.
@@ -585,7 +624,6 @@ class Lark(Serialize):
 
             >>> Lark.open("grammar_file.lark", rel_to=__file__, parser="lalr")
             Lark(...)
-
         """
         if rel_to:
             basepath = os.path.dirname(rel_to)
@@ -593,12 +631,34 @@ class Lark(Serialize):
         with open(grammar_filename, encoding='utf8') as f:
             return cls(f, **options)
 
+    @overload
     @classmethod
-    def open_from_package(cls: Type[_T], package: str, grammar_path: str, search_paths: 'Sequence[str]'=[""], **options) -> _T:
-        """Create an instance of Lark with the grammar loaded from within the package `package`.
+    def open_from_package(
+        cls,
+        package: str,
+        grammar_path: str,
+        search_paths: 'Sequence[str]' = ...,
+        *,
+        transformer: 'Transformer[Token, _Return_T]',
+        **options: Any,
+    ) -> 'Lark[_Return_T]': ...
+
+    @overload
+    @classmethod
+    def open_from_package(
+        cls,
+        package: str,
+        grammar_path: str,
+        search_paths: 'Sequence[str]' = ...,
+        **options: Any,
+    ) -> 'Lark[ParseTree]': ...
+
+    @classmethod
+    def open_from_package(cls, package: str, grammar_path: str, search_paths: 'Sequence[str]'=[""], **options) -> 'Lark':
+        """Create an instance of Lark with the grammar loaded from within the package ``package``.
         This allows grammar loading from zipapps.
 
-        Imports in the grammar will use the `package` and `search_paths` provided, through `FromPackageLoader`
+        Imports in the grammar will use the ``package`` and ``search_paths`` provided, through ``FromPackageLoader``
 
         Example:
 
@@ -651,7 +711,7 @@ class Lark(Serialize):
         """
         return self.parser.parse_interactive(text, start=start)
 
-    def parse(self, text: LarkInput, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> 'ParseTree':
+    def parse(self, text: LarkInput, start: Optional[str]=None, on_error: 'Optional[Callable[[UnexpectedInput], bool]]'=None) -> _Return_T:
         """Parse the given text, according to the options provided.
 
         Parameters:

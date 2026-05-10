@@ -22,6 +22,7 @@
 [Read more about the parsers](parsers.md)
 
 ## Extra features
+  - `Lark.scan()` for finding non-overlapping grammar matches embedded in arbitrary text (LALR only — see [recipes](recipes.html#extract-grammar-matches-from-arbitrary-text-with-lark-scan))
   - Support for external regex module ([see here](classes.html#using-unicode-character-classes-with-regex))
   - Import grammars from Nearley.js ([read more](tools.html#importing-grammars-from-nearleyjs))
   - CYK parser

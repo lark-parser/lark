@@ -5,7 +5,7 @@ Lark
 ----
 
 .. autoclass:: lark.Lark
-    :members: open, parse, parse_interactive, lex, save, load, get_terminal, open_from_package
+    :members: open, parse, parse_interactive, scan, lex, save, load, get_terminal, open_from_package
 
 
 Using Unicode character classes with ``regex``
@@ -101,3 +101,10 @@ TextSlice
 ---------
 
 .. autoclass:: lark.utils.TextSlice
+
+ScanMatch
+---------
+
+A single match yielded by :meth:`Lark.scan`.
+
+.. autoclass:: lark.parser_frontends.ScanMatch

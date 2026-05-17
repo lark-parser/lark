@@ -766,6 +766,9 @@ class Grammar(Serialize):
                 else:
                     exp_options = options
 
+                if len(expansion) == 1 and expansion[0] == NonTerminal(name):
+                    continue
+
                 for sym in expansion:
                     assert isinstance(sym, Symbol)
                     if sym.is_term and exp_options and exp_options.keep_all_tokens:

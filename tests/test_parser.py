@@ -72,11 +72,15 @@ class TestParsers(unittest.TestCase):
                a: a | "a"
             """
 
-        self.assertRaises(GrammarError, Lark, g, parser='lalr')
+        for parser in ('lalr', 'earley'):
+            l = Lark(g, parser=parser)
+            tree = l.parse('a')
+            self.assertEqual(tree, Tree('start', [Tree('a', [])]))
 
-        # TODO: should it? shouldn't it?
-        # l = Lark(g, parser='earley', lexer='dynamic')
-        # self.assertRaises(ParseError, l.parse, 'a')
+        g = """start: a
+               a: a
+            """
+        self.assertRaises(GrammarError, Lark, g, parser='lalr')
 
     def test_propagate_positions(self):
         g = Lark("""start: a
@@ -2255,6 +2259,11 @@ def _make_parser_test(LEXER, PARSER):
             res = l.parse('abba')
             self.assertEqual(''.join(child.data for child in res.children), 'indirection')
 
+
+        def test_issue_1585_priority_recursive_star(self):
+            l = _Lark('start.1: "a" | start start*')
+            for s in ('a', 'aa', 'aaaa'):
+                self.assertEqual(l.parse(s).data, 'start')
 
         def test_utf8(self):
             g = u"""start: a

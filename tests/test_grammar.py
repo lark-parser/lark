@@ -302,6 +302,11 @@ class TestGrammar(TestCase):
 
         self.assertNotEqual(a, b)
 
+    def test_issue_1585_cyk(self):
+        l = Lark('start.1: "a" | start start*', parser='cyk')
+        for s in ('aa', 'aaaa'):
+            self.assertEqual(l.parse(s).data, 'start')
+
 
 if __name__ == '__main__':
     main()

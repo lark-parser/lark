@@ -150,7 +150,7 @@ class TestCache(TestCase):
 
     @skipIf(regex is None, "'regex' lib not installed")
     def test_recursive_pattern(self):
-        g = """
+        g = r"""
         start: recursive+
         recursive: /\w{3}\d{3}(?R)?/
         """

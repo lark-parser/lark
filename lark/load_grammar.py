@@ -704,6 +704,8 @@ class Grammar(Serialize):
         for name, (term_tree, priority) in term_defs:
             if term_tree is None:  # Terminal added through %declare
                 continue
+            if next(term_tree.find_data('template_usage'), None) is not None:
+                raise GrammarError("Templates cannot be used inside terminals (%s)" % name)
             expansions = list(term_tree.find_data('expansion'))
             if len(expansions) == 1 and not expansions[0].children:
                 raise GrammarError("Terminals cannot be empty (%s)" % name)

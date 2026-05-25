@@ -125,6 +125,13 @@ class TestGrammar(TestCase):
             """
         self.assertRaises( GrammarError, Lark, g)
 
+    def test_template_in_terminal(self):
+        g = """start: TERM
+            TERM: _quoted{"'"}
+            _quoted{q}: q /.*?/ q
+            """
+        self.assertRaises(GrammarError, Lark, g)
+
     def test_undefined_rule(self):
         self.assertRaises(GrammarError, Lark, """start: a""")
 

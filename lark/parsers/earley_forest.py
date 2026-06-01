@@ -67,11 +67,37 @@ class SymbolNode(ForestNode):
         self.paths.add((transitive, node))
 
     def load_paths(self):
+        # Collect canonical intermediate symbol nodes for multi-hop Leo chains.
+        # When a node already IS the intermediate symbol (from a direct Leo completion),
+        # use it as the canonical node so all other paths to the same symbol merge into it,
+        # preserving SPPF sharing and rule-order-based disambiguation.
+        canonical_vn = {}
         for transitive, node in self.paths:
             if transitive.next_titem is not None:
-                vn = type(self)(transitive.next_titem.s, transitive.next_titem.start, self.end)
-                vn.add_path(transitive.next_titem, node)
-                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, vn)
+                vn_s = transitive.next_titem.reduction.rule.origin
+                vn_start = transitive.next_titem.reduction.start
+                if getattr(node, 's', None) == vn_s and getattr(node, 'start', None) == vn_start:
+                    canonical_vn[(vn_s, vn_start)] = node
+
+        for transitive, node in self.paths:
+            if transitive.next_titem is not None:
+                vn_s = transitive.next_titem.reduction.rule.origin
+                vn_start = transitive.next_titem.reduction.start
+                key = (vn_s, vn_start)
+                if getattr(node, 's', None) == vn_s and getattr(node, 'start', None) == vn_start:
+                    # node already represents the intermediate symbol; use it directly
+                    self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule,
+                                    transitive.reduction.start, transitive.reduction.node, node)
+                elif key in canonical_vn:
+                    # Merge this derivation into the existing canonical intermediate node
+                    canonical_vn[key].add_path(transitive.next_titem, node)
+                else:
+                    # No existing node; create one and record it
+                    vn = type(self)(vn_s, vn_start, self.end)
+                    canonical_vn[key] = vn
+                    vn.add_path(transitive.next_titem, node)
+                    self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule,
+                                    transitive.reduction.start, transitive.reduction.node, vn)
             else:
                 self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, node)
         self.paths_loaded = True

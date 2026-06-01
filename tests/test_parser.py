@@ -1070,6 +1070,29 @@ def _make_full_earley_test(LEXER):
             n = Tree('a', [])
             assert tree == Tree('start', [n, n])
 
+        def test_earley_jeo_right_recursion(self):
+            """Joop Leo optimization should correctly handle right-recursive grammars"""
+            grammar = r"""
+            start: "x" start | "x"
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            res = l.parse('xxx')
+            self.assertEqual(res, Tree('start', [Tree('start', [Tree('start', [])])]))
+
+        def test_earley_jeo_multi_start_right_recursion(self):
+            """Joop Leo optimization should work correctly with multiple start symbols (issue #397)"""
+            grammar = r"""
+            a: "x" a | "x"
+            b: "y" b | "y"
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER, start=['a', 'b'])
+
+            res_a = l.parse('xxx', start='a')
+            self.assertEqual(res_a, Tree('a', [Tree('a', [Tree('a', [])])]))
+
+            res_b = l.parse('yyy', start='b')
+            self.assertEqual(res_b, Tree('b', [Tree('b', [Tree('b', [])])]))
+
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley

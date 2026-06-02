@@ -112,10 +112,10 @@ class Parser(BaseParser):
                 else:
                     # Handle items carried over due to ignores
                     new_item = Item(item.rule, item.ptr, item.start)
-                    label = (new_item.s, new_item.start, i + 1)
-                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
-                    if item.node:
+                    if item.node is not None:
                         # new_item.node and item.node both represent the same symbol, so merge their children
+                        label = (new_item.s, new_item.start, i + 1)
+                        new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                         for child in item.node.children:
                             new_item.node.add_family(new_item.s, child.rule, new_item.start, child.left, child.right)
 

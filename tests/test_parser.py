@@ -905,6 +905,21 @@ def _make_full_earley_test(LEXER):
             tree = l.parse('x')
             assert tree == Tree('start', [Tree('a', ['x'])])
 
+        @unittest.skipIf(LEXER=='basic', 'Ignore carry-over is dynamic-lexer-specific')
+        def test_ignore_carryover_with_priority(self):
+            """Items in to_scan with item.node=None must not produce an empty SPPF
+            node when carried over past an ignored sequence (issue #1598)."""
+            grammar = r"""
+                start: a
+                a.1: NAME
+                NAME: /[a-z]+/
+                %import common.WS
+                %ignore WS
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            tree = l.parse('   hello')
+            self.assertEqual(tree, Tree('start', [Tree('a', ['hello'])]))
+
         @unittest.skipIf(LEXER=='basic', 'This scenario only occurs with the dynamic lexers')
         def test_multiple_start_solutions2(self):
             grammar = r"""

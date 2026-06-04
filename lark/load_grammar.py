@@ -1274,6 +1274,8 @@ class GrammarBuilder:
                 for symbol in stmt.children:
                     assert isinstance(symbol, Symbol), symbol
                     is_term = isinstance(symbol, Terminal)
+                    if not is_term:
+                        raise GrammarError("Expecting terminal name to follow %%declare, but got rule name %r" % symbol.name)
                     if mangle is None:
                         name = symbol.name
                     else:

@@ -138,6 +138,12 @@ class TestGrammar(TestCase):
     def test_undefined_term(self):
         self.assertRaises(GrammarError, Lark, """start: A""")
 
+    def test_declare_rule_name(self):
+        # %declare is for terminals only; a rule (lowercase) name used to crash
+        # the compiler with AttributeError instead of a clean GrammarError.
+        self.assertRaises(GrammarError, Lark, """start: "a"\n%declare foo""")
+        self.assertRaises(GrammarError, Lark, """start: "a"\n%declare FOO bar""")
+
     def test_token_multiline_only_works_with_x_flag(self):
         g = r"""start: ABC
                 ABC: /  a      b c

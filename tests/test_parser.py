@@ -1093,6 +1093,52 @@ def _make_full_earley_test(LEXER):
             res_b = l.parse('yyy', start='b')
             self.assertEqual(res_b, Tree('b', [Tree('b', [Tree('b', [])])]))
 
+        def test_earley_jeo_chain_stops_at_nonnullable_suffix(self):
+            """Leo chain walks outward until the outer rule has a non-nullable
+            suffix after the recursive position, at which point is_quasi_complete
+            returns False (covers the non-NULLABLE check + break in
+            create_leo_transitives)."""
+            grammar = r"""
+            start: a "z"
+            a: "x" a | "y"
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            tree = l.parse('xxyz')
+            self.assertEqual(tree, Tree('start', [Tree('a', [Tree('a', [Tree('a', [])])])]))
+
+        def test_earley_jeo_chain_extends_through_nullable_suffix(self):
+            """Leo chain extends into an outer rule when the trailing symbols
+            are all nullable: is_quasi_complete traverses them via the
+            NULLABLE check + advance loop."""
+            grammar = r"""
+            start: a opt
+            a: "x" a | "y"
+            opt: "q" |
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            tree_no_opt = l.parse('xxy')
+            self.assertEqual(tree_no_opt, Tree('start', [Tree('a', [Tree('a', [Tree('a', [])])]), Tree('opt', [])]))
+            tree_with_opt = l.parse('xxyq')
+            self.assertEqual(tree_with_opt, Tree('start', [Tree('a', [Tree('a', [Tree('a', [])])]), Tree('opt', [])]))
+
+        def test_earley_jeo_nullable_start_self_recursion(self):
+            """is_quasi_complete's start-symbol self-reference guard: when the
+            Leo chain walks into a rule of the form `start: ... <nullable> start ...`
+            with `start` itself nullable, the guard returns False so the chain
+            doesn't pretend the start rule is quasi-complete."""
+            grammar = r"""
+            start: a x start |
+            x:
+            a: "x" a | "y"
+            """
+            l = Lark(grammar, parser='earley', lexer=LEXER)
+            self.assertEqual(l.parse(''), Tree('start', []))
+            tree = l.parse('xxy')
+            self.assertEqual(
+                tree,
+                Tree('start', [Tree('a', [Tree('a', [Tree('a', [])])]), Tree('x', []), Tree('start', [])])
+            )
+
     _NAME = "TestFullEarley" + LEXER.capitalize()
     _TestFullEarley.__name__ = _NAME
     globals()[_NAME] = _TestFullEarley

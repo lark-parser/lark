@@ -87,8 +87,6 @@ class Parser:
         held_completions = {}
 
         def is_quasi_complete(item):
-            if item.is_complete:
-                return True
             quasi = item.advance()
             while not quasi.is_complete:
                 if quasi.expect not in self.NULLABLE:
@@ -173,19 +171,18 @@ class Parser:
                 ###R Joop Leo right recursion Completer
                 if item.rule.origin in transitives[item.start]:
                     transitive = transitives[item.start][item.s]
-                    if transitive.previous in transitives[transitive.column]:
-                        root_transitive = transitives[transitive.column][transitive.previous]
-                    else:
-                        root_transitive = transitive
+                    # Every titem is inserted into transitives[col][previous],
+                    # so this lookup always finds the chain's root (or transitive
+                    # itself when it is the root).
+                    root_transitive = transitives[transitive.column][transitive.previous]
 
                     new_item = Item(transitive.rule, transitive.ptr, transitive.start)
                     label = (root_transitive.s, root_transitive.start, i)
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     new_item.node.add_path(root_transitive, item.node)
-                    if new_item.expect in self.TERMINALS:
-                        # Add (B :: aC.B, h, y) to Q
-                        to_scan.add(new_item)
-                    elif new_item not in column:
+                    # new_item.expect cannot be a terminal: is_quasi_complete
+                    # required the post-recursion suffix to be all-nullable.
+                    if new_item not in column:
                         # Add (B :: aC.B, h, y) to Ei and R
                         column.add(new_item)
                         items.append(new_item)

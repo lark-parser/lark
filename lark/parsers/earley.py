@@ -102,6 +102,9 @@ class Parser:
             trule = None
             previous = None
 
+            ### Recursively walk backwards through the Earley sets until we find the
+            #   first transitive candidate. If this is done continuously, we shouldn't
+            #   have to walk more than 1 hop.
             while True:
                 if origin in transitives[start]:
                     previous = trule = transitives[start][origin]
@@ -133,9 +136,12 @@ class Parser:
                 origin = originator.rule.origin
                 start = originator.start
 
+            # If a suitable Transitive candidate is not found, bail.
             if trule is None:
                 return
 
+            ### Now walk forwards and create Transitive Items in each set we walked through;
+            #   and link each transitive item to the next set forwards.
             while to_create:
                 origin, start, originator = to_create.pop()
                 if previous is not None:
@@ -157,20 +163,11 @@ class Parser:
                     item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     item.node.add_family(item.s, item.rule, item.start, None, None)
 
-                # Empty has 0 length. If we complete an empty symbol in a particular
-                # parse step, we need to be able to use that same empty symbol to complete
-                # any predictions that result, that themselves require empty. Avoids
-                # infinite recursion on empty symbols.
-                # held_completions is 'H' in E.Scott's paper.
-                # Must be updated before Leo fires, since Leo skips the regular completer.
-                if item.start == i:
-                    held_completions[item.rule.origin] = item.node
-
                 create_leo_transitives(item.rule.origin, item.start)
 
                 ###R Joop Leo right recursion Completer
                 if item.rule.origin in transitives[item.start]:
-                    transitive = transitives[item.start][item.s]
+                    transitive = transitives[item.start][item.rule.origin]
                     # Every titem is inserted into transitives[col][previous],
                     # so this lookup always finds the chain's root (or transitive
                     # itself when it is the root).
@@ -188,6 +185,14 @@ class Parser:
                         items.append(new_item)
                 ###R Regular Earley completer
                 else:
+                    # Empty has 0 length. If we complete an empty symbol in a particular
+                    # parse step, we need to be able to use that same empty symbol to complete
+                    # any predictions that result, that themselves require empty. Avoids
+                    # infinite recursion on empty symbols.
+                    # held_completions is 'H' in E.Scott's paper.
+                    if item.start == i:
+                        held_completions[item.rule.origin] = item.node
+
                     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
                     for originator in originators:
                         new_item = originator.advance()

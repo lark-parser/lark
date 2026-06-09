@@ -315,6 +315,22 @@ class TestGrammar(TestCase):
 
         self.assertNotEqual(a, b)
 
+    def test_cyclic_rule(self):
+        # A rule that can derive itself without consuming any input makes the
+        # LALR and CYK parsers loop forever. Reject such grammars at build time
+        # with a clear error instead of hanging (issue #1585).
+        self.assertRaises(GrammarError, Lark, 'start.1: "a" | start start*', parser='lalr')
+        self.assertRaises(GrammarError, Lark, 'start: x\nx.1: "a" | x x*', parser='lalr')
+        self.assertRaises(GrammarError, Lark, 'start: a\na: b\nb: a | "x"', parser='lalr')
+        self.assertRaises(GrammarError, Lark, 'start.1: "a" | start start*', parser='cyk')
+
+        # Earley resolves cyclic grammars (see test_many_cycles), so it is left as-is.
+        Lark('start.1: "a" | start start*', parser='earley').parse('aa')
+
+        # Left recursion and optional repetition are not cyclic and still build.
+        Lark('start: e\ne: e "+" t | t\nt: "a"', parser='lalr')
+        Lark('start: "a"*', parser='lalr')
+
 
 if __name__ == '__main__':
     main()

@@ -130,8 +130,20 @@ else:
     import sre_constants
 
 categ_pattern = re.compile(r'\\p{[A-Za-z_]+}')
+locale_flag_pattern = re.compile(r'\(\?([aiLmsux]+)(:|\))')
+
+def _strip_width_only_locale_flags(expr: str) -> str:
+    def _replace(match):
+        flags = match.group(1).replace('L', '')
+        suffix = match.group(2)
+        if flags:
+            return '(?%s%s' % (flags, suffix)
+        return '(?:' if suffix == ':' else ''
+
+    return re.sub(locale_flag_pattern, _replace, expr)
 
 def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
+    expr = _strip_width_only_locale_flags(expr)
     if _has_regex:
         # Since `sre_parse` cannot deal with Unicode categories of the form `\p{Mn}`, we replace these with
         # a simple letter, which makes no difference as we are only trying to get the possible lengths of the regex

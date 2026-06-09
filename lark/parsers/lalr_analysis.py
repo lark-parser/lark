@@ -12,7 +12,7 @@ from collections import defaultdict
 from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
-from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet, RulePtr, State
+from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet, RulePtr, State, check_cyclic_grammar
 from ..grammar import Rule, Symbol
 from ..common import ParserConf
 
@@ -156,6 +156,7 @@ class LALR_Analyzer(GrammarAnalyzer):
 
     def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
         GrammarAnalyzer.__init__(self, parser_conf, debug, strict)
+        check_cyclic_grammar(parser_conf.rules, self.NULLABLE)
         self.nonterminal_transitions = []
         self.directly_reads = defaultdict(set)
         self.reads = defaultdict(set)

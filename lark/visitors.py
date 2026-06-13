@@ -187,7 +187,7 @@ class Transformer(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
         return token
 
 
-def merge_transformers(base_transformer=None, **transformers_to_merge):
+def compose_transformers(base_transformer=None, **transformers_to_merge):
     """Merge a collection of transformers into the base_transformer, each into its own 'namespace'.
 
     When called, it will collect the methods from each transformer, and assign them to base_transformer,
@@ -271,8 +271,12 @@ class TransformerChain(Generic[_Leaf_T, _Return_T]):
         return TransformerChain(*self.transformers + (other,))
 
 
-class Transformer_InPlace(Transformer[_Leaf_T, _Return_T]):
-    """Same as Transformer, but non-recursive, and changes the tree in-place instead of returning new instances
+class InPlaceTransformer(Transformer[_Leaf_T, _Return_T]):
+    """In-place transformer that modifies the tree without recursion.
+
+    Unlike the standard Transformer which creates new tree instances, InPlaceTransformer
+    modifies the existing tree in-place, making it more memory-efficient for large trees.
+    It processes nodes non-recursively using iter_subtrees().
 
     Useful for huge trees. Conservative in memory.
     """
@@ -286,10 +290,12 @@ class Transformer_InPlace(Transformer[_Leaf_T, _Return_T]):
         return self._transform_tree(tree)
 
 
-class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
-    """Same as Transformer but non-recursive.
+class IterativeTransformer(Transformer[_Leaf_T, _Return_T]):
+    """Iterative (non-recursive) transformer that avoids Python's recursion limit.
 
-    Like Transformer, it doesn't change the original tree.
+    Like Transformer, it creates new tree instances rather than modifying in-place.
+    It uses an iterative approach with an explicit stack, making it suitable for
+    deeply nested trees that would exceed Python's maximum recursion depth.
 
     Useful for huge trees.
     """
@@ -404,16 +410,15 @@ class Visitor_Recursive(VisitorBase, Generic[_Leaf_T]):
         return tree
 
 
-class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
-    """Interpreter walks the tree starting at the root.
+class TreeInterpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
+    """Tree interpreter for top-down tree traversal with manual control.
 
-    Visits the tree, starting with the root and finally the leaves (top-down)
+    TreeInterpreter walks the tree starting at the root, visiting nodes top-down.
+    Unlike Transformer and Visitor, it doesn't automatically visit sub-branches;
+    the user must explicitly call visit(), visit_children(), or use @visit_children_decor.
+    This allows implementing branching, loops, and other control flow patterns.
 
     For each tree node, it calls its methods (provided by user via inheritance) according to ``tree.data``.
-
-    Unlike ``Transformer`` and ``Visitor``, the Interpreter doesn't automatically visit its sub-branches.
-    The user has to explicitly call ``visit``, ``visit_children``, or use the ``@visit_children_decor``.
-    This allows the user to implement branching and loops.
     """
 
     def visit(self, tree: Tree[_Leaf_T]) -> _Return_T:
@@ -452,7 +457,7 @@ class Interpreter(_Decoratable, ABC, Generic[_Leaf_T, _Return_T]):
         return self.visit_children(tree)
 
 
-_InterMethod = Callable[[Type[Interpreter], _Return_T], _R]
+_InterMethod = Callable[[Type[TreeInterpreter], _Return_T], _R]
 
 def visit_children_decor(func: _InterMethod) -> _InterMethod:
     """
@@ -469,8 +474,8 @@ def visit_children_decor(func: _InterMethod) -> _InterMethod:
     """
     @wraps(func)
     def inner(cls, tree):
-        if not isinstance(cls, Interpreter):
-            raise TypeError("visit_children_decor can only be applied to Interpreter methods.")
+        if not isinstance(cls, TreeInterpreter):
+            raise TypeError("visit_children_decor can only be applied to Interpreter/TreeInterpreter methods.")
         values = cls.visit_children(tree)
         return func(cls, values)
     return inner
@@ -597,6 +602,19 @@ def v_args(inline: bool = False, meta: bool = False, tree: bool = False, wrapper
 
 
 ###}
+
+# Backward-compatible aliases
+Transformer_InPlace = InPlaceTransformer
+"""Alias for InPlaceTransformer. Deprecated: use InPlaceTransformer instead."""
+
+Transformer_NonRecursive = IterativeTransformer
+"""Alias for IterativeTransformer. Deprecated: use IterativeTransformer instead."""
+
+Interpreter = TreeInterpreter
+"""Alias for TreeInterpreter. Deprecated: use TreeInterpreter instead."""
+
+merge_transformers = compose_transformers
+"""Alias for compose_transformers. Deprecated: use compose_transformers instead."""
 
 
 # --- Visitor Utilities ---

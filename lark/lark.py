@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-import getpass
-import sys, os, pickle
-import tempfile
+import sys, os
 import types
 import re
 from typing import (
@@ -16,7 +14,8 @@ if TYPE_CHECKING:
     from .parser_frontends import ParsingFrontend
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
+from .utils import Serialize, FS, logger, TextOrSlice, LarkInput
+from .serialize import SerializeMemoizer
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 
 from .tree import Tree
@@ -27,6 +26,13 @@ from .visitors import _Return_T
 from .parse_tree_builder import ParseTreeBuilder
 from .parser_frontends import _validate_frontend_args, _get_lexer_callbacks, _deserialize_parsing_frontend, _construct_parsing_frontend
 from .grammar import Rule
+
+# Import from new modules
+from .options import LarkOptions, _LOAD_ALLOWED_OPTIONS, _VALID_PRIORITY_OPTIONS, _VALID_AMBIGUITY_OPTIONS
+from .persistence import (
+    lark_save, lark_load, lark_load_into, lark_load_from_dict,
+    resolve_cache_fn, load_from_cache, save_to_cache, lark_deserialize_lexer_conf,
+)
 
 
 try:
@@ -46,209 +52,13 @@ class PostLex(ABC):
 
     always_accept: Iterable[str] = ()
 
-class LarkOptions(Serialize):
-    """Specifies the options for Lark
-
-    """
-
-    start: List[str]
-    debug: bool
-    strict: bool
-    transformer: 'Optional[Transformer]'
-    propagate_positions: Union[bool, str]
-    maybe_placeholders: bool
-    cache: Union[bool, str]
-    cache_grammar: bool
-    regex: bool
-    g_regex_flags: int
-    keep_all_tokens: bool
-    tree_class: Optional[Callable[[str, List], Any]]
-    parser: _ParserArgType
-    lexer: _LexerArgType
-    ambiguity: 'Literal["auto", "resolve", "explicit", "forest"]'
-    postlex: Optional[PostLex]
-    priority: 'Optional[Literal["auto", "normal", "invert"]]'
-    lexer_callbacks: Dict[str, Callable[[Token], Token]]
-    use_bytes: bool
-    ordered_sets: bool
-    edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
-    import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
-    source_path: Optional[str]
-
-    OPTIONS_DOC = r"""
-    **===  General Options  ===**
-
-    start
-            The start symbol. Either a string, or a list of strings for multiple possible starts (Default: "start")
-    debug
-            Display debug information and extra warnings. Use only when debugging (Default: ``False``)
-            When used with Earley, it generates a forest graph as "sppf.png", if 'dot' is installed.
-    strict
-            Throw an exception on any potential ambiguity, including shift/reduce conflicts, and regex collisions.
-    transformer
-            Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
-    propagate_positions
-            Propagates positional attributes into the 'meta' attribute of all tree branches.
-            Sets attributes: (line, column, end_line, end_column, start_pos, end_pos,
-                              container_line, container_column, container_end_line, container_end_column)
-            Accepts ``False``, ``True``, or a callable, which will filter which nodes to ignore when propagating.
-    maybe_placeholders
-            When ``True``, the ``[]`` operator returns ``None`` when not matched.
-            When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
-            (default= ``True``)
-    cache
-            Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
-
-            - When ``False``, does nothing (default)
-            - When ``True``, caches to a temporary file in the local directory
-            - When given a string, caches to the path pointed by the string
-    cache_grammar
-            For use with ``cache`` option. When ``True``, the unanalyzed grammar is also included in the cache.
-            Useful for classes that require the ``Lark.grammar`` to be present (e.g. Reconstructor).
-            (default= ``False``)
-    regex
-            When True, uses the ``regex`` module instead of the stdlib ``re``.
-    g_regex_flags
-            Flags that are applied to all terminals (both regex and strings)
-    keep_all_tokens
-            Prevent the tree builder from automagically removing "punctuation" tokens (Default: ``False``)
-    tree_class
-            Lark will produce trees comprised of instances of this class instead of the default ``lark.Tree``.
-
-    **=== Algorithm Options ===**
-
-    parser
-            Decides which parser engine to use. Accepts "earley" or "lalr". (Default: "earley").
-            (there is also a "cyk" option for legacy)
-    lexer
-            Decides whether or not to use a lexer stage
-
-            - "auto" (default): Choose for me based on the parser
-            - "basic": Use a basic lexer
-            - "contextual": Stronger lexer (only works with parser="lalr")
-            - "dynamic": Flexible and powerful (only with parser="earley")
-            - "dynamic_complete": Same as dynamic, but tries *every* variation of tokenizing possible.
-    ambiguity
-            Decides how to handle ambiguity in the parse. Only relevant if parser="earley"
-
-            - "resolve": The parser will automatically choose the simplest derivation
-              (it chooses consistently: greedy for tokens, non-greedy for rules)
-            - "explicit": The parser will return all derivations wrapped in "_ambig" tree nodes (i.e. a forest).
-            - "forest": The parser will return the root of the shared packed parse forest.
-
-    **=== Misc. / Domain Specific Options ===**
-
-    postlex
-            Lexer post-processing (Default: ``None``) Only works with the basic and contextual lexers.
-    priority
-            How priorities should be evaluated - "auto", ``None``, "normal", "invert" (Default: "auto")
-    lexer_callbacks
-            Dictionary of callbacks for the lexer. May alter tokens during lexing. Use with caution.
-    use_bytes
-            Accept an input of type ``bytes`` instead of ``str``.
-    ordered_sets
-            Should Earley use ordered-sets to achieve stable output (~10% slower than regular sets. Default: True)
-    edit_terminals
-            A callback for editing the terminals before parse.
-    import_paths
-            A List of either paths or loader functions to specify from where grammars are imported
-    source_path
-            Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
-    **=== End of Options ===**
-    """
-    if __doc__:
-        __doc__ += OPTIONS_DOC
-
-
-    # Adding a new option needs to be done in multiple places:
-    # - In the dictionary below. This is the primary truth of which options `Lark.__init__` accepts
-    # - In the docstring above. It is used both for the docstring of `LarkOptions` and `Lark`, and in readthedocs
-    # - As an attribute of `LarkOptions` above
-    # - Potentially in `_LOAD_ALLOWED_OPTIONS` below this class, when the option doesn't change how the grammar is loaded
-    # - Potentially in `lark.tools.__init__`, if it makes sense, and it can easily be passed as a cmd argument
-    _defaults: Dict[str, Any] = {
-        'debug': False,
-        'strict': False,
-        'keep_all_tokens': False,
-        'tree_class': None,
-        'cache': False,
-        'cache_grammar': False,
-        'postlex': None,
-        'parser': 'earley',
-        'lexer': 'auto',
-        'transformer': None,
-        'start': 'start',
-        'priority': 'auto',
-        'ambiguity': 'auto',
-        'regex': False,
-        'propagate_positions': False,
-        'lexer_callbacks': {},
-        'maybe_placeholders': True,
-        'edit_terminals': None,
-        'g_regex_flags': 0,
-        'use_bytes': False,
-        'ordered_sets': True,
-        'import_paths': [],
-        'source_path': None,
-        '_plugins': {},
-    }
-
-    def __init__(self, options_dict: Dict[str, Any]) -> None:
-        o = dict(options_dict)
-
-        options = {}
-        for name, default in self._defaults.items():
-            if name in o:
-                value = o.pop(name)
-                if isinstance(default, bool) and name not in ('cache', 'use_bytes', 'propagate_positions'):
-                    value = bool(value)
-            else:
-                value = default
-
-            options[name] = value
-
-        if isinstance(options['start'], str):
-            options['start'] = [options['start']]
-
-        self.__dict__['options'] = options
-
-
-        assert_config(self.parser, ('earley', 'lalr', 'cyk', None))
-
-        if self.parser == 'earley' and self.transformer:
-            raise ConfigurationError('Cannot specify an embedded transformer when using the Earley algorithm. '
-                             'Please use your transformer on the resulting parse tree, or use a different algorithm (i.e. LALR)')
-
-        if self.cache_grammar and not self.cache:
-            raise ConfigurationError('cache_grammar cannot be set when cache is disabled')
-
-        if o:
-            raise ConfigurationError("Unknown options: %s" % o.keys())
-
-    def __getattr__(self, name: str) -> Any:
-        try:
-            return self.__dict__['options'][name]
-        except KeyError as e:
-            raise AttributeError(e)
-
-    def __setattr__(self, name: str, value: str) -> None:
-        assert_config(name, self.options.keys(), "%r isn't a valid option. Expected one of: %s")
-        self.options[name] = value
-
-    def serialize(self, memo = None) -> Dict[str, Any]:
-        return self.options
-
-    @classmethod
-    def deserialize(cls, data: Dict[str, Any], memo: Dict[int, Union[TerminalDef, Rule]]) -> "LarkOptions":
-        return cls(data)
-
 
 # Options that can be passed to the Lark parser, even when it was loaded from cache/standalone.
 # These options are only used outside of `load_grammar`.
-_LOAD_ALLOWED_OPTIONS = {'postlex', 'transformer', 'lexer_callbacks', 'use_bytes', 'debug', 'g_regex_flags', 'regex', 'propagate_positions', 'tree_class', '_plugins'}
+_LOAD_ALLOWED_OPTIONS = _LOAD_ALLOWED_OPTIONS
 
-_VALID_PRIORITY_OPTIONS = ('auto', 'normal', 'invert', None)
-_VALID_AMBIGUITY_OPTIONS = ('auto', 'resolve', 'explicit', 'forest')
+_VALID_PRIORITY_OPTIONS = _VALID_PRIORITY_OPTIONS
+_VALID_AMBIGUITY_OPTIONS = _VALID_AMBIGUITY_OPTIONS
 
 
 _T = TypeVar('_T', bound="Lark")
@@ -338,56 +148,12 @@ class Lark(Serialize, Generic[_Return_T]):
                     raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
 
             if self.options.cache:
-                if self.options.parser != 'lalr':
-                    raise ConfigurationError("cache only works with parser='lalr' for now")
+                result = resolve_cache_fn(self.options, grammar, options)
+                if result is not None:
+                    cache_fn, cache_sha256 = result
 
-                unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals', '_plugins')
-                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
-                from . import __version__
-                s = grammar + options_str + __version__ + str(sys.version_info[:2])
-                cache_sha256 = sha256_digest(s)
-
-                if isinstance(self.options.cache, str):
-                    cache_fn = self.options.cache
-                else:
-                    if self.options.cache is not True:
-                        raise ConfigurationError("cache argument must be bool or str")
-
-                    try:
-                        username = getpass.getuser()
-                    except Exception:
-                        # The exception raised may be ImportError or OSError in
-                        # the future.  For the cache, we don't care about the
-                        # specific reason - we just want a username.
-                        username = "unknown"
-
-
-                    cache_fn = tempfile.gettempdir() + "/.lark_%s_%s_%s_%s_%s.tmp" % (
-                        "cache_grammar" if self.options.cache_grammar else "cache", username, cache_sha256, *sys.version_info[:2])
-
-                old_options = self.options
-                try:
-                    with FS.open(cache_fn, 'rb') as f:
-                        logger.debug('Loading grammar from cache: %s', cache_fn)
-                        # Remove options that aren't relevant for loading from cache
-                        for name in (set(options) - _LOAD_ALLOWED_OPTIONS):
-                            del options[name]
-                        file_sha256 = f.readline().rstrip(b'\n')
-                        cached_used_files = pickle.load(f)
-                        if file_sha256 == cache_sha256.encode('utf8') and verify_used_files(cached_used_files):
-                            cached_parser_data = pickle.load(f)
-                            self._load(cached_parser_data, **options)
-                            return
-                except FileNotFoundError:
-                    # The cache file doesn't exist; parse and compose the grammar as normal
-                    pass
-                except Exception: # We should probably narrow done which errors we catch here.
-                    logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
-
-                    # In theory, the Lark instance might have been messed up by the call to `_load`.
-                    # In practice the only relevant thing that might have been overwritten should be `options`
-                    self.options = old_options
-
+                    if load_from_cache(self, cache_fn, cache_sha256, options):
+                        return
 
             # Parse the grammar file and compose the grammars
             self.grammar, used_files = load_grammar(grammar, self.source_path, self.options.import_paths, self.options.keep_all_tokens)
@@ -477,15 +243,7 @@ class Lark(Serialize, Generic[_Return_T]):
             self.lexer = self._build_lexer()
 
         if cache_fn:
-            logger.debug('Saving grammar to cache: %s', cache_fn)
-            try:
-                with FS.open(cache_fn, 'wb') as f:
-                    assert cache_sha256 is not None
-                    f.write(cache_sha256.encode('utf8') + b'\n')
-                    pickle.dump(used_files, f)
-                    self.save(f, _LOAD_ALLOWED_OPTIONS)
-            except IOError as e:
-                logger.exception("Failed to save Lark to cache: %r.", cache_fn, e)
+            save_to_cache(cache_fn, cache_sha256, self, used_files)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC
@@ -529,12 +287,7 @@ class Lark(Serialize, Generic[_Return_T]):
 
         Useful for caching and multiprocessing.
         """
-        if self.options.parser != 'lalr':
-            raise NotImplementedError("Lark.save() is only implemented for the LALR(1) parser.")
-        data, m = self.memo_serialize([TerminalDef, Rule])
-        if exclude_options:
-            data["options"] = {n: v for n, v in data["options"].items() if n not in exclude_options}
-        pickle.dump({'data': data, 'memo': m}, f, protocol=pickle.HIGHEST_PROTOCOL)
+        lark_save(self, f, exclude_options)
 
     @classmethod
     def load(cls: Type[_T], f) -> _T:
@@ -542,57 +295,17 @@ class Lark(Serialize, Generic[_Return_T]):
 
         Useful for caching and multiprocessing.
         """
-        inst = cls.__new__(cls)
-        return inst._load(f)
+        return lark_load(cls, f)
 
     def _deserialize_lexer_conf(self, data: Dict[str, Any], memo: Dict[int, Union[TerminalDef, Rule]], options: LarkOptions) -> LexerConf:
-        lexer_conf = LexerConf.deserialize(data['lexer_conf'], memo)
-        lexer_conf.callbacks = options.lexer_callbacks or {}
-        lexer_conf.re_module = regex if options.regex else re
-        lexer_conf.use_bytes = options.use_bytes
-        lexer_conf.g_regex_flags = options.g_regex_flags
-        lexer_conf.skip_validation = True
-        lexer_conf.postlex = options.postlex
-        return lexer_conf
+        return lark_deserialize_lexer_conf(data, memo, options)
 
     def _load(self: _T, f: Any, **kwargs) -> _T:
-        if isinstance(f, dict):
-            d = f
-        else:
-            d = pickle.load(f)
-        memo_json = d['memo']
-        data = d['data']
-
-        assert memo_json
-        memo = SerializeMemoizer.deserialize(memo_json, {'Rule': Rule, 'TerminalDef': TerminalDef}, {})
-        if 'grammar' in data:
-            self.grammar = Grammar.deserialize(data['grammar'], memo)
-        options = dict(data['options'])
-        if (set(kwargs) - _LOAD_ALLOWED_OPTIONS) & set(LarkOptions._defaults):
-            raise ConfigurationError("Some options are not allowed when loading a Parser: {}"
-                             .format(set(kwargs) - _LOAD_ALLOWED_OPTIONS))
-        options.update(kwargs)
-        self.options = LarkOptions.deserialize(options, memo)
-        self.rules = [Rule.deserialize(r, memo) for r in data['rules']]
-        self.source_path = '<deserialized>'
-        _validate_frontend_args(self.options.parser, self.options.lexer)
-        self.lexer_conf = self._deserialize_lexer_conf(data['parser'], memo, self.options)
-        self.terminals = self.lexer_conf.terminals
-        self._prepare_callbacks()
-        self._terminals_dict = {t.name: t for t in self.terminals}
-        self.parser = _deserialize_parsing_frontend(
-            data['parser'],
-            memo,
-            self.lexer_conf,
-            self._callbacks,
-            self.options,  # Not all, but multiple attributes are used
-        )
-        return self
+        return lark_load_into(self, f, **kwargs)
 
     @classmethod
     def _load_from_dict(cls, data, memo, **kwargs):
-        inst = cls.__new__(cls)
-        return inst._load({'data': data, 'memo': memo}, **kwargs)
+        return lark_load_from_dict(cls, data, memo, **kwargs)
 
     @overload
     @classmethod

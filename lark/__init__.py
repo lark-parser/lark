@@ -14,6 +14,10 @@ from .tree import ParseTree, Tree
 from .utils import logger, TextSlice
 from .visitors import Discard, Transformer, Transformer_NonRecursive, Visitor, v_args
 
+# Also export new names for renamed classes (and old aliases)
+from .visitors import IterativeTransformer, InPlaceTransformer, TreeInterpreter, compose_transformers
+from .visitors import Transformer_InPlace, Interpreter, merge_transformers
+
 __version__: str = "1.3.1"
 
 __all__ = (
@@ -33,6 +37,13 @@ __all__ = (
     "Discard",
     "Transformer",
     "Transformer_NonRecursive",
+    "Transformer_InPlace",
+    "IterativeTransformer",
+    "InPlaceTransformer",
+    "Interpreter",
+    "TreeInterpreter",
+    "merge_transformers",
+    "compose_transformers",
     "TextSlice",
     "Visitor",
     "v_args",

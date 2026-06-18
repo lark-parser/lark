@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .parser_frontends import ParsingFrontend
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
-from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
+from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, TextSlice, LarkInput
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 
 from .tree import Tree
@@ -45,6 +45,23 @@ class PostLex(ABC):
         return stream
 
     always_accept: Iterable[str] = ()
+
+
+_UTF8_BOM = '\ufeff'
+_UTF8_BOM_BYTES = b'\xef\xbb\xbf'
+
+
+def _strip_bom(text: LarkInput) -> LarkInput:
+    if isinstance(text, str) and text.startswith(_UTF8_BOM):
+        return text[1:]
+    if isinstance(text, bytes) and text.startswith(_UTF8_BOM_BYTES):
+        return text[len(_UTF8_BOM_BYTES):]
+    if isinstance(text, TextSlice):
+        bom = _UTF8_BOM_BYTES if isinstance(text.text, bytes) else _UTF8_BOM
+        if text.text.startswith(bom, text.start, text.end):
+            return TextSlice(text.text, text.start + len(bom), text.end)
+    return text
+
 
 class LarkOptions(Serialize):
     """Specifies the options for Lark
@@ -328,6 +345,9 @@ class Lark(Serialize, Generic[_Return_T]):
             pass
         else:
             grammar = read()
+
+        if isinstance(grammar, str):
+            grammar = _strip_bom(grammar)
 
         cache_fn = None
         cache_sha256 = None
@@ -734,6 +754,7 @@ class Lark(Serialize, Generic[_Return_T]):
         """
         if on_error is not None and self.options.parser != 'lalr':
             raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
+        text = _strip_bom(text)
         return self.parser.parse(text, start=start, on_error=on_error)
 
 

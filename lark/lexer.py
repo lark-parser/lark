@@ -254,13 +254,13 @@ class Token(str):
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
+        return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column, self.end_line, self.end_column, self.end_pos))
 
     def __repr__(self):
         return 'Token(%r, %r)' % (self.type, self.value)
 
     def __deepcopy__(self, memo):
-        return Token(self.type, self.value, self.start_pos, self.line, self.column)
+        return Token(self.type, self.value, self.start_pos, self.line, self.column, self.end_line, self.end_column, self.end_pos)
 
     def __eq__(self, other):
         if isinstance(other, Token) and self.type != other.type:

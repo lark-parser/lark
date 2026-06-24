@@ -101,6 +101,20 @@ class TestReconstructor(TestCase):
         for c in code:
             self.assert_reconstruct(g, c)
 
+    def test_template_rule(self):
+        g = """
+        start: (NL | binfunc)*
+        binfunc: WORD "(" binarg{WORD} ")"
+        binarg{arg}: arg "," arg
+        NL: /(\\r?\\n)+\\s*/
+        """ + common
+
+        code = """
+        func(a, b)
+        """
+
+        self.assert_reconstruct(g, code)
+
     def test_json_example(self):
         test_json = '''
             {

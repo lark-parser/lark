@@ -415,6 +415,17 @@ class TestTrees(TestCase):
             result = T().transform(copied)
             self.assertEqual(result, Tree('start', [3, 7]))
 
+    def test_transformer_discard_root(self):
+        """Transformer_NonRecursive should return None (not crash) when the root node is discarded."""
+        for base in (Transformer, Transformer_NonRecursive):
+            class T(base):
+                def start(self, children):
+                    return Discard
+
+            tree = Tree('start', [Token('A', 'x')])
+            result = T().transform(tree)
+            self.assertIsNone(result)
+
     def test_merge_transformers(self):
         tree = Tree('start', [
             Tree('main', [

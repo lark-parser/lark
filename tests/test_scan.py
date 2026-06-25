@@ -21,6 +21,45 @@ class TestScan(unittest.TestCase):
                                     ScanMatch((21, 30), Tree('expr', ['c', Tree('expr', [Tree('expr', ['d'])])])),
                                     ])
 
+    def test_scan_no_matches(self):
+        # Empty, whitespace-only, and all-garbage input yield no matches.
+        parser = Lark(r"""
+        expr: "(" WORD ")"
+        WORD: /\w+/
+        %ignore /\s+/
+        """, parser='lalr', start='expr')
+        for text in ("", "   ", "no parens here"):
+            self.assertEqual(list(parser.scan(text)), [])
+
+    def test_scan_nullable_start(self):
+        # A nullable start rule (the empty string is itself a valid parse) must not emit
+        # zero-length matches, and a grammar with no non-ignored terminal must terminate
+        # cleanly rather than spin.
+        parser = Lark(r"""
+        start: A*
+        A: "a"
+        %ignore /\s+/
+        """, parser='lalr')
+        finds = list(parser.scan("a b a"))
+        self.assertEqual([m.range for m in finds], [(0, 1), (4, 5)])
+        self.assertTrue(all(end > start for start, end in (m.range for m in finds)))
+
+        # Purely nullable: nothing to search for, so no matches (and no infinite loop).
+        parser = Lark("start: empty\nempty:\n%ignore /\\s+/", parser='lalr')
+        self.assertEqual(list(parser.scan("a b a")), [])
+
+    def test_scan_matches_parse_under_tree_options(self):
+        # scan() builds the tree via a separate replay path; check it matches parse().
+        grammar = r"""
+        start: "(" WORD? ")"
+        WORD: /\w+/
+        """
+        for opts in (dict(keep_all_tokens=True), dict(maybe_placeholders=True)):
+            parser = Lark(grammar, parser='lalr', start='start', **opts)
+            for text in ("(a)", "()"):
+                match, = parser.scan(text)
+                self.assertEqual(match.value, parser.parse(text))
+
     def test_scan_meta(self):
         parser = Lark(r"""
         expr: "(" (WORD|expr)* ")"
@@ -73,6 +112,22 @@ class TestScan(unittest.TestCase):
             ScanMatch((10, 13), Tree('start', [Tree('expr', ['c'])])),
             ScanMatch((15, 18), Tree('start', [Tree('expr', ['e'])])),
             ScanMatch((22, 25), Tree('start', [Tree('expr', ['f'])])),
+        ])
+
+    def test_scan_adjacent(self):
+        # Matches that abut with no gap: the resume (pos = last.end_pos) must re-find a
+        # match starting at the exact end offset of the previous one. No %ignore, and each
+        # match is a single expr (not expr+), so the three "(x)" don't collapse into one.
+        parser = Lark(r"""
+        expr: "(" WORD ")"
+        WORD: /\w+/
+        """, parser='lalr', start="expr")
+
+        finds = list(parser.scan("(a)(b)(c)"))
+        self.assertEqual(finds, [
+            ScanMatch((0, 3), Tree('expr', ['a'])),
+            ScanMatch((3, 6), Tree('expr', ['b'])),
+            ScanMatch((6, 9), Tree('expr', ['c'])),
         ])
 
     def test_scan_start_inside_ignored_regex_span(self):
@@ -166,6 +221,22 @@ class TestScan(unittest.TestCase):
         # Sanity check: with the basic lexer the same input doesn't match
         parser_basic = Lark(grammar, parser='lalr', start='stmt', lexer='basic')
         self.assertEqual(list(parser_basic.scan(text)), [])
+
+    def test_scan_keyword_unless(self):
+        # Keyword terminals are folded into NAME by _create_unless and dropped from the
+        # regular scanner; search_start uses a scanner that keeps them. scan() must still
+        # find keyword-led matches and tag them as parse() would.
+        parser = Lark(r"""
+        start: TRUE | NAME
+        TRUE: "true"
+        NAME: /[a-z]+/
+        %ignore /\s+/
+        """, parser='lalr', start='start', lexer='basic')
+
+        finds = list(parser.scan("xx true truly yy"))
+        self.assertEqual([m.range for m in finds], [(0, 2), (3, 7), (8, 13), (14, 16)])
+        self.assertEqual([m.value.children[0].type for m in finds],
+                         ['NAME', 'TRUE', 'NAME', 'NAME'])
 
     def test_scan_lexer_callback_exception_skips_candidate(self):
         # A lexer-callback signalling an invalid token via ValueError must not
@@ -291,6 +362,39 @@ class TestScan(unittest.TestCase):
         match = results[0]
         self.assertEqual(match.range, (0, 2))
         self.assertEqual(match.value.children, [NoCopy("a"), NoCopy("a")])
+
+    def test_scan_bytes(self):
+        # scan() must work on bytes input, yielding byte-offset ranges and bytes-valued tokens.
+        parser = Lark(r"""
+        expr: "(" (WORD|expr)* ")"
+        %ignore / +/
+        WORD: /\w+/
+        """, parser='lalr', start="expr", use_bytes=True)
+
+        finds = list(parser.scan(b"|() | (a) | ((x)) |"))
+        self.assertEqual(finds, [
+            ScanMatch((1, 3), Tree('expr', [])),
+            ScanMatch((6, 9), Tree('expr', [Token('WORD', b'a')])),
+            ScanMatch((12, 17), Tree('expr', [Tree('expr', [Token('WORD', b'x')])])),
+        ])
+
+    def test_scan_multiple_start(self):
+        # With multiple start symbols, scan() requires an explicit start, and an
+        # explicit start scopes the scan to that rule only.
+        parser = Lark(r"""
+        a: "(" WORD ")"
+        b: "[" WORD "]"
+        WORD: /\w+/
+        %ignore /\s+/
+        """, parser='lalr', start=["a", "b"])
+
+        with self.assertRaises(ConfigurationError):
+            list(parser.scan("(x) [y]"))
+
+        self.assertEqual(list(parser.scan("(x) [y]", start="a")),
+                         [ScanMatch((0, 3), Tree('a', ['x']))])
+        self.assertEqual(list(parser.scan("(x) [y]", start="b")),
+                         [ScanMatch((4, 7), Tree('b', ['y']))])
 
     def test_scan_rejects_postlex(self):
         class MyIndenter(Indenter):

@@ -518,7 +518,7 @@ class Lexer(ABC):
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         return NotImplemented
 
-    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
         raise TypeError("This lexer cannot be used for searching in text")
 
     def make_lexer_state(self, text: str):
@@ -624,6 +624,7 @@ class BasicLexer(AbstractBasicLexer):
         self.terminals_by_name = conf.terminals_by_name
 
         self._scanner: Optional[Scanner] = None
+        self._search_scanner: Optional[Scanner] = None
 
     def _build_scanner(self) -> Scanner:
         terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
@@ -643,6 +644,16 @@ class BasicLexer(AbstractBasicLexer):
         if self._scanner is None:
             self._scanner = self._build_scanner()
         return self._scanner
+
+    @property
+    def search_scanner(self) -> Scanner:
+        # Used by search_start(): a match can only begin with a non-ignored terminal, so we
+        # search those directly. Searching all terminals and skipping ignores would jump past
+        # a real start hiding inside an ignore's span (e.g. the "a" in an ignored "xxa").
+        if self._search_scanner is None:
+            terminals = [t for t in self.terminals if t.name not in self.ignore_types]
+            self._search_scanner = Scanner(terminals, self.g_regex_flags, self.re, self.use_bytes)
+        return self._search_scanner
 
     def match(self, text, pos):
         return self.scanner.match(text, pos)
@@ -681,16 +692,12 @@ class BasicLexer(AbstractBasicLexer):
         # EOF
         raise EOFError(self)
 
-    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
-        while True:
-            res = self.scanner.search(text, pos)
-            if not res:
-                return None
-            (value, type_), actual_pos = res
-            if type_ in self.ignore_types:
-                pos = actual_pos + len(value)
-                continue
-            return Token(type_, value, actual_pos, end_pos=actual_pos + len(value))
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
+        res = self.search_scanner.search(text, pos)
+        if res is None:
+            return None
+        _, actual_pos = res
+        return actual_pos
 
 
 class ContextualLexer(Lexer):
@@ -746,7 +753,7 @@ class ContextualLexer(Lexer):
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
 
-    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[Token]:
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
         return self.lexers[start_state].search_start(text, start_state, pos)
 
 ###}

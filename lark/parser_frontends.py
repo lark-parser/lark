@@ -177,17 +177,16 @@ class ParsingFrontend(Serialize):
         line_ctr = LineCounter.from_text_slice(text_slice)
         while True:
             # Search for a plausible start
-            first_token = self.lexer.search_start(text_slice, start_state, pos)
-            if first_token is None:
+            match_start = self.lexer.search_start(text_slice, start_state, pos)
+            if match_start is None:
                 return
-            assert first_token.start_pos is not None and first_token.start_pos >= text_slice.start
-            assert first_token.end_pos is not None and first_token.end_pos <= text_slice.end
+            assert text_slice.start <= match_start <= text_slice.end
 
             # Parse without callbacks, to keep value-stack minimal and avoid expensive deepcopies.
             # Aim for the longest possible match, and save the tokens we lex for later replay.
-            line_ctr.feed(text_slice.text[line_ctr.char_pos:first_token.start_pos])
+            line_ctr.feed(text_slice.text[line_ctr.char_pos:match_start])
             text_slice_wlc = _TextSlice_WithLineCount(
-                text_slice.text, first_token.start_pos, text_slice.end,
+                text_slice.text, match_start, text_slice.end,
                 line_ctr.line, line_ctr.line_start_pos)
             stunted_ip = self.parse_interactive(text_slice_wlc, start=chosen_start)
             stunted_ip.parser_state.parse_conf.callbacks = {}
@@ -228,12 +227,13 @@ class ParsingFrontend(Serialize):
                             f"scan() requires source positions on every token (use Token.update() in callbacks).")
                     replay_ip.feed_token(t)
                 res = replay_ip.feed_eof(matched[-1])
-                yield ScanMatch((first_token.start_pos, matched[-1].end_pos), res)
+                # Range comes from the matched tokens, not match_start (the lexer may skip leading ignores).
+                yield ScanMatch((matched[0].start_pos, matched[-1].end_pos), res)
                 # Resume from end of match (no overlaps)
                 pos = matched[-1].end_pos
             else:
                 # No match found. Scan again from next character
-                pos = first_token.start_pos + 1
+                pos = match_start + 1
 
 
 def _validate_frontend_args(parser, lexer) -> None:

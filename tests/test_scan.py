@@ -75,6 +75,28 @@ class TestScan(unittest.TestCase):
             ScanMatch((22, 25), Tree('start', [Tree('expr', ['f'])])),
         ])
 
+    def test_scan_start_inside_ignored_regex_span(self):
+        # search_start() should search real start terminals directly, not skip over
+        # the full extent of an ignore regex that happens to contain one.
+        parser = Lark(r"""
+        start: "a"
+        %ignore /x+a/
+        """, parser='lalr')
+
+        self.assertEqual([m.range for m in parser.scan("xxa a")], [(2, 3), (4, 5)])
+
+    def test_scan_range_starts_after_ignored_prefix(self):
+        # Search may find a candidate inside/under an ignore match, but the reported
+        # range should still describe the non-ignored parse result.
+        parser = Lark(r"""
+        start: A? C
+        A: "a"
+        C: "c"
+        %ignore /ab/
+        """, parser='lalr')
+
+        self.assertEqual([m.range for m in parser.scan("abc")], [(2, 3)])
+
     def test_scan_subset(self):
         parser = Lark(r"""
         expr: "(" (WORD|expr)* ")"

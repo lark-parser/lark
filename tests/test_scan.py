@@ -104,6 +104,25 @@ class TestScan(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             list(parser.scan("(a)"))
 
+    def test_scan_rejects_lexer_only(self):
+        # A lexer-only Lark (parser=None) has no .parser; scan() must raise a clear
+        # ConfigurationError, not leak an AttributeError.
+        parser = Lark(r"""
+        start: WORD
+        WORD: /\w+/
+        """, parser=None, lexer='basic')
+        with self.assertRaises(ConfigurationError):
+            list(parser.scan("a b c"))
+
+    def test_scan_validates_eagerly(self):
+        # scan() validates its configuration on the call itself, not lazily on first iteration.
+        parser = Lark(r"""
+        expr: "(" WORD ")"
+        WORD: /\w+/
+        """, parser='earley', start="expr")
+        with self.assertRaises(ConfigurationError):
+            parser.scan("(a)")  # not iterated — must still raise
+
     def test_scan_contextual(self):
         "Ensure a contextual scan works, where a basic scan would fail."
 
@@ -166,6 +185,24 @@ class TestScan(unittest.TestCase):
             list(parser.scan("hello"))
         self.assertIn("did not preserve token positions", str(cm.exception))
 
+    def test_scan_callback_dropping_positions_on_earlier_token_raises_clear_error(self):
+        # The final token is enough to compute ScanMatch.range, but earlier tokens
+        # still need positions for propagate_positions metadata.
+        def cb(t):
+            if t.value == "a":
+                return Token(t.type, t.value)  # drops positions
+            return t
+
+        parser = Lark(r"""
+        start: WORD WORD
+        WORD: /[ab]/
+        %ignore / +/
+        """, parser='lalr', lexer_callbacks={'WORD': cb}, propagate_positions=True)
+
+        with self.assertRaises(LexError) as cm:
+            list(parser.scan("a b"))
+        self.assertIn("did not preserve token positions", str(cm.exception))
+
     def test_scan_propagates_non_valueerror_callback_exception(self):
         # Non-ValueError exceptions from user callbacks are programming errors
         # and must surface — only ValueError is treated as "invalid token".
@@ -179,6 +216,20 @@ class TestScan(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             list(parser.scan("hi"))
+
+    def test_scan_does_not_swallow_configuration_error(self):
+        # ConfigurationError subclasses ValueError, which scan() catches to skip a failed
+        # lex. It must still propagate rather than being silently treated as "no match".
+        def cb(t):
+            raise ConfigurationError("boom")
+
+        parser = Lark(r"""
+        start: WORD
+        WORD: /\w+/
+        """, parser='lalr', lexer_callbacks={'WORD': cb})
+
+        with self.assertRaises(ConfigurationError):
+            list(parser.scan("hello"))
 
     def test_scan_returns_transformer_value(self):
         # ScanMatch.value is documented as "Tree, or whatever the transformer returns".

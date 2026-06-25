@@ -1,6 +1,5 @@
-from copy import copy
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Generic, Iterable, Tuple, TypeVar
+from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Generic, Iterator, Tuple, TypeVar
 
 from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
@@ -156,7 +155,7 @@ class ParsingFrontend(Serialize):
         stream = self._make_lexer_thread(text)
         return self.parser.parse_interactive(stream, chosen_start)
 
-    def scan(self, text: TextOrSlice, start: Optional[str]=None) -> Iterable[ScanMatch]:
+    def scan(self, text: TextOrSlice, start: Optional[str]=None) -> Iterator[ScanMatch]:
         """See ``Lark.scan``."""
         if self.parser_conf.parser_type != 'lalr':
             raise ConfigurationError("scan() requires parser='lalr'")
@@ -165,9 +164,14 @@ class ParsingFrontend(Serialize):
         if self.lexer_conf.postlex is not None:
             # postlex carries state across the stream (indent depth, paren nesting); mid-stream parses break it.
             raise ConfigurationError("scan() does not support postlex")
+        if isinstance(self.lexer_conf.lexer_type, type):
+            # A custom lexer class was supplied; scan() relies on the built-in lexers' search_start().
+            raise ConfigurationError("scan() does not support custom lexers")
         chosen_start = self._verify_start(start)
+        return self._scan(TextSlice.cast_from(text), chosen_start)
+
+    def _scan(self, text_slice: TextSlice, chosen_start: str) -> Iterator[ScanMatch]:
         start_state = self.parser._parse_table.start_states[chosen_start]
-        text_slice = TextSlice.cast_from(text)
         pos = text_slice.start
         while True:
             # Search for a plausible start
@@ -180,7 +184,6 @@ class ParsingFrontend(Serialize):
             # Parse without callbacks, to keep value-stack minimal and avoid expensive deepcopies.
             # Aim for the longest possible match, and save the tokens we lex for later replay.
             stunted_ip = self.parse_interactive(text_slice.start_from(first_token.start_pos), start=chosen_start)
-            stunted_ip.parser_state.parse_conf = copy(stunted_ip.parser_state.parse_conf)
             stunted_ip.parser_state.parse_conf.callbacks = {}
             matched_tokens = []
             longest_match = 0  # number of tokens in the longest accepted prefix
@@ -201,24 +204,27 @@ class ParsingFrontend(Serialize):
             except UnexpectedInput:
                 # Parse failed
                 pass
+            except ConfigurationError:
+                # ConfigurationError subclasses ValueError, and must not be swallowed
+                raise
             except ValueError:
                 # A user lexer-callback raised an error
                 pass
 
             if longest_match:
                 # Match found! Replay tokens with real callbacks, and yield the result
-                last = matched_tokens[longest_match - 1]
-                if last.end_pos is None:
-                    raise LexError(
-                        f"Lexer callback for {last.type!r} did not preserve token positions; "
-                        f"scan() requires source positions on every token (use Token.update() in callbacks).")
+                matched = matched_tokens[:longest_match]
                 replay_ip = self.parse_interactive(start=chosen_start)
-                for t in matched_tokens[:longest_match]:
+                for t in matched:
+                    if t.start_pos is None or t.end_pos is None:
+                        raise LexError(
+                            f"Lexer callback for {t.type!r} did not preserve token positions; "
+                            f"scan() requires source positions on every token (use Token.update() in callbacks).")
                     replay_ip.feed_token(t)
-                res = replay_ip.feed_eof(last)
-                yield ScanMatch((first_token.start_pos, last.end_pos), res)
+                res = replay_ip.feed_eof(matched[-1])
+                yield ScanMatch((first_token.start_pos, matched[-1].end_pos), res)
                 # Resume from end of match (no overlaps)
-                pos = last.end_pos
+                pos = matched[-1].end_pos
             else:
                 # No match found. Scan again from next character
                 pos = first_token.start_pos + 1

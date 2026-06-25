@@ -1,9 +1,8 @@
 import unittest
 
-from lark import Lark, TextSlice, Token, Transformer, Tree
+from lark import Lark, TextSlice, Token, Transformer, Tree, ScanMatch
 from lark.exceptions import ConfigurationError, LexError
 from lark.indenter import Indenter
-from lark.parser_frontends import ScanMatch
 
 
 class TestScan(unittest.TestCase):

@@ -5,8 +5,7 @@ Wrong type annotations here will cause a mypy error.
 """
 from typing import Iterable, Tuple
 
-from lark import Lark, Token, ParseTree, Transformer
-from lark.parser_frontends import ScanMatch
+from lark import Lark, Token, ParseTree, Transformer, ScanMatch
 
 
 class _ToInt(Transformer[Token, int]):

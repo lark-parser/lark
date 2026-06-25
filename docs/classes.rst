@@ -107,4 +107,4 @@ ScanMatch
 
 A single match yielded by :meth:`Lark.scan`.
 
-.. autoclass:: lark.parser_frontends.ScanMatch
+.. autoclass:: lark.ScanMatch

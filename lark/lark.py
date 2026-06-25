@@ -757,6 +757,8 @@ class Lark(Serialize, Generic[_Return_T]):
 
         Note: ``lexer_callbacks`` may fire while exploring the input, for regions that yield no match.
 
+        Note: While lexer="basic" works, it highly not recommended due to performance liabilities.
+
         Parameters:
             text (TextOrSlice): Text to be scanned, as ``str``, ``bytes``, or a ``TextSlice`` instance.
             start (str, optional): Start symbol. Required if Lark was initialized with multiple start symbols.

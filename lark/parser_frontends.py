@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKI
 
 from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerThread, LineCounter, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -173,6 +173,8 @@ class ParsingFrontend(Serialize):
     def _scan(self, text_slice: TextSlice, chosen_start: str) -> Iterator[ScanMatch]:
         start_state = self.parser._parse_table.start_states[chosen_start]
         pos = text_slice.start
+        # We count the lines here, to avoid re-counting them inside each new lexer state
+        line_ctr = LineCounter.from_text_slice(text_slice)
         while True:
             # Search for a plausible start
             first_token = self.lexer.search_start(text_slice, start_state, pos)
@@ -183,7 +185,11 @@ class ParsingFrontend(Serialize):
 
             # Parse without callbacks, to keep value-stack minimal and avoid expensive deepcopies.
             # Aim for the longest possible match, and save the tokens we lex for later replay.
-            stunted_ip = self.parse_interactive(text_slice.start_from(first_token.start_pos), start=chosen_start)
+            line_ctr.feed(text_slice.text[line_ctr.char_pos:first_token.start_pos])
+            text_slice_wlc = _TextSlice_WithLineCount(
+                text_slice.text, first_token.start_pos, text_slice.end,
+                line_ctr.line, line_ctr.line_start_pos)
+            stunted_ip = self.parse_interactive(text_slice_wlc, start=chosen_start)
             stunted_ip.parser_state.parse_conf.callbacks = {}
             matched_tokens = []
             longest_match = 0  # number of tokens in the longest accepted prefix

@@ -24,6 +24,7 @@ from .grammar import TOKEN_DEFAULT_PRIORITY
 ###{standalone
 from contextlib import suppress
 from copy import copy
+from dataclasses import dataclass
 
 try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on
     has_interegular = bool(interegular)
@@ -273,6 +274,15 @@ class Token(str):
     __hash__ = str.__hash__
 
 
+@dataclass(frozen=True)
+class _TextSlice_WithLineCount(TextSlice):
+    """Internal: a TextSlice carrying the line/column state at its ``start``, so the lexer can
+    resume position tracking without re-counting from offset 0.
+    """
+    line: int
+    line_start_pos: int
+
+
 class LineCounter:
     "A utility class for keeping track of line & column information"
 
@@ -284,6 +294,21 @@ class LineCounter:
         self.line = 1
         self.column = 1
         self.line_start_pos = 0
+
+    @classmethod
+    def from_text_slice(cls, text_slice: TextSlice) -> 'LineCounter':
+        """Build a counter positioned at ``text_slice.start``. Resumes from a snapshot when the
+        slice carries one (``_TextSlice_WithLineCount``); otherwise counts the prefix once.
+        """
+        self = cls(b'\n' if isinstance(text_slice.text, bytes) else '\n')
+        if isinstance(text_slice, _TextSlice_WithLineCount):
+            self.char_pos = text_slice.start
+            self.line = text_slice.line
+            self.line_start_pos = text_slice.line_start_pos
+            self.column = text_slice.start - text_slice.line_start_pos + 1
+        elif text_slice.start > 0:
+            self.feed(TextSlice(text_slice.text, 0, text_slice.start))
+        return self
 
     def __eq__(self, other):
         if not isinstance(other, LineCounter):
@@ -433,11 +458,7 @@ class LexerState:
     def __init__(self, text: TextSlice, line_ctr: Optional[LineCounter] = None, last_token: Optional[Token]=None):
         if isinstance(text, TextSlice):
             if line_ctr is None:
-                line_ctr = LineCounter(b'\n' if isinstance(text.text, bytes) else '\n')
-
-                if text.start > 0:
-                    # Advance the line-count until line_ctr.char_pos == text.start
-                    line_ctr.feed(TextSlice(text.text, 0, text.start))
+                line_ctr = LineCounter.from_text_slice(text)
 
             if not (text.start <= line_ctr.char_pos <= text.end):
                 raise ValueError("LineCounter.char_pos is out of bounds")

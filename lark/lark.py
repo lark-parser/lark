@@ -757,7 +757,7 @@ class Lark(Serialize, Generic[_Return_T]):
 
         Note: ``lexer_callbacks`` may fire while exploring the input, for regions that yield no match.
 
-        Note: While lexer="basic" works, it highly not recommended due to performance liabilities.
+        Note: While ``lexer='basic'`` works, it can be much slower than the contextual lexer. Use is strongly discouraged.
 
         Parameters:
             text (TextOrSlice): Text to be scanned, as ``str``, ``bytes``, or a ``TextSlice`` instance.

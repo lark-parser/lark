@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKI
 
 from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
-from .lexer import LexerThread, LineCounter, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerThread, LineCounter, Token, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -184,7 +184,7 @@ class ParsingFrontend(Serialize):
 
             # Parse without callbacks, to keep value-stack minimal and avoid expensive deepcopies.
             # Aim for the longest possible match, and save the tokens we lex for later replay.
-            line_ctr.feed(text_slice.text[line_ctr.char_pos:match_start])
+            line_ctr.advance_to(text_slice.text, match_start)
             text_slice_wlc = _TextSlice_WithLineCount(
                 text_slice.text, match_start, text_slice.end,
                 line_ctr.line, line_ctr.line_start_pos)
@@ -199,9 +199,9 @@ class ParsingFrontend(Serialize):
                     matched_tokens.append(token)
                     # Test if we reached a possible completed parse
                     if '$END' in stunted_ip.choices():
-                        tmp_ip = stunted_ip.copy(deepcopy_values=False)
+                        tmp_state = stunted_ip.parser_state.copy(deepcopy_values=False)
                         try:
-                            tmp_ip.feed_eof(token)
+                            tmp_state.feed_token(Token.new_borrow_pos('$END', '', token), is_end=True)
                         except UnexpectedInput:
                             continue
                         longest_match = len(matched_tokens)

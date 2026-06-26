@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 import re
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload
+    AnyStr, ClassVar, TYPE_CHECKING, overload
 )
 from types import ModuleType
 import warnings
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .parsers.lalr_parser_state import ParserState
 
 from .utils import classify, get_regexp_width, Serialize, logger, TextSlice, TextOrSlice
-from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
+from .exceptions import UnexpectedCharacters, ConfigurationError, LexError, UnexpectedToken
 from .grammar import TOKEN_DEFAULT_PRIORITY
 
 
@@ -307,7 +307,7 @@ class LineCounter:
             self.line_start_pos = text_slice.line_start_pos
             self.column = text_slice.start - text_slice.line_start_pos + 1
         elif text_slice.start > 0:
-            self.feed(TextSlice(text_slice.text, 0, text_slice.start))
+            self.advance_to(text_slice.text, text_slice.start)
         return self
 
     def __eq__(self, other):
@@ -316,7 +316,7 @@ class LineCounter:
 
         return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
-    def feed(self, token: TextOrSlice, test_newline=True):
+    def feed(self, token: AnyStr, test_newline=True):
         """Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
@@ -328,6 +328,16 @@ class LineCounter:
                 self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
+        self.column = self.char_pos - self.line_start_pos + 1
+
+    def advance_to(self, text: AnyStr, pos: int):
+        """Advance the counter to absolute offset ``pos`` within ``text``, counting the newlines
+        """
+        newlines = text.count(self.newline_char, self.char_pos, pos)
+        if newlines:
+            self.line += newlines
+            self.line_start_pos = text.rindex(self.newline_char, self.char_pos, pos) + 1
+        self.char_pos = pos
         self.column = self.char_pos - self.line_start_pos + 1
 
 
@@ -423,15 +433,14 @@ class Scanner:
                 return m.lastgroup
         return None
 
-    def search(self, text: TextSlice, pos: int):
-        "Find earliest match, starting at pos"
+    def search(self, text: TextSlice, pos: int) -> Optional[int]:
+        "Find the position of the earliest match, starting at pos"
         best = None
         for mre in self._mres:
             m = mre.search(text.text, pos, text.end)
             if m and (best is None or m.start() < best.start()):
                 best = m
-        if best is not None:
-            return (best.group(0), best.lastgroup), best.start()
+        return best.start() if best is not None else None
 
 def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:
@@ -519,7 +528,8 @@ class Lexer(ABC):
         return NotImplemented
 
     def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
-        raise TypeError("This lexer cannot be used for searching in text")
+        raise ConfigurationError("scan() is not supported by %s; use the built-in 'basic' or 'contextual' lexer"
+                                 % type(self).__name__)
 
     def make_lexer_state(self, text: str):
         "Deprecated"
@@ -693,11 +703,7 @@ class BasicLexer(AbstractBasicLexer):
         raise EOFError(self)
 
     def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
-        res = self.search_scanner.search(text, pos)
-        if res is None:
-            return None
-        _, actual_pos = res
-        return actual_pos
+        return self.search_scanner.search(text, pos)
 
 
 class ContextualLexer(Lexer):

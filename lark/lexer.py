@@ -253,6 +253,17 @@ class Token(str):
     def new_borrow_pos(cls: Type[_T], type_: str, value: Any, borrow_t: 'Token') -> _T:
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
+    def as_str(self) -> str:
+        """Return the token's value as a ``str``.
+
+        When the parser is created with ``use_bytes=True``, ``value`` is ``bytes``,
+        so ``str(token)`` yields its repr rather than its text. This decodes it,
+        letting transformer callbacks work the same regardless of ``use_bytes``.
+        """
+        if isinstance(self.value, bytes):
+            return self.value.decode('latin-1')
+        return self.value
+
     def __reduce__(self):
         return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
 

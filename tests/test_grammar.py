@@ -36,6 +36,25 @@ class TestGrammar(TestCase):
         assert p.parse("a b") == p.parse("a    b")
         assert len(spaces) == 5
 
+    def test_lexer_callbacks_with_keyword_terminals(self):
+        # Issue #1618: when several terminals both absorb a keyword
+        # (UnlessCallback) and have a lexer_callbacks entry, every callback but
+        # the last used to be silently skipped because the CallChain condition
+        # closed over the loop variable.
+        fired = []
+        p = Lark(r"""
+            start: (A | B | AKW | BKW)+
+            A: /[a-z]+/
+            B: /[0-9]+/
+            AKW: "foo"
+            BKW: "123"
+            %ignore " "
+        """, parser='lalr', lexer='basic',
+            lexer_callbacks={'A': lambda t: fired.append('A') or t,
+                             'B': lambda t: fired.append('B') or t})
+        list(p.lex("abc 456"))
+        assert sorted(set(fired)) == ['A', 'B']
+
 
     def test_override_rule(self):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter

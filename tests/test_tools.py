@@ -91,6 +91,12 @@ class TestStandalone(TestCase):
         res = ip_copy.feed_eof()
         self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
+    def test_scan(self):
+        context = self._create_standalone('start: "a"+')
+        parser = context['Lark_StandAlone']()
+
+        self.assertEqual([m.range for m in parser.scan('xxaa yy a')], [(2, 4), (8, 9)])
+
     def test_contextual(self):
         grammar = """
         start: a b

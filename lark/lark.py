@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .tree import ParseTree
     from .visitors import Transformer
     from typing import Literal
-    from .parser_frontends import ParsingFrontend
+    from .parser_frontends import ParsingFrontend, ScanMatch
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
@@ -735,6 +735,48 @@ class Lark(Serialize, Generic[_Return_T]):
         if on_error is not None and self.options.parser != 'lalr':
             raise NotImplementedError("The on_error option is only implemented for the LALR(1) parser.")
         return self.parser.parse(text, start=start, on_error=on_error)
+
+    def scan(self, text: TextOrSlice, start: Optional[str]=None) -> Iterator['ScanMatch[_Return_T]']:
+        """Scan the input text for non-overlapping matches of this grammar.
+        Only works when ``parser='lalr'`` and without ``postlex``.
+
+        Greedy parsing: where multiple end positions are valid, the longest is returned.
+        Input that doesn't match the grammar is silently skipped rather than raised.
+
+        Performance: scan() runs a parse attempt at every position where a match could begin, so its
+        cost is the sum of those attempts' lengths -- in the worst case O(n*m), with n the input
+        length and m the longest possible parse attempt. For best results, choose leading terminals
+        that are rare in the text and reliably indicate the start of a match.
+
+        A returned match will never start or end with an ignored terminal.
+
+        User ``lexer_callbacks`` must preserve source positions on returned tokens — use
+        ``Token.update()`` rather than constructing a fresh ``Token``. A callback that raises
+        ``ValueError`` is treated as a failed lex, skipping the candidate match; any other
+        exception propagates.
+
+        Note: ``lexer_callbacks`` may fire while exploring the input, for regions that yield no match.
+
+        Note: While ``lexer='basic'`` works, it can be much slower than the contextual lexer. Use is strongly discouraged.
+
+        Parameters:
+            text (TextOrSlice): Text to be scanned, as ``str``, ``bytes``, or a ``TextSlice`` instance.
+            start (str, optional): Start symbol. Required if Lark was initialized with multiple start symbols.
+
+        Yields:
+            ``ScanMatch`` instances, each with a ``range`` (a (start, end) tuple)
+            and a ``value`` attribute. ``value`` is a ``Tree`` by default, or
+            whatever the ``transformer`` returns when one was supplied.
+
+        :raises ConfigurationError: If the configuration doesn't support scanning;
+                scan() requires ``parser='lalr'`` without ``postlex`` or a custom lexer.
+        :raises LexError: If a ``lexer_callback`` returns a token without source positions.
+
+        See Also: ``Lark.parse()``
+        """
+        if self.options.parser != 'lalr':
+            raise ConfigurationError("scan() requires parser='lalr'")
+        return self.parser.scan(text, start=start)
 
 
 ###}

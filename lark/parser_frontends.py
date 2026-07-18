@@ -1,8 +1,9 @@
-from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Generic, Iterator, Tuple, TypeVar
 
-from .exceptions import ConfigurationError, GrammarError, assert_config
+from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
-from .lexer import LexerThread, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerThread, LineCounter, Token, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -13,6 +14,21 @@ if TYPE_CHECKING:
 
 
 ###{standalone
+
+T = TypeVar('T')
+
+@dataclass(frozen=True)
+class ScanMatch(Generic[T]):
+    """A non-overlapping match found by ``Lark.scan()``.
+
+    Attributes:
+        range: A (start, end) tuple of the indices in the input text.
+        value: The parse result. A ``Tree`` by default, or whatever the
+            ``transformer`` returns when one was supplied to Lark.
+    """
+    range: Tuple[int, int]
+    value: T
+
 
 def _wrap_lexer(lexer_class):
     future_interface = getattr(lexer_class, '__future_interface__', 0)
@@ -138,6 +154,86 @@ class ParsingFrontend(Serialize):
             raise ConfigurationError("parse_interactive() currently only works with parser='lalr' ")
         stream = self._make_lexer_thread(text)
         return self.parser.parse_interactive(stream, chosen_start)
+
+    def scan(self, text: TextOrSlice, start: Optional[str]=None) -> Iterator[ScanMatch]:
+        """See ``Lark.scan``."""
+        if self.parser_conf.parser_type != 'lalr':
+            raise ConfigurationError("scan() requires parser='lalr'")
+        if self.skip_lexer:
+            raise ConfigurationError("scan() does not support lexer='dynamic'/'dynamic_complete'")
+        if self.lexer_conf.postlex is not None:
+            # postlex carries state across the stream (indent depth, paren nesting); mid-stream parses break it.
+            raise ConfigurationError("scan() does not support postlex")
+        if isinstance(self.lexer_conf.lexer_type, type):
+            # A custom lexer class was supplied; scan() relies on the built-in lexers' search_start().
+            raise ConfigurationError("scan() does not support custom lexers")
+        chosen_start = self._verify_start(start)
+        return self._scan(TextSlice.cast_from(text), chosen_start)
+
+    def _scan(self, text_slice: TextSlice, chosen_start: str) -> Iterator[ScanMatch]:
+        start_state = self.parser._parse_table.start_states[chosen_start]
+        pos = text_slice.start
+        # We count the lines here, to avoid re-counting them inside each new lexer state
+        line_ctr = LineCounter.from_text_slice(text_slice)
+        while True:
+            # Search for a plausible start
+            match_start = self.lexer.search_start(text_slice, start_state, pos)
+            if match_start is None:
+                return
+            assert text_slice.start <= match_start <= text_slice.end
+
+            # Parse without callbacks, to keep value-stack minimal and avoid expensive deepcopies.
+            # Aim for the longest possible match, and save the tokens we lex for later replay.
+            line_ctr.advance_to(text_slice.text, match_start)
+            text_slice_wlc = _TextSlice_WithLineCount(
+                text_slice.text, match_start, text_slice.end,
+                line_ctr.line, line_ctr.line_start_pos)
+            stunted_ip = self.parse_interactive(text_slice_wlc, start=chosen_start)
+            stunted_ip.parser_state.parse_conf.callbacks = {}
+            matched_tokens = []
+            longest_match = 0  # number of tokens in the longest accepted prefix
+            token_stream = stunted_ip.lexer_thread.lex(stunted_ip.parser_state)
+            try:
+                for token in token_stream:
+                    stunted_ip.feed_token(token)
+                    matched_tokens.append(token)
+                    # Test if we reached a possible completed parse
+                    if '$END' in stunted_ip.choices():
+                        tmp_state = stunted_ip.parser_state.copy(deepcopy_values=False)
+                        try:
+                            tmp_state.feed_token(Token.new_borrow_pos('$END', '', token), is_end=True)
+                        except UnexpectedInput:
+                            continue
+                        longest_match = len(matched_tokens)
+                        # keep going and testing for candidates, until the parse ends or fails
+            except UnexpectedInput:
+                # Parse failed
+                pass
+            except ConfigurationError:
+                # ConfigurationError subclasses ValueError, and must not be swallowed
+                raise
+            except ValueError:
+                # A user lexer-callback raised an error
+                pass
+
+            if longest_match:
+                # Match found! Replay tokens with real callbacks, and yield the result
+                matched = matched_tokens[:longest_match]
+                replay_ip = self.parse_interactive(start=chosen_start)
+                for t in matched:
+                    if t.start_pos is None or t.end_pos is None:
+                        raise LexError(
+                            f"Lexer callback for {t.type!r} did not preserve token positions; "
+                            f"scan() requires source positions on every token (use Token.update() in callbacks).")
+                    replay_ip.feed_token(t)
+                res = replay_ip.feed_eof(matched[-1])
+                # Range comes from the matched tokens, not match_start (the lexer may skip leading ignores).
+                yield ScanMatch((matched[0].start_pos, matched[-1].end_pos), res)
+                # Resume from end of match (no overlaps)
+                pos = matched[-1].end_pos
+            else:
+                # No match found. Scan again from next character
+                pos = match_start + 1
 
 
 def _validate_frontend_args(parser, lexer) -> None:

@@ -4,7 +4,7 @@ from abc import abstractmethod, ABC
 import re
 from typing import (
     TypeVar, Type, Dict, Iterator, Collection, Callable, Optional, FrozenSet, Any,
-    ClassVar, TYPE_CHECKING, overload
+    AnyStr, ClassVar, TYPE_CHECKING, overload
 )
 from types import ModuleType
 import warnings
@@ -17,13 +17,14 @@ if TYPE_CHECKING:
     from .parsers.lalr_parser_state import ParserState
 
 from .utils import classify, get_regexp_width, Serialize, logger, TextSlice, TextOrSlice
-from .exceptions import UnexpectedCharacters, LexError, UnexpectedToken
+from .exceptions import UnexpectedCharacters, ConfigurationError, LexError, UnexpectedToken
 from .grammar import TOKEN_DEFAULT_PRIORITY
 
 
 ###{standalone
 from contextlib import suppress
 from copy import copy
+from dataclasses import dataclass
 
 try:  # For the standalone parser, we need to make sure that has_interegular is False to avoid NameErrors later on
     has_interegular = bool(interegular)
@@ -254,13 +255,15 @@ class Token(str):
         return cls(type_, value, borrow_t.start_pos, borrow_t.line, borrow_t.column, borrow_t.end_line, borrow_t.end_column, borrow_t.end_pos)
 
     def __reduce__(self):
-        return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column))
+        return (self.__class__, (self.type, self.value, self.start_pos, self.line, self.column,
+                                 self.end_line, self.end_column, self.end_pos))
 
     def __repr__(self):
         return 'Token(%r, %r)' % (self.type, self.value)
 
     def __deepcopy__(self, memo):
-        return Token(self.type, self.value, self.start_pos, self.line, self.column)
+        return Token(self.type, self.value, self.start_pos, self.line, self.column,
+                     self.end_line, self.end_column, self.end_pos)
 
     def __eq__(self, other):
         if isinstance(other, Token) and self.type != other.type:
@@ -269,6 +272,15 @@ class Token(str):
         return str.__eq__(self, other)
 
     __hash__ = str.__hash__
+
+
+@dataclass(frozen=True)
+class _TextSlice_WithLineCount(TextSlice):
+    """Internal: a TextSlice carrying the line/column state at its ``start``, so the lexer can
+    resume position tracking without re-counting from offset 0.
+    """
+    line: int
+    line_start_pos: int
 
 
 class LineCounter:
@@ -283,13 +295,28 @@ class LineCounter:
         self.column = 1
         self.line_start_pos = 0
 
+    @classmethod
+    def from_text_slice(cls, text_slice: TextSlice) -> 'LineCounter':
+        """Build a counter positioned at ``text_slice.start``. Resumes from a snapshot when the
+        slice carries one (``_TextSlice_WithLineCount``); otherwise counts the prefix once.
+        """
+        self = cls(b'\n' if isinstance(text_slice.text, bytes) else '\n')
+        if isinstance(text_slice, _TextSlice_WithLineCount):
+            self.char_pos = text_slice.start
+            self.line = text_slice.line
+            self.line_start_pos = text_slice.line_start_pos
+            self.column = text_slice.start - text_slice.line_start_pos + 1
+        elif text_slice.start > 0:
+            self.advance_to(text_slice.text, text_slice.start)
+        return self
+
     def __eq__(self, other):
         if not isinstance(other, LineCounter):
             return NotImplemented
 
         return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
-    def feed(self, token: TextOrSlice, test_newline=True):
+    def feed(self, token: AnyStr, test_newline=True):
         """Consume a token and calculate the new line & column.
 
         As an optional optimization, set test_newline=False if token doesn't contain a newline.
@@ -301,6 +328,16 @@ class LineCounter:
                 self.line_start_pos = self.char_pos + token.rindex(self.newline_char) + 1
 
         self.char_pos += len(token)
+        self.column = self.char_pos - self.line_start_pos + 1
+
+    def advance_to(self, text: AnyStr, pos: int):
+        """Advance the counter to absolute offset ``pos`` within ``text``, counting the newlines
+        """
+        newlines = text.count(self.newline_char, self.char_pos, pos)
+        if newlines:
+            self.line += newlines
+            self.line_start_pos = text.rindex(self.newline_char, self.char_pos, pos) + 1
+        self.char_pos = pos
         self.column = self.char_pos - self.line_start_pos + 1
 
 
@@ -396,6 +433,15 @@ class Scanner:
                 return m.lastgroup
         return None
 
+    def search(self, text: TextSlice, pos: int) -> Optional[int]:
+        "Find the position of the earliest match, starting at pos"
+        best = None
+        for mre in self._mres:
+            m = mre.search(text.text, pos, text.end)
+            if m and (best is None or m.start() < best.start()):
+                best = m
+        return best.start() if best is not None else None
+
 def _regexp_has_newline(r: str):
     r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
@@ -421,11 +467,7 @@ class LexerState:
     def __init__(self, text: TextSlice, line_ctr: Optional[LineCounter] = None, last_token: Optional[Token]=None):
         if isinstance(text, TextSlice):
             if line_ctr is None:
-                line_ctr = LineCounter(b'\n' if isinstance(text.text, bytes) else '\n')
-
-                if text.start > 0:
-                    # Advance the line-count until line_ctr.char_pos == text.start
-                    line_ctr.feed(TextSlice(text.text, 0, text.start))
+                line_ctr = LineCounter.from_text_slice(text)
 
             if not (text.start <= line_ctr.char_pos <= text.end):
                 raise ValueError("LineCounter.char_pos is out of bounds")
@@ -484,6 +526,10 @@ class Lexer(ABC):
     @abstractmethod
     def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         return NotImplemented
+
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
+        raise ConfigurationError("scan() is not supported by %s; use the built-in 'basic' or 'contextual' lexer"
+                                 % type(self).__name__)
 
     def make_lexer_state(self, text: str):
         "Deprecated"
@@ -588,6 +634,7 @@ class BasicLexer(AbstractBasicLexer):
         self.terminals_by_name = conf.terminals_by_name
 
         self._scanner: Optional[Scanner] = None
+        self._search_scanner: Optional[Scanner] = None
 
     def _build_scanner(self) -> Scanner:
         terminals, self.callback = _create_unless(self.terminals, self.g_regex_flags, self.re, self.use_bytes)
@@ -607,6 +654,16 @@ class BasicLexer(AbstractBasicLexer):
         if self._scanner is None:
             self._scanner = self._build_scanner()
         return self._scanner
+
+    @property
+    def search_scanner(self) -> Scanner:
+        # Used by search_start(): a match can only begin with a non-ignored terminal, so we
+        # search those directly. Searching all terminals and skipping ignores would jump past
+        # a real start hiding inside an ignore's span (e.g. the "a" in an ignored "xxa").
+        if self._search_scanner is None:
+            terminals = [t for t in self.terminals if t.name not in self.ignore_types]
+            self._search_scanner = Scanner(terminals, self.g_regex_flags, self.re, self.use_bytes)
+        return self._search_scanner
 
     def match(self, text, pos):
         return self.scanner.match(text, pos)
@@ -644,6 +701,9 @@ class BasicLexer(AbstractBasicLexer):
 
         # EOF
         raise EOFError(self)
+
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
+        return self.search_scanner.search(text, pos)
 
 
 class ContextualLexer(Lexer):
@@ -698,5 +758,8 @@ class ContextualLexer(Lexer):
                 raise UnexpectedToken(token, e.allowed, state=parser_state, token_history=[last_token], terminals_by_name=self.root_lexer.terminals_by_name)
             except UnexpectedCharacters:
                 raise e  # Raise the original UnexpectedCharacters. The root lexer raises it with the wrong expected set.
+
+    def search_start(self, text: TextSlice, start_state: Any, pos: int) -> Optional[int]:
+        return self.lexers[start_state].search_start(text, start_state, pos)
 
 ###}

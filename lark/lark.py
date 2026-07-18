@@ -89,8 +89,8 @@ class LarkOptions(Serialize):
             Applies the transformer to every parse tree (equivalent to applying it after the parse, but faster)
     propagate_positions
             Propagates positional attributes into the 'meta' attribute of all tree branches.
-            Sets attributes: (line, column, end_line, end_column, start_pos, end_pos,
-                              container_line, container_column, container_end_line, container_end_column)
+            Sets attributes: line, column, end_line, end_column, start_pos, end_pos,
+            container_line, container_column, container_end_line, container_end_column
             Accepts ``False``, ``True``, or a callable, which will filter which nodes to ignore when propagating.
     maybe_placeholders
             When ``True``, the ``[]`` operator returns ``None`` when not matched.
@@ -154,6 +154,7 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
+
     **=== End of Options ===**
     """
     if __doc__:

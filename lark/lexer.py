@@ -642,8 +642,13 @@ class BasicLexer(AbstractBasicLexer):
 
         for type_, f in self.user_callbacks.items():
             if type_ in self.callback:
-                # Already a callback there, probably UnlessCallback
-                self.callback[type_] = CallChain(self.callback[type_], f, lambda t: t.type == type_)
+                # Already a callback there, probably UnlessCallback.
+                # Bind ``type_`` per iteration; otherwise every CallChain's
+                # condition closes over the loop variable and checks the last
+                # terminal's name, silently skipping the other callbacks.
+                self.callback[type_] = CallChain(
+                    self.callback[type_], f, lambda t, type_=type_: t.type == type_
+                )
             else:
                 self.callback[type_] = f
 

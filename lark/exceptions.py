@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from .tree import Tree
 
 ###{standalone
+import unicodedata
+
 
 class LarkError(Exception):
     pass
@@ -20,6 +22,11 @@ def assert_config(value, options: Collection, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 
+def _display_width(s):
+    width = 0
+    for ch in s:
+        width += 2 if unicodedata.east_asian_width(ch) in ('F', 'W') else 1
+    return width
 
 class GrammarError(LarkError):
     pass
@@ -66,7 +73,7 @@ class UnexpectedInput(LarkError):
         if not isinstance(text, bytes):
             before = text[start:pos].rsplit('\n', 1)[-1]
             after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before.expandtabs()) + '^\n'
+            return before + after + '\n' + ' ' * _display_width(before.expandtabs()) + '^\n'
         else:
             before = text[start:pos].rsplit(b'\n', 1)[-1]
             after = text[pos:end].split(b'\n', 1)[0]

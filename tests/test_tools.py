@@ -51,6 +51,30 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
 
+    def test_error_context(self):
+        grammar = r"""
+            start: /\d+/ "X"
+            %ignore " "
+        """
+
+        context = self._create_standalone(grammar)
+        l = context['Lark_StandAlone']()
+
+        try:
+            l.parse('12 $')
+        except context['UnexpectedCharacters'] as e:
+            self.assertIn('^', e.get_context('12 $'))
+            self.assertIn('^', str(e))
+        else:
+            self.fail('Expected UnexpectedCharacters')
+
+        try:
+            l.parse('12 13')
+        except context['UnexpectedToken'] as e:
+            self.assertIn('^', e.get_context('12 13'))
+        else:
+            self.fail('Expected UnexpectedToken')
+
     def test_interactive(self):
         grammar = """
                 start: A+ B*

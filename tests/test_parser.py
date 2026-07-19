@@ -78,6 +78,22 @@ class TestParsers(unittest.TestCase):
         # l = Lark(g, parser='earley', lexer='dynamic')
         # self.assertRaises(ParseError, l.parse, 'a')
 
+    def test_reduce_reduce_collision(self):
+        # Two rules matching the same input, with no priority to tell them apart.
+        # Unlike test_infinite_recurse, this grammar isn't cyclic, so it reaches
+        # the LALR table construction rather than being rejected before it.
+        g = """start: a | b
+               a: "x"
+               b: "x"
+            """
+
+        with self.assertRaises(GrammarError) as cm:
+            Lark(g, parser='lalr')
+        self.assertIn('Reduce/Reduce collision', str(cm.exception))
+
+        # A priority on one of them resolves the collision.
+        Lark(g.replace('a: "x"', 'a.2: "x"'), parser='lalr')
+
     def test_propagate_positions(self):
         g = Lark("""start: a
                     a: "a"

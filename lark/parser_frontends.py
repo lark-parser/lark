@@ -342,7 +342,7 @@ def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options
 
 class CYK_FrontEnd:
     def __init__(self, lexer_conf, parser_conf, options=None):
-        self.parser = cyk.Parser(parser_conf.rules)
+        self.parser = cyk.Parser(parser_conf.rules, parser_conf.start)
 
         self.callbacks = parser_conf.callbacks
 

@@ -310,23 +310,26 @@ class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
             if isinstance(x, Tree):
                 size = len(x.children)
                 if size:
-                    args = stack[-size:]
+                    args = [a for a in stack[-size:] if a is not Discard]
                     del stack[-size:]
                 else:
                     args = []
 
                 res = self._call_userfunc(x, args)
-                if res is not Discard:
-                    stack.append(res)
+                # Push discarded results too, as placeholders, so that a parent's
+                # ``stack[-len(children):]`` slice stays aligned with its children
+                # even when some of them were discarded (they are filtered above).
+                stack.append(res)
 
             elif self.__visit_tokens__ and isinstance(x, Token):
                 res = self._call_userfunc_token(x)
-                if res is not Discard:
-                    stack.append(res)
+                stack.append(res)
             else:
                 stack.append(x)
 
         result, = stack  # We should have only one tree remaining
+        if result is Discard:  # the whole tree was discarded
+            return None  # type: ignore[return-value]
         # There are no guarantees on the type of the value produced by calling a user func for a
         # child will produce. This means type system can't statically know that the final result is
         # _Return_T. As a result a cast is required.

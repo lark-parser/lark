@@ -350,6 +350,13 @@ class TestGrammar(TestCase):
         Lark('start: e\ne: e "+" t | t\nt: "a"', parser='lalr')
         Lark('start: "a"*', parser='lalr')
 
+        # A cycle the parser can never enter is harmless, so it isn't rejected.
+        Lark('start: "x"\na: b\nb: a', parser='lalr')
+
+        # ...but it is rejected once some start symbol can reach it.
+        self.assertRaises(GrammarError, Lark, 'start: "x"\na: b\nb: a',
+                          parser='lalr', start=['start', 'a'])
+
 
 if __name__ == '__main__':
     main()

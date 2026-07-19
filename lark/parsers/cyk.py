@@ -80,10 +80,10 @@ class RuleNode:
 class Parser:
     """Parser wrapper."""
 
-    def __init__(self, rules):
+    def __init__(self, rules, start):
         super(Parser, self).__init__()
         _, _, nullable = calculate_sets(rules)
-        check_cyclic_grammar(rules, nullable)
+        check_cyclic_grammar(rules, nullable, start)
         self.orig_rules = {rule: rule for rule in rules}
         rules = [self._to_rule(rule) for rule in rules]
         self.grammar = to_cnf(Grammar(rules))

@@ -326,6 +326,8 @@ class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
             else:
                 stack.append(x)
 
+        if not stack:
+            return None     # type: ignore[return-value]
         result, = stack  # We should have only one tree remaining
         # There are no guarantees on the type of the value produced by calling a user func for a
         # child will produce. This means type system can't statically know that the final result is

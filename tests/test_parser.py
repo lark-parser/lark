@@ -1337,6 +1337,18 @@ def _make_parser_test(LEXER, PARSER):
                 s = j.encode(enc)
                 self.assertRaises(UnexpectedCharacters, g.parse, s)
 
+        def test_bytes_token_as_str(self):
+            # With use_bytes=True the token value is bytes, so float(token)
+            # or str ops that work under use_bytes=False fail. as_str() decodes
+            # it, letting a callback do float(token.as_str()) either way. (#1526)
+            g = _Lark(r"""start: NUMBER
+                          NUMBER: /[0-9]+/
+                       """, use_bytes=True)
+            num, = g.parse(b"42").children
+            self.assertEqual(num.value, b"42")
+            self.assertEqual(num.as_str(), "42")
+            self.assertEqual(float(num.as_str()), 42.0)
+
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
             """Verify that stack depth isn't an issue for EBNF grammars"""

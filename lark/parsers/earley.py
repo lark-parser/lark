@@ -18,7 +18,7 @@ from ..exceptions import UnexpectedEOF, UnexpectedToken
 from ..utils import logger, OrderedSet, dedup_list
 from .grammar_analysis import GrammarAnalyzer
 from ..grammar import NonTerminal
-from .earley_common import Item
+from .earley_common import Item, TransitiveItem
 from .earley_forest import ForestSumVisitor, SymbolNode, StableSymbolNode, TokenNode, ForestToParseTree
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ class Parser:
         self.term_matcher = term_matcher
 
 
-    def predict_and_complete(self, i, to_scan, columns, transitives, node_cache):
+    def predict_and_complete(self, i, to_scan, columns, transitives, node_cache, start_symbol=None):
         """The core Earley Predictor and Completer.
 
         At each stage of the input, we handling any completed items (things
@@ -85,6 +85,70 @@ class Parser:
         which can be added to the scan list for the next scanner cycle."""
         # Held Completions (H in E.Scotts paper).
         held_completions = {}
+
+        def is_quasi_complete(item):
+            quasi = item.advance()
+            while not quasi.is_complete:
+                if quasi.expect not in self.NULLABLE:
+                    return False
+                if quasi.rule.origin == start_symbol and quasi.expect == start_symbol:
+                    return False
+                quasi = quasi.advance()
+            return True
+
+        def create_leo_transitives(origin, start):
+            visited = set()
+            to_create = []
+            trule = None
+            previous = None
+
+            ### Recursively walk backwards through the Earley sets until we find the
+            #   first transitive candidate. If this is done continuously, we shouldn't
+            #   have to walk more than 1 hop.
+            while True:
+                if origin in transitives[start]:
+                    previous = trule = transitives[start][origin]
+                    break
+
+                if not self.FIRST[origin]:
+                    break
+
+                if origin in self.NULLABLE:
+                    break
+
+                candidates = [c for c in columns[start] if c.expect is not None and c.expect == origin]
+                if len(candidates) != 1:
+                    break
+                originator = candidates[0]
+
+                if originator in visited:
+                    break
+
+                visited.add(originator)
+                if not is_quasi_complete(originator):
+                    break
+
+                trule = originator.advance()
+                if originator.start != start:
+                    visited.clear()
+
+                to_create.append((origin, start, originator))
+                origin = originator.rule.origin
+                start = originator.start
+
+            # If a suitable Transitive candidate is not found, bail.
+            if trule is None:
+                return
+
+            ### Now walk forwards and create Transitive Items in each set we walked through;
+            #   and link each transitive item to the next set forwards.
+            while to_create:
+                origin, start, originator = to_create.pop()
+                if previous is not None:
+                    titem = previous.next_titem = TransitiveItem(origin, trule, originator, previous.column)
+                else:
+                    titem = TransitiveItem(origin, trule, originator, start)
+                previous = transitives[start][origin] = titem
 
         column = columns[i]
         # R (items) = Ei (column.items)
@@ -99,24 +163,23 @@ class Parser:
                     item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     item.node.add_family(item.s, item.rule, item.start, None, None)
 
-                # create_leo_transitives(item.rule.origin, item.start)
+                create_leo_transitives(item.rule.origin, item.start)
 
                 ###R Joop Leo right recursion Completer
                 if item.rule.origin in transitives[item.start]:
-                    transitive = transitives[item.start][item.s]
-                    if transitive.previous in transitives[transitive.column]:
-                        root_transitive = transitives[transitive.column][transitive.previous]
-                    else:
-                        root_transitive = transitive
+                    transitive = transitives[item.start][item.rule.origin]
+                    # Every titem is inserted into transitives[col][previous],
+                    # so this lookup always finds the chain's root (or transitive
+                    # itself when it is the root).
+                    root_transitive = transitives[transitive.column][transitive.previous]
 
                     new_item = Item(transitive.rule, transitive.ptr, transitive.start)
                     label = (root_transitive.s, root_transitive.start, i)
                     new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
                     new_item.node.add_path(root_transitive, item.node)
-                    if new_item.expect in self.TERMINALS:
-                        # Add (B :: aC.B, h, y) to Q
-                        to_scan.add(new_item)
-                    elif new_item not in column:
+                    # new_item.expect cannot be a terminal: is_quasi_complete
+                    # required the post-recursion suffix to be all-nullable.
+                    if new_item not in column:
                         # Add (B :: aC.B, h, y) to Ei and R
                         column.add(new_item)
                         items.append(new_item)
@@ -127,8 +190,7 @@ class Parser:
                     # any predictions that result, that themselves require empty. Avoids
                     # infinite recursion on empty symbols.
                     # held_completions is 'H' in E.Scott's paper.
-                    is_empty_item = item.start == i
-                    if is_empty_item:
+                    if item.start == i:
                         held_completions[item.rule.origin] = item.node
 
                     originators = [originator for originator in columns[item.start] if originator.expect is not None and originator.expect == item.s]
@@ -168,22 +230,6 @@ class Parser:
                         items.append(new_item)
 
     def _parse(self, lexer, columns, to_scan, start_symbol=None):
-
-        def is_quasi_complete(item):
-            if item.is_complete:
-                return True
-
-            quasi = item.advance()
-            while not quasi.is_complete:
-                if quasi.expect not in self.NULLABLE:
-                    return False
-                if quasi.rule.origin == start_symbol and quasi.expect == start_symbol:
-                    return False
-                quasi = quasi.advance()
-            return True
-
-        # def create_leo_transitives(origin, start):
-        #   ...   # removed at commit 4c1cfb2faf24e8f8bff7112627a00b94d261b420
 
         def scan(i, token, to_scan):
             """The core Earley Scanner.
@@ -246,7 +292,7 @@ class Parser:
         i = 0
         node_cache = {}
         for token in lexer.lex(expects):
-            self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+            self.predict_and_complete(i, to_scan, columns, transitives, node_cache, start_symbol)
 
             to_scan, node_cache = scan(i, token, to_scan)
             i += 1
@@ -254,7 +300,7 @@ class Parser:
             expects.clear()
             expects |= {i.expect for i in to_scan}
 
-        self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+        self.predict_and_complete(i, to_scan, columns, transitives, node_cache, start_symbol)
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1

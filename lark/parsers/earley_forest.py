@@ -67,13 +67,27 @@ class SymbolNode(ForestNode):
         self.paths.add((transitive, node))
 
     def load_paths(self):
+        # Share canonical intermediate symbol nodes across multi-hop Leo chains:
+        # SPPF identity is (s, start, end), so any path whose node matches the
+        # expected intermediate's label is reused as the canonical node, and other
+        # paths targeting the same label merge into it via add_path.
+        node_cache = {(node.s, node.start, node.end): node for (_, node) in self.paths}
         for transitive, node in self.paths:
+            next_node = node
             if transitive.next_titem is not None:
-                vn = type(self)(transitive.next_titem.s, transitive.next_titem.start, self.end)
-                vn.add_path(transitive.next_titem, node)
-                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, vn)
-            else:
-                self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule, transitive.reduction.start, transitive.reduction.node, node)
+                label = (transitive.next_titem.reduction.rule.origin,
+                         transitive.next_titem.reduction.start,
+                         self.end)
+                if label != (node.s, node.start, node.end):
+                    if label in node_cache:
+                        # Canonical already added as right-side by an earlier path; just merge.
+                        node_cache[label].add_path(transitive.next_titem, node)
+                        continue
+                    next_node = node_cache[label] = type(self)(*label)
+                    next_node.add_path(transitive.next_titem, node)
+
+            self.add_family(transitive.reduction.rule.origin, transitive.reduction.rule,
+                            transitive.reduction.start, transitive.reduction.node, next_node)
         self.paths_loaded = True
 
     @property

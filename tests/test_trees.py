@@ -435,6 +435,23 @@ class TestTrees(TestCase):
             result = T().transform(tree)
             self.assertIsNone(result)
 
+    def test_transformer_variants_discard_with_preceding_sibling(self):
+        # A discarded node whose parent is preceded by another subtree must not
+        # corrupt the tree. Transformer_NonRecursive used to mis-slice its stack
+        # here and steal `keep` into `wrap` (dropping it from `start`).
+        tree = Tree('start', [
+            Tree('keep', [Token('T', 'x')]),
+            Tree('wrap', [Tree('drop', [])]),
+            ])
+        expected = Tree('start', [Tree('keep', [Token('T', 'x')]), Tree('wrap', [])])
+        for base in (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive):
+            class T(base):
+                def drop(self, children):
+                    return Discard
+
+            result = T().transform(copy.deepcopy(tree))
+            self.assertEqual(result, expected)
+
     def test_merge_transformers(self):
         tree = Tree('start', [
             Tree('main', [

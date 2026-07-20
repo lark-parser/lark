@@ -57,7 +57,7 @@ class WriteTokensTransformer(Transformer_InPlace):
                     else:
                         name, _args = parse_rulename(sym.name)
                         assert x.data == name, (sym, x)
-                        x.meta.original_rulename = sym.name
+                        x.meta.orig_rulename = sym.name
                     to_write.append(x)
 
         assert is_iter_empty(iter_args)
@@ -84,13 +84,13 @@ class Reconstructor(TreeMatcher):
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
 
-    def _reconstruct(self, tree, original_rulename=None):
-        unreduced_tree = self.match_tree(tree, original_rulename or tree.data)
+    def _reconstruct(self, tree, orig_rulename=None):
+        unreduced_tree = self.match_tree(tree, orig_rulename or tree.data)
 
         res = self.write_tokens.transform(unreduced_tree)
         for item in res:
             if isinstance(item, Tree):
-                child_rulename = getattr(item.meta, "original_rulename", None)
+                child_rulename = getattr(item.meta, "orig_rulename", None)
                 yield from self._reconstruct(item, child_rulename)
             else:
                 yield item

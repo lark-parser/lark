@@ -204,3 +204,44 @@ the `Indenter` class. Take a look at the [indented tree example][indent] as well
 
 [indent]: examples/indented_tree.html
 [python]: https://github.com/lark-parser/lark/blob/master/lark/grammars/python.lark
+
+
+## Extract grammar matches from arbitrary text with `Lark.scan`
+
+Sometimes parsing the entire document isn't feasible. The scan method
+lets you find every instance of a grammar that appears inside arbitrary text.
+Things like dates in prose, JSON payloads in log lines, or configuration placeholders
+in templates.
+
+`Lark.scan()` walks the input from left to right, yielding a match per snippet that matches your grammar.
+Text that doesn't match is silently skipped.
+
+Example:
+```python
+from lark import Lark
+
+parser = Lark(r"""
+    date: MONTH DAY "," YEAR
+    MONTH: "January"|"February"|"March"|"April"|"May"|"June"
+         |"July"|"August"|"September"|"October"|"November"|"December"
+    DAY: /\d+/
+    YEAR: /\d+/
+    %ignore /\s+/
+""", parser="lalr", start="date")
+
+text = "Python 0.9.0 was released on February 20, 1991, and 1.0 on January 26, 1994."
+
+for match in parser.scan(text):
+    print("Found:", match)
+```
+
+Prints:
+
+```
+Found: ScanMatch(range=(29, 46), value=Tree(Token('RULE', 'date'), [Token('MONTH', 'February'), Token('DAY', '20'), Token('YEAR', '1991')]))
+Found: ScanMatch(range=(59, 75), value=Tree(Token('RULE', 'date'), [Token('MONTH', 'January'), Token('DAY', '26'), Token('YEAR', '1994')]))
+```
+
+For an example scanning text for JSON, see [`examples/advanced/scan_json.py`][scan_json].
+
+[scan_json]: examples/advanced/scan_json.html

@@ -45,8 +45,8 @@ class Tree(Generic[_Leaf_T]):
         data: The name of the rule or alias
         children: List of matched sub-rules and terminals
         meta: Line & Column numbers (if ``propagate_positions`` is enabled).
-            meta attributes: (line, column, end_line, end_column, start_pos, end_pos,
-                              container_line, container_column, container_end_line, container_end_column)
+            Attributes: line, column, end_line, end_column, start_pos, end_pos,
+            container_line, container_column, container_end_line, container_end_column.
             container_* attributes consider all symbols, including those that have been inlined in the tree.
             For example, in the rule 'a: _A B _C', the regular attributes will mark the start and end of B,
             but the container_* attributes will also include _A and _C in the range. However, rules that

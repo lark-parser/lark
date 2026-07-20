@@ -26,7 +26,7 @@ import lark
 from lark import logger
 from lark.lark import Lark
 from lark.utils import TextSlice
-from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters, ConfigurationError
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
 from lark.lexer import Lexer, BasicLexer
@@ -2839,6 +2839,18 @@ def _make_parser_test(LEXER, PARSER):
             parser = _Lark("start: ")
             s = TextSlice("hello", 2, 3)
             self.assertRaises(TypeError, parser.parse, s)
+
+        @unittest.skipIf(PARSER != 'lalr', "scan() only supports the LALR parser")
+        def test_scan_lexer_support(self):
+            # scan() works with the built-in lexers, but rejects custom lexers, which
+            # don't implement search_start().
+            parser = _Lark('start: "a"+')
+            if LEXER.startswith('custom'):
+                with self.assertRaises(ConfigurationError):
+                    list(parser.scan("aa"))
+            else:
+                m, = parser.scan("aa")
+                self.assertEqual((m.range, m.value), ((0, 2), Tree('start', [])))
 
 
     _NAME = "Test" + PARSER.capitalize() + LEXER.capitalize()

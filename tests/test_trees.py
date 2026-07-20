@@ -38,6 +38,15 @@ class TestTrees(TestCase):
         data = pickle.dumps(s, protocol=pickle.HIGHEST_PROTOCOL)
         assert pickle.loads(data) == s
 
+    def test_token_deepcopy_and_pickle_preserve_positions(self):
+        # Token.__eq__ ignores positions, so a copy that drops end_line/end_column/end_pos
+        # would still compare equal. Assert the positions survive deepcopy and pickling.
+        t = Token('A', 'abc', start_pos=10, line=1, column=3, end_line=2, end_column=6, end_pos=13)
+        copies = [copy.deepcopy(t), pickle.loads(pickle.dumps(t, protocol=pickle.HIGHEST_PROTOCOL))]
+        for t2 in copies:
+            self.assertEqual((t2.start_pos, t2.line, t2.column), (10, 1, 3))
+            self.assertEqual((t2.end_line, t2.end_column, t2.end_pos), (2, 6, 13))
+
     def test_repr_runnable(self):
         assert self.tree1 == eval(repr(self.tree1))
 
@@ -414,6 +423,17 @@ class TestTrees(TestCase):
             copied = copy.deepcopy(tree)
             result = T().transform(copied)
             self.assertEqual(result, Tree('start', [3, 7]))
+
+    def test_transformer_discard_root(self):
+        """Transformer_NonRecursive should return None (not crash) when the root node is discarded."""
+        for base in (Transformer, Transformer_NonRecursive):
+            class T(base):
+                def start(self, children):
+                    return Discard
+
+            tree = Tree('start', [Token('A', 'x')])
+            result = T().transform(tree)
+            self.assertIsNone(result)
 
     def test_merge_transformers(self):
         tree = Tree('start', [

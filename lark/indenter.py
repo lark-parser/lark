@@ -18,13 +18,9 @@ class Indenter(PostLex, ABC):
     It keeps track of the current indentation, as well as the current level of parentheses.
     Inside parentheses, the indentation is ignored, and no indent/dedent tokens get generated.
 
-    Note: This is an abstract class. To use it, inherit and implement all its abstract methods:
-        - tab_len
-        - NL_type
-        - OPEN_PAREN_types, CLOSE_PAREN_types
-        - INDENT_type, DEDENT_type
+    Note: This is an abstract class. To use it, inherit and implement all its abstract properties.
 
-    See also: the ``postlex`` option in `Lark`.
+    See also: the ``postlex`` option in :class:`lark.Lark`, and the :doc:`/examples/indented_tree` example.
     """
     paren_level: int
     indent_level: List[int]
@@ -108,7 +104,7 @@ class Indenter(PostLex, ABC):
     def INDENT_type(self) -> str:
         """The name of the token that starts an indentation in the grammar.
 
-        See also: %declare
+        See also: `%declare <grammar.html#declare>`_
         """
         raise NotImplementedError()
 
@@ -117,7 +113,7 @@ class Indenter(PostLex, ABC):
     def DEDENT_type(self) -> str:
         """The name of the token that end an indentation in the grammar.
 
-        See also: %declare
+        See also: `%declare <grammar.html#declare>`_
         """
         raise NotImplementedError()
 
@@ -129,9 +125,10 @@ class Indenter(PostLex, ABC):
 
 
 class PythonIndenter(Indenter):
-    """A postlexer that "injects" _INDENT/_DEDENT tokens based on indentation, according to the Python syntax.
+    """A postlexer that "injects" _INDENT/_DEDENT tokens based on indentation, according to the
+    `Python syntax <https://docs.python.org/3/reference/lexical_analysis.html#indentation>`_.
 
-    See also: the ``postlex`` option in `Lark`.
+    See also: the ``postlex`` option in :class:`lark.Lark`.
     """
 
     NL_type = '_NEWLINE'

@@ -95,6 +95,7 @@ Indenter
 --------
 
 .. autoclass:: lark.indenter.Indenter
+   :members: NL_type, OPEN_PAREN_types, CLOSE_PAREN_types, INDENT_type, DEDENT_type, tab_len
 .. autoclass:: lark.indenter.PythonIndenter
 
 TextSlice

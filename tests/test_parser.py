@@ -2770,6 +2770,34 @@ def _make_parser_test(LEXER, PARSER):
             b = parser.parse(s)
             assert a == b
 
+        @unittest.skipIf(PARSER != 'lalr', "Embedded token callbacks are only applied by the lalr parser")
+        def test_default_token_in_treeless_mode(self):
+            # Regression test for issue #1582: an embedded transformer did not
+            # call __default_token__ on tokens, unlike Transformer.transform().
+            grammar = r"""
+                start: expr
+
+                expr: A B
+                    | A expr B
+
+                A: "a"
+                B: "b"
+
+                %import common.WS
+                %ignore WS
+            """
+            s = 'a a a b b b'
+
+            class AbTransformer(Transformer):
+                def __default_token__(self, token):
+                    return token.update(value=str(token).upper())
+
+            parser = _Lark(grammar)
+            a = AbTransformer().transform(parser.parse(s))
+            parser = _Lark(grammar, transformer=AbTransformer())
+            b = parser.parse(s)
+            assert a == b
+
         @unittest.skipIf(PARSER != 'lalr', "strict mode is only supported in lalr for now")
         def test_strict(self):
             # Test regex collision

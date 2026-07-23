@@ -8,6 +8,7 @@ from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
+from .visitors import Transformer
 
 if TYPE_CHECKING:
     from .parsers.lalr_analysis import ParseTableBase
@@ -249,8 +250,15 @@ def _validate_frontend_args(parser, lexer) -> None:
 
 def _get_lexer_callbacks(transformer, terminals):
     result = {}
+    # Tokens without a dedicated transformer method fall back to
+    # __default_token__, mirroring Transformer.transform(). The base
+    # implementation is a no-op, so it's only wired up when overridden,
+    # to avoid a needless call per token (see issue #1582).
+    default_token = getattr(transformer, '__default_token__', None)
+    if getattr(type(transformer), '__default_token__', None) is Transformer.__default_token__:
+        default_token = None
     for terminal in terminals:
-        callback = getattr(transformer, terminal.name, None)
+        callback = getattr(transformer, terminal.name, default_token)
         if callback is not None:
             result[terminal.name] = callback
     return result

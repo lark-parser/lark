@@ -305,6 +305,33 @@ try:
 except ImportError:
     _has_atomicwrites = False
 
+
+def _open_private(name, mode, **kwargs):
+    """Like open(), but refuses to follow a symlink, refuses a file that belongs to
+    another user, and keeps the file readable only by its owner.
+
+    The parser cache is stored in a shared temporary directory under a name that is
+    derived from the grammar, so another user on the same machine can predict it and
+    get there first.
+    """
+    if "w" in mode:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    else:
+        flags = os.O_RDONLY
+    if "b" in mode:
+        flags |= getattr(os, "O_BINARY", 0)
+    fd = os.open(name, flags | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        if hasattr(os, "geteuid") and os.fstat(fd).st_uid != os.geteuid():
+            raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+        if "w" in mode and hasattr(os, "fchmod"):
+            os.fchmod(fd, 0o600)
+        return os.fdopen(fd, mode, **kwargs)
+    except Exception:
+        os.close(fd)
+        raise
+
+
 class FS:
     exists = staticmethod(os.path.exists)
 
@@ -313,7 +340,7 @@ class FS:
         if _has_atomicwrites and "w" in mode:
             return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
         else:
-            return open(name, mode, **kwargs)
+            return _open_private(name, mode, **kwargs)
 
 
 class fzset(frozenset):

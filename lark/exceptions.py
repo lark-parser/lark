@@ -20,22 +20,24 @@ class ConfigurationError(LarkError, ValueError):
 def assert_config(value, options: Collection, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
+
+
 def _padding_for(before):
     col = 0
     result = []
     for ch in before:
         if ch == '\t':
-           spaces = 8 - (col % 8)
-           result.append(' ' * spaces)
-           col += spaces
+            spaces = 8 - (col % 8)
+            result.append(' ' * spaces)
+            col += spaces
         else:
-           if unicodedata.east_asian_width(ch) in ('W' ,'F') 
-               result.append('\u3000')
-               col += 2
-        else:   
-             result.append(' ')
-             col += 1
-    return ''.join(result)   
+            if unicodedata.east_asian_width(ch) in ('W', 'F'):
+                result.append('\u3000')
+                col += 2
+            else:
+                result.append(' ')
+                col += 1
+    return ''.join(result)
     
 
 

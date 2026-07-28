@@ -2484,7 +2484,32 @@ def _make_parser_test(LEXER, PARSER):
 
             p = _Lark(r"""!start: "a" ["b" | "c" "d"] """, maybe_placeholders=True)
             self.assertEqual(p.parse("a").children, ['a', None, None])
-            # self.assertEqual(p.parse("ab").children, ['a', 'b', None])        # Not implemented; current behavior is incorrect
+            self.assertEqual(p.parse("ab").children, ['a', 'b', None])
+            self.assertEqual(p.parse("acd").children, ['a', 'c', 'd'])
+
+            # Shorter branches of an optional alternation pad to the widest branch (#1078)
+            p = _Lark(r"""!start: "a" ["b" | "c" "d" | "e" "f" "g"] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("a").children, ['a', None, None, None])
+            self.assertEqual(p.parse("ab").children, ['a', 'b', None, None])
+            self.assertEqual(p.parse("acd").children, ['a', 'c', 'd', None])
+            self.assertEqual(p.parse("aefg").children, ['a', 'e', 'f', 'g'])
+
+            # The optional keeps fixed arity regardless of where the alternation sits
+            p = _Lark(r"""!start: ["a" | "b" "c"] "z" """, maybe_placeholders=True)
+            self.assertEqual(p.parse("z").children, [None, None, 'z'])
+            self.assertEqual(p.parse("az").children, ['a', None, 'z'])
+            self.assertEqual(p.parse("bcz").children, ['b', 'c', 'z'])
+
+            # Alternation nested in a group inside the optional pads too
+            p = _Lark(r"""!start: [ ("a" | "b" "c") "d" ] """, maybe_placeholders=True)
+            self.assertEqual(p.parse("").children, [None, None, None])
+            self.assertEqual(p.parse("ad").children, ['a', None, 'd'])
+            self.assertEqual(p.parse("bcd").children, ['b', 'c', 'd'])
+
+            # maybe_placeholders=False stays unpadded (arity varies, no None inserted)
+            p = _Lark(r"""!start: "a" ["b" | "c" "d"] """, maybe_placeholders=False)
+            self.assertEqual(p.parse("a").children, ['a'])
+            self.assertEqual(p.parse("ab").children, ['a', 'b'])
             self.assertEqual(p.parse("acd").children, ['a', 'c', 'd'])
 
 

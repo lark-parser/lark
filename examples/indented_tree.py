@@ -3,7 +3,7 @@ Parsing Indentation
 ===================
 
 A demonstration of parsing indentation (“whitespace significant” language)
-and the usage of the ``Indenter`` class.
+and the usage of :class:`lark.indenter.Indenter`.
 
 Since indentation is context-sensitive, a postlex stage is introduced to
 manufacture ``INDENT``/``DEDENT`` tokens.

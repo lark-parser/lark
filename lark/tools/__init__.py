@@ -20,7 +20,8 @@ flags = [
     'regex',
     'propagate_positions',
     'maybe_placeholders',
-    'use_bytes'
+    'use_bytes',
+    'allow_cyclic_rules',
 ]
 
 options = ['start', 'lexer']

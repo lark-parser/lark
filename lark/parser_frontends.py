@@ -280,8 +280,9 @@ def create_contextual_lexer(lexer_conf: LexerConf, parser, postlex, options) -> 
 def create_lalr_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options=None) -> LALR_Parser:
     debug = options.debug if options else False
     strict = options.strict if options else False
+    allow_cyclic_rules = options.allow_cyclic_rules if options else False
     cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
-    return cls(parser_conf, debug=debug, strict=strict)
+    return cls(parser_conf, debug=debug, strict=strict, allow_cyclic_rules=allow_cyclic_rules)
 
 _parser_creators['lalr'] = create_lalr_parser
 

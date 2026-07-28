@@ -140,13 +140,17 @@ def calculate_sets(rules):
 def check_cyclic_grammar(rules, nullable, start):
     """Raise GrammarError if a non-terminal can derive itself without consuming input.
 
-    A grammar is cyclic when some rule allows ``A => A`` (directly, or through other
-    symbols that are all nullable), e.g. ``a: a b*`` where ``b*`` may be empty. Such a
-    rule has no base case to terminate on, so the LALR and CYK parsers loop forever on
-    it (Earley merely produces an arbitrary parse). Reject it at build time instead.
+    A grammar is cyclic when some rule allows ``A => A`` (directly, or indirectly)
+    e.g. ``a: a b*`` where ``b*`` may be empty.
+    This affects both LALR at run-time, and CYK at build-time.
 
+    This function exists for finding the cycles at build-time.
     Only rules reachable from a start symbol are checked. A cycle the parser can never
     enter is harmless, and rejecting it would break grammars that work today.
+
+    Note: Some cyclical grammars may still work in LALR due to its conflict resolution.
+
+    Returns the set of reachable non-terminals, so callers can reuse it.
     """
     rules_by_origin = classify(rules, lambda r: r.origin)
     expand = lambda sym: [s for rule in rules_by_origin.get(sym, ())
@@ -173,6 +177,8 @@ def check_cyclic_grammar(rules, nullable, start):
             raise GrammarError("Rule '%s' is cyclic: it can derive itself without consuming "
                                "any input, and would never terminate. (reachable from '%s')"
                                % (origin.name, reachable[origin]))
+
+    return set(reachable)
 
 
 class GrammarAnalyzer:

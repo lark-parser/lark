@@ -83,7 +83,10 @@ class Parser:
     def __init__(self, rules, start):
         super(Parser, self).__init__()
         _, _, nullable = calculate_sets(rules)
-        check_cyclic_grammar(rules, nullable, start)
+        reachable = check_cyclic_grammar(rules, nullable, start)
+        # Unreachable rules can never take part in a parse, but they would still
+        # go through CNF conversion, which loops forever on unreachable cycles.
+        rules = [rule for rule in rules if rule.origin in reachable]
         self.orig_rules = {rule: rule for rule in rules}
         rules = [self._to_rule(rule) for rule in rules]
         self.grammar = to_cnf(Grammar(rules))

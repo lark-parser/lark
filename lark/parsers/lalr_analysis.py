@@ -154,9 +154,10 @@ class LALR_Analyzer(GrammarAnalyzer):
     directly_reads: Dict[Tuple[LR0ItemSet, Symbol], Set[Symbol]]
 
 
-    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
+    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False, allow_cyclic_rules: bool=False):
         GrammarAnalyzer.__init__(self, parser_conf, debug, strict)
-        check_cyclic_grammar(parser_conf.rules, self.NULLABLE, parser_conf.start)
+        if not allow_cyclic_rules:
+            check_cyclic_grammar(parser_conf.rules, self.NULLABLE, parser_conf.start)
         self.nonterminal_transitions = []
         self.directly_reads = defaultdict(set)
         self.reads = defaultdict(set)

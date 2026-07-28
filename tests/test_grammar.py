@@ -336,12 +336,27 @@ class TestGrammar(TestCase):
 
     def test_cyclic_rule(self):
         # A rule that can derive itself without consuming any input makes the
-        # LALR and CYK parsers loop forever. Reject such grammars at build time
-        # with a clear error instead of hanging (issue #1585).
+        # grammar infinitely ambiguous: CYK loops forever on it, and LALR either
+        # loops at parse time or resolves the cycle away as dead code. Reject
+        # such grammars at build time with a clear error (issue #1585).
         self.assertRaises(GrammarError, Lark, 'start.1: "a" | start start*', parser='lalr')
         self.assertRaises(GrammarError, Lark, 'start: x\nx.1: "a" | x x*', parser='lalr')
         self.assertRaises(GrammarError, Lark, 'start: a\na: b\nb: a | "x"', parser='lalr')
         self.assertRaises(GrammarError, Lark, 'start.1: "a" | start start*', parser='cyk')
+
+        # Also rejected when conflict resolution used to leave the cycle as dead
+        # code (these built and parsed on earlier versions): the cyclic
+        # alternative can never contribute a parse, so it is surely a mistake.
+        self.assertRaises(GrammarError, Lark, 'start: "x" | start', parser='lalr')
+        self.assertRaises(GrammarError, Lark, 'start: a\na: start | "x"', parser='lalr')
+
+        # allow_cyclic_rules disables the rejection, for backwards compatibility
+        # with grammars that relied on the cycle being resolved away as dead
+        # code. Depending on conflict resolution, the parser may loop forever
+        # at parse time. CYK ignores it, since it cannot process cyclic rules.
+        Lark('start: "x" | start', parser='lalr', allow_cyclic_rules=True).parse('x')
+        self.assertRaises(GrammarError, Lark, 'start.1: "a" | start start*',
+                          parser='cyk', allow_cyclic_rules=True)
 
         # Earley resolves cyclic grammars (see test_many_cycles), so it is left as-is.
         Lark('start.1: "a" | start start*', parser='earley').parse('aa')
@@ -351,7 +366,9 @@ class TestGrammar(TestCase):
         Lark('start: "a"*', parser='lalr')
 
         # A cycle the parser can never enter is harmless, so it isn't rejected.
+        # CYK must also drop the unreachable rules, or CNF conversion loops on them.
         Lark('start: "x"\na: b\nb: a', parser='lalr')
+        Lark('start: "x"\na: b\nb: a', parser='cyk').parse('x')
 
         # ...but it is rejected once some start symbol can reach it.
         self.assertRaises(GrammarError, Lark, 'start: "x"\na: b\nb: a',

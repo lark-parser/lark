@@ -29,7 +29,7 @@ IMPORT_PATHS = ['grammars']
 
 EXT = '.lark'
 
-_RE_FLAGS = 'imslux'
+_RE_FLAGS = 'aimsLux'
 
 _EMPTY = Symbol('__empty__')
 

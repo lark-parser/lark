@@ -3,6 +3,7 @@
 
 import hashlib
 import os.path
+import re
 import sys
 from collections import namedtuple
 from copy import copy, deepcopy
@@ -596,6 +597,17 @@ def _literal_to_pattern(literal):
         assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 
 
+def _char_to_regexp(char: str) -> str:
+    """Escape a single character for use inside a regexp character class.
+
+    The result stays ascii, because the pattern may later be encoded to bytes (``use_bytes``).
+    """
+    codepoint = ord(char)
+    if char.isascii():
+        return re.escape(char)
+    return '\\x%02x' % codepoint if codepoint <= 0xff else '\\U%08x' % codepoint
+
+
 @inline_args
 class PrepareLiterals(Transformer_InPlace):
     def literal(self, literal):
@@ -603,15 +615,38 @@ class PrepareLiterals(Transformer_InPlace):
 
     def range(self, start, end):
         assert start.type == end.type == 'STRING'
-        start = start.value[1:-1]
-        end = end.value[1:-1]
-        assert len(eval_escaping(start)) == len(eval_escaping(end)) == 1
-        regexp = '[%s-%s]' % (start, end)
+        start = eval_escaping(start.value[1:-1])
+        end = eval_escaping(end.value[1:-1])
+        assert len(start) == len(end) == 1
+        regexp = '[%s-%s]' % (_char_to_regexp(start), _char_to_regexp(end))
         return ST('pattern', [PatternRE(regexp)])
 
 
 def _make_joined_pattern(regexp, flags_set) -> PatternRE:
     return PatternRE(regexp, ())
+
+
+def _has_bare_alternation(regexp: str) -> bool:
+    """Whether ``regexp`` has a ``|`` outside of any group, i.e. one that isn't already
+    bound by surrounding parentheses.
+    """
+    depth = 0
+    in_class = False
+    chars = iter(regexp)
+    for c in chars:
+        if c == '\\':
+            next(chars, None)
+        elif in_class:
+            in_class = c != ']'
+        elif c == '[':
+            in_class = True
+        elif c == '(':
+            depth += 1
+        elif c == ')':
+            depth -= 1
+        elif c == '|' and not depth:
+            return True
+    return False
 
 class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
@@ -625,7 +660,10 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         if len(items) == 1:
             return items[0]
 
-        pattern = ''.join(i.to_regexp() for i in items)
+        # A bare '|' binds looser than concatenation, so an item carrying one has to be grouped
+        # before it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
+        regexps = [i.to_regexp() for i in items]
+        pattern = ''.join('(?:%s)' % r if _has_bare_alternation(r) else r for r in regexps)
         return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps: List[Pattern]) -> Pattern:

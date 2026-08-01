@@ -299,6 +299,29 @@ class TestGrammar(TestCase):
         for i in (-1, 1000):
             self.assertRaises(UnexpectedInput, l.parse, str(i))
 
+    def test_concat_regexp_with_alternation(self):
+        # A '|' outside a group binds looser than concatenation, so it used to swallow
+        # whatever was concatenated after it: /admin|user/ "_id" compiled to 'admin|user_id'.
+        l = Lark('start: T\nT: /admin|user/ "_id"', parser='lalr')
+        for s in ('admin_id', 'user_id'):
+            self.assertEqual(l.parse(s), Tree('start', [s]))
+        for s in ('admin', 'user'):
+            self.assertRaises(UnexpectedInput, l.parse, s)
+
+        # A '|' that is escaped, inside a character class, or already grouped keeps its meaning
+        for term, matches in [(r'/a\|b/', 'a|bc'), ('/[a|b]/', 'ac'), ('/(a|b)/', 'ac')]:
+            l = Lark('start: T\nT: %s "c"' % term, parser='lalr')
+            self.assertEqual(l.parse(matches), Tree('start', [matches]))
+
+    def test_literal_range_escapes_endpoints(self):
+        # Endpoints were spliced into the character class as written, so a metacharacter
+        # escaped it: "^".."z" became '[^-z]', a negated class matching almost everything.
+        l = Lark('start: T\nT: "^".."z"', parser='lalr')
+        for s in ('^', 'a', 'z'):
+            self.assertEqual(l.parse(s), Tree('start', [s]))
+        for s in ('!', '0', '\t'):
+            self.assertRaises(UnexpectedInput, l.parse, s)
+
     def test_list_grammar_imports(self):
             grammar = """
             %import .test_templates_import (start, sep)

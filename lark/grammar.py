@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, ClassVar, Sequence
+from typing import Any, Dict, Optional, Tuple, ClassVar, Sequence, Callable
 
 from .utils import Serialize
 
@@ -15,56 +15,57 @@ class Symbol(Serialize):
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Symbol):
             return NotImplemented
         return self.is_term == other.is_term and self.name == other.name
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not (self == other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.name)
+    def __repr__(self) -> str:
+        return f'{type(self).__name__}({self.name!r})'
 
-    fullrepr = property(__repr__)
+    fullrepr: property = property(__repr__)
 
-    def renamed(self, f):
+    def renamed(self, f: Callable[[str], str]) -> 'Symbol':
         return type(self)(f(self.name))
 
 
 class Terminal(Symbol):
-    __serialize_fields__ = 'name', 'filter_out'
+    __serialize_fields__ = ('name', 'filter_out')
 
     is_term: ClassVar[bool] = True
+    filter_out: bool
 
     def __init__(self, name: str, filter_out: bool = False) -> None:
-        self.name = name
+        super().__init__(name)
         self.filter_out = filter_out
 
     @property
-    def fullrepr(self):
-        return '%s(%r, %r)' % (type(self).__name__, self.name, self.filter_out)
+    def fullrepr(self) -> str:
+        return f'{type(self).__name__}({self.name!r}, {self.filter_out!r})'
 
-    def renamed(self, f):
+    def renamed(self, f: Callable[[str], str]) -> 'Terminal':
         return type(self)(f(self.name), self.filter_out)
 
 
 class NonTerminal(Symbol):
-    __serialize_fields__ = 'name',
+    __serialize_fields__ = ('name',)
 
     is_term: ClassVar[bool] = False
 
-    def serialize(self, memo=None) -> Dict[str, Any]:
-        # TODO this is here because self.name can be a Token instance.
-        #      remove this function when the issue is fixed. (backwards-incompatible)
+    def serialize(self, memo: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+        # TODO: this is here because self.name can be a Token instance.
+        #       remove this function when the issue is fixed. (backwards-incompatible)
         return {'name': str(self.name), '__type__': 'NonTerminal'}
 
 
 class RuleOptions(Serialize):
-    __serialize_fields__ = 'keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices'
+    __serialize_fields__ = ('keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices')
 
     keep_all_tokens: bool
     expand1: bool
@@ -72,32 +73,37 @@ class RuleOptions(Serialize):
     template_source: Optional[str]
     empty_indices: Tuple[bool, ...]
 
-    def __init__(self, keep_all_tokens: bool=False, expand1: bool=False, priority: Optional[int]=None, template_source: Optional[str]=None, empty_indices: Tuple[bool, ...]=()) -> None:
+    def __init__(
+        self,
+        keep_all_tokens: bool = False,
+        expand1: bool = False,
+        priority: Optional[int] = None,
+        template_source: Optional[str] = None,
+        empty_indices: Tuple[bool, ...] = ()
+    ) -> None:
         self.keep_all_tokens = keep_all_tokens
         self.expand1 = expand1
         self.priority = priority
         self.template_source = template_source
         self.empty_indices = empty_indices
 
-    def __repr__(self):
-        return 'RuleOptions(%r, %r, %r, %r)' % (
-            self.keep_all_tokens,
-            self.expand1,
-            self.priority,
-            self.template_source
+    def __repr__(self) -> str:
+        return (
+            f'RuleOptions({self.keep_all_tokens!r}, {self.expand1!r}, '
+            f'{self.priority!r}, {self.template_source!r}, {self.empty_indices!r})'
         )
 
 
 class Rule(Serialize):
     """
-        origin : a symbol
-        expansion : a list of symbols
-        order : index of this expansion amongst all rules of the same name
+    origin : a symbol
+    expansion : a list of symbols
+    order : index of this expansion amongst all rules of the same name
     """
     __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
 
-    __serialize_fields__ = 'origin', 'expansion', 'order', 'alias', 'options'
-    __serialize_namespace__ = Terminal, NonTerminal, RuleOptions
+    __serialize_fields__ = ('origin', 'expansion', 'order', 'alias', 'options')
+    __serialize_namespace__ = (Terminal, NonTerminal, RuleOptions)
 
     origin: NonTerminal
     expansion: Sequence[Symbol]
@@ -106,8 +112,14 @@ class Rule(Serialize):
     options: RuleOptions
     _hash: int
 
-    def __init__(self, origin: NonTerminal, expansion: Sequence[Symbol],
-                 order: int=0, alias: Optional[str]=None, options: Optional[RuleOptions]=None):
+    def __init__(
+        self,
+        origin: NonTerminal,
+        expansion: Sequence[Symbol],
+        order: int = 0,
+        alias: Optional[str] = None,
+        options: Optional[RuleOptions] = None
+    ) -> None:
         self.origin = origin
         self.expansion = expansion
         self.alias = alias
@@ -115,22 +127,21 @@ class Rule(Serialize):
         self.options = options or RuleOptions()
         self._hash = hash((self.origin, tuple(self.expansion)))
 
-    def _deserialize(self):
+    def _deserialize(self) -> None:
         self._hash = hash((self.origin, tuple(self.expansion)))
 
-    def __str__(self):
-        return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
+    def __str__(self) -> str:
+        expansion_str = ' '.join(x.name for x in self.expansion)
+        return f'<{self.origin.name} : {expansion_str}>'
 
-    def __repr__(self):
-        return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+    def __repr__(self) -> str:
+        return f'Rule({self.origin!r}, {self.expansion!r}, {self.alias!r}, {self.options!r})'
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return self._hash
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Rule):
             return False
         return self.origin == other.origin and self.expansion == other.expansion
-
-
 ###}

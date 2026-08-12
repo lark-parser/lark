@@ -23,6 +23,7 @@ Welcome to Lark's documentation!
    json_tutorial
    how_to_use
    how_to_develop
+   pyparsing_porting
    recipes
    examples/index
 

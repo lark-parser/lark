@@ -267,6 +267,13 @@ class TestCacheFile(TestCase):
             f.write(b'data')
         self.assertEqual(stat.S_IMODE(os.stat(self.cache_fn).st_mode) & 0o077, 0)
 
+    def test_load_refuses_group_or_world_accessible(self):
+        with open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        os.chmod(self.cache_fn, 0o644)
+        with self.assertRaises(OSError):
+            FS.open(self.cache_fn, 'rb').close()
+
 
 if __name__ == '__main__':
     main()

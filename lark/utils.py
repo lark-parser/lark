@@ -308,7 +308,8 @@ except ImportError:
 
 def _open_private(name, mode, **kwargs):
     """Like open(), but refuses to follow a symlink, refuses a file that belongs to
-    another user, and keeps the file readable only by its owner.
+    another user, refuses to read a file that other users can access, and keeps the
+    file readable only by its owner.
 
     The parser cache is stored in a shared temporary directory under a name that is
     derived from the grammar, so another user on the same machine can predict it and
@@ -322,8 +323,14 @@ def _open_private(name, mode, **kwargs):
         flags |= getattr(os, "O_BINARY", 0)
     fd = os.open(name, flags | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
-        if hasattr(os, "geteuid") and os.fstat(fd).st_uid != os.geteuid():
-            raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+        st = os.fstat(fd)
+        if hasattr(os, "geteuid"):
+            if st.st_uid != os.geteuid():
+                raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+            # On read, don't trust the contents of a file that group or others can
+            # write, since it could have been tampered with even though we own it.
+            if "w" not in mode and st.st_mode & 0o077:
+                raise PermissionError("Refusing to read %r: it is accessible to other users" % name)
         if "w" in mode and hasattr(os, "fchmod"):
             os.fchmod(fd, 0o600)
         return os.fdopen(fd, mode, **kwargs)

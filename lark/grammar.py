@@ -29,7 +29,9 @@ class Symbol(Serialize):
     def __repr__(self) -> str:
         return f'{type(self).__name__}({self.name!r})'
 
-    fullrepr: property = property(__repr__)
+    @property
+    def fullrepr(self) -> str:
+        return repr(self)
 
     def renamed(self, f: Callable[[str], str]) -> 'Symbol':
         return type(self)(f(self.name))

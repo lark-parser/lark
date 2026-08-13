@@ -1,11 +1,16 @@
 from __future__ import absolute_import
 
 import logging
+import os
+import shutil
+import stat
+import tempfile
 from unittest import TestCase, main, skipIf
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
+from lark.utils import FS
 import lark.lark as lark_module
 from lark.reconstruct import Reconstructor
 from . import test_reconstructor
@@ -227,6 +232,47 @@ class TestCache(TestCase):
         tree = parser.parse(code)
         new = Reconstructor(parser).reconstruct(tree)
         self.assertEqual(test_reconstructor._remove_ws(code), test_reconstructor._remove_ws(new))
+
+
+@skipIf(os.name != 'posix', "requires posix file permissions and symlinks")
+class TestCacheFile(TestCase):
+    # The automatic cache name is derived from the grammar and lives in a shared
+    # temporary directory, so another user can predict the path and create it first.
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, True)
+        self.cache_fn = os.path.join(self.tmpdir, 'cache.tmp')
+        self.other_fn = os.path.join(self.tmpdir, 'other')
+        with open(self.other_fn, 'wb') as f:
+            f.write(b'original')
+
+    def test_load_does_not_follow_symlink(self):
+        os.symlink(self.other_fn, self.cache_fn)
+        with self.assertRaises(OSError):
+            FS.open(self.cache_fn, 'rb').close()
+
+    def test_save_does_not_follow_symlink(self):
+        os.symlink(self.other_fn, self.cache_fn)
+        try:
+            with FS.open(self.cache_fn, 'wb') as f:
+                f.write(b'overwritten')
+        except OSError:
+            pass
+        with open(self.other_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'original')
+
+    def test_save_keeps_cache_private(self):
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        self.assertEqual(stat.S_IMODE(os.stat(self.cache_fn).st_mode) & 0o077, 0)
+
+    def test_load_refuses_group_or_world_accessible(self):
+        with open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        os.chmod(self.cache_fn, 0o644)
+        with self.assertRaises(OSError):
+            FS.open(self.cache_fn, 'rb').close()
 
 
 if __name__ == '__main__':

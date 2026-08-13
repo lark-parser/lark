@@ -1,4 +1,5 @@
 from .utils import logger, NO_VALUE
+import unicodedata
 from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,6 +20,26 @@ class ConfigurationError(LarkError, ValueError):
 def assert_config(value, options: Collection, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
+
+
+def _padding_for(before):
+    col = 0
+    result = []
+    for ch in before:
+        if ch == '\t':
+            spaces = 8 - (col % 8)
+            result.append(' ' * spaces)
+            col += spaces
+        else:
+            if unicodedata.east_asian_width(ch) in ('W', 'F'):
+                result.append('\u3000')
+                col += 2
+            else:
+                result.append(' ')
+                col += 1
+    return ''.join(result)
+    
+
 
 
 class GrammarError(LarkError):
@@ -66,7 +87,7 @@ class UnexpectedInput(LarkError):
         if not isinstance(text, bytes):
             before = text[start:pos].rsplit('\n', 1)[-1]
             after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before.expandtabs()) + '^\n'
+            return before + after + '\n' + _padding_for(before) + '^\n'
         else:
             before = text[start:pos].rsplit(b'\n', 1)[-1]
             after = text[pos:end].split(b'\n', 1)[0]

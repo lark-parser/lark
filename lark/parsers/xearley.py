@@ -156,7 +156,7 @@ class Parser(BaseParser):
         i = 0
         node_cache = {}
         for token in stream:
-            self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+            self.predict_and_complete(i, to_scan, columns, transitives, node_cache, start_symbol)
 
             to_scan, node_cache = scan(i, to_scan)
 
@@ -167,7 +167,7 @@ class Parser(BaseParser):
                 text_column += 1
             i += 1
 
-        self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+        self.predict_and_complete(i, to_scan, columns, transitives, node_cache, start_symbol)
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1

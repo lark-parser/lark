@@ -143,7 +143,7 @@ class Template:
         tree = self.conf._get_tree(tree)
         for subtree in tree.iter_subtrees():
             res = self.match(subtree)
-            if res:
+            if res is not None:
                 yield subtree, res
 
     def apply_vars(self, vars: Mapping[str, Tree[str]]) -> Tree[str]:

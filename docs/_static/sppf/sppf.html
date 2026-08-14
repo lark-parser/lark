@@ -3,7 +3,10 @@
 <html lang="en-us">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shared Packed Parse Forest (SPPF)</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  </head>
 
 <body>
 
@@ -70,12 +73,12 @@
 <p>Then given input sentence $abcd$, the the following SPPF will be the result:</p>
 
 
-<figure>
+<figure class="figure">
 
-        <img src="sppf_abcd.svg"/>
+        <img src="sppf_abcd.svg" class="figure-img img-fluid" alt="SPPF with intermediate nodes"/>
 
 
-    <figcaption>
+    <figcaption class="figure-caption">
         <h4>SPPF with intermediate nodes</h4>
 
     </figcaption>
@@ -86,12 +89,12 @@
 <p>Suppose that the intermediate nodes had not been added to the SPPF. Then the nonterminal symbol nodes for $A$, $B$, $C$, and $D$ would have been attached to the nonterminal symbol node $S$:</p>
 
 
-<figure>
+<figure class="figure">
 
-        <img src="sppf_abcd_noint.svg"/>
+        <img src="sppf_abcd_noint.svg" class="figure-img img-fluid" alt="SPPF without intermediate nodes"/>
 
 
-    <figcaption>
+    <figcaption class="figure-caption">
         <h4>SPPF without intermediate nodes</h4>
 
     </figcaption>
@@ -111,12 +114,12 @@ $S ::= SS \mid a \mid \varepsilon$.</p>
 <p>Given input sentence $a$, there are infinitely many derivations. All these derivations are present in the following SPPF:</p>
 
 
-<figure>
+<figure class="figure">
 
-        <img src="sppf_cycle.svg"/>
+        <img src="sppf_cycle.svg" class="figure-img img-fluid" alt="SPPF containing an infinite number of derivations"/>
 
 
-    <figcaption>
+    <figcaption class="figure-caption">
         <h4>SPPF containing an infinite number of derivations</h4>
 
     </figcaption>
@@ -132,12 +135,12 @@ $ E ::= E + E \mid 1 $.</p>
 <p>This gives the following SPPF:</p>
 
 
-<figure>
+<figure class="figure">
 
-        <img src="sppf_111.svg"/>
+        <img src="sppf_111.svg" class="figure-img img-fluid" alt="SPPF containing an ambiguous root node"/>
 
 
-    <figcaption>
+    <figcaption class="figure-caption">
         <h4>SPPF containing an ambiguous root node</h4>
 
     </figcaption>
@@ -193,13 +196,14 @@ $ E ::= E + E \mid 1 $.</p>
       Powered by the <a href="https://web.archive.org/web/20200128172318/https://github.com/gcushen/hugo-academic" target="_blank">Academic
       theme</a> for <a href="https://web.archive.org/web/20200128172318/http://gohugo.io/" target="_blank">Hugo</a>.
 
-      <span class="pull-right" aria-hidden="true">
+      <span class="float-end" aria-hidden="true">
         <a href="#" id="back_to_top">
           <span class="button_icon">
             <i class="fa fa-chevron-up fa-2x"></i>
           </span>
         </a>
       </span>
+      
 
       <p>Source: <a href="https://web.archive.org/web/20200128172318/http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/">Wayback Machine</a>
         copy of <code>http://www.bramvandersanden.com/post/2014/06/shared-packed-parse-forest/</code> used to be.

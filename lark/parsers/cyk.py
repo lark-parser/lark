@@ -12,6 +12,7 @@ from ..exceptions import ParseError
 from ..lexer import Token
 from ..tree import Tree
 from ..grammar import Terminal as T, NonTerminal as NT, Symbol
+from .grammar_analysis import calculate_sets, check_cyclic_grammar
 
 def match(t, s):
     assert isinstance(t, T)
@@ -79,8 +80,13 @@ class RuleNode:
 class Parser:
     """Parser wrapper."""
 
-    def __init__(self, rules):
+    def __init__(self, rules, start):
         super(Parser, self).__init__()
+        _, _, nullable = calculate_sets(rules)
+        reachable = check_cyclic_grammar(rules, nullable, start)
+        # Unreachable rules can never take part in a parse, but they would still
+        # go through CNF conversion, which loops forever on unreachable cycles.
+        rules = [rule for rule in rules if rule.origin in reachable]
         self.orig_rules = {rule: rule for rule in rules}
         rules = [self._to_rule(rule) for rule in rules]
         self.grammar = to_cnf(Grammar(rules))

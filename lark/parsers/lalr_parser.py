@@ -15,8 +15,8 @@ from .lalr_parser_state import ParserState, ParseConf
 ###{standalone
 
 class LALR_Parser(Serialize):
-    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
-        analysis = LALR_Analyzer(parser_conf, debug=debug, strict=strict)
+    def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False, allow_cyclic_rules: bool=False):
+        analysis = LALR_Analyzer(parser_conf, debug=debug, strict=strict, allow_cyclic_rules=allow_cyclic_rules)
         analysis.compute_lalr()
         callbacks = parser_conf.callbacks
 

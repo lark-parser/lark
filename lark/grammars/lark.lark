@@ -58,5 +58,8 @@ _NL: /(\r?\n)+\s*/
 
 COMMENT: /\s*/ "//" /[^\n]/* | /\s*/ "#" /[^\n]/*
 
+BACKSLASH: /\\[ ]*\n/
+
 %ignore WS_INLINE
 %ignore COMMENT
+%ignore BACKSLASH

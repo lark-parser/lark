@@ -328,6 +328,14 @@ class TestGrammar(TestCase):
         p.parse('ab')
 
 
+    def test_line_breaks_in_lark_lark(self):
+        # The `lark.lark` meta-grammar must accept line continuations too
+        lark_lark = Lark.open_from_package('lark', 'lark.lark', ('grammars',), parser='lalr')
+        lark_lark.parse(r"""start: "a" \
+                       "b"
+""")
+
+
     def test_symbol_eq(self):
         a = None
         b = Symbol("abc")

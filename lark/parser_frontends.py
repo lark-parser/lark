@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Generic, Iterator, Tuple, TypeVar
 
 from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
-from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
+from .utils import Serialize, TextOrSlice, TextSlice, LarkInput
 from .lexer import LexerThread, LineCounter, Token, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
@@ -292,13 +292,6 @@ class EarleyRegexpMatcher:
         self.regexps = {}
         for t in lexer_conf.terminals:
             regexp = t.pattern.to_regexp()
-            try:
-                width = get_regexp_width(regexp)[0]
-            except ValueError:
-                raise GrammarError("Bad regexp in token %s: %s" % (t.name, regexp))
-            else:
-                if width == 0:
-                    raise GrammarError("Dynamic Earley doesn't allow zero-width regexps", t)
             if lexer_conf.use_bytes:
                 regexp = regexp.encode('utf-8')
 

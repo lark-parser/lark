@@ -39,6 +39,46 @@ class Parser(BaseParser):
 
     def _parse(self, stream, columns, to_scan, start_symbol=None):
 
+        def scan_zero_width(i, to_scan, node_cache):
+            """Advance zero-width terminals in the current Earley column.
+
+            Dynamic lexing normally delays each match until the input position at
+            which it ends. A zero-width match ends in the current column instead,
+            so it must be advanced before the regular scanner moves on. Each item
+            is considered once to prevent nullable terminal cycles from looping.
+            """
+            matched = self.Set()
+            while True:
+                self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+                zero_width_items = []
+                for item in self.Set(to_scan):
+                    if item in matched:
+                        continue
+                    m = match(item.expect, stream, i)
+                    if m and m.end() == i:
+                        zero_width_items.append((item, m))
+                    matched.add(item)
+
+                if not zero_width_items:
+                    return
+
+                for item, m in zero_width_items:
+                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                    t.end_line = text_line
+                    t.end_column = text_column
+                    t.end_pos = i
+
+                    new_item = item.advance()
+                    label = (new_item.s, new_item.start, i)
+                    token_node = TokenNode(t, terminals[t.type])
+                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
+                    new_item.node.add_family(new_item.s, item.rule, new_item.start, item.node, token_node)
+
+                    if new_item.expect in self.TERMINALS:
+                        to_scan.add(new_item)
+                    else:
+                        columns[i].add(new_item)
+
         def scan(i, to_scan):
             """The core Earley Scanner.
 
@@ -156,7 +196,7 @@ class Parser(BaseParser):
         i = 0
         node_cache = {}
         for token in stream:
-            self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+            scan_zero_width(i, to_scan, node_cache)
 
             to_scan, node_cache = scan(i, to_scan)
 
@@ -167,7 +207,7 @@ class Parser(BaseParser):
                 text_column += 1
             i += 1
 
-        self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+        scan_zero_width(i, to_scan, node_cache)
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1

@@ -605,7 +605,7 @@ def _char_to_regexp(char: str) -> str:
     codepoint = ord(char)
     if char.isascii():
         return re.escape(char)
-    return '\\x%02x' % codepoint if codepoint <= 0xff else '\\U%08x' % codepoint
+    return f'\\x{codepoint:02x}' if codepoint <= 0xff else f'\\U{codepoint:08x}'
 
 
 @inline_args
@@ -626,28 +626,6 @@ def _make_joined_pattern(regexp, flags_set) -> PatternRE:
     return PatternRE(regexp, ())
 
 
-def _has_bare_alternation(regexp: str) -> bool:
-    """Whether ``regexp`` has a ``|`` outside of any group, i.e. one that isn't already
-    bound by surrounding parentheses.
-    """
-    depth = 0
-    in_class = False
-    chars = iter(regexp)
-    for c in chars:
-        if c == '\\':
-            next(chars, None)
-        elif in_class:
-            in_class = c != ']'
-        elif c == '[':
-            in_class = True
-        elif c == '(':
-            depth += 1
-        elif c == ')':
-            depth -= 1
-        elif c == '|' and not depth:
-            return True
-    return False
-
 class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
         p ,= ps
@@ -660,10 +638,9 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         if len(items) == 1:
             return items[0]
 
-        # A bare '|' binds looser than concatenation, so an item carrying one has to be grouped
-        # before it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
-        regexps = [i.to_regexp() for i in items]
-        pattern = ''.join('(?:%s)' % r if _has_bare_alternation(r) else r for r in regexps)
+        # A bare '|' binds looser than concatenation, so each item is grouped before
+        # it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
+        pattern = ''.join(f'(?:{i.to_regexp()})' for i in items)
         return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps: List[Pattern]) -> Pattern:

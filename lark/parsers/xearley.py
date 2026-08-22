@@ -56,24 +56,65 @@ class Parser(BaseParser):
             # they complete, we push all tokens into a buffer (delayed_matches), to
             # be held possibly for a later parse step when we reach the point in the
             # input stream at which they complete.
+            #
+            # When terminal priorities are in use, we apply the traditional
+            # "longest match, then highest priority" filter so that a higher-
+            # priority terminal suppresses lower-priority matches at the same
+            # position that are not longer.  This mirrors the behavior of the
+            # basic/standard lexer and prevents spurious ambiguities that the
+            # ForestSumVisitor cannot resolve by priority sum alone (see #1441).
+            matched_items = []
             for item in self.Set(to_scan):
                 m = match(item.expect, stream, i)
                 if m:
-                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].append( (item, i, t) )
+                    matched_items.append((item, m))
 
-                    if self.complete_lex:
-                        s = m.group(0)
-                        for j in range(1, len(s)):
-                            m = match(item.expect, s[:-j])
-                            if m:
-                                t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                                delayed_matches[i+m.end()].append( (item, i, t) )
+            # Determine the best (longest length, highest priority) match at
+            # this position so we can filter out dominated alternatives.
+            # We only filter when:
+            #  - priorities are in use (forest_sum_visitor is set)
+            #  - complete_lex is False (dynamic_complete intentionally explores
+            #    all sub-match lengths for full ambiguity)
+            #  - the matched terminals have differing priorities
+            if matched_items and self.forest_sum_visitor is not None and not self.complete_lex:
+                def _term_priority(item):
+                    term = terminals.get(item.expect.name)
+                    return term.priority if term is not None else 0
 
-                    # XXX The following 3 lines were commented out for causing a bug. See issue #768
-                    # # Remove any items that successfully matched in this pass from the to_scan buffer.
-                    # # This ensures we don't carry over tokens that already matched, if we're ignoring below.
-                    # to_scan.remove(item)
+                best_priority = max(_term_priority(item) for item, m in matched_items)
+                min_priority = min(_term_priority(item) for item, m in matched_items)
+                # Only filter when priorities actually differ among matched terminals
+                if best_priority > min_priority:
+                    best_len_at_priority = max(
+                        m.end() - i
+                        for item, m in matched_items
+                        if _term_priority(item) == best_priority
+                    )
+                    filtered = []
+                    for item, m in matched_items:
+                        match_len = m.end() - i
+                        # Keep if: this IS the highest-priority terminal, OR
+                        # it matches longer than the best high-priority match
+                        if _term_priority(item) >= best_priority or match_len > best_len_at_priority:
+                            filtered.append((item, m))
+                    matched_items = filtered
+
+            for item, m in matched_items:
+                t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                delayed_matches[m.end()].append( (item, i, t) )
+
+                if self.complete_lex:
+                    s = m.group(0)
+                    for j in range(1, len(s)):
+                        m = match(item.expect, s[:-j])
+                        if m:
+                            t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                            delayed_matches[i+m.end()].append( (item, i, t) )
+
+                # XXX The following 3 lines were commented out for causing a bug. See issue #768
+                # # Remove any items that successfully matched in this pass from the to_scan buffer.
+                # # This ensures we don't carry over tokens that already matched, if we're ignoring below.
+                # to_scan.remove(item)
 
             # 3) Process any ignores. This is typically used for e.g. whitespace.
             # We carry over any unmatched items from the to_scan buffer to be matched again after

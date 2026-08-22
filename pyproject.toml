@@ -106,3 +106,8 @@ testpaths =[
     "tests"
 ]
 python_files = "__main__.py"
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,.npm,.cache'
+check-hidden = true
+ignore-words-list = 'nd,iif,ot,datas,foor,re-use'

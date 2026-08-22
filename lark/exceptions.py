@@ -1,6 +1,6 @@
 from .utils import logger, NO_VALUE
 from typing import Mapping, Iterable, Callable, Union, TypeVar, Tuple, Any, List, Set, Optional, Collection, TYPE_CHECKING
-
+import unicodedata
 if TYPE_CHECKING:
     from .lexer import Token
     from .parsers.lalr_interactive_parser import InteractiveParser
@@ -20,6 +20,11 @@ def assert_config(value, options: Collection, msg='Got %r, expected one of %s'):
     if value not in options:
         raise ConfigurationError(msg % (value, options))
 
+def _display_width(s):
+    width = 0
+    for ch in s:
+        width += 2 if unicodedata.east_asian_width(ch) in ('F', 'W') else 1
+    return width
 
 class GrammarError(LarkError):
     pass
@@ -66,7 +71,7 @@ class UnexpectedInput(LarkError):
         if not isinstance(text, bytes):
             before = text[start:pos].rsplit('\n', 1)[-1]
             after = text[pos:end].split('\n', 1)[0]
-            return before + after + '\n' + ' ' * len(before.expandtabs()) + '^\n'
+            return before + after + '\n' + ' ' * _display_width(before.expandtabs()) + '^\n'
         else:
             before = text[start:pos].rsplit(b'\n', 1)[-1]
             after = text[pos:end].split(b'\n', 1)[0]

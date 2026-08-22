@@ -204,6 +204,36 @@ class TestParsers(unittest.TestCase):
             result = parser.parse(text)
             self.assertEqual(result, expected)
 
+    def test_fullwidth_error_context_alignment(self):
+
+        grammar = r"""
+        start: CHINESE WORD WORD
+
+        CHINESE: "你好"
+        WORD: /[a-zA-Z]+/
+
+        %ignore " "
+        """
+
+        parser = Lark(grammar)
+
+        text = "你好 hello 123"
+
+        try:
+            parser.parse(text)
+            assert False
+        except Exception as e:
+            context = e.get_context(text)
+
+            lines = context.splitlines()
+
+            assert len(lines) >= 2
+
+            caret_pos = lines[1].index("^")
+
+            # ensure full-width chars are counted properly
+            assert caret_pos >= 11
+
     def test_vargs_meta(self):
 
         @v_args(meta=True)

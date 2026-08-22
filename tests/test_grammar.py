@@ -151,6 +151,14 @@ class TestGrammar(TestCase):
             """
         self.assertRaises(GrammarError, Lark, g)
 
+    def test_literal_range_multichar(self):
+        # Under `python -O` the old assert was stripped and the range silently compiled
+        # to the class [ab-z], which is not what the grammar says.
+        g = """start: A
+            A: "ab".."z"
+            """
+        self.assertRaises(GrammarError, Lark, g)
+
     def test_undefined_rule(self):
         self.assertRaises(GrammarError, Lark, """start: a""")
 

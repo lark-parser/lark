@@ -605,7 +605,10 @@ class PrepareLiterals(Transformer_InPlace):
         assert start.type == end.type == 'STRING'
         start = start.value[1:-1]
         end = end.value[1:-1]
-        assert len(eval_escaping(start)) == len(eval_escaping(end)) == 1
+        # Not an assert: -O strips it, silently accepting "ab".."z" as the class [ab-z].
+        if len(eval_escaping(start)) != 1 or len(eval_escaping(end)) != 1:
+            raise GrammarError("Literal range must be defined by single characters, "
+                               "not \"%s\"..\"%s\"" % (start, end))
         regexp = '[%s-%s]' % (start, end)
         return ST('pattern', [PatternRE(regexp)])
 

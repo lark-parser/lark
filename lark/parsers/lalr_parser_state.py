@@ -1,5 +1,5 @@
 from copy import deepcopy, copy
-from typing import Dict, Any, Generic, List
+from typing import Dict, Any, Generic, List, Optional
 from ..lexer import Token, LexerThread
 from ..common import ParserCallbacks
 
@@ -56,10 +56,16 @@ class ParserState(Generic[StateT]):
     def __copy__(self):
         return self.copy()
 
-    def copy(self, deepcopy_values=True) -> 'ParserState[StateT]':
+    def copy(self, deepcopy_values=True, lexer: Optional[LexerThread]=None) -> 'ParserState[StateT]':
+        """Copy the parser state.
+
+        By default the copy keeps reading from the same lexer thread.
+        Callers that want an independent parse (like InteractiveParser.copy())
+        should pass their own copy of the lexer thread as `lexer`.
+        """
         return type(self)(
             self.parse_conf,
-            self.lexer, # XXX copy
+            self.lexer if lexer is None else lexer,
             copy(self.state_stack),
             deepcopy(self.value_stack) if deepcopy_values else copy(self.value_stack),
         )

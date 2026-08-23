@@ -54,7 +54,7 @@ Lark provides syntax highlighting for its grammar files (\*.lark):
 These are implementations of Lark in other languages. They accept Lark grammars, and provide similar utilities.
 
 - [Lerche (Julia)](https://github.com/jamesrhester/Lerche.jl) - an unofficial clone, written entirely in Julia.
-- [Lark.js (Javascript)](https://github.com/lark-parser/lark.js) - a port of the stand-alone LALR(1) parser generator to Javascsript.
+- [Lark.js (Javascript)](https://github.com/lark-parser/lark.js) - a port of the stand-alone LALR(1) parser generator to JavaScript.
 
 ### Hello World
 

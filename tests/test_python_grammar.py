@@ -293,6 +293,27 @@ class TestPythonParser(TestCase):
             with self.assertRaises(ParseError):
                 self.python_parser.parse(case, start="file_input")
 
+    def test_comprehensions_with_interleaved_filters(self):
+        clauses = (
+            "for i in range(3) if i > 0 if i < 3 "
+            "for j in range(5) if j % 2 == 0 if j < 4"
+        )
+        cases = [
+            f"[(i, j) {clauses}]",
+            f"{{(i, j) {clauses}}}",
+            f"{{i: j {clauses}}}",
+            f"((i, j) {clauses})",
+        ]
+        for case in cases:
+            with self.subTest(case=case):
+                self.python_parser.parse(case + "\n", start="file_input")
+
+        async_comprehension = textwrap.dedent("""
+        async def collect():
+            return [(i, j) async for i in first() if i async for j in second() if j]
+        """)
+        self.python_parser.parse(async_comprehension, start="file_input")
+
     def test_assign_to_variable_named_match(self):
         text = textwrap.dedent("""
         match = re.match(pattern, string)

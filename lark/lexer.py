@@ -69,7 +69,8 @@ class Pattern(Serialize, ABC):
         raise NotImplementedError()
 
     def _get_flags(self, value):
-        for f in self.flags:
+        # Sorted to remove the hash randomization in sets, that differs between processes
+        for f in sorted(self.flags):
             value = ('(?%s:%s)' % (f, value))
         return value
 

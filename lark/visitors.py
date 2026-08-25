@@ -310,20 +310,17 @@ class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):
             if isinstance(x, Tree):
                 size = len(x.children)
                 if size:
+                    # Discarded children are kept on the stack as placeholders, so
+                    # that this slice stays aligned with x.children. Drop them here.
                     args = [a for a in stack[-size:] if a is not Discard]
                     del stack[-size:]
                 else:
                     args = []
 
-                res = self._call_userfunc(x, args)
-                # Push discarded results too, as placeholders, so that a parent's
-                # ``stack[-len(children):]`` slice stays aligned with its children
-                # even when some of them were discarded (they are filtered above).
-                stack.append(res)
+                stack.append(self._call_userfunc(x, args))    # may be Discard
 
             elif self.__visit_tokens__ and isinstance(x, Token):
-                res = self._call_userfunc_token(x)
-                stack.append(res)
+                stack.append(self._call_userfunc_token(x))    # may be Discard
             else:
                 stack.append(x)
 

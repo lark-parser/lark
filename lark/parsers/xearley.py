@@ -98,10 +98,14 @@ class Parser(BaseParser):
             # and create the symbol node in the SPPF tree. Advance the item that completed,
             # and add the resulting new item to either the Earley set (for processing by the
             # completer/predictor) or the to_scan buffer for the next parse step.
+            # Tokens in delayed_matches[i+1] end just past stream[i], so their end
+            # position is the position of stream[i+1], not that of stream[i].
+            end_line, end_column = position_after(i)
+
             for item, start, token in delayed_matches[i+1]:
                 if token is not None:
-                    token.end_line = text_line
-                    token.end_column = text_column + 1
+                    token.end_line = end_line
+                    token.end_column = end_column
                     token.end_pos = i + 1
 
                     new_item = item.advance()
@@ -148,6 +152,16 @@ class Parser(BaseParser):
         text_line = 1
         text_column = 1
 
+        # Iterating over bytes yields ints, so slice the stream instead of indexing it
+        # to get a value comparable to the newline. Same approach as LineCounter.
+        newline = b'\n' if isinstance(stream, bytes) else '\n'
+
+        def position_after(i):
+            """Line & column of stream[i+1], i.e. of the position just past stream[i]."""
+            if stream[i:i+1] == newline:
+                return text_line + 1, 1
+            return text_line, text_column + 1
+
         ## The main Earley loop.
         # Run the Prediction/Completion cycle for any Items in the current Earley set.
         # Completions will be added to the SPPF tree, and predictions will be recursively
@@ -155,16 +169,12 @@ class Parser(BaseParser):
         # step.
         i = 0
         node_cache = {}
-        for token in stream:
+        for _ in stream:
             self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
 
             to_scan, node_cache = scan(i, to_scan)
 
-            if token == '\n':
-                text_line += 1
-                text_column = 1
-            else:
-                text_column += 1
+            text_line, text_column = position_after(i)
             i += 1
 
         self.predict_and_complete(i, to_scan, columns, transitives, node_cache)

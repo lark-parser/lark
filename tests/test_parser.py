@@ -2408,6 +2408,32 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(tok.end_line, 2)
             self.assertEqual(tok.end_column, 6)
 
+        def test_line_counting_newline_at_end(self):
+            # A token whose last character is a newline ends at the start of the
+            # next line, not one column further along its own line.
+            p = _Lark("start: /[^x]+/")
+
+            text = 'hello\nworld\n'
+            t = p.parse(text)
+            tok = t.children[0]
+            self.assertEqual(tok, text)
+            self.assertEqual(tok.line, 1)
+            self.assertEqual(tok.column, 1)
+            self.assertEqual(tok.end_pos, len(text))
+            self.assertEqual(tok.end_line, 3)
+            self.assertEqual(tok.end_column, 1)
+
+        def test_line_counting_bytes(self):
+            p = _Lark("start: /[^x]+/", use_bytes=True)
+
+            text = b'hello\nworld'
+            t = p.parse(text)
+            tok = t.children[0]
+            self.assertEqual(tok.line, 1)
+            self.assertEqual(tok.column, 1)
+            self.assertEqual(tok.end_line, 2)
+            self.assertEqual(tok.end_column, 6)
+
         @unittest.skipIf(PARSER=='cyk', "Empty rules")
         def test_empty_end(self):
             p = _Lark("""

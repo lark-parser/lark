@@ -67,12 +67,8 @@ class InteractiveParser:
         return self.copy()
 
     def copy(self, deepcopy_values=True):
-        lexer_thread = copy(self.lexer_thread)
-        return type(self)(
-            self.parser,
-            self.parser_state.copy(deepcopy_values=deepcopy_values, lexer=lexer_thread),
-            lexer_thread,
-        )
+        parser_state = self.parser_state.copy(deepcopy_values=deepcopy_values)
+        return type(self)(self.parser, parser_state, parser_state.lexer)
 
     def __eq__(self, other):
         if not isinstance(other, InteractiveParser):

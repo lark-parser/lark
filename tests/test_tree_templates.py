@@ -143,16 +143,27 @@ class TestTreeTemplatesTemplate(unittest.TestCase):
             with self.subTest(msg=description):
                 self.assertIsNone(template.match(test_case))
 
-    def test_template_search__same_tree_no_template__empty_generator(self):
-        template = Template(SOME_NON_TEMPLATE_TREE, conf=self.conf)
-
-        self.assertEqual([], list(template.search(SOME_NON_TEMPLATE_TREE)))
-
-    def test_template_search__same_tree_as_child__empty_generator(self):
+    def test_template_search__same_tree_no_template__match_without_vars(self):
         template = Template(SOME_NON_TEMPLATE_TREE, conf=self.conf)
 
         self.assertEqual(
-            [], list(template.search(Tree("root", children=[SOME_NON_TEMPLATE_TREE])))
+            [(SOME_NON_TEMPLATE_TREE, {})],
+            list(template.search(SOME_NON_TEMPLATE_TREE)),
+        )
+
+    def test_template_search__same_tree_as_child__match_without_vars(self):
+        template = Template(SOME_NON_TEMPLATE_TREE, conf=self.conf)
+
+        self.assertEqual(
+            [(SOME_NON_TEMPLATE_TREE, {})],
+            list(template.search(Tree("root", children=[SOME_NON_TEMPLATE_TREE]))),
+        )
+
+    def test_template_search__different_tree_no_template__empty_generator(self):
+        template = Template(SOME_NON_TEMPLATE_TREE, conf=self.conf)
+
+        self.assertEqual(
+            [], list(template.search(Tree("root", children=[Tree("foo", ["bye"])])))
         )
 
     def test_template_search__with_template__matched_result_with_parent_tree(self):
@@ -216,6 +227,15 @@ class TestTreeTemplatesTemplateTranslator(unittest.TestCase):
         expected_result = deepcopy(tree)
         expected_result.children.insert(0, Token("DASHES", "--"))
         expected_result.children.insert(2, Token("DASHES", "--"))
+        self.assertEqual(expected_result, translator.translate(tree))
+
+    def test_translate__translation_without_vars__tree_replaced(self):
+        dashed = f"--{SOME_NON_TEMPLATED_STRING}"
+        translations = {self.conf(SOME_NON_TEMPLATED_STRING): self.conf(dashed)}
+        translator = TemplateTranslator(translations)
+        tree = self.parser.parse(SOME_NON_TEMPLATED_STRING)
+
+        expected_result = self.parser.parse(dashed)
         self.assertEqual(expected_result, translator.translate(tree))
 
 

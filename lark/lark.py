@@ -382,6 +382,11 @@ class Lark(Serialize, Generic[_Return_T]):
                 except FileNotFoundError:
                     # The cache file doesn't exist; parse and compose the grammar as normal
                     pass
+                except PermissionError as e:
+                    # FS.open refused the cache (a symlink, owned by another user, or
+                    # writable by others). This is an intentional refusal, not a crash,
+                    # so log a single line and rebuild from the grammar as normal.
+                    logger.warning("Not loading Lark from cache: %s. We will rebuild it.", e)
                 except Exception: # We should probably narrow done which errors we catch here.
                     logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
 

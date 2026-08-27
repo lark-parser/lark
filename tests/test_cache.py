@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import logging
+import pickle
 from unittest import TestCase, main, skipIf
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
@@ -70,6 +71,11 @@ def append_zero(t):
 
 class TestCache(TestCase):
     g = '''start: "a"'''
+    g_with_terminal_reference = '''
+        start: A
+        A: B
+        B: "a"
+    '''
 
 
     def setUp(self):
@@ -194,9 +200,9 @@ class TestCache(TestCase):
             Lark(self.g, parser='lalr', cache=False, cache_grammar=True)
 
         assert len(self.mock_fs.files) == 0
-        parser1 = Lark(self.g, parser='lalr', cache=True, cache_grammar=True)
-        parser2 = Lark(self.g, parser='lalr', cache=True, cache_grammar=True)
-        assert parser2.parse('a') == Tree('start', [])
+        parser1 = Lark(self.g_with_terminal_reference, parser='lalr', cache=True, cache_grammar=True)
+        parser2 = Lark(self.g_with_terminal_reference, parser='lalr', cache=True, cache_grammar=True)
+        assert parser2.parse('a') == Tree('start', ['a'])
 
         # Assert that the cache file was created, and uses a different name than regular cache
         assert len(self.mock_fs.files) == 1
@@ -207,6 +213,23 @@ class TestCache(TestCase):
         assert parser1.grammar.term_defs == parser2.grammar.term_defs
         # Using repr() because RuleOptions doesn't implement __eq__
         assert repr(parser1.grammar.rule_defs) == repr(parser2.grammar.rule_defs)
+        assert parser1.grammar.term_references == parser2.grammar.term_references
+        assert parser2.grammar.term_references == {'A': ['B'], 'B': []}
+
+    def test_cache_grammar_backward_compatibility(self):
+        parser = Lark(self.g_with_terminal_reference, parser='lalr', cache=True, cache_grammar=True)
+        serialized = BytesIO()
+        parser.save(serialized)
+        payload = pickle.loads(serialized.getvalue())
+        del payload['data']['grammar']['term_references']
+
+        serialized = BytesIO()
+        pickle.dump(payload, serialized)
+        serialized.seek(0)
+        loaded = Lark.load(serialized)
+
+        assert loaded.parse('a') == Tree('start', ['a'])
+        assert loaded.grammar.term_references == {}
 
     def test_reconstruct(self):
         # Test that Reconstructor works with cached parsers (using cache_grammar)

@@ -55,6 +55,38 @@ class TestGrammar(TestCase):
         list(p.lex("abc 456"))
         assert sorted(set(fired)) == ['A', 'B']
 
+    def test_terminal_references_are_not_reported_as_unused(self):
+        grammar = r"""
+            start: IDENTIFIER
+            _IDENT_LETTER: "A".."Z"
+            DECIMAL_DIGIT: "0".."9"
+            ALPHANUMERIC: _IDENT_LETTER | DECIMAL_DIGIT
+            IDENTIFIER: _IDENT_LETTER ALPHANUMERIC+
+            UNUSED_FRAGMENT: "unused"
+            UNUSED: UNUSED_FRAGMENT
+        """
+
+        with self.assertLogs("lark", level="DEBUG") as logs:
+            parser = Lark(grammar, parser="lalr")
+
+        self.assertEqual(logs.output, ["DEBUG:lark:Unused terminals: ['UNUSED_FRAGMENT', 'UNUSED']"])
+        self.assertEqual([terminal.name for terminal in parser.terminals], ['IDENTIFIER'])
+        self.assertEqual(parser.parse("ANSWER42"), Tree('start', ['ANSWER42']))
+
+    def test_overridden_terminal_does_not_keep_imported_references(self):
+        grammar = r"""
+            %import common (CNAME, LETTER, DIGIT)
+            %override CNAME: "x"
+            start: CNAME
+        """
+
+        with self.assertLogs("lark", level="DEBUG") as logs:
+            parser = Lark(grammar, parser="lalr")
+
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(set(logs.records[0].args[0]), {'DIGIT', 'LETTER'})
+        self.assertEqual(parser.parse("x"), Tree('start', ['x']))
+
 
     def test_override_rule(self):
         # Overrides the 'sep' template in existing grammar to add an optional terminating delimiter

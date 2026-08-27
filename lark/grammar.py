@@ -10,6 +10,7 @@ if TYPE_CHECKING:
         from typing_extensions import Self
     from .utils import SerializeMemoizer
 
+###{standalone
 TOKEN_DEFAULT_PRIORITY = 0
 
 
@@ -58,7 +59,7 @@ class Terminal(Symbol):
     def fullrepr(self) -> str:
         return f'{type(self).__name__}({self.name!r}, {self.filter_out!r})'
 
-    def renamed(self, f: Callable[[str], str]) -> 'Terminal':
+    def renamed(self, f: Callable[[str], str]) -> 'Self':
         return type(self)(f(self.name), self.filter_out)
 
 
@@ -67,7 +68,80 @@ class NonTerminal(Symbol):
 
     is_term: ClassVar[bool] = False
 
-    def serialize(self, memo: Any = None) -> Dict[str, Any]:
+    def serialize(self, memo: Optional['SerializeMemoizer'] = None) -> Dict[str, Any]:
         # TODO this is here because self.name can be a Token instance.
         #      remove this function when the issue is fixed. (backwards-incompatible)
         return {'name': str(self.name), '__type__': 'NonTerminal'}
+
+
+class RuleOptions(Serialize):
+    __serialize_fields__ = ('keep_all_tokens', 'expand1', 'priority', 'template_source', 'empty_indices')
+
+    keep_all_tokens: bool
+    expand1: bool
+    priority: Optional[int]
+    template_source: Optional[str]
+    empty_indices: Tuple[bool, ...]
+
+    def __init__(self, keep_all_tokens: bool = False, expand1: bool = False, priority: Optional[int] = None, template_source: Optional[str] = None, empty_indices: Tuple[bool, ...] = ()) -> None:
+        self.keep_all_tokens = keep_all_tokens
+        self.expand1 = expand1
+        self.priority = priority
+        self.template_source = template_source
+        self.empty_indices = empty_indices
+
+    def __repr__(self) -> str:
+        return 'RuleOptions(%r, %r, %r, %r)' % (
+            self.keep_all_tokens,
+            self.expand1,
+            self.priority,
+            self.template_source
+        )
+
+
+class Rule(Serialize):
+    """
+        origin : a symbol
+        expansion : a list of symbols
+        order : index of this expansion amongst all rules of the same name
+    """
+    __slots__ = ('origin', 'expansion', 'alias', 'options', 'order', '_hash')
+
+    __serialize_fields__ = ('origin', 'expansion', 'order', 'alias', 'options')
+    __serialize_namespace__ = (Terminal, NonTerminal, RuleOptions)
+
+    origin: NonTerminal
+    expansion: Sequence[Symbol]
+    order: int
+    alias: Optional[str]
+    options: RuleOptions
+    _hash: int
+
+    def __init__(self, origin: NonTerminal, expansion: Sequence[Symbol],
+                 order: int = 0, alias: Optional[str] = None, options: Optional[RuleOptions] = None) -> None:
+        self.origin = origin
+        self.expansion = expansion
+        self.alias = alias
+        self.order = order
+        self.options = options or RuleOptions()
+        self._hash = hash((self.origin, tuple(self.expansion)))
+
+    def _deserialize(self) -> None:
+        self._hash = hash((self.origin, tuple(self.expansion)))
+
+    def __str__(self) -> str:
+        return '<%s : %s>' % (self.origin.name, ' '.join(x.name for x in self.expansion))
+
+    def __repr__(self) -> str:
+        return 'Rule(%r, %r, %r, %r)' % (self.origin, self.expansion, self.alias, self.options)
+
+    def __hash__(self) -> int:
+        return self._hash
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Rule):
+            return False
+        return self.origin == other.origin and self.expansion == other.expansion
+
+
+###}

@@ -137,6 +137,50 @@ def calculate_sets(rules):
     return FIRST, FOLLOW, NULLABLE
 
 
+def check_cyclic_grammar(rules, nullable, start):
+    """Raise GrammarError if a non-terminal can derive itself without consuming input.
+
+    A grammar is cyclic when some rule allows ``A => A`` (directly, or indirectly)
+    e.g. ``a: a b*`` where ``b*`` may be empty.
+    This affects both LALR at run-time, and CYK at build-time.
+
+    This function exists for finding the cycles at build-time.
+    Only rules reachable from a start symbol are checked. A cycle the parser can never
+    enter is harmless, and rejecting it would break grammars that work today.
+
+    Note: Some cyclical grammars may still work in LALR due to its conflict resolution.
+
+    Returns the set of reachable non-terminals, so callers can reuse it.
+    """
+    rules_by_origin = classify(rules, lambda r: r.origin)
+    expand = lambda sym: [s for rule in rules_by_origin.get(sym, ())
+                          for s in rule.expansion if not s.is_term]
+    # Maps each reachable non-terminal to a start symbol it is reachable from.
+    reachable = {}
+    for start_sym in start:
+        for sym in bfs([NonTerminal(start_sym)], expand):
+            reachable.setdefault(sym, start_sym)
+
+    # A -> B whenever a rule expands A to B with every other symbol nullable.
+    derives = {}
+    for rule in rules:
+        if rule.origin not in reachable:
+            continue
+        expansion = rule.expansion
+        for i, sym in enumerate(expansion):
+            if not sym.is_term and all(s in nullable for j, s in enumerate(expansion) if j != i):
+                derives.setdefault(rule.origin, set()).add(sym)
+
+    # The grammar is cyclic if any non-terminal derives itself, directly or transitively.
+    for origin, syms in derives.items():
+        if origin in bfs(syms, lambda sym: derives.get(sym, ())):
+            raise GrammarError("Rule '%s' is cyclic: it can derive itself without consuming "
+                               "any input, and would never terminate. (reachable from '%s')"
+                               % (origin.name, reachable[origin]))
+
+    return set(reachable)
+
+
 class GrammarAnalyzer:
     def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
         self.debug = debug

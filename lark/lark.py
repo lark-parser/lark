@@ -74,6 +74,7 @@ class LarkOptions(Serialize):
     edit_terminals: Optional[Callable[[TerminalDef], TerminalDef]]
     import_paths: 'List[Union[str, Callable[[Union[None, str, PackageResource], str], Tuple[str, str]]]]'
     source_path: Optional[str]
+    allow_cyclic_rules: bool
 
     OPTIONS_DOC = r"""
     **===  General Options  ===**
@@ -154,6 +155,8 @@ class LarkOptions(Serialize):
             A List of either paths or loader functions to specify from where grammars are imported
     source_path
             Override the source of from where the grammar was loaded. Useful for relative imports and unconventional grammar loading
+    allow_cyclic_rules
+            Disable detection of cyclic rules; LALR may loop forever for some grammars. Added for backwards compatibility.
 
     **=== End of Options ===**
     """
@@ -170,6 +173,7 @@ class LarkOptions(Serialize):
     _defaults: Dict[str, Any] = {
         'debug': False,
         'strict': False,
+        'allow_cyclic_rules': False,
         'keep_all_tokens': False,
         'tree_class': None,
         'cache': False,

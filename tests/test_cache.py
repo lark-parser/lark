@@ -12,6 +12,7 @@ from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
 from lark.utils import FS, _open_private
+import lark.utils as lark_utils
 import lark.lark as lark_module
 from lark.reconstruct import Reconstructor
 from . import test_reconstructor
@@ -275,6 +276,20 @@ class TestCacheFile(TestCase):
                 _open_private(self.cache_fn, 'wb')
         with open(self.cache_fn, 'rb') as f:
             self.assertEqual(f.read(), b'colleague-data')
+
+    def test_lark_warns_on_refused_cache_without_traceback(self):
+        # A refused cache path must not break parser construction, and both the load
+        # and the save refusal should surface as one warning each, not an exception log.
+        os.symlink(self.other_fn, self.cache_fn)
+        with self.assertLogs(lark_module.logger, level='WARNING') as cm:
+            Lark('start: "a"', parser='lalr', cache=self.cache_fn)
+        self.assertEqual([r.levelname for r in cm.records], ['WARNING'] * len(cm.records))
+        self.assertTrue(any('Failed to load cache' in r.getMessage() for r in cm.records))
+        if not lark_utils._has_atomicwrites:
+            # With atomicwrites the save replaces the symlink atomically instead of refusing.
+            self.assertTrue(any('Failed to save cache' in r.getMessage() for r in cm.records))
+        with open(self.other_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'original')
 
     def test_save_keeps_cache_private(self):
         with FS.open(self.cache_fn, 'wb') as f:

@@ -1,5 +1,6 @@
 import unicodedata
 import os
+import errno
 from itertools import product
 from collections import deque
 from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence, Iterable, AbstractSet
@@ -305,6 +306,58 @@ try:
 except ImportError:
     _has_atomicwrites = False
 
+
+def _open_private(name, mode, **kwargs):
+    """Like open(), but refuses to follow a symlink, refuses a file that belongs to
+    another user, refuses to read a file that other users can write, and keeps the
+    file readable only by its owner.
+
+    The parser cache is stored in a shared temporary directory under a name that is
+    derived from the grammar, so another user on the same machine can predict it and
+    get there first.
+
+    A refused file raises ``PermissionError``, which the cache loader turns into a
+    warning and a normal rebuild rather than a failure.
+    """
+    writing = "w" in mode
+    if writing:
+        # No O_TRUNC here: we truncate only after the ownership check passes, so a file
+        # we end up refusing (e.g. a shared cache owned by someone else) is left intact
+        # instead of being emptied first.
+        flags = os.O_WRONLY | os.O_CREAT
+    else:
+        flags = os.O_RDONLY
+    if "b" in mode:
+        flags |= getattr(os, "O_BINARY", 0)
+    try:
+        fd = os.open(name, flags | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    except OSError as e:
+        # O_NOFOLLOW reports a symlink as ELOOP (EMLINK on some BSDs). Treat that as a
+        # refusal like the ownership/permission checks below, so the caller sees one
+        # kind of "won't use this cache" error rather than a raw traceback.
+        if e.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1)):
+            raise PermissionError("Refusing to open %r: it is a symlink" % name) from e
+        raise
+    try:
+        st = os.fstat(fd)
+        if hasattr(os, "geteuid"):
+            if st.st_uid != os.geteuid():
+                raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+            # On read, don't trust a file that group or others can write, since it
+            # could have been tampered with even though we own it. Only write bits let
+            # another user do that, so read bits are fine to leave alone.
+            if not writing and st.st_mode & 0o022:
+                raise PermissionError("Refusing to read %r: other users can write to it" % name)
+        if writing:
+            if hasattr(os, "fchmod"):
+                os.fchmod(fd, 0o600)
+            os.ftruncate(fd, 0)
+        return os.fdopen(fd, mode, **kwargs)
+    except Exception:
+        os.close(fd)
+        raise
+
+
 class FS:
     exists = staticmethod(os.path.exists)
 
@@ -313,7 +366,7 @@ class FS:
         if _has_atomicwrites and "w" in mode:
             return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
         else:
-            return open(name, mode, **kwargs)
+            return _open_private(name, mode, **kwargs)
 
 
 class fzset(frozenset):

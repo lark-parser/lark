@@ -382,6 +382,11 @@ class Lark(Serialize, Generic[_Return_T]):
                 except FileNotFoundError:
                     # The cache file doesn't exist; parse and compose the grammar as normal
                     pass
+                except PermissionError as e:
+                    # FS.open refused the cache (a symlink, owned by another user, or
+                    # writable by others). This is an intentional refusal, not a crash,
+                    # so log a single line and rebuild from the grammar as normal.
+                    logger.warning("Failed to load cache due to a permissions error: %s. Rebuilding from the grammar.", e)
                 except Exception: # We should probably narrow done which errors we catch here.
                     logger.exception("Failed to load Lark from cache: %r. We will try to carry on.", cache_fn)
 
@@ -485,8 +490,11 @@ class Lark(Serialize, Generic[_Return_T]):
                     f.write(cache_sha256.encode('utf8') + b'\n')
                     pickle.dump(used_files, f)
                     self.save(f, _LOAD_ALLOWED_OPTIONS)
+            except PermissionError as e:
+                # FS.open refused the cache path (a symlink, or owned by another user).
+                logger.warning("Failed to save cache due to a permissions error: %s", e)
             except IOError as e:
-                logger.exception("Failed to save Lark to cache: %r.", cache_fn, e)
+                logger.exception("Failed to save Lark to cache: %r. (%s)", cache_fn, e)
 
     if __doc__:
         __doc__ += "\n\n" + LarkOptions.OPTIONS_DOC

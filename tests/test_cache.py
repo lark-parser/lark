@@ -1,11 +1,18 @@
 from __future__ import absolute_import
 
 import logging
+import os
+import shutil
+import stat
+import tempfile
 from unittest import TestCase, main, skipIf
+from unittest.mock import patch
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
+from lark.utils import FS, _open_private
+import lark.utils as lark_utils
 import lark.lark as lark_module
 from lark.reconstruct import Reconstructor
 from . import test_reconstructor
@@ -227,6 +234,107 @@ class TestCache(TestCase):
         tree = parser.parse(code)
         new = Reconstructor(parser).reconstruct(tree)
         self.assertEqual(test_reconstructor._remove_ws(code), test_reconstructor._remove_ws(new))
+
+
+@skipIf(os.name != 'posix', "requires posix file permissions and symlinks")
+class TestCacheFile(TestCase):
+    # The automatic cache name is derived from the grammar and lives in a shared
+    # temporary directory, so another user can predict the path and create it first.
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, True)
+        self.cache_fn = os.path.join(self.tmpdir, 'cache.tmp')
+        self.other_fn = os.path.join(self.tmpdir, 'other')
+        with open(self.other_fn, 'wb') as f:
+            f.write(b'original')
+
+    def test_load_does_not_follow_symlink(self):
+        os.symlink(self.other_fn, self.cache_fn)
+        with self.assertRaises(OSError):
+            FS.open(self.cache_fn, 'rb').close()
+
+    def test_save_does_not_follow_symlink(self):
+        os.symlink(self.other_fn, self.cache_fn)
+        try:
+            with FS.open(self.cache_fn, 'wb') as f:
+                f.write(b'overwritten')
+        except OSError:
+            pass
+        with open(self.other_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'original')
+
+    def test_save_refuses_other_users_file_without_truncating(self):
+        # A refused file must be left intact, not emptied first. This is the plain-open
+        # write path (atomicwrites has its own mkstemp+rename), so exercise it directly.
+        # We can't chown to another user without privileges, so fake the mismatch.
+        with open(self.cache_fn, 'wb') as f:
+            f.write(b'colleague-data')
+        os.chmod(self.cache_fn, 0o600)
+        with patch('os.geteuid', return_value=os.geteuid() + 1):
+            with self.assertRaises(OSError):
+                _open_private(self.cache_fn, 'wb')
+        with open(self.cache_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'colleague-data')
+
+    def test_lark_warns_on_refused_cache_without_traceback(self):
+        # A refused cache path must not break parser construction, and both the load
+        # and the save refusal should surface as one warning each, not an exception log.
+        os.symlink(self.other_fn, self.cache_fn)
+        with self.assertLogs(lark_module.logger, level='WARNING') as cm:
+            Lark('start: "a"', parser='lalr', cache=self.cache_fn)
+        self.assertEqual([r.levelname for r in cm.records], ['WARNING'] * len(cm.records))
+        self.assertTrue(any('Failed to load cache' in r.getMessage() for r in cm.records))
+        if not lark_utils._has_atomicwrites:
+            # With atomicwrites the save replaces the symlink atomically instead of refusing.
+            self.assertTrue(any('Failed to save cache' in r.getMessage() for r in cm.records))
+        with open(self.other_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'original')
+
+    def test_save_keeps_cache_private(self):
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        self.assertEqual(stat.S_IMODE(os.stat(self.cache_fn).st_mode) & 0o077, 0)
+
+    def test_load_refuses_group_or_world_writable(self):
+        with open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        os.chmod(self.cache_fn, 0o666)
+        with self.assertRaises(OSError):
+            FS.open(self.cache_fn, 'rb').close()
+
+    def test_load_allows_group_readable(self):
+        # Only write bits let another user tamper, so a file we own that is merely
+        # group/world readable is still fine to load.
+        with open(self.cache_fn, 'wb') as f:
+            f.write(b'data')
+        os.chmod(self.cache_fn, 0o644)
+        with FS.open(self.cache_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'data')
+
+
+class TestCacheFilePortable(TestCase):
+    # Runs everywhere, including Windows, where the posix-only checks above are skipped:
+    # _open_private must still round-trip a normal read/write.
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, True)
+        self.cache_fn = os.path.join(self.tmpdir, 'cache.tmp')
+
+    def test_open_roundtrip(self):
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'roundtrip')
+        with FS.open(self.cache_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'roundtrip')
+
+    def test_open_truncates_existing_on_write(self):
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'longer original content')
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'short')
+        with FS.open(self.cache_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'short')
 
 
 if __name__ == '__main__':

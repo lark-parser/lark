@@ -9,6 +9,10 @@ while Lark grammars are usually written as EBNF text. In return, Lark can build
 a parse tree automatically, run different parser algorithms from the same
 grammar, and keep grammar and tree-processing code separate.
 
+One common early porting surprise is whitespace: pyparsing skips whitespace by
+default, but Lark only ignores whitespace that the grammar explicitly declares
+with `%ignore`.
+
 ## Porting checklist
 
 1. **Choose one representative input** from the pyparsing parser's tests.
@@ -25,16 +29,27 @@ grammar, and keep grammar and tree-processing code separate.
 | `Literal("+")`, `Keyword("if")` | string terminals: `"+"`, `"if"` |
 | `Word(alphas)`, `Word(nums)` | regex terminals: `/[a-zA-Z]+/`, `/\d+/` or `%import common.INT` |
 | `expr + term` | sequence: `expr term` |
-| `expr | term` / `MatchFirst` | ordered alternatives usually become `expr \| term` in a rule |
+| `expr | term` / `MatchFirst` | alternatives usually become `expr | term` in a rule |
 | `Optional(expr)` | `expr?` |
 | `ZeroOrMore(expr)` | `expr*` |
 | `OneOrMore(expr)` | `expr+` |
 | `Group(expr)` | a named rule, for example `group: expr` |
-| `Suppress(expr)` | literal strings or terminals whose values are not needed in the tree |
+| `Suppress(expr)` | anonymous literals such as `"="`, or underscore-prefixed terminals/rules whose values are not needed in the tree |
 | `setParseAction(fn)` | `Transformer` or `Visitor` methods |
 | `ignore(...)` | `%ignore ...` |
 | `delimitedList(item)` | `item ("," item)*` |
-| `infixNotation(...)` | precedence rules, or Lark's grammar composition patterns |
+| `Forward()` | recursive rules, for example `?expr: atom | expr "+" atom` |
+| `Regex(r"...")` | regex terminals: `/.../` |
+| `QuotedString(...)` | quoted-string terminals, often `%import common.ESCAPED_STRING` |
+| `CaselessKeyword("if")` | case-insensitive literals: `"if"i` |
+| `setResultsName("name")` | rule aliases such as `-> name`, or transformer method names |
+| `infixNotation(...)` | precedence rules |
+
+Unlike pyparsing's `MatchFirst`, Lark alternatives are not inherently ordered in
+the same way: LALR resolves choices deterministically from the parse table, and
+Earley uses ambiguity handling and priorities when needed. If a pyparsing grammar
+relies on ordering to choose between overlapping expressions, make that choice
+explicit with priorities or more specific rules when porting.
 
 ## Minimal example
 
@@ -111,14 +126,14 @@ ignored text is part of the grammar:
 ```python
 parser = Lark(r"""
     start: assignment+
-    assignment: NAME "=" VALUE
+    assignment: NAME "=" INT
 
-    COMMENT: /#.*/
-    VALUE: /[^\n#]+/
+    COMMENT: /#[^\n]*/
 
     %import common.CNAME -> NAME
-    %import common.WS_INLINE
-    %ignore WS_INLINE
+    %import common.INT
+    %import common.WS
+    %ignore WS
     %ignore COMMENT
 """, parser="lalr")
 ```

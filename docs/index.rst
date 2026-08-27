@@ -96,6 +96,7 @@ Resources
 
    -  :doc:`how_to_use`
    -  :doc:`how_to_develop`
+   -  :doc:`pyparsing_porting`
 
 -  Reference
 

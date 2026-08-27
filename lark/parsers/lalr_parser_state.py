@@ -59,7 +59,7 @@ class ParserState(Generic[StateT]):
     def copy(self, deepcopy_values=True) -> 'ParserState[StateT]':
         return type(self)(
             self.parse_conf,
-            self.lexer, # XXX copy
+            copy(self.lexer),
             copy(self.state_stack),
             deepcopy(self.value_stack) if deepcopy_values else copy(self.value_stack),
         )

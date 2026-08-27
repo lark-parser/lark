@@ -2671,6 +2671,26 @@ def _make_parser_test(LEXER, PARSER):
             res = ip_copy.feed_eof()
             self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
+        @unittest.skipIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
+        def test_interactive_parser_copy_resume(self):
+            g = _Lark(r'''
+                start: A+
+                A: "a"
+            ''')
+
+            ip = g.parse_interactive("aaa")
+            ip_copy = ip.copy()
+
+            # The copy has to resume from its own lexer position, not from the original's
+            ip_copy.exhaust_lexer()
+            self.assertEqual(ip_copy.resume_parse(), Tree('start', ['a', 'a', 'a']))
+
+            # And advancing the copy must not affect the original
+            self.assertEqual(ip.resume_parse(), Tree('start', ['a', 'a', 'a']))
+
+            self.assertIs(ip_copy.parser_state.lexer, ip_copy.lexer_thread)
+            self.assertIsNot(ip_copy.parser_state.lexer, ip.lexer_thread)
+
         @unittest.skipIf(PARSER != 'lalr', "interactive_parser error handling only works with LALR for now")
         def test_error_with_interactive_parser(self):
             def ignore_errors(e):

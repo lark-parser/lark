@@ -317,6 +317,16 @@ class LineCounter:
 
         return self.char_pos == other.char_pos and self.newline_char == other.newline_char
 
+    def __copy__(self):
+        # Explicit copy: the generic copy protocol is ~5x slower, and this runs on every LexerThread copy
+        new = type(self).__new__(type(self))
+        new.newline_char = self.newline_char
+        new.char_pos = self.char_pos
+        new.line = self.line
+        new.column = self.column
+        new.line_start_pos = self.line_start_pos
+        return new
+
     def feed(self, token: AnyStr, test_newline=True):
         """Consume a token and calculate the new line & column.
 

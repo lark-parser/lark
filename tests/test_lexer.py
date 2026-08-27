@@ -1,6 +1,8 @@
+from copy import copy
 from unittest import TestCase, main
 
 from lark import Lark, Tree, TextSlice
+from lark.lexer import LineCounter
 
 
 class TestLexer(TestCase):
@@ -18,6 +20,19 @@ class TestLexer(TestCase):
 
         res = list(p.lex("abc cba dd", dont_ignore=True))
         assert res == list('abc cba dd')
+
+    def test_line_counter_copy(self):
+        lc = LineCounter('\n')
+        lc.feed("ab\ncd")
+        lc2 = copy(lc)
+        self.assertIsNot(lc, lc2)
+        # Every slot must survive the copy, so a field added to LineCounter but not to __copy__ fails here
+        for slot in LineCounter.__slots__:
+            self.assertEqual(getattr(lc, slot), getattr(lc2, slot))
+
+        lc2.feed("xyz")
+        self.assertEqual(lc2.char_pos, 8)
+        self.assertEqual(lc.char_pos, 5)
 
     def test_flag_order_is_deterministic(self):
         # Two or more flags on one terminal is the only case where order exists; the

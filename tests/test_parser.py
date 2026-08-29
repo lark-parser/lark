@@ -2395,6 +2395,26 @@ def _make_parser_test(LEXER, PARSER):
             self.assertEqual(t.children, ['a', 'bc'])
             self.assertEqual(t.children[0].type, 'A')
 
+        @unittest.skipIf(LEXER=='basic', "This scenario only occurs with the dynamic lexers")
+        @unittest.skipIf(LEXER=='dynamic_complete', "dynamic_complete intentionally generates all sub-matches")
+        @unittest.skipIf(PARSER=='cyk', "Not applicable to CYK")
+        def test_terminal_priority_in_recursive_rule(self):
+            """Terminal priorities should be respected in recursive rules (issue #1441)."""
+            g = r"""
+            %import common.SIGNED_INT
+            %import common.SIGNED_FLOAT
+            %import common.WS
+            %ignore WS
+            FLOAT.1: SIGNED_FLOAT
+            INT: SIGNED_INT
+            start: FLOAT | INT | "[" start* "]"
+            """
+            l = _Lark(g)
+            t = l.parse("[1 2.0 3]")
+            # "2.0" must be matched as a single FLOAT, not split into INT "2" + FLOAT ".0"
+            self.assertEqual(len(t.children), 3)
+            self.assertEqual(t.children[1].children[0], '2.0')
+
         def test_line_counting(self):
             p = _Lark("start: /[^x]+/")
 

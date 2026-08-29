@@ -157,6 +157,20 @@ class TestGrammar(TestCase):
     def test_undefined_term(self):
         self.assertRaises(GrammarError, Lark, """start: A""")
 
+    def test_anon_terminal_names(self):
+        # Issue #836: common multi-char operators get readable auto-names
+        # instead of showing up as __ANON_N in error messages.
+        p = Lark("""start: "a" (">=" | "<=" | "!=") "b" """)
+        names = {t.name for t in p.terminals}
+        assert {'LESSEQUAL', 'MOREEQUAL', 'NOTEQUAL'} <= names, names
+
+    def test_anon_terminal_name_collision(self):
+        # If the auto-name is already taken by a user terminal, fall back to __ANON.
+        p = Lark("""start: "a" "<=" LESSEQUAL "b"\nLESSEQUAL: "leq" """)
+        names = {t.name for t in p.terminals}
+        assert 'LESSEQUAL' in names
+        assert any(n.startswith('__ANON') for n in names), names
+
     def test_declare_rule_name(self):
         # %declare is for terminals only; a rule (lowercase) name used to crash
         # the compiler with AttributeError instead of a clean GrammarError.

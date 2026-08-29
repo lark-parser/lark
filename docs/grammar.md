@@ -272,6 +272,10 @@ Using the `%ignore` directive results in a cleaner grammar.
 
 It's especially important for the LALR(1) algorithm, because adding whitespace (or comments, or other extraneous elements) explicitly in the grammar, harms its predictive abilities, which are based on a lookahead of 1.
 
+When using LALR, ignored terminals are skipped by the lexer before parsing.
+Because of that, ignored terminals should not be referenced from LALR rules when their position matters.
+Earley can still use such a reference to require an ignored terminal at a specific position, but that behavior is currently a missing feature in LALR.
+
 **Syntax:**
 ```html
 %ignore <TERMINAL>

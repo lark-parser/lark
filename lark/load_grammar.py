@@ -223,6 +223,45 @@ class FindRuleSize(Transformer):
         return max(self._args_as_int(args))
 
 
+def _balance_optional_arity(rule: Tree, keep_all_tokens: bool) -> None:
+    """Pad shorter alternatives of an optional so the whole group has fixed arity.
+
+    ``maybe_placeholders`` promises a ``[...]`` group a constant number of children.
+    When the group's alternatives differ in width (``["a" | "b" "c"]``), the shorter
+    ones must be trailing-padded with placeholders to match the widest (Issue #1078).
+    """
+    def arity(node) -> int:
+        # Number of tree children the node yields: kept symbols and placeholders count one each.
+        if node is _EMPTY:
+            return 1
+        if isinstance(node, Terminal):
+            return 1 if keep_all_tokens or not node.filter_out else 0
+        if isinstance(node, NonTerminal):
+            return 0 if node.name.startswith('_') else 1
+        if isinstance(node, Tree):
+            if node.data == 'expansion':
+                return sum(arity(c) for c in node.children)
+            if node.data == 'expansions':
+                return max(arity(c) for c in node.children)
+        return 1
+
+    if not isinstance(rule, Tree):
+        return
+    for child in rule.children:
+        _balance_optional_arity(child, keep_all_tokens)
+    if rule.data == 'expansions':
+        widths = [arity(b) for b in rule.children]
+        width = max(widths)
+        for i, (branch, w) in enumerate(zip(list(rule.children), widths)):
+            if w >= width:
+                continue
+            pad = [_EMPTY] * (width - w)
+            if isinstance(branch, Tree) and branch.data == 'expansion':
+                branch.children += pad
+            else:
+                rule.children[i] = ST('expansion', [branch, *pad])
+
+
 @inline_args
 class EBNF_to_BNF(Transformer_InPlace):
     def __init__(self):
@@ -374,6 +413,7 @@ class EBNF_to_BNF(Transformer_InPlace):
 
     def maybe(self, rule: Tree):
         keep_all_tokens = self.rule_options and self.rule_options.keep_all_tokens
+        _balance_optional_arity(rule, keep_all_tokens)
         rule_size = FindRuleSize(keep_all_tokens).transform(rule)
         empty = ST('expansion', [_EMPTY] * rule_size)
         return ST('expansions', [rule, empty])

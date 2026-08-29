@@ -137,6 +137,48 @@ def calculate_sets(rules):
     return FIRST, FOLLOW, NULLABLE
 
 
+def check_cyclic_grammar(rules, nullable):
+    """Raise GrammarError if a non-terminal can derive itself without consuming input.
+
+    A grammar is cyclic when some rule allows ``A => A`` (directly, or through other
+    symbols that are all nullable), e.g. ``a: a b*`` where ``b*`` may be empty. Such a
+    rule has no base case to terminate on, so the LALR and CYK parsers loop forever on
+    it (Earley merely produces an arbitrary parse). Reject it at build time instead.
+    """
+    # A -> B whenever a rule expands A to B with every other symbol nullable.
+    derives = defaultdict(set)
+    for rule in rules:
+        expansion = rule.expansion
+        for i, sym in enumerate(expansion):
+            if sym.is_term:
+                continue
+            if all(s in nullable for j, s in enumerate(expansion) if j != i):
+                derives[rule.origin].add(sym)
+
+    # Iterative DFS that stops at the first non-terminal found on a cycle.
+    UNVISITED, ON_STACK, DONE = 0, 1, 2
+    state = defaultdict(int)
+    for start in list(derives):
+        if state[start] != UNVISITED:
+            continue
+        path = [(start, iter(derives[start]))]
+        state[start] = ON_STACK
+        while path:
+            origin, children = path[-1]
+            for nxt in children:
+                if state[nxt] == ON_STACK:
+                    raise GrammarError("Rule '%s' is cyclic: it can derive itself without "
+                                       "consuming any input, which makes the parser loop "
+                                       "forever (e.g. `a: a b*`)." % nxt.name)
+                if state[nxt] == UNVISITED:
+                    state[nxt] = ON_STACK
+                    path.append((nxt, iter(derives[nxt])))
+                    break
+            else:
+                state[origin] = DONE
+                path.pop()
+
+
 class GrammarAnalyzer:
     def __init__(self, parser_conf: ParserConf, debug: bool=False, strict: bool=False):
         self.debug = debug

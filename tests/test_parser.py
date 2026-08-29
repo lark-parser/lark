@@ -1337,6 +1337,33 @@ def _make_parser_test(LEXER, PARSER):
                 s = j.encode(enc)
                 self.assertRaises(UnexpectedCharacters, g.parse, s)
 
+        def test_utf8_bom_is_skipped(self):
+            g = _Lark(r"""!start: "hello" """)
+            self.assertEqual(g.parse('\ufeffhello').children, ['hello'])
+
+        def test_utf8_bom_bytes_is_skipped(self):
+            g = _Lark(r"""!start: "hello" """, use_bytes=True)
+            self.assertEqual(g.parse(b'\xef\xbb\xbfhello').children[0].value, b'hello')
+
+        @unittest.skipIf(LEXER not in ('basic', 'contextual'), "TextSlice only supports basic and contextual lexers")
+        def test_utf8_bom_textslice_is_skipped(self):
+            g = _Lark(r"""!start: "hello" """)
+            self.assertEqual(g.parse(TextSlice('x\ufeffhello', 1, None)).children, ['hello'])
+
+        def test_utf8_bom_grammar_file_is_skipped(self):
+            import tempfile
+
+            grammar = '\ufeff!start: "hello"'
+            with tempfile.NamedTemporaryFile('w', encoding='utf8', suffix='.lark', delete=False) as f:
+                f.write(grammar)
+                grammar_path = f.name
+
+            try:
+                g = _Lark_open(grammar_path)
+                self.assertEqual(g.parse('hello').children, ['hello'])
+            finally:
+                os.unlink(grammar_path)
+
         @unittest.skipIf(PARSER == 'cyk', "Takes forever")
         def test_stack_for_ebnf(self):
             """Verify that stack depth isn't an issue for EBNF grammars"""

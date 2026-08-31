@@ -340,14 +340,44 @@ class ParseTreeBuilder:
     def _init_builders(self, rules):
         propagate_positions = make_propagate_positions(self.propagate_positions)
 
+        # When maybe_placeholders is enabled, compute target width per rule origin
+        # so narrower alternatives within the same optional group get padded to match
+        # the widest alternative. We detect this by looking at rules with empty_indices
+        # that have trailing Nones (empty_indices after the last expansion element),
+        # which indicates an optional group was absent at the end.
+        target_width_by_origin = {}
+        if self.maybe_placeholders:
+            for rule in rules:
+                origin_name = rule.origin.name
+                ei = rule.options.empty_indices
+                if ei and len(rule.expansion) > 0:
+                    s = ''.join(str(int(b)) for b in ei)
+                    processed = [len(ones) for ones in s.split('0')]
+                    trailing = processed[len(rule.expansion)]
+                    if trailing > 0:
+                        target = len(rule.expansion) + trailing
+                        if origin_name not in target_width_by_origin or target > target_width_by_origin[origin_name]:
+                            target_width_by_origin[origin_name] = target
+
         for rule in rules:
             options = rule.options
             keep_all_tokens = options.keep_all_tokens
             expand_single_child = options.expand1
 
+            empty_indices = options.empty_indices if self.maybe_placeholders else None
+
+            # Pad narrower alternatives that have no empty_indices with trailing Nones
+            if self.maybe_placeholders and rule.origin.name in target_width_by_origin and not empty_indices:
+                target = target_width_by_origin[rule.origin.name]
+                visible = sum(1 for sym in rule.expansion
+                              if keep_all_tokens or not (sym.is_term and sym.filter_out))
+                trailing_nones = target - visible
+                if trailing_nones > 0:
+                    empty_indices = (False,) * len(rule.expansion) + (True,) * trailing_nones
+
             wrapper_chain = list(filter(None, [
                 (expand_single_child and not rule.alias) and ExpandSingleChild,
-                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, options.empty_indices if self.maybe_placeholders else None),
+                maybe_create_child_filter(rule.expansion, keep_all_tokens, self.ambiguous, empty_indices),
                 propagate_positions,
                 self.ambiguous and maybe_create_ambiguous_expander(self.tree_class, rule.expansion, keep_all_tokens),
                 self.ambiguous and partial(AmbiguousIntermediateExpander, self.tree_class)

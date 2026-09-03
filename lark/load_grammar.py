@@ -3,6 +3,7 @@
 
 import hashlib
 import os.path
+import re
 import sys
 from collections import namedtuple
 from copy import copy, deepcopy
@@ -596,6 +597,19 @@ def _literal_to_pattern(literal):
         assert False, 'Invariant failed: literal.type not in ["STRING", "REGEXP"]'
 
 
+def _char_to_regexp(char: str) -> str:
+    """Escape a single character for use inside a regexp character class.
+
+    Characters in 0x80-0xff are written as ``\\xNN`` escapes: under ``use_bytes`` the
+    pattern is later encoded (utf-8 by the dynamic lexer), which would split a literal
+    character into two bytes. Anything else is left to ``re.escape``, which keeps
+    non-ascii characters literal.
+    """
+    if '\x80' <= char <= '\xff':
+        return f'\\x{ord(char):02x}'
+    return re.escape(char)
+
+
 @inline_args
 class PrepareLiterals(Transformer_InPlace):
     def literal(self, literal):
@@ -603,15 +617,16 @@ class PrepareLiterals(Transformer_InPlace):
 
     def range(self, start, end):
         assert start.type == end.type == 'STRING'
-        start = start.value[1:-1]
-        end = end.value[1:-1]
-        assert len(eval_escaping(start)) == len(eval_escaping(end)) == 1
-        regexp = '[%s-%s]' % (start, end)
+        start = eval_escaping(start.value[1:-1])
+        end = eval_escaping(end.value[1:-1])
+        assert len(start) == len(end) == 1
+        regexp = '[%s-%s]' % (_char_to_regexp(start), _char_to_regexp(end))
         return ST('pattern', [PatternRE(regexp)])
 
 
 def _make_joined_pattern(regexp, flags_set) -> PatternRE:
     return PatternRE(regexp, ())
+
 
 class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
@@ -625,7 +640,9 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         if len(items) == 1:
             return items[0]
 
-        pattern = ''.join(i.to_regexp() for i in items)
+        # A bare '|' binds looser than concatenation, so an item containing one is grouped
+        # before it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
+        pattern = ''.join(f'(?:{r})' if '|' in r else r for r in (i.to_regexp() for i in items))
         return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps: List[Pattern]) -> Pattern:

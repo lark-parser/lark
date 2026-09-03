@@ -322,6 +322,11 @@ class TestGrammar(TestCase):
         for s in ('!', '0', '\t'):
             self.assertRaises(UnexpectedInput, l.parse, s)
 
+        # Non-ascii endpoints stay literal, so the pattern is the same string as /[а-я]/
+        # (interegular and anonymous-terminal dedup both compare pattern strings)
+        l = Lark('start: T\nT: "а".."я"', parser='lalr')
+        self.assertEqual(l.get_terminal('T').pattern.to_regexp(), '[а-я]')
+
     def test_list_grammar_imports(self):
             grammar = """
             %import .test_templates_import (start, sep)

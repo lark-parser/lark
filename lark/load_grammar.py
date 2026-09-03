@@ -600,12 +600,14 @@ def _literal_to_pattern(literal):
 def _char_to_regexp(char: str) -> str:
     """Escape a single character for use inside a regexp character class.
 
-    The result stays ascii, because the pattern may later be encoded to bytes (``use_bytes``).
+    Characters in 0x80-0xff are written as ``\\xNN`` escapes: under ``use_bytes`` the
+    pattern is later encoded (utf-8 by the dynamic lexer), which would split a literal
+    character into two bytes. Anything else is left to ``re.escape``, which keeps
+    non-ascii characters literal.
     """
-    codepoint = ord(char)
-    if char.isascii():
-        return re.escape(char)
-    return f'\\x{codepoint:02x}' if codepoint <= 0xff else f'\\U{codepoint:08x}'
+    if '\x80' <= char <= '\xff':
+        return f'\\x{ord(char):02x}'
+    return re.escape(char)
 
 
 @inline_args
@@ -638,9 +640,9 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         if len(items) == 1:
             return items[0]
 
-        # A bare '|' binds looser than concatenation, so each item is grouped before
-        # it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
-        pattern = ''.join(f'(?:{i.to_regexp()})' for i in items)
+        # A bare '|' binds looser than concatenation, so an item containing one is grouped
+        # before it's joined, or it swallows its neighbors: /a|b/ "c" must not become 'a|bc'.
+        pattern = ''.join(f'(?:{r})' if '|' in r else r for r in (i.to_regexp() for i in items))
         return _make_joined_pattern(pattern, {i.flags for i in items})
 
     def expansions(self, exps: List[Pattern]) -> Pattern:

@@ -283,7 +283,10 @@ class Transformer_InPlace(Transformer[_Leaf_T, _Return_T]):
         for subtree in tree.iter_subtrees():
             subtree.children = list(self._transform_children(subtree.children))
 
-        return self._transform_tree(tree)
+        result = self._transform_tree(tree)
+        if result is Discard:  # the whole tree was discarded
+            return None  # type: ignore[return-value]
+        return result
 
 
 class Transformer_NonRecursive(Transformer[_Leaf_T, _Return_T]):

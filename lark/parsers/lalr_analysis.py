@@ -80,18 +80,36 @@ class IntParseTable(ParseTableBase[int]):
 
     @classmethod
     def from_ParseTable(cls, parse_table: ParseTable):
-        enum = list(parse_table.states)
+        # Number states in a stable traversal without sorting their entire closures.
+        enum = list(dict.fromkeys(s for _, s in sorted(parse_table.start_states.items())))
         state_to_idx: Dict['State', int] = {s:i for i,s in enumerate(enum)}
+        for s in enum:
+            for _, (action, target) in sorted(parse_table.states[s].items()):
+                if action is Shift and target not in state_to_idx:
+                    state_to_idx[target] = len(enum)
+                    enum.append(target)
+
+        # Preserve disconnected states in externally supplied parse tables.
+        if len(enum) < len(parse_table.states):
+            def state_key(state):
+                return sorted((rp.rule.origin.name,
+                               tuple((sym.is_term, sym.name) for sym in rp.rule.expansion),
+                               rp.index) for rp in state)
+
+            for s in sorted(parse_table.states.keys() - state_to_idx.keys(), key=state_key):
+                state_to_idx[s] = len(enum)
+                enum.append(s)
+
         int_states = {}
 
-        for s, la in parse_table.states.items():
+        for s in enum:
             la = {k:(v[0], state_to_idx[v[1]]) if v[0] is Shift else v
-                  for k,v in la.items()}
+                  for k,v in sorted(parse_table.states[s].items())}
             int_states[ state_to_idx[s] ] = la
 
 
-        start_states = {start:state_to_idx[s] for start, s in parse_table.start_states.items()}
-        end_states = {start:state_to_idx[s] for start, s in parse_table.end_states.items()}
+        start_states = {start:state_to_idx[s] for start, s in sorted(parse_table.start_states.items())}
+        end_states = {start:state_to_idx[s] for start, s in sorted(parse_table.end_states.items())}
         return cls(int_states, start_states, end_states)
 
 ###}

@@ -22,6 +22,53 @@ class TestStandalone(TestCase):
         exec(code, context)
         return context
 
+    def test_parse_table_order(self):
+        from lark.parsers.lalr_analysis import IntParseTable, ParseTable
+
+        parser = Lark('start: "a" | "b"\nother: start*', parser='lalr',
+                      start=['start', 'other'], debug=True)
+        table = parser.parser.parser._parse_table
+        table.states[frozenset().union(*table.states)] = {}
+        reordered = ParseTable(
+            {state: dict(reversed(list(actions.items())))
+             for state, actions in reversed(list(table.states.items()))},
+            dict(reversed(list(table.start_states.items()))),
+            dict(reversed(list(table.end_states.items()))),
+        )
+        first = IntParseTable.from_ParseTable(table)
+        second = IntParseTable.from_ParseTable(reordered)
+        self.assertEqual(len(first.states), len(table.states))
+        self.assertEqual(repr(first.serialize(None)), repr(second.serialize(None)))
+
+    def test_reproducible_generation(self):
+        import os
+        import subprocess
+        import sys
+
+        grammar = '?start: item1* item2\nitem1: A\nitem2: "b"\nA: /[ab]/imsu'
+        script = """from hashlib import sha256
+from io import StringIO
+from lark import Lark
+from lark.tools.standalone import gen_standalone
+parser = Lark(%r, parser='lalr', start=['start', 'item1'])
+for compress in (False, True):
+    out = StringIO()
+    gen_standalone(parser, out=out, compress=compress)
+    code = out.getvalue()
+    context = {'__name__': 'test_standalone'}
+    exec(code, context)
+    rebuilt = context['Lark_StandAlone']()
+    assert rebuilt.parse('aab', start='start') == parser.parse('aab', start='start')
+    print(sha256(code.encode()).hexdigest())
+""" % grammar
+        outputs = [subprocess.check_output(
+            [sys.executable, '-c', script],
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            env=dict(os.environ, PYTHONHASHSEED=str(seed)),
+        ) for seed in (1, 1, 2)]
+        self.assertEqual(outputs[0], outputs[1])
+        self.assertEqual(outputs[0], outputs[2])
+
     def test_simple(self):
         grammar = """
             start: NUMBER WORD

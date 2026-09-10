@@ -54,6 +54,9 @@ class Pattern(Serialize, ABC):
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value and self.flags == other.flags
 
+    def _serialize(self, data, memo):
+        data['flags'] = sorted(self.flags)
+
     @abstractmethod
     def to_regexp(self) -> str:
         raise NotImplementedError()

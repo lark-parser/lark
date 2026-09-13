@@ -168,6 +168,18 @@ class TestReconstructor(TestCase):
         for code in examples:
             self.assert_reconstruct(g, code, keep_all_tokens=True)
 
+    def test_optional_operator_is_separated(self):
+        """
+        The `?` operator must not glue to the item that follows it. In Lark's own grammar a
+        leading `?` is part of a rule name, so `r: a? b` came back as `r:a?b`, where `?b` is a
+        single name: the optional operator is lost and a rule reference changes identity.
+        """
+        parser = Lark.open_from_package('lark', 'lark.lark', ['grammars'],
+                                        parser='lalr', maybe_placeholders=False)
+        tree = parser.parse('r: a? b\n')
+        new = Reconstructor(parser).reconstruct(tree)
+        self.assertEqual(parser.parse(new + '\n'), tree)
+
     def test_switch_grammar_unicode_terminal(self):
         """
         This test checks that a parse tree built with a grammar containing only ascii characters can be reconstructed

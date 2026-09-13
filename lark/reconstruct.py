@@ -102,7 +102,8 @@ class Reconstructor(TreeMatcher):
         y = []
         prev_item = ''
         for item in x:
-            if insert_spaces and prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
+            if insert_spaces and prev_item and item and is_id_continue(item[0]) and (
+                    is_id_continue(prev_item[-1]) or prev_item[-1] == '?'):
                 y.append(' ')
             y.append(item)
             prev_item = item

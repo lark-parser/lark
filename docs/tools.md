@@ -14,6 +14,42 @@ python -m lark.tools.standalone
 
 For a play-by-play, read the [tutorial](http://blog.erezsh.com/create-a-stand-alone-lalr1-parser-in-python/)
 
+### Python API
+
+Use `gen_standalone()` to generate a stand-alone parser from a `Lark` instance. This is useful when the grammar is stored in Python code instead of a separate grammar file.
+
+```python
+from io import StringIO
+
+from lark import Lark
+from lark.tools.standalone import gen_standalone
+
+parser = Lark('start: WORD\n%import common.WORD', parser='lalr')
+source = StringIO()
+gen_standalone(parser, out=source)
+standalone_source = source.getvalue()
+```
+
+The full signature is `gen_standalone(lark_inst, output=None, out=sys.stdout, compress=False)`. The function writes Python source to the text stream passed as `out` and returns `None`. Pass `out` and `compress` by keyword, because the second positional argument is the low-level `output` callback.
+
+It accepts these arguments, in signature order:
+
+- `lark_inst`: a `Lark` instance configured with the LALR parser.
+- `output`: an advanced, print-compatible output callback. When provided, it takes precedence over `out`.
+- `out`: the text stream that receives the generated source. It defaults to standard output.
+- `compress`: if `True`, compress the serialized parser data embedded in the generated source.
+
+Passing a `Lark` instance configured for another parser raises `NotImplementedError`.
+
+To write the parser directly to a module:
+
+```python
+with open('standalone_parser.py', 'w', encoding='utf-8') as f:
+    gen_standalone(parser, out=f, compress=True)
+```
+
+The generator and its generated code are licensed under the Mozilla Public License 2.0 (MPL-2.0), separately from Lark's main license.
+
 
 ## Importing grammars from Nearley.js
 

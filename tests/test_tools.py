@@ -51,6 +51,24 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
 
+    def test_gen_standalone_python_api(self):
+        parser = Lark('start: WORD\n%import common.WORD', parser='lalr')
+        source = StringIO()
+
+        result = standalone.gen_standalone(parser, out=source)
+
+        self.assertIsNone(result)
+        context = {'__doc__': None, '__name__': 'test_standalone_api'}
+        exec(source.getvalue(), context)
+        standalone_parser = context['Lark_StandAlone']()
+        self.assertEqual(standalone_parser.parse('hello'), Tree('start', ['hello']))
+
+    def test_gen_standalone_rejects_non_lalr_parser(self):
+        parser = Lark('start: "hello"', parser='earley')
+
+        with self.assertRaisesRegex(NotImplementedError, 'LALR'):
+            standalone.gen_standalone(parser, out=StringIO())
+
     def test_interactive(self):
         grammar = """
                 start: A+ B*

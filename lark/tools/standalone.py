@@ -124,6 +124,22 @@ def strip_docstrings(line_gen):
 
 
 def gen_standalone(lark_inst, output=None, out=sys.stdout, compress=False):
+    """Generate Python source for a stand-alone LALR parser.
+
+    The source is written to ``out``, which defaults to stdout. Set
+    ``compress`` to embed the serialized parser data in compressed form.
+    ``output`` is an advanced, print-compatible emitter that takes precedence
+    over ``out`` when provided.
+
+    The generated source and this generator are licensed under the Mozilla
+    Public License 2.0. See the module header for details.
+
+    Raises:
+        NotImplementedError: If ``lark_inst`` is not configured for LALR.
+    """
+    if lark_inst.options.parser != 'lalr':
+        raise NotImplementedError("gen_standalone() is only implemented for the LALR(1) parser.")
+
     if output is None:
         output = partial(print, file=out)
 

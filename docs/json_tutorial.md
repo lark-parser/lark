@@ -441,7 +441,7 @@ I measured memory consumption using a little script called [memusg](https://gist
 | Parsimonious ([Parser](https://gist.github.com/reclosedev/5222560)) | ? | 5.7s | ? | 1545M |
 
 
-I added a few other parsers for comparison. PyParsing and funcparselib fair pretty well in their memory usage (they don't build a tree), but they can't compete with the run-time speed of LALR(1).
+I added a few other parsers for comparison. PyParsing and funcparselib fare pretty well in their memory usage (they don't build a tree), but they can't compete with the run-time speed of LALR(1).
 
 These benchmarks are for Lark's alpha version. I already have several optimizations planned that will significantly improve run-time speed.
 

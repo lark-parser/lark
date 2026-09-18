@@ -108,6 +108,21 @@ class TestTreeTemplatesTemplate(unittest.TestCase):
 
         self.assertIsNone(template.match(Tree("foo", children=["bye"])))
 
+    def test_template_match__tree_and_token__none(self):
+        parser = Lark('start: pair | WORD\npair: WORD "," WORD\n%import common.WORD')
+        trees = [parser.parse("a,b"), parser.parse("a")]
+
+        for template_tree, target_tree in (trees, reversed(trees)):
+            with self.subTest(template=template_tree):
+                self.assertIsNone(Template(template_tree).match(target_tree))
+
+    def test_template_search__skips_token_in_place_of_tree(self):
+        parser = Lark('start: pair | WORD\npair: WORD "," WORD\n%import common.WORD')
+        match = parser.parse("a,b")
+        tree = Tree("root", [parser.parse("a"), match])
+
+        self.assertEqual([(match, {})], list(Template(match).search(tree)))
+
     def test_template_match__no_template__empty_dictionary(self):
         tree = self.parser.parse(SOME_NON_TEMPLATED_STRING)
         template = Template(tree, conf=self.conf)

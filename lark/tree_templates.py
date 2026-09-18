@@ -75,6 +75,9 @@ class TemplateConf:
                 return {}
             return None
 
+        if not isinstance(tree, Tree):
+            return None
+
         assert isinstance(template, Tree) and isinstance(tree, Tree), f"template={template} tree={tree}"
 
         if template.data == tree.data and len(template.children) == len(tree.children):

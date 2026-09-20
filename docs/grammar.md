@@ -122,7 +122,12 @@ SIGNED_INTEGER: /
  /x
 ```
 
-Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
+Supported flags are one of: `imsluxaL`. See Python's regex documentation for more details on each one.
+
+Notes:
+
+- The `a` (ASCII) and `u` (UNICODE) flags are mutually exclusive, and cannot be combined on the same literal.
+- In Python 3, the `L` (LOCALE) flag only works with bytes patterns, so it requires the `use_bytes=True` option. Conversely, the `u` flag only works with str patterns.
 
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 

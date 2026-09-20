@@ -1808,6 +1808,32 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
+        def test_token_flags_ascii(self):
+            # Test the ASCII flag (a) - makes \w, \d, \s ASCII-only
+            l = _Lark(r"""!start: /\w+/a
+                      """)
+            # Non-ASCII letters must not match \w with the 'a' flag
+            tree = l.parse('abc')
+            self.assertEqual(tree.children, ['abc'])
+            self.assertRaises(UnexpectedCharacters, l.parse, 'ab\u00e9c')
+
+            # Sanity check: without the flag, \w matches unicode letters
+            l2 = _Lark(r"""!start: /\w+/
+                      """)
+            self.assertEqual(l2.parse('ab\u00e9c').children, ['ab\u00e9c'])
+
+        def test_token_flags_locale_requires_bytes(self):
+            # In Python 3 the 'L' (LOCALE) flag only works with bytes patterns
+            self.assertRaises(GrammarError, _Lark, r"""!start: /\d+/L
+                      """)
+
+        def test_token_flags_locale_bytes(self):
+            # 'L' works with bytes patterns (use_bytes=True)
+            l = _Lark(r"""!start: /\w+/L
+                      """, use_bytes=True)
+            tree = l.parse(b'abc_123')
+            self.assertEqual(tree.children[0].value, b'abc_123')
+
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?

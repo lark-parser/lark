@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from typing import Literal
     from .parser_frontends import ParsingFrontend, ScanMatch
 
-from .exceptions import ConfigurationError, assert_config, UnexpectedInput
+from .exceptions import ConfigurationError, GrammarError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
 from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
 
@@ -442,6 +442,19 @@ class Lark(Serialize, Generic[_Return_T]):
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
+
+        # In Python 3, the 'L' (LOCALE) flag is only valid for bytes patterns, and
+        # the 'u' (UNICODE) flag is only valid for str patterns.
+        if self.options.use_bytes:
+            for t in self.terminals:
+                if 'u' in t.pattern.flags:
+                    raise GrammarError("Terminal %s uses the 'u' (UNICODE) flag, which isn't valid "
+                                       "with use_bytes=True (bytes patterns are always ASCII)" % t.name)
+        else:
+            for t in self.terminals:
+                if 'L' in t.pattern.flags:
+                    raise GrammarError("Terminal %s uses the 'L' (LOCALE) flag, which requires "
+                                       "use_bytes=True (in Python 3 it only works with bytes patterns)" % t.name)
 
         if self.options.edit_terminals:
             for t in self.terminals:

@@ -141,6 +141,12 @@ def get_regexp_width(expr: str) -> Union[Tuple[int, int], List[int]]:
         if re.search(categ_pattern, expr):
             raise ImportError('`regex` module must be installed in order to use Unicode categories.', expr)
         regexp_final = expr
+
+    # `sre_parse` (unlike `re` itself and the `regex` module) rejects the 'L' (LOCALE) flag
+    # on str patterns. Flags don't influence the match width, and the substitution can't
+    # change the width even if it were to hit literal characters, so replacing the group
+    # opener is safe here.
+    regexp_final = regexp_final.replace('(?L:', '(?i:')
     try:
         # Fixed in next version (past 0.960) of typeshed
         return [int(x) for x in sre_parse.parse(regexp_final).getwidth()]

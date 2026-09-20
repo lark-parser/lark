@@ -605,8 +605,11 @@ class BasicLexer(AbstractBasicLexer):
             terminal_to_regexp = {}
             for t in terminals:
                 regexp = t.pattern.to_regexp()
+                # Validate the pattern in its final form: under use_bytes the 'L'
+                # (LOCALE) flag is only valid for bytes patterns in Python 3.
+                regexp_to_compile = regexp.encode('latin-1') if conf.use_bytes else regexp
                 try:
-                    self.re.compile(regexp, conf.g_regex_flags)
+                    self.re.compile(regexp_to_compile, conf.g_regex_flags)
                 except self.re.error:
                     raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 

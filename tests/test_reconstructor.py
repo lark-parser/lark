@@ -168,6 +168,35 @@ class TestReconstructor(TestCase):
         for code in examples:
             self.assert_reconstruct(g, code, keep_all_tokens=True)
 
+    def test_adjacent_tokens_lexing_as_one(self):
+        """Two tokens written next to each other must not lex back as a single, different token,
+        even when neither of them ends or starts with an identifier character.
+        """
+        # "-" followed by "-" opens a line comment that eats the rest of the line
+        g1 = """
+        start: expr
+        ?expr: expr "-" product | product
+        ?product: "-" NUMBER -> neg
+                | NUMBER
+        COMMENT: /--[^\\n]*/
+        %ignore COMMENT
+        """ + common
+
+        # "<" followed by "=" is the longer "<=" operator
+        g2 = """
+        start: cmp
+        ?cmp: WORD OP item
+        ?item: "=" WORD -> ref
+             | WORD
+        OP: "<=" | "<"
+        """ + common
+
+        for g, code in [(g1, "1 - -2"), (g2, "a < =b")]:
+            parser = Lark(g, parser='lalr', maybe_placeholders=False)
+            tree = parser.parse(code)
+            new = Reconstructor(parser).reconstruct(tree)
+            self.assertEqual(parser.parse(new), tree)
+
     def test_switch_grammar_unicode_terminal(self):
         """
         This test checks that a parse tree built with a grammar containing only ascii characters can be reconstructed

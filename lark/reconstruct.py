@@ -6,11 +6,11 @@ from typing import Dict, Callable, Iterable, Optional
 from .lark import Lark
 from .tree import Tree, ParseTree
 from .visitors import Transformer_InPlace
-from .lexer import Token, PatternStr, TerminalDef
+from .lexer import Token, PatternStr, TerminalDef, Scanner
 from .grammar import Terminal, Symbol
 
 from .tree_matcher import TreeMatcher, is_discarded_terminal, parse_rulename
-from .utils import is_id_continue
+from .utils import is_id_continue, TextSlice
 
 def is_iter_empty(i):
     try:
@@ -83,6 +83,27 @@ class Reconstructor(TreeMatcher):
         TreeMatcher.__init__(self, parser)
 
         self.write_tokens = WriteTokensTransformer({t.name:t for t in self.tokens}, term_subs or {})
+        self._scanner: Optional[Scanner] = None
+
+    @property
+    def scanner(self) -> Optional[Scanner]:
+        """A scanner over the grammar's terminals, ordered the way the basic lexer orders them,
+        so that it reads the output back the way the lexer will.
+        """
+        if self._scanner is None and self.tokens:
+            terminals = sorted(self.tokens, key=lambda t: (-t.priority, -t.pattern.max_width, -len(t.pattern.value), t.name))
+            conf = self.parser.lexer_conf
+            self._scanner = Scanner(terminals, conf.g_regex_flags, conf.re_module, use_bytes=False)
+        return self._scanner
+
+    def _absorbs_next(self, prev_item: str, item: str) -> bool:
+        "Whether lexing `prev_item` with `item` appended to it would read past the end of `prev_item`"
+        scanner = self.scanner
+        if scanner is None:
+            return False
+        text = prev_item + item
+        res = scanner.match(TextSlice(text, 0, len(text)), 0)
+        return res is not None and len(res[0]) > len(prev_item)
 
     def _reconstruct(self, tree, orig_rulename=None):
         unreduced_tree = self.match_tree(tree, orig_rulename or tree.data)
@@ -102,7 +123,9 @@ class Reconstructor(TreeMatcher):
         y = []
         prev_item = ''
         for item in x:
-            if insert_spaces and prev_item and item and is_id_continue(prev_item[-1]) and is_id_continue(item[0]):
+            if insert_spaces and prev_item and item and (
+                    (is_id_continue(prev_item[-1]) and is_id_continue(item[0]))
+                    or self._absorbs_next(prev_item, item)):
                 y.append(' ')
             y.append(item)
             prev_item = item

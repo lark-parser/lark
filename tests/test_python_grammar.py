@@ -329,6 +329,30 @@ class TestPythonParser(TestCase):
 
         self._test_parsed_is_file_containing_only_this_statement(text, "if_stmt")
 
+    def test_parenthesized_with_statement(self):
+        cases = [
+            textwrap.dedent("""
+            with (open("a.txt") as a,
+                  open("b.txt") as b):
+                pass
+            """),
+            textwrap.dedent("""
+            with (open("a.txt") as a, open("b.txt"),):
+                pass
+            """),
+            textwrap.dedent("""
+            with (open("a.txt")):
+                pass
+            """),
+            textwrap.dedent("""
+            with (a, b):
+                pass
+            """),
+        ]
+        for case in cases:
+            with self.subTest(case=case):
+                self._test_parsed_is_file_containing_only_this_statement(case, "with_stmt")
+
 
 if __name__ == '__main__':
     main()

@@ -64,6 +64,64 @@ def make_recons_rule_to_term(origin, term):
     return make_recons_rule(origin, [Terminal(term.name)], [term])
 
 
+def _expand1_rules(rules, hidden_rules):
+    # Underscored rules are flattened before ExpandSingleChild is applied.
+    # Find which of them can contribute zero or one children to the shaped tree.
+    empty, single = set(), set()
+    changed = True
+    while changed:
+        changed = False
+        for origin, alternatives in hidden_rules.items():
+            for rule in alternatives:
+                expansion = rule.expansion
+                if origin not in empty and all(sym in empty for sym in expansion):
+                    empty.add(origin)
+                    changed = True
+                if origin not in single and any(
+                    (sym not in hidden_rules or sym in single)
+                    and all(other in empty for j, other in enumerate(expansion) if i != j)
+                    for i, sym in enumerate(expansion)
+                ):
+                    single.add(origin)
+                    changed = True
+
+    # Specialize only the hidden rules reached by a single-child derivation.
+    # Keep the original callbacks, so discarded tokens retain their positions.
+    pending = []
+
+    def restrict(expansion, size):
+        for index in range(len(expansion)) if size else (None,):
+            result = []
+            for i, sym in enumerate(expansion):
+                count = int(i == index)
+                if sym in hidden_rules:
+                    if sym not in (single if count else empty):
+                        break
+                    pending.append((sym, count))
+                    result.append(NonTerminal('%s$%d' % (sym.name, count)))
+                elif count:
+                    result.append(sym)
+                else:
+                    break
+            else:
+                yield result
+
+    for rule in rules:
+        for expansion in restrict(rule.expansion, 1):
+            yield Rule(rule.origin, expansion, alias=rule.alias)
+
+    seen = set()
+    while pending:
+        sym, size = pending.pop()
+        if (sym, size) in seen:
+            continue
+        seen.add((sym, size))
+        origin = NonTerminal('%s$%d' % (sym.name, size))
+        for rule in hidden_rules[sym]:
+            for expansion in restrict(rule.expansion, size):
+                yield Rule(origin, expansion, alias=rule.alias)
+
+
 def parse_rulename(s):
     "Parse rule names that may contain a template syntax (like rule{a, b, ...})"
     name, args_str = re.match(r'(\w+)(?:{(.+)})?', s).groups()
@@ -130,6 +188,8 @@ class TreeMatcher:
                         if sym.name.startswith('_') or sym in expand1s or sym in aliases}
 
         seen = set()
+        expand1_rules = []
+        hidden_rules = defaultdict(list)
         for r in rules:
             recons_exp = [sym if sym in nonterminals else Terminal(sym.name)
                           for sym in r.expansion if not is_discarded_terminal(sym)]
@@ -141,17 +201,21 @@ class TreeMatcher:
             sym = NonTerminal(r.alias) if r.alias else r.origin
             rule = make_recons_rule(sym, recons_exp, r.expansion)
 
-            if sym in expand1s and len(recons_exp) != 1:
+            if sym in expand1s:
                 self.rules_for_root[sym.name].append(rule)
+                expand1_rules.append(rule)
 
                 if sym.name not in seen:
                     yield make_recons_rule_to_term(sym, sym)
                     seen.add(sym.name)
             else:
-                if sym.name.startswith('_') or sym in expand1s:
+                if sym.name.startswith('_'):
+                    hidden_rules[sym].append(rule)
                     yield rule
                 else:
                     self.rules_for_root[sym.name].append(rule)
+
+        yield from _expand1_rules(expand1_rules, hidden_rules)
 
         for origin, rule_aliases in aliases.items():
             for alias in rule_aliases:
@@ -185,7 +249,7 @@ class TreeMatcher:
         try:
             parser = self._parser_cache[rulename]
         except KeyError:
-            rules = self.rules + _best_rules_from_group(self.rules_for_root[rulename])
+            rules = _best_rules_from_group(self.rules + self.rules_for_root[rulename])
 
             # TODO pass callbacks through dict, instead of alias?
             callbacks = {rule: rule.alias for rule in rules}

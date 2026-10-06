@@ -8,6 +8,7 @@ from unittest import TestCase
 
 from lark import Lark
 from lark.reconstruct import Reconstructor
+from lark.indenter import PythonIndenter
 
 common = """
 %import common (WS_INLINE, NUMBER, WORD)
@@ -100,6 +101,48 @@ class TestReconstructor(TestCase):
 
         for c in code:
             self.assert_reconstruct(g, c)
+
+    def test_expand_rule_with_repetition(self):
+        grammar = """
+        start: concat ("," concat)*
+        ?concat: item+
+        item: LETTER
+        %import common.LETTER
+        %ignore " "
+        """
+        for repetition in ('item+', 'item*', '_items{item}'):
+            expanded_grammar = grammar.replace('item+', repetition) + '\n_items{x}: x+'
+            parser = Lark(expanded_grammar, parser='lalr', maybe_placeholders=False)
+            reconstructor = Reconstructor(parser)
+            codes = ('a', 'a,b,c', 'ab', 'ab,c', 'a,bc', 'ab,cd')
+            if repetition == 'item*':
+                codes += ('', ',')
+            for code in codes:
+                with self.subTest(repetition=repetition, code=code):
+                    tree = parser.parse(code)
+                    self.assertEqual(tree, parser.parse(reconstructor.reconstruct(tree)))
+
+    def test_expand_rule_with_nullable_children(self):
+        grammar = """
+        start: item ("," item)*
+        ?item: _prefix LETTER _suffix
+        _prefix: "["
+        _suffix: "]"
+        %import common.LETTER
+        """
+        parser = Lark(grammar, parser='lalr', maybe_placeholders=False)
+        tree = parser.parse('[a],[b],[c]')
+        self.assertEqual(tree, parser.parse(Reconstructor(parser).reconstruct(tree)))
+
+    def test_python_string_arguments(self):
+        parser = Lark.open_from_package(
+            'lark', 'python.lark', ['grammars'], parser='lalr',
+            postlex=PythonIndenter(), start='file_input', maybe_placeholders=False)
+        reconstructor = Reconstructor(parser, {'_NEWLINE': lambda symbol: '\n'})
+        for code in ("f('a', 'b', [])\n", "f('a' 'b', 'c')\n"):
+            with self.subTest(code=code):
+                tree = parser.parse(code)
+                self.assertEqual(tree, parser.parse(reconstructor.reconstruct(tree)))
 
     def test_template_rule(self):
         g = """

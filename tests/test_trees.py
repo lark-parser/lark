@@ -56,6 +56,91 @@ class TestTrees(TestCase):
         nodes = list(self.tree1.iter_subtrees())
         self.assertEqual(nodes, expected)
 
+    def test_iter_subtrees_preserves_ordinary_tree_order(self):
+        left = Tree('left', [Tree('deep', [Tree('leaf', [])])])
+        right = Tree('right', [Tree('shallow', [])])
+        tree = Tree('root', [left, right])
+        self.assertEqual([node.data for node in tree.iter_subtrees()],
+                         ['leaf', 'deep', 'shallow', 'left', 'right', 'root'])
+
+    def test_iter_subtrees_shared_child_before_parents(self):
+        leaf = Tree('leaf', [])
+        parent = Tree('parent', [leaf])
+        for children in ([parent, leaf], [leaf, parent]):
+            tree = Tree('root', children)
+            nodes = list(tree.iter_subtrees())
+            self.assertEqual([id(node) for node in nodes],
+                             [id(leaf), id(parent), id(tree)])
+
+    def test_iter_subtrees_deduplicates_by_identity(self):
+        first = Tree('same', [])
+        second = Tree('same', [])
+        parent = Tree('parent', [first, second])
+        tree = Tree('root', [parent, first, second])
+        nodes = list(tree.iter_subtrees())
+        self.assertEqual(len(nodes), 4)
+        positions = {id(node): i for i, node in enumerate(nodes)}
+        self.assertLess(positions[id(first)], positions[id(parent)])
+        self.assertLess(positions[id(second)], positions[id(parent)])
+        self.assertLess(positions[id(parent)], positions[id(tree)])
+
+    def test_iter_subtrees_avoids_repeated_shared_expansion(self):
+        class Children(list):
+            def __init__(self, children):
+                super().__init__(children)
+                self.iterations = 0
+
+            def __reversed__(self):
+                self.iterations += 1
+                return super().__reversed__()
+
+        children = Children([])
+        leaf = Tree('leaf', children)
+        tree = Tree('root', [leaf, leaf, leaf])
+        self.assertEqual(list(tree.iter_subtrees()), [leaf, tree])
+        self.assertLessEqual(children.iterations, 2)
+
+    def test_visitor_shared_child_before_parents(self):
+        leaf = Tree('leaf', [1])
+        parent = Tree('parent', [leaf])
+        tree = Tree('root', [parent, leaf])
+
+        class Sum(Visitor):
+            def __default__(self, node):
+                node.total = sum(child.total if isinstance(child, Tree) else child
+                                 for child in node.children)
+
+        Sum().visit(tree)
+        self.assertEqual(tree.total, 2)
+
+    def test_visitor_ambiguous_parse_shared_child_before_parents(self):
+        from lark import Lark
+
+        parser = Lark('start: branch | leaf\nbranch: leaf\nleaf: "a"',
+                      ambiguity='explicit')
+        tree = parser.parse('a')
+
+        class Count(Visitor):
+            def __default__(self, node):
+                node.total = 1 + sum(child.total for child in node.children)
+
+        Count().visit(tree)
+        self.assertEqual(tree.total, 6)
+
+    def test_transformer_inplace_shared_child_before_parents(self):
+        leaf = Tree('leaf', [1])
+        parent = Tree('parent', [leaf])
+        tree = Tree('root', [parent, leaf])
+
+        class Increment(Transformer_InPlace):
+            def leaf(self, children):
+                return children[0] + 1
+
+            def parent(self, children):
+                return children[0] * 2
+
+        self.assertEqual(Increment().transform(tree), Tree('root', [4, 2]))
+
     def test_iter_subtrees_topdown(self):
         expected = [Tree('a', [Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]),
                     Tree('b', 'x'), Tree('c', 'y'), Tree('d', 'z')]

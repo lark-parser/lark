@@ -140,14 +140,38 @@ class Tree(Generic[_Leaf_T]):
         Iterates over all the subtrees, never returning to the same node twice (Lark's parse-tree is actually a DAG).
         """
         queue = [self]
-        subtrees = dict()
+        seen = {id(self)}
+        shared = False
         for subtree in queue:
-            subtrees[id(subtree)] = subtree
-            queue += [c for c in reversed(subtree.children)
-                      if isinstance(c, Tree) and id(c) not in subtrees]
+            for child in reversed(subtree.children):
+                if isinstance(child, Tree):
+                    child_id = id(child)
+                    if child_id in seen:
+                        shared = True
+                    else:
+                        seen.add(child_id)
+                        queue.append(child)
 
-        del queue
-        return reversed(list(subtrees.values()))
+        if not shared:
+            return reversed(queue)
+
+        # Reverse breadth-first order preserves the order of ordinary trees,
+        # but a shared child can be closer to the root than one of its parents.
+        # Visit any such dependencies first, expanding each node only once.
+        seen.clear()
+        ordered = []
+        for subtree in reversed(queue):
+            stack = [(subtree, False)]
+            while stack:
+                node, expanded = stack.pop()
+                if expanded:
+                    ordered.append(node)
+                elif id(node) not in seen:
+                    seen.add(id(node))
+                    stack.append((node, True))
+                    stack += [(child, False) for child in reversed(node.children)
+                              if isinstance(child, Tree) and id(child) not in seen]
+        return iter(ordered)
 
     def iter_subtrees_topdown(self):
         """Breadth-first iteration.

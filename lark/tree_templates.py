@@ -78,12 +78,14 @@ class TemplateConf:
         assert isinstance(template, Tree) and isinstance(tree, Tree), f"template={template} tree={tree}"
 
         if template.data == tree.data and len(template.children) == len(tree.children):
-            res = {}
+            res: MatchResult = {}
             for t1, t2 in zip(template.children, tree.children):
                 matches = self._match_tree_template(t1, t2)
                 if matches is None:
                     return None
 
+                if any(name in res and res[name] != value for name, value in matches.items()):
+                    return None
                 res.update(matches)
 
             return res
@@ -125,6 +127,7 @@ class Template:
         """Match a tree template to a tree.
 
         A tree template without variables will only match ``tree`` if it is equal to the template.
+        Repeated occurrences of a variable must match equal subtrees.
 
         Parameters:
             tree (Tree): The tree to match to the template

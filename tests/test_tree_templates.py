@@ -240,6 +240,39 @@ class TestTreeTemplatesTemplateTranslator(unittest.TestCase):
 
 
 class TestTreeTemplatesTemplateDefaultConf(unittest.TestCase):
+    def test_repeated_variable_matches_equal_trees(self):
+        template = Template(Tree('pair', [Tree('var', ['$x']), Tree('var', ['$x'])]))
+        left = Tree('value', ['same'])
+        right = Tree('value', ['same'])
+
+        self.assertEqual({'x': left}, template.match(Tree('pair', [left, right])))
+
+    def test_repeated_variable_rejects_different_trees(self):
+        template = Template(Tree('pair', [Tree('var', ['$x']), Tree('var', ['$x'])]))
+        tree = Tree('pair', [Tree('value', ['left']), Tree('value', ['right'])])
+
+        self.assertIsNone(template.match(tree))
+
+    def test_repeated_variable_rejects_nested_conflict(self):
+        template = Template(Tree('pair', [
+            Tree('wrapper', [Tree('var', ['$x'])]), Tree('var', ['$x'])]))
+        tree = Tree('pair', [
+            Tree('wrapper', [Tree('value', ['left'])]), Tree('value', ['right'])])
+
+        self.assertIsNone(template.match(tree))
+
+    def test_repeated_variable_search_and_translation(self):
+        template = Template(Tree('pair', [Tree('var', ['$x']), Tree('var', ['$x'])]))
+        different = Tree('pair', [Tree('value', ['left']), Tree('value', ['right'])])
+        same = Tree('pair', [Tree('value', ['same']), Tree('value', ['same'])])
+        tree = Tree('root', [different, same])
+
+        self.assertEqual([(same, {'x': same.children[0]})], list(template.search(tree)))
+
+        replacement = Template(Tree('double', [Tree('var', ['$x'])]))
+        expected = Tree('root', [deepcopy(different), Tree('double', [Tree('value', ['same'])])])
+        self.assertEqual(expected, TemplateTranslator({template: replacement}).translate(tree))
+
     def test_template_match__match_same_tree__empty_dictionary(self):
         tree = Tree("foo", children=["hi"])
         template = Template(tree)

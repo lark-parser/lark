@@ -152,4 +152,8 @@ class ImmutableInteractiveParser(InteractiveParser):
         p = copy(self)
         return InteractiveParser(p.parser, p.parser_state, p.lexer_thread)
 
+    def resume_parse(self):
+        """Resume parsing from a copy of the current state and return the result."""
+        return self.as_mutable().resume_parse()
+
 ###}

@@ -47,6 +47,43 @@ class SerializeTestT(Transformer[Token, int]):
 
 
 class TestParsers(unittest.TestCase):
+    def test_immutable_interactive_resume_parse(self):
+        grammar = 'start: A B\nA: "a"\nB: "b"'
+        for lexer in ('basic', 'contextual'):
+            parser = Lark(grammar, parser='lalr', lexer=lexer)
+            expected = parser.parse('ab')
+            for consumed in range(3):
+                with self.subTest(lexer=lexer, consumed=consumed):
+                    cursor = parser.parse_interactive('ab')
+                    tokens = cursor.lexer_thread.lex(cursor.parser_state)
+                    for _ in range(consumed):
+                        cursor.feed_token(next(tokens))
+                    snapshot = cursor.as_immutable()
+                    states = snapshot.parser_state.state_stack[:]
+                    values = snapshot.parser_state.value_stack[:]
+                    lexer_state = copy(snapshot.lexer_thread.state)
+
+                    self.assertEqual(snapshot.resume_parse(), expected)
+                    self.assertEqual(snapshot.parser_state.state_stack, states)
+                    self.assertEqual(snapshot.parser_state.value_stack, values)
+                    self.assertEqual(snapshot.lexer_thread.state, lexer_state)
+                    self.assertEqual(snapshot.resume_parse(), expected)
+
+    def test_immutable_interactive_resume_parse_error(self):
+        grammar = 'start: A B\nA: "a"\nB: "b"'
+        for lexer in ('basic', 'contextual'):
+            with self.subTest(lexer=lexer):
+                parser = Lark(grammar, parser='lalr', lexer=lexer)
+                snapshot = parser.parse_interactive('a').as_immutable()
+                states = snapshot.parser_state.state_stack[:]
+                lexer_state = copy(snapshot.lexer_thread.state)
+
+                for _ in range(2):
+                    self.assertRaises(UnexpectedToken, snapshot.resume_parse)
+                    self.assertEqual(snapshot.parser_state.state_stack, states)
+                    self.assertEqual(snapshot.parser_state.value_stack, [])
+                    self.assertEqual(snapshot.lexer_thread.state, lexer_state)
+
     def test_big_list(self):
         Lark(r"""
             start: {}

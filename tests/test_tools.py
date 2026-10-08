@@ -91,6 +91,15 @@ class TestStandalone(TestCase):
         res = ip_copy.feed_eof()
         self.assertEqual(res, Tree('start', ['a', 'b', 'b']))
 
+    def test_immutable_interactive_resume_parse(self):
+        context = self._create_standalone('start: A B\nA: "a"\nB: "b"')
+        parser = context['Lark_StandAlone']()
+        snapshot = parser.parse_interactive('ab').as_immutable()
+        expected = parser.parse('ab')
+
+        self.assertEqual(snapshot.resume_parse(), expected)
+        self.assertEqual(snapshot.resume_parse(), expected)
+
     def test_scan(self):
         context = self._create_standalone('start: "a"+')
         parser = context['Lark_StandAlone']()

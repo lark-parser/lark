@@ -148,6 +148,8 @@ class Token(str):
     will end up in the tree as Token instances. The Token class inherits from Python's ``str``,
     so normal string comparisons and operations will work as expected.
 
+    Comparisons between tokens using ``==`` and ``!=`` also take the token type into account.
+
     Attributes:
         type: Name of the token (as specified in grammar)
         value: Value of the token (redundant, as ``token.value == token`` will always be true)
@@ -271,6 +273,12 @@ class Token(str):
             return False
 
         return str.__eq__(self, other)
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return NotImplemented
+        return not result
 
     __hash__ = str.__hash__
 

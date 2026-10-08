@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from lark import Lark, Tree, TextSlice
+from lark import Lark, Tree, TextSlice, Token
 
 
 class TestLexer(TestCase):
@@ -38,6 +38,79 @@ class TestLexer(TestCase):
 
         res = list(p.lex(TextSlice("aaaabc cba dddd", 3, -2)))
         assert res == list('abccbadd')
+
+    def test_token_comparisons(self):
+        token = Token('NAME', 'foo')
+        for other, equal in [
+            (Token('NAME', 'foo'), True),
+            (Token('OTHER', 'foo'), False),
+            (Token('NAME', 'bar'), False),
+            (Token('OTHER', 'bar'), False),
+            ('foo', True),
+            ('bar', False),
+            (None, False),
+            (123, False),
+        ]:
+            with self.subTest(other=other):
+                self.assertIs(token == other, equal)
+                self.assertIs(other == token, equal)
+                self.assertIs(token != other, not equal)
+                self.assertIs(other != token, not equal)
+
+    def test_token_comparison_ignores_positions(self):
+        first = Token('NAME', 'foo', 0, 1, 1, 1, 4, 3)
+        second = Token('NAME', 'foo', 5, 2, 1, 2, 4, 8)
+        self.assertEqual(first, second)
+        self.assertFalse(first != second)
+        self.assertEqual(hash(first), hash(second))
+        self.assertEqual(hash(first), hash('foo'))
+        self.assertEqual({first: 'value'}[second], 'value')
+        self.assertEqual({first: 'value'}['foo'], 'value')
+
+    def test_token_comparison_not_implemented(self):
+        token = Token('NAME', 'foo')
+        self.assertIs(token.__eq__(None), NotImplemented)
+        self.assertIs(token.__ne__(None), NotImplemented)
+
+        equal, unequal = object(), object()
+
+        class ReflectedComparison:
+            def __eq__(self, other):
+                return equal
+
+            def __ne__(self, other):
+                return unequal
+
+        other = ReflectedComparison()
+        self.assertIs(token == other, equal)
+        self.assertIs(token != other, unequal)
+        self.assertIs(other == token, equal)
+        self.assertIs(other != token, unequal)
+
+    def test_token_comparison_subclass(self):
+        class UnequalToken(Token):
+            def __eq__(self, other):
+                return False
+
+        token = Token('NAME', 'foo')
+        other = UnequalToken('NAME', 'foo')
+        self.assertFalse(token == other)
+        self.assertFalse(other == token)
+        self.assertTrue(token != other)
+        self.assertTrue(other != token)
+
+    def test_filter_tokens_by_type_and_value(self):
+        parser = Lark('''
+            start: KEYWORD NAME
+            KEYWORD: "if"
+            NAME: /[a-z]+/
+            %ignore " "
+        ''', parser='lalr')
+        tokens = parser.parse('if if').children
+        keyword = Token('KEYWORD', 'if')
+        self.assertEqual(tokens, [keyword, Token('NAME', 'if')])
+        self.assertEqual([token for token in tokens if token != keyword],
+                         [Token('NAME', 'if')])
 
 
 if __name__ == '__main__':

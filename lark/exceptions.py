@@ -61,6 +61,8 @@ class UnexpectedInput(LarkError):
             so you have to provide it again
         """
         pos = self.pos_in_stream or 0
+        if pos == -1:
+            pos = len(text)
         start = max(pos - span, 0)
         end = pos + span
         if not isinstance(text, bytes):

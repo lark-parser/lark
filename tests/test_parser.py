@@ -26,7 +26,7 @@ import lark
 from lark import logger
 from lark.lark import Lark
 from lark.utils import TextSlice
-from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters, ConfigurationError
+from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters, UnexpectedEOF, ConfigurationError
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
 from lark.lexer import Lexer, BasicLexer
@@ -47,6 +47,42 @@ class SerializeTestT(Transformer[Token, int]):
 
 
 class TestParsers(unittest.TestCase):
+    def test_eof_context(self):
+        cases = [
+            ('', 40, '\n^\n'),
+            ('a', 40, 'a\n ^\n'),
+            ('abc', 40, 'abc\n   ^\n'),
+            ('abc\ndef', 40, 'def\n   ^\n'),
+            ('abc\n', 40, '\n^\n'),
+            ('a\tb', 40, 'a\tb\n         ^\n'),
+            ('abcdef', 3, 'def\n   ^\n'),
+            ('abcdef', 0, '\n^\n'),
+        ]
+        for text, span, expected in cases:
+            for as_bytes in (False, True):
+                with self.subTest(text=text, span=span, as_bytes=as_bytes):
+                    source = text.encode('ascii') if as_bytes else text
+                    self.assertEqual(UnexpectedEOF([]).get_context(source, span), expected)
+
+    def test_earley_eof_context(self):
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            for text in ('a', 'a\na', 'a\n'):
+                with self.subTest(lexer=lexer, text=text):
+                    parser = Lark('start: "a"+ "b"\n%ignore /\\s+/', parser='earley', lexer=lexer)
+                    with self.assertRaises(UnexpectedEOF) as caught:
+                        parser.parse(text)
+                    last_line = text.rsplit('\n', 1)[-1]
+                    self.assertEqual(caught.exception.get_context(text),
+                                     last_line + '\n' + ' ' * len(last_line) + '^\n')
+
+    def test_non_eof_context(self):
+        error = UnexpectedInput()
+        for pos, expected in [(None, 'abc\n^\n'), (0, 'abc\n^\n'),
+                              (1, 'abc\n ^\n'), (3, 'abc\n   ^\n')]:
+            with self.subTest(pos=pos):
+                error.pos_in_stream = pos
+                self.assertEqual(error.get_context('abc'), expected)
+
     def test_big_list(self):
         Lark(r"""
             start: {}

@@ -108,17 +108,19 @@ class Tree(Generic[_Leaf_T]):
         return self._rich(parent)
 
     def _rich(self, parent):
+        from rich.text import Text
+
         if parent:
-            tree = parent.add(f'[bold]{self.data}[/bold]')
+            tree = parent.add(Text(self.data, style='bold'))
         else:
             import rich.tree
-            tree = rich.tree.Tree(self.data)
+            tree = rich.tree.Tree(Text(self.data))
 
         for c in self.children:
             if isinstance(c, Tree):
                 c._rich(tree)
             else:
-                tree.add(f'[green]{c}[/green]')
+                tree.add(Text(str(c), style='green'))
 
         return tree
 

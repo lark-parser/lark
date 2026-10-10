@@ -7,6 +7,12 @@ from unittest import TestCase
 import copy
 import pickle
 import functools
+from io import StringIO
+
+try:
+    from rich.console import Console
+except ImportError:
+    Console = None
 
 from lark.tree import Tree
 from lark.lexer import Token
@@ -22,6 +28,17 @@ class TestTrees(TestCase):
             Tree('c', [Token('T', 'y')]),
             Tree('d', [Tree('z', [Token('T', 'zz'), Tree('zzz', 'zzz')])]),
         ])
+
+    @unittest.skipIf(Console is None, 'rich is not installed')
+    def test_rich_preserves_literal_text(self):
+        for value in ('[bold]literal[/bold]', '[/bold]', r'\[green]', ':smile:', 'plain text'):
+            with self.subTest(value=value):
+                tree = Tree(value, [Tree(value, [Token('TEXT', value)])])
+                output = StringIO()
+                console = Console(file=output, color_system=None, width=100)
+                console.print(tree)
+                self.assertEqual(output.getvalue(),
+                                 value + '\n└── ' + value + '\n    └── ' + value + '\n')
 
     def test_eq(self):
         assert self.tree1 == self.tree1

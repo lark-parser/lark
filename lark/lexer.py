@@ -443,15 +443,17 @@ class Scanner:
                 best = m
         return best.start() if best is not None else None
 
-def _regexp_has_newline(r: str):
+def _regexp_has_newline(r: str, flags: int = 0):
     r"""Expressions that may indicate newlines in a regexp:
         - newlines (\n)
         - escaped newline (\\n)
         - anything but ([^...])
-        - any-char (.) when the flag (?s) exists
+        - any-char (.) when the flag (?s) or the global re.DOTALL flag exists
         - spaces (\s)
     """
-    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or ('(?s' in r and '.' in r)
+    return '\n' in r or '\\n' in r or '\\s' in r or '[^' in r or (
+        ('(?s' in r or flags & re.DOTALL) and '.' in r
+    )
 
 
 class LexerState:
@@ -624,7 +626,8 @@ class BasicLexer(AbstractBasicLexer):
                 raise LexError("interegular must be installed for strict mode. Use `pip install 'lark[interegular]'`.")
 
         # Init
-        self.newline_types = frozenset(t.name for t in terminals if _regexp_has_newline(t.pattern.to_regexp()))
+        self.newline_types = frozenset(t.name for t in terminals
+                                       if _regexp_has_newline(t.pattern.to_regexp(), conf.g_regex_flags))
         self.ignore_types = frozenset(conf.ignore)
 
         terminals.sort(key=lambda x: (-x.priority, -x.pattern.max_width, -len(x.pattern.value), x.name))

@@ -7,6 +7,7 @@ from lark.tree import Tree
 from lark.tools import standalone
 
 from io import StringIO
+import re
 
 
 class TestStandalone(TestCase):
@@ -96,6 +97,20 @@ class TestStandalone(TestCase):
         parser = context['Lark_StandAlone']()
 
         self.assertEqual([m.range for m in parser.scan('xxaa yy a')], [(2, 4), (8, 9)])
+
+    def test_global_dotall_positions(self):
+        grammar = 'start: MULTILINE BANG\nMULTILINE: /a.*?b/\nBANG: "!"'
+        parser = Lark(grammar, parser='lalr', g_regex_flags=re.DOTALL)
+        for compress in (False, True):
+            with self.subTest(compress=compress):
+                code_buf = StringIO()
+                standalone.gen_standalone(parser, out=code_buf, compress=compress)
+                context = {'__doc__': None, '__name__': 'test_standalone'}
+                exec(code_buf.getvalue(), context)
+                tree = context['Lark_StandAlone']().parse('a\nb!')
+                multiline, bang = tree.children
+                self.assertEqual((multiline.end_line, multiline.end_column), (2, 2))
+                self.assertEqual((bang.line, bang.column), (2, 2))
 
     def test_contextual(self):
         grammar = """

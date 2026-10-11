@@ -33,6 +33,38 @@ class TestTrees(TestCase):
     def test_deepcopy(self):
         assert self.tree1 == copy.deepcopy(self.tree1)
 
+    def test_deepcopy_isolates_metadata(self):
+        from lark import Lark
+
+        tree = Lark('start: "a"', propagate_positions=True).parse('a')
+        tree.meta.annotations = ['original']
+        copied = copy.deepcopy(tree)
+
+        self.assertEqual(copied.meta.start_pos, tree.meta.start_pos)
+        self.assertEqual(copied.meta.end_pos, tree.meta.end_pos)
+        self.assertIsNot(copied.meta, tree.meta)
+        copied.meta.line = 10
+        copied.meta.annotations.append('copy')
+        self.assertEqual(tree.meta.line, 1)
+        self.assertEqual(tree.meta.annotations, ['original'])
+
+    def test_deepcopy_preserves_shared_metadata(self):
+        left = Tree('left', [])
+        right = Tree('right', [], meta=left.meta)
+        copied = copy.deepcopy(Tree('root', [left, right, left]))
+
+        self.assertIs(copied.children[0], copied.children[2])
+        self.assertIs(copied.children[0].meta, copied.children[1].meta)
+        self.assertIsNot(copied.children[0].meta, left.meta)
+
+    def test_deepcopy_metadata_reference_to_tree(self):
+        tree = Tree('root', [])
+        tree.meta.owner = tree
+        copied = copy.deepcopy(tree)
+
+        self.assertIs(copied.meta.owner, copied)
+        self.assertIs(tree.meta.owner, tree)
+
     def test_pickle(self):
         s = copy.deepcopy(self.tree1)
         data = pickle.dumps(s, protocol=pickle.HIGHEST_PROTOCOL)

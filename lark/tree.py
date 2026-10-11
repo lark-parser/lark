@@ -213,7 +213,11 @@ class Tree(Generic[_Leaf_T]):
                     yield c
 
     def __deepcopy__(self, memo):
-        return type(self)(self.data, deepcopy(self.children, memo), meta=self._meta)
+        copied = type(self)(self.data, [], meta=None)
+        memo[id(self)] = copied
+        copied.children = deepcopy(self.children, memo)
+        copied._meta = deepcopy(self._meta, memo)
+        return copied
 
     def copy(self) -> 'Tree[_Leaf_T]':
         return type(self)(self.data, self.children)

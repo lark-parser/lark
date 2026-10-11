@@ -4,7 +4,7 @@ import os
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
-from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, find_grammar_errors, list_grammar_imports
+from lark.load_grammar import GrammarError, GRAMMAR_ERRORS, GRAMMAR_CHAR_ERRORS, find_grammar_errors, list_grammar_imports
 from lark.load_grammar import FromPackageLoader
 from lark.grammar import Symbol
 
@@ -21,6 +21,25 @@ class TestGrammar(TestCase):
                     assert msg in str(e)
                 else:
                     assert False, "example did not raise an error"
+
+    def test_char_errors(self):
+        for msg, examples in GRAMMAR_CHAR_ERRORS:
+            for example in examples:
+                try:
+                    p = Lark(example)
+                except GrammarError as e:
+                    assert msg in str(e)
+                    assert 'at line %d' % example.count('\n') in str(e)
+                else:
+                    assert False, "example did not raise an error"
+
+        # an unexpected character that isn't a literal still gets the generic message
+        try:
+            Lark('a: $\n')
+        except GrammarError as e:
+            assert 'Unexpected input' in str(e)
+        else:
+            assert False, "example did not raise an error"
 
     def test_empty_literal(self):
         # Issues #888
@@ -335,6 +354,39 @@ class TestGrammar(TestCase):
                        "b"
 """)
 
+
+    def test_terminal_literal_backtracking(self):
+        # The STRING and REGEXP grammar terminals used an ambiguous
+        # alternation (`\\"|\\\\|[^"\n]`), so an unterminated literal made of
+        # backslashes forced the regex engine into exponential backtracking
+        # while loading the grammar. A ~60 character grammar used to run for
+        # longer than the age of the universe.
+        import threading
+
+        def load(grammar):
+            done = []
+            t = threading.Thread(target=lambda: done.append(self._try_load(grammar)))
+            t.daemon = True
+            t.start()
+            t.join(5)
+            self.assertFalse(t.is_alive(), "grammar loading did not terminate: %r" % grammar)
+
+        load('start: "' + '\\' * 60 + '\n')
+        load('start: /' + '\\' * 60 + '\n')
+
+        # valid escaped literals must still compile and match as before
+        p = Lark(r'start: "a\"b"', parser='lalr')
+        self.assertEqual(p.parse('a"b'), Tree('start', []))
+        p = Lark('start: A\nA: /a\\/b/', parser='lalr')
+        self.assertEqual(p.parse('a/b'), Tree('start', [Token('A', 'a/b')]))
+
+    @staticmethod
+    def _try_load(grammar):
+        try:
+            Lark(grammar)
+        except Exception:
+            pass
+        return True
 
     def test_symbol_eq(self):
         a = None

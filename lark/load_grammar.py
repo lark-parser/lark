@@ -90,8 +90,8 @@ TERMINALS = {
     'RULE_MODIFIERS': '(!|![?]?|[?]!?)(?=[_a-z])',
     'RULE': '_?[a-z][_a-z0-9]*',
     'TERMINAL': '_?[A-Z][_A-Z0-9]*',
-    'STRING': r'"(\\"|\\\\|[^"\n])*?"i?',
-    'REGEXP': r'/(?!/)(\\/|\\\\|[^/])*?/[%s]*' % _RE_FLAGS,
+    'STRING': r'"(\\.|[^\\"\n])*?"i?',
+    'REGEXP': r'/(?!/)(\\[\s\S]|[^\\/])*?/[%s]*' % _RE_FLAGS,
     '_NL': r'(\r?\n)+\s*',
     '_NL_OR': r'(\r?\n)+\s*\|',
     'WS': r'[ \t]+',
@@ -958,6 +958,13 @@ GRAMMAR_ERRORS = [
         ('%ignore expects a value', ['%ignore %import\n']),
     ]
 
+GRAMMAR_CHAR_ERRORS = [
+        ('Unterminated string or regexp literal (bad escaping? a backslash always escapes the character that follows it)',
+         # the parser is in a different state when the statement is not the first in the grammar,
+         # so each case appears once bare and once with a preceding line
+         ['A: "\\\n', '\nA: /\\/\n', 'a: "\\\n', '\na: /\\/\n', '%ignore "\\\n', '\n%ignore /\\/\n']),
+    ]
+
 def _translate_parser_exception(parse, e):
         error = e.match_examples(parse, GRAMMAR_ERRORS, use_accepts=True)
         if error:
@@ -965,11 +972,19 @@ def _translate_parser_exception(parse, e):
         elif 'STRING' in e.expected:
             return "Expecting a value"
 
+def _translate_lexer_exception(parse, e):
+        if e.char in ('"', '/'):    # Lexing failed at the start of a string or regexp literal
+            return e.match_examples(parse, GRAMMAR_CHAR_ERRORS)
+
 def _parse_grammar(text, name, start='start'):
     try:
         tree = _get_parser().parse(text + '\n', start)
     except UnexpectedCharacters as e:
         context = e.get_context(text)
+        error = _translate_lexer_exception(_get_parser().parse, e)
+        if error:
+            raise GrammarError("%s, at line %s column %s in %s: \n\n%s" %
+                               (error, e.line, e.column, name, context))
         raise GrammarError("Unexpected input at line %d column %d in %s: \n\n%s" %
                            (e.line, e.column, name, context))
     except UnexpectedToken as e:

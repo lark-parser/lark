@@ -174,7 +174,7 @@ def create_code_for_nearley_grammar(g, start, builtin_path, folder_path, es6=Fal
     emit("    __default__ = lambda self, n, c, m: c if c else None")
 
     emit()
-    emit('parser = Lark(grammar, start="n_%s", maybe_placeholders=False)' % start)
+    emit('parser = Lark(grammar, start=%r, maybe_placeholders=False)' % _get_rulename(start))
     emit('def parse(text):')
     emit('    return TransformNearley().transform(parser.parse(text))')
 

@@ -6,7 +6,7 @@ import logging
 import os
 import codecs
 
-from lark import logger
+from lark import logger, UnexpectedInput
 from lark.tools.nearley import create_code_for_nearley_grammar, main as nearley_tool_main
 
 logger.setLevel(logging.INFO)
@@ -28,6 +28,26 @@ except RuntimeError as e:
 
 
 class TestNearley(unittest.TestCase):
+    def test_start_rule_names(self):
+        cases = [
+            ('main', 'n_main'),
+            ('Main', 'n_main'),
+            ('MAIN_2', 'n_main_2'),
+            ('$main', 'n___dollar__main'),
+            ('_', 'n__ws_maybe'),
+            ('__', 'n__ws'),
+        ]
+        for name, converted_name in cases:
+            with self.subTest(name=name):
+                grammar = 'other -> "b"\n%s -> "a"' % name
+                code = create_code_for_nearley_grammar(grammar, name, BUILTIN_PATH, './')
+                namespace = {}
+                exec(code, namespace)
+                self.assertEqual(namespace['parser'].options.start, [converted_name])
+                self.assertEqual(namespace['parse']('a'), [['a']])
+                with self.assertRaises(UnexpectedInput):
+                    namespace['parse']('b')
+
     def test_css(self):
         fn = os.path.join(NEARLEY_PATH, 'examples/csscolor.ne')
         with open(fn) as f:

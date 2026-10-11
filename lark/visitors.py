@@ -615,6 +615,8 @@ class CollapseAmbiguities(Transformer):
         return sum(options, [])
 
     def __default__(self, data, children_lists, meta):
+        # A missing optional child is one possible value, not an empty list of alternatives.
+        children_lists = [[None] if child is None else child for child in children_lists]
         return [Tree(data, children, meta) for children in combine_alternatives(children_lists)]
 
     def __default_token__(self, t):

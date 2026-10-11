@@ -9,9 +9,11 @@ import pickle
 import functools
 
 from lark.tree import Tree
+from lark import Lark
 from lark.lexer import Token
 from lark.visitors import Visitor, Visitor_Recursive, Transformer, Interpreter, visit_children_decor, v_args, Discard, Transformer_InPlace, \
     Transformer_InPlaceRecursive, Transformer_NonRecursive, merge_transformers
+from lark.visitors import CollapseAmbiguities
 
 
 class TestTrees(TestCase):
@@ -434,6 +436,49 @@ class TestTrees(TestCase):
             tree = Tree('start', [Token('A', 'x')])
             result = T().transform(tree)
             self.assertIsNone(result)
+
+    def test_collapse_ambiguities_optional_slots(self):
+        grammar = 'start: [A] [B]\nA: "a"\nB: "b"'
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            for placeholders in (False, True):
+                parser = Lark(grammar, lexer=lexer, ambiguity='explicit',
+                              maybe_placeholders=placeholders, propagate_positions=True)
+                for text in ('', 'a', 'b', 'ab'):
+                    with self.subTest(lexer=lexer, placeholders=placeholders, text=text):
+                        tree = parser.parse(text)
+                        original = repr(tree)
+                        result, = CollapseAmbiguities().transform(tree)
+                        self.assertEqual(list(result.children), tree.children)
+                        self.assertIs(result.meta, tree.meta)
+                        self.assertIsNot(result, tree)
+                        self.assertEqual(repr(tree), original)
+
+    def test_collapse_ambiguities_nested_optional_slots(self):
+        grammar = '''
+            start: choice choice
+            choice: left | right
+            left: [A] "x"
+            right: [A] "x"
+            A: "a"
+        '''
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            parser = Lark(grammar, lexer=lexer, ambiguity='explicit')
+            for text in ('xx', 'axx', 'xax', 'axax'):
+                with self.subTest(lexer=lexer, text=text):
+                    tree = parser.parse(text)
+                    original = repr(tree)
+                    results = CollapseAmbiguities().transform(tree)
+                    self.assertEqual(len(results), 4)
+                    self.assertCountEqual([
+                        tuple(choice.children[0].data for choice in result.children)
+                        for result in results
+                    ], [('left', 'left'), ('left', 'right'), ('right', 'left'), ('right', 'right')])
+                    for result in results:
+                        self.assertFalse(list(result.find_data('_ambig')))
+                        for choice, prefix in zip(result.children, text.split('x')):
+                            expected = [Token('A', 'a')] if prefix else [None]
+                            self.assertEqual(list(choice.children[0].children), expected)
+                    self.assertEqual(repr(tree), original)
 
     def test_transformer_variants_discard_with_preceding_sibling(self):
         # A discarded node whose parent is preceded by another subtree must not

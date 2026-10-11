@@ -30,6 +30,9 @@ class Indenter(PostLex, ABC):
         self.indent_level = [0]
         assert self.tab_len > 0
 
+    def _get_indent(self, indent_str: str) -> int:
+        return indent_str.count(' ') + indent_str.count('\t') * self.tab_len
+
     def handle_NL(self, token: Token) -> Iterator[Token]:
         if self.paren_level > 0:
             return
@@ -37,7 +40,7 @@ class Indenter(PostLex, ABC):
         yield token
 
         indent_str = token.rsplit('\n', 1)[1] # Tabs and spaces
-        indent = indent_str.count(' ') + indent_str.count('\t') * self.tab_len
+        indent = self._get_indent(indent_str)
 
         if indent > self.indent_level[-1]:
             self.indent_level.append(indent)
@@ -137,5 +140,9 @@ class PythonIndenter(Indenter):
     INDENT_type = '_INDENT'
     DEDENT_type = '_DEDENT'
     tab_len = 8
+
+    def _get_indent(self, indent_str: str) -> int:
+        # Python tabs advance to the next multiple of eight, not by a fixed width.
+        return len(indent_str.expandtabs(self.tab_len))
 
 ###}

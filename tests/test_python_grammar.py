@@ -2,8 +2,8 @@ import inspect
 import textwrap
 from unittest import TestCase, main
 
-from lark import Lark
-from lark.indenter import PythonIndenter
+from lark import Lark, Token
+from lark.indenter import Indenter, PythonIndenter, DedentError
 from lark.exceptions import UnexpectedCharacters, UnexpectedToken, ParseError
 
 valid_DEC_NUMBER = [
@@ -241,6 +241,56 @@ class TestPythonParser(TestCase):
         token = tree.children[0]
         self.assertEqual(token.type, terminal)
         self.assertEqual(token.value, text)
+
+    def test_mixed_indentation_tab_stops(self):
+        cases = [
+            ('    \t', ' ' * 9),
+            (' ' * 7 + '\t', ' ' * 9),
+            ('\t    \t', ' ' * 17),
+            ('\t', '\t\t'),
+            (' ' * 4, ' ' * 8),
+        ]
+        for lexer in ('basic', 'contextual'):
+            parser = Lark.open_from_package(
+                'lark', 'python.lark', ('grammars',), parser='lalr', lexer=lexer,
+                postlex=PythonIndenter(), start='file_input')
+            for outer, inner in cases:
+                for newline in ('\n', '\r\n'):
+                    with self.subTest(lexer=lexer, outer=outer, inner=inner, newline=newline):
+                        code = newline.join([
+                            'if True:', outer + 'if True:', inner + 'pass',
+                            outer + 'pass', 'pass', '',
+                        ])
+                        # CPython accepts this indentation; it is not an inconsistent-tab error.
+                        compile(code, '<mixed-indentation>', 'exec')
+                        self.assertEqual(parser.parse(code), parser.parse(code.expandtabs(8)))
+
+    def test_python_indenter_preserves_generic_tab_width(self):
+        class FixedWidthIndenter(Indenter):
+            NL_type = '_NEWLINE'
+            OPEN_PAREN_types = []
+            CLOSE_PAREN_types = []
+            INDENT_type = '_INDENT'
+            DEDENT_type = '_DEDENT'
+            tab_len = 8
+
+        for prefix, python_width, generic_width in [(' \t', 8, 9), ('\t \t', 16, 17), (' \t \t ', 17, 19)]:
+            for cls, width in [(PythonIndenter, python_width), (FixedWidthIndenter, generic_width)]:
+                with self.subTest(prefix=prefix, indenter=cls.__name__):
+                    indenter = cls()
+                    token = Token('_NEWLINE', '\n' + prefix, 0, 1, 1, 2, len(prefix) + 1, len(prefix) + 1)
+                    output = list(indenter.handle_NL(token))
+                    self.assertEqual(indenter.indent_level, [0, width])
+                    self.assertIs(output[0], token)
+                    self.assertEqual(output[1].value, prefix)
+                    self.assertEqual((output[1].start_pos, output[1].end_pos), (token.start_pos, token.end_pos))
+
+    def test_mixed_indentation_invalid_dedent(self):
+        code = 'if True:\n    \tpass\n   pass\n'
+        with self.assertRaises(IndentationError):
+            compile(code, '<invalid-dedent>', 'exec')
+        with self.assertRaises(DedentError):
+            self.python_parser.parse(code, start='file_input')
 
     def _test_parsed_is_file_containing_only_this_statement(self, text, statement):
         tree = self.python_parser.parse(text, start="file_input")

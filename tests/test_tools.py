@@ -152,6 +152,20 @@ class TestStandalone(TestCase):
         x = l.parse('(\n)\n')
         self.assertEqual(x, Tree('start', []))
 
+    def test_python_indenter_tab_stops(self):
+        grammar = r'''
+            start: "a" _NEWLINE _INDENT "b" _NEWLINE _INDENT "c" _NEWLINE _DEDENT "d" _NEWLINE _DEDENT
+            _NEWLINE: /\n[ \t]*/
+            %ignore /[ \t]+/
+            %declare _INDENT _DEDENT
+        '''
+        text = 'a\n    \tb\n         c\n    \td\n'
+        for compress in (False, True):
+            with self.subTest(compress=compress):
+                context = self._create_standalone(grammar, compress=compress)
+                parser = context['Lark_StandAlone'](postlex=context['PythonIndenter']())
+                self.assertEqual(parser.parse(text), parser.parse(text.expandtabs(8)))
+
     def test_transformer(self):
         grammar = r"""
             start: some_rule "(" SOME_TERMINAL ")"

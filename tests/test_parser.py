@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import re
+import logging
 import unittest
 import os
 import sys
@@ -47,6 +48,30 @@ class SerializeTestT(Transformer[Token, int]):
 
 
 class TestParsers(unittest.TestCase):
+    def test_match_examples_with_different_accepts(self):
+        grammar = 'start: "x" expr "!" | "y" expr "?"\nexpr: "z"+'
+        self.addCleanup(logger.setLevel, logger.level)
+        logger.setLevel(logging.WARNING)
+        for lexer in ('basic', 'contextual'):
+            for debug in (False, True):
+                parser = Lark(grammar, parser='lalr', lexer=lexer, debug=debug)
+                for example, text in (('xz', 'yz'), ('xzx', 'yzx')):
+                    with self.subTest(lexer=lexer, debug=debug, text=text):
+                        with self.assertRaises(UnexpectedToken) as cm:
+                            parser.parse(text)
+                        error = cm.exception
+                        with self.assertRaises(UnexpectedToken) as other_cm:
+                            parser.parse(example)
+                        self.assertEqual(error.state, other_cm.exception.state)
+                        self.assertNotEqual(error.accepts, other_cm.exception.accepts)
+                        self.assertIsNone(error.match_examples(parser.parse, {'other': [example]}))
+                        self.assertEqual(error.match_examples(parser.parse, {
+                            'other': [example], 'same': [text],
+                        }), 'same')
+                        self.assertEqual(error.match_examples(parser.parse, {
+                            'other': [example],
+                        }, use_accepts=False), 'other')
+
     def test_big_list(self):
         Lark(r"""
             start: {}

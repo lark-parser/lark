@@ -113,8 +113,8 @@ class UnexpectedInput(LarkError):
                             and isinstance(ut, UnexpectedToken)
                             and ut.accepts != self.accepts
                         ):
-                            logger.debug("Different accepts with same state[%d]: %s != %s at example [%s][%s]" %
-                                         (self.state, self.accepts, ut.accepts, i, j))
+                            logger.debug("Different accepts with same state[%s]: %s != %s at example [%s][%s]",
+                                         self.state, self.accepts, ut.accepts, i, j)
                             continue
                         if (
                             isinstance(self, (UnexpectedToken, UnexpectedEOF))

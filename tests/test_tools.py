@@ -97,6 +97,18 @@ class TestStandalone(TestCase):
 
         self.assertEqual([m.range for m in parser.scan('xxaa yy a')], [(2, 4), (8, 9)])
 
+    def test_match_examples_with_different_accepts(self):
+        grammar = 'start: "x" expr "!" | "y" expr "?"\nexpr: "z"+'
+        for compress in (False, True):
+            with self.subTest(compress=compress):
+                context = self._create_standalone(grammar, compress=compress)
+                parser = context['Lark_StandAlone']()
+                with self.assertRaises(context['UnexpectedToken']) as cm:
+                    parser.parse('yz')
+                self.assertEqual(cm.exception.match_examples(parser.parse, {
+                    'other': ['xz'], 'same': ['yz'],
+                }), 'same')
+
     def test_contextual(self):
         grammar = """
         start: a b

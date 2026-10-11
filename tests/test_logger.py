@@ -1,6 +1,6 @@
 import logging
 from contextlib import contextmanager
-from lark import Lark, logger
+from lark import Lark, logger, UnexpectedToken
 from unittest import TestCase, main, skipIf
 
 from io import StringIO
@@ -21,6 +21,14 @@ def capture_log():
     logger.addHandler(orig_handler)
 
 class Testlogger(TestCase):
+
+    def test_match_examples_different_accepts_debug(self):
+        parser = Lark('start: "x" expr "!" | "y" expr "?"\nexpr: "z"+', parser='lalr')
+        with self.assertRaises(UnexpectedToken) as cm:
+            parser.parse('yz')
+        with self.assertLogs(logger, level='DEBUG') as logs:
+            self.assertIsNone(cm.exception.match_examples(parser.parse, {'other': ['xz']}))
+        self.assertIn('Different accepts with same state[', '\n'.join(logs.output))
 
     def test_debug(self):
         logger.setLevel(logging.DEBUG)

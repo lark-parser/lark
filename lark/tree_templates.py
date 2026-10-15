@@ -97,16 +97,19 @@ class _ReplaceVars(Transformer[str, Tree[str]]):
         self._conf = conf
         self._vars = vars
 
-    def __default__(self, data, children, meta) -> Tree[str]:
-        tree = super().__default__(data, children, meta)
-
-        var = self._conf.test_var(tree)
-        if var:
-            try:
-                return self._vars[var]
-            except KeyError:
-                raise MissingVariableError(f"No mapping for template variable ({var})")
-        return tree
+    def _transform_children(self, children):
+        for child in children:
+            # Match variables before visiting children, just as template matching does.
+            var = self._conf.test_var(child)
+            if var:
+                try:
+                    yield self._vars[var]
+                except KeyError:
+                    raise MissingVariableError(f"No mapping for template variable ({var})")
+            elif isinstance(child, Tree):
+                yield self._transform_tree(child)
+            else:
+                yield child
 
 
 class Template:

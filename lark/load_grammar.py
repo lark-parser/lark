@@ -611,7 +611,7 @@ class PrepareLiterals(Transformer_InPlace):
 
 
 def _make_joined_pattern(regexp, flags_set) -> PatternRE:
-    return PatternRE(regexp, ())
+    return PatternRE(regexp, tuple(sorted(flags_set)))
 
 class TerminalTreeToPattern(Transformer_NonRecursive):
     def pattern(self, ps):
@@ -626,7 +626,8 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
             return items[0]
 
         pattern = ''.join(i.to_regexp() for i in items)
-        return _make_joined_pattern(pattern, {i.flags for i in items})
+        common_flags = frozenset.intersection(*(i.flags for i in items))
+        return _make_joined_pattern(pattern, common_flags)
 
     def expansions(self, exps: List[Pattern]) -> Pattern:
         if len(exps) == 1:
@@ -637,7 +638,8 @@ class TerminalTreeToPattern(Transformer_NonRecursive):
         exps.sort(key=lambda x: (-x.max_width, -x.min_width, -len(x.value)))
 
         pattern = '(?:%s)' % ('|'.join(i.to_regexp() for i in exps))
-        return _make_joined_pattern(pattern, {i.flags for i in exps})
+        common_flags = frozenset.intersection(*(i.flags for i in exps))
+        return _make_joined_pattern(pattern, common_flags)
 
     def expr(self, args) -> Pattern:
         inner: Pattern

@@ -39,6 +39,24 @@ class TestLexer(TestCase):
         res = list(p.lex(TextSlice("aaaabc cba dddd", 3, -2)))
         assert res == list('abccbadd')
 
+    def test_make_joined_pattern_preserves_flags(self):
+        """Regression test: combined terminals must preserve their flags."""
+        parser = Lark('start: A\nA: "ab"i "cd"i', parser='lalr')
+        terminal = next(t for t in parser.terminals if t.name == 'A')
+        assert terminal.pattern.flags == frozenset({'i'}), \
+            "flags were dropped on joined pattern"
+
+    def test_make_joined_pattern_with_disjoint_flags(self):
+        """Joined pattern with no common flags should report an empty set."""
+        parser = Lark('start: A\nA: /a/i /b/s /c/m', parser='lalr')
+        terminal = next(t for t in parser.terminals if t.name == 'A')
+        assert terminal.pattern.flags == frozenset()
+        # Each sub-pattern's inline flags still govern its own matching.
+        regexp = terminal.pattern.to_regexp()
+        assert '?i:' in regexp
+        assert '?s:' in regexp
+        assert '?m:' in regexp
+
 
 if __name__ == '__main__':
     main()

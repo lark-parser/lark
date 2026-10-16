@@ -244,8 +244,9 @@ class EBNF_to_BNF(Transformer_InPlace):
         return t
 
     def _add_recurse_rule(self, type_: str, expr: Tree):
+        key = (expr, self.rule_options and self.rule_options.keep_all_tokens)
         try:
-            return self.rules_cache[expr]
+            return self.rules_cache[key]
         except KeyError:
             new_name = self._name_rule(type_)
             t = NonTerminal(new_name)
@@ -253,7 +254,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                 ST('expansion', [expr]),
                 ST('expansion', [t, expr])
             ])
-            return self._add_rule(expr, new_name, tree)
+            return self._add_rule(key, new_name, tree)
 
     def _add_repeat_rule(self, a, b, target, atom):
         """Generate a rule that repeats target ``a`` times, and repeats atom ``b`` times.
@@ -267,7 +268,7 @@ class EBNF_to_BNF(Transformer_InPlace):
             new_rule: target target target atom atom atom atom
 
         """
-        key = (a, b, target, atom)
+        key = (a, b, target, atom, self.rule_options and self.rule_options.keep_all_tokens)
         try:
             return self.rules_cache[key]
         except KeyError:
@@ -300,7 +301,7 @@ class EBNF_to_BNF(Transformer_InPlace):
                     | target target target atom atom atom
 
         """
-        key = (a, b, target, atom, "opt")
+        key = (a, b, target, atom, "opt", self.rule_options and self.rule_options.keep_all_tokens)
         try:
             return self.rules_cache[key]
         except KeyError:

@@ -1732,6 +1732,18 @@ def _make_parser_test(LEXER, PARSER):
             tree = l.parse('aaa')
             self.assertEqual(tree.children, ['a', 'a', 'a'])
 
+        def test_repetition_keep_all_tokens(self):
+            for repeat, count in [('+', 2), ('*', 2), ('~50', 50), ('~0..50', 2)]:
+                if PARSER == 'cyk' and repeat in ('*', '~0..50'):
+                    continue  # CYK doesn't support empty rules
+                rules = ['dropped: _A' + repeat, '!kept: _A' + repeat]
+                for rule_order in (rules, rules[::-1]):
+                    with self.subTest(repeat=repeat, rules=rule_order):
+                        l = _Lark('\n'.join(['start: dropped "," kept'] + rule_order + ['_A: "a"']))
+                        dropped, kept = l.parse('a' * count + ',' + 'a' * count).children
+                        self.assertEqual(dropped, Tree('dropped', []))
+                        self.assertEqual(kept, Tree('kept', [Token('_A', 'a')] * count))
+
 
         def test_token_flags(self):
             l = _Lark("""!start: "a"i+

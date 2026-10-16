@@ -197,13 +197,16 @@ class TextSlice(Generic[AnyStr]):
 
         if self.start < 0:
             object.__setattr__(self, 'start', self.start + len(self.text))
-            assert self.start >=0
+
+        assert 0 <= self.start <= len(self.text)
 
         if self.end is None:
             object.__setattr__(self, 'end', len(self.text))
         elif self.end < 0:
             object.__setattr__(self, 'end', self.end + len(self.text))
-            assert self.end <= len(self.text)
+
+        assert 0 <= self.end <= len(self.text)
+        assert self.end >= self.start
 
     @classmethod
     def cast_from(cls, text: 'TextOrSlice') -> 'TextSlice[AnyStr]':

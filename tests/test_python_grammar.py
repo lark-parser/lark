@@ -246,9 +246,9 @@ class TestPythonParser(TestCase):
         tree = self.python_parser.parse(text, start="file_input")
         self.assertEqual(len(tree.children), 1)
 
-        statement_token = tree.children[0].data
-        self.assertEqual(statement_token.type, "RULE")
-        self.assertEqual(statement_token.value, statement)
+        statement_data = tree.children[0].data
+        self.assertIs(type(statement_data), str)
+        self.assertEqual(statement_data, statement)
 
     def test_DEC_NUMBER(self):
         for case in valid_DEC_NUMBER:

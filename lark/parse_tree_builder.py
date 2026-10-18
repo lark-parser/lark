@@ -367,7 +367,7 @@ class ParseTreeBuilder:
 
         for rule, wrapper_chain in self.rule_builders:
 
-            user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
+            user_callback_name = str(rule.alias or rule.options.template_source or rule.origin.name)
             try:
                 f = getattr(transformer, user_callback_name)
                 wrapper = getattr(f, 'visit_wrapper', None)

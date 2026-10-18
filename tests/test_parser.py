@@ -1497,6 +1497,103 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse("starts")
             self.assertSequenceEqual(x.children, ['starts'])
 
+        def test_tree_data_is_plain_str(self):
+            grammar = r"""
+                start: rule alias template{WORD}
+                rule: WORD
+                alias: WORD -> renamed
+                template{item}: item
+                WORD: /[a-z]+/
+                %ignore " "
+            """
+
+            class CustomTree(Tree):
+                def __init__(self, data, children):
+                    self.data_type = type(data)
+                    super().__init__(data, children)
+
+            for tree_class in (Tree, CustomTree):
+                tree = _Lark(grammar, tree_class=tree_class).parse('one two three')
+                subtrees = list(tree.iter_subtrees_topdown())
+                self.assertEqual([t.data for t in subtrees],
+                                 ['start', 'rule', 'renamed', 'template'])
+                for subtree, positions in zip(subtrees, [(0, 13), (0, 3), (4, 7), (8, 13)]):
+                    with self.subTest(tree_class=tree_class, data=subtree.data):
+                        self.assertIs(type(subtree.data), str)
+                        if tree_class is CustomTree:
+                            self.assertIs(subtree.data_type, str)
+                        self.assertEqual((subtree.meta.start_pos, subtree.meta.end_pos), positions)
+                        self.assertEqual((subtree.meta.line, subtree.meta.end_line), (1, 1))
+                for subtree, value, positions in zip(subtrees[1:],
+                                                     ['one', 'two', 'three'],
+                                                     [(0, 3), (4, 7), (8, 13)]):
+                    token, = subtree.children
+                    self.assertIsInstance(token, Token)
+                    self.assertEqual((token.type, token.value), ('WORD', value))
+                    self.assertEqual((token.start_pos, token.end_pos), positions)
+
+        @unittest.skipIf(PARSER == 'earley', "Tree-less mode is not supported in earley")
+        def test_default_transformer_data_is_plain_str(self):
+            grammar = r"""
+                start: rule alias template{WORD}
+                rule: WORD
+                alias: WORD -> renamed
+                template{item}: item
+                WORD: /[a-z]+/
+                %ignore " "
+            """
+
+            class DefaultTransformer(Transformer):
+                def __init__(self):
+                    self.labels = []
+
+                def __default__(self, data, children, meta):
+                    self.labels.append(data)
+                    return data, children
+
+            for embedded in (False, True):
+                transformer = DefaultTransformer()
+                if embedded:
+                    result = _Lark(grammar, transformer=transformer).parse('one two three')
+                else:
+                    result = transformer.transform(_Lark(grammar).parse('one two three'))
+                self.assertEqual(result, ('start', [('rule', ['one']),
+                                                   ('renamed', ['two']),
+                                                   ('template', ['three'])]))
+                self.assertEqual(transformer.labels, ['rule', 'renamed', 'template', 'start'])
+                for data in transformer.labels:
+                    with self.subTest(embedded=embedded, data=data):
+                        self.assertIs(type(data), str)
+
+        @unittest.skipIf(PARSER == 'earley', "Tree-less mode is not supported in earley")
+        def test_wrapped_transformer_data_is_plain_str(self):
+            grammar = r"""
+                start: rule alias template{WORD}
+                rule: WORD
+                alias: WORD -> renamed
+                template{item}: item
+                WORD: /[a-z]+/
+                %ignore " "
+            """
+
+            @v_args(tree=True)
+            class NamedTransformer(Transformer):
+                def rule(self, tree):
+                    return type(tree.data), tree.data, tree.children
+
+                start = renamed = template = rule
+
+            expected = (str, 'start', [(str, 'rule', ['one']),
+                                       (str, 'renamed', ['two']),
+                                       (str, 'template', ['three'])])
+            for embedded in (False, True):
+                with self.subTest(embedded=embedded):
+                    if embedded:
+                        result = _Lark(grammar, transformer=NamedTransformer()).parse('one two three')
+                    else:
+                        result = NamedTransformer().transform(_Lark(grammar).parse('one two three'))
+                    self.assertEqual(result, expected)
+
         def test_templates(self):
             g = _Lark(r"""
                        start: "[" sep{NUMBER, ","} "]"

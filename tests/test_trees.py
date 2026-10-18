@@ -23,6 +23,55 @@ class TestTrees(TestCase):
             Tree('d', [Tree('z', [Token('T', 'zz'), Tree('zzz', 'zzz')])]),
         ])
 
+    def test_create_ast_transformer_preserves_supplied_instance(self):
+        from types import ModuleType
+        from lark.ast_utils import Ast, create_transformer
+
+        class Number(Ast):
+            def __init__(self, value):
+                self.value = value
+
+        class InitialTransformer(Transformer):
+            def __init__(self, symbols):
+                super().__init__()
+                self.symbols = symbols
+
+            def __len__(self):
+                return len(self.symbols)
+
+            def INT(self, token):
+                return int(token)
+
+            def start(self, children):
+                self.symbols['result'] = children[0].value
+                return self.symbols['result']
+
+        module = ModuleType('ast_nodes')
+        module.Number = Number
+        tree = Tree('start', [Tree('number', [Token('INT', '42')])])
+        for symbols in ({}, {'existing': 1}):
+            with self.subTest(symbols=symbols):
+                initial = InitialTransformer(symbols)
+                transformer = create_transformer(module, initial)
+                self.assertIs(transformer, initial)
+                self.assertEqual(transformer.transform(tree), 42)
+                self.assertEqual(symbols['result'], 42)
+
+    def test_create_ast_transformer_default(self):
+        from types import ModuleType
+        from lark.ast_utils import Ast, create_transformer
+
+        class Number(Ast):
+            def __init__(self, value):
+                self.value = value
+
+        module = ModuleType('ast_nodes')
+        module.Number = Number
+        for transformer in (create_transformer(module), create_transformer(module, None)):
+            result = transformer.transform(Tree('number', [42]))
+            self.assertIsInstance(result, Number)
+            self.assertEqual(result.value, 42)
+
     def test_eq(self):
         assert self.tree1 == self.tree1
         assert self.tree1 != 0

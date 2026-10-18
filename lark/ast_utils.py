@@ -47,7 +47,7 @@ def create_transformer(ast_module: types.ModuleType,
         decorator_factory (Callable): An optional callable accepting two booleans, inline, and meta,
             and returning a decorator for the methods of ``transformer``. (default: ``v_args``).
     """
-    t = transformer or Transformer()
+    t = Transformer() if transformer is None else transformer
 
     for name, obj in inspect.getmembers(ast_module):
         if not name.startswith('_') and inspect.isclass(obj):

@@ -29,7 +29,7 @@ from lark.utils import TextSlice
 from lark.exceptions import GrammarError, ParseError, UnexpectedToken, UnexpectedInput, UnexpectedCharacters, ConfigurationError
 from lark.tree import Tree
 from lark.visitors import Transformer, Transformer_InPlace, v_args, Transformer_InPlaceRecursive
-from lark.lexer import Lexer, BasicLexer
+from lark.lexer import Lexer, BasicLexer, LexerState
 from lark.indenter import Indenter
 
 __all__ = ['TestParsers']
@@ -380,6 +380,78 @@ class TestParsers(unittest.TestCase):
 
         r = p.parse('')
         self.assertEqual(r, Tree('start', [Token('A', 'A')]))
+
+
+    def test_legacy_state_lexer_text(self):
+        for parser in ('lalr', 'earley', 'cyk'):
+            for text in ('a b', b'a b'):
+                for wrapped in (False, True):
+                    with self.subTest(parser=parser, text=text, wrapped=wrapped):
+                        p = Lark('start: A+\n%declare A', parser=parser,
+                                 lexer=LegacyStateLexer,
+                                 use_bytes=isinstance(text, bytes))
+                        source = TextSlice(text, 0, len(text)) if wrapped else text
+                        result = p.parse(source)
+                        self.assertEqual([t.value for t in result.children],
+                                         [text[0:1], text[2:3]])
+                        self.assertEqual([t.start_pos for t in result.children],
+                                         [0, 2])
+                        self.assertEqual([t.end_pos for t in result.children],
+                                         [1, 3])
+
+    def test_legacy_state_lexer_recovery(self):
+        p = Lark('start: A+\n%declare A', parser='lalr', lexer=LegacyStateLexer)
+        errors = []
+
+        def on_error(error):
+            self.assertIsInstance(error, UnexpectedCharacters)
+            state = error.interactive_parser.lexer_thread.state
+            self.assertIsInstance(state.text, TextSlice)
+            self.assertEqual(state.last_token, 'a')
+            self.assertEqual(state.line_ctr.char_pos, 2)
+            errors.append(error)
+            return True
+
+        result = p.parse('a !\nb', on_error=on_error)
+        self.assertEqual(result.children, ['a', 'b'])
+        self.assertEqual(len(errors), 1)
+        self.assertEqual((result.children[1].line, result.children[1].column),
+                         (2, 1))
+
+    def test_legacy_state_lexer_interactive_copy(self):
+        p = Lark('start: A+\n%declare A', parser='lalr', lexer=LegacyStateLexer)
+        cursor = p.parse_interactive('a b')
+        tokens = cursor.lexer_thread.lex(cursor.parser_state)
+        first = next(tokens)
+        cursor.feed_token(first)
+        state = cursor.lexer_thread.state
+        self.assertIsInstance(state.text, TextSlice)
+        self.assertIs(state.last_token, first)
+        self.assertEqual(state.line_ctr.char_pos, 1)
+        fork = cursor.copy()
+        self.assertEqual(fork.resume_parse().children, ['a', 'b'])
+        self.assertEqual(state.line_ctr.char_pos, 1)
+        second = next(tokens)
+        cursor.feed_token(second)
+        self.assertEqual(cursor.feed_eof(second).children, ['a', 'b'])
+        self.assertIs(state.last_token, second)
+        tokens.close()
+
+    def test_legacy_state_lexer_custom_input(self):
+        class ObjectLexer(Lexer):
+            __future_interface__ = 1
+
+            def __init__(self, lexer_conf):
+                pass
+
+            def lex(self, lexer_state, parser_state):
+                assert lexer_state.text is data
+                for value in lexer_state.text:
+                    yield Token('A', value)
+
+        data = [1, 2, 3]
+        p = Lark('start: A+\n%declare A', parser='lalr', lexer=ObjectLexer)
+        self.assertEqual([t.value for t in p.parse(data).children], data)
 
 
     def test_lexer_token_limit(self):
@@ -1090,6 +1162,41 @@ def _make_full_earley_test(LEXER):
     globals()[_NAME] = _TestFullEarley
     __all__.append(_NAME)
 
+class LegacyStateLexer(Lexer):
+    """Exercise the pre-TextSlice state interface without using BasicLexer."""
+    __future_interface__ = 1
+
+    def __init__(self, lexer_conf):
+        pass
+
+    def lex(self, lexer_state, parser_state):
+        assert isinstance(lexer_state, LexerState)
+        for clone in (copy, deepcopy):
+            snapshot = clone(lexer_state)
+            assert snapshot == lexer_state
+            assert snapshot.line_ctr is not lexer_state.line_ctr
+        text = lexer_state.text
+        # Replacement, not just mutation, must remain visible to the parser.
+        lexer_state.line_ctr = copy(lexer_state.line_ctr)
+        line_ctr = lexer_state.line_ctr
+        while line_ctr.char_pos < len(text):
+            pos = line_ctr.char_pos
+            value = text[pos:pos + 1]
+            if value.isspace():
+                line_ctr.feed(value)
+                continue
+            if not value.isalpha():
+                raise UnexpectedCharacters(text, pos, line_ctr.line,
+                                           line_ctr.column, allowed={'A'})
+            token = Token('A', value, pos, line_ctr.line, line_ctr.column)
+            line_ctr.feed(value)
+            token.end_pos = line_ctr.char_pos
+            token.end_line = line_ctr.line
+            token.end_column = line_ctr.column
+            lexer_state.last_token = token
+            yield token
+
+
 class CustomLexerNew(Lexer):
     """
     Purpose of this custom lexer is to test the integration,
@@ -1110,7 +1217,14 @@ class CustomLexerOld1(Lexer):
     def __init__(self, lexer_conf):
         self.lexer = BasicLexer(copy(lexer_conf))
     def lex(self, lexer_state, parser_state):
-        return self.lexer.lex(lexer_state, parser_state)
+        # This legacy interface receives raw text. Adapt it explicitly before
+        # delegating to the current BasicLexer, which expects a TextSlice.
+        assert isinstance(lexer_state.text, (str, bytes))
+        state = LexerState(TextSlice.cast_from(lexer_state.text),
+                           lexer_state.line_ctr, lexer_state.last_token)
+        for token in self.lexer.lex(state, parser_state):
+            lexer_state.last_token = state.last_token
+            yield token
 
     __future_interface__ = 1
 

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from copy import copy
 from typing import Any, Callable, Dict, Optional, Collection, Union, TYPE_CHECKING, Generic, Iterator, Tuple, TypeVar
 
 from .exceptions import ConfigurationError, GrammarError, LexError, UnexpectedInput, assert_config
 from .utils import get_regexp_width, Serialize, TextOrSlice, TextSlice, LarkInput
-from .lexer import LexerThread, LineCounter, Token, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
+from .lexer import LexerState, LexerThread, LineCounter, Token, _TextSlice_WithLineCount, BasicLexer, ContextualLexer, Lexer
 from .parsers import earley, xearley, cyk
 from .parsers.lalr_parser import LALR_Parser
 from .tree import Tree
@@ -30,6 +31,31 @@ class ScanMatch(Generic[T]):
     value: T
 
 
+class _LegacyLexerState(LexerState):
+    """Expose raw text to interface-1 lexers while sharing their mutable state."""
+    __slots__ = ('_state',)
+
+    def __init__(self, state):
+        object.__setattr__(self, '_state', state)
+
+    def __getattr__(self, name):
+        value = getattr(object.__getattribute__(self, '_state'), name)
+        if name == 'text' and isinstance(value, TextSlice):
+            return value.text
+        return value
+
+    def __setattr__(self, name, value):
+        if name == '_state':
+            object.__setattr__(self, name, value)
+            return
+        if name == 'text' and isinstance(value, (str, bytes)):
+            value = TextSlice.cast_from(value)
+        setattr(self._state, name, value)
+
+    def __copy__(self):
+        return type(self)(copy(self._state))
+
+
 def _wrap_lexer(lexer_class):
     future_interface = getattr(lexer_class, '__future_interface__', 0)
     if future_interface == 2:
@@ -41,8 +67,7 @@ def _wrap_lexer(lexer_class):
             def lex(self, lexer_state, parser_state):
                 if isinstance(lexer_state.text, TextSlice) and not lexer_state.text.is_complete_text():
                     raise TypeError("Interface=1 Custom Lexer don't support TextSlice")
-                lexer_state.text = lexer_state.text
-                return self.lexer.lex(lexer_state, parser_state)
+                return self.lexer.lex(_LegacyLexerState(lexer_state), parser_state)
         return CustomLexerWrapper1
     elif future_interface == 0:
         class CustomLexerWrapper0(Lexer):

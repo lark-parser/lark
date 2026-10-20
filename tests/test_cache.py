@@ -89,6 +89,52 @@ class TestCache(TestCase):
         parser = Lark(self.g, parser='lalr', cache=fn)
         assert parser.parse('a') == Tree('start', [])
 
+    def test_postlex_always_accept_cache(self):
+        class PostLex:
+            def __init__(self, always_accept):
+                self.always_accept = always_accept
+
+            def process(self, stream):
+                return (token for token in stream if token.type not in self.always_accept)
+
+        grammar = 'start: "a"\nB: "b"\nC: "c"'
+        for lexer in ('basic', 'contextual'):
+            with self.subTest(lexer=lexer):
+                options = dict(parser='lalr', lexer=lexer, cache='postlex-cache')
+                Lark(grammar, **options)
+                for terminals, text in ((('B',), 'ba'), (('C',), 'ca')):
+                    postlex = PostLex(terminals)
+                    parser = Lark(grammar, postlex=postlex, **options)
+                    self.assertEqual(parser.parse(text), Tree('start', []))
+                    cached = Lark(grammar, postlex=postlex, **options)
+                    self.assertEqual(cached.parse(text), parser.parse(text))
+
+    def test_postlex_always_accept_iterator_cache(self):
+        class PostLex:
+            def __init__(self):
+                self.always_accept = iter(['B'])
+
+            def process(self, stream):
+                return (token for token in stream if token.type != 'B')
+
+        grammar = 'start: "a"\nB: "b"'
+        for _ in range(2):
+            parser = Lark(grammar, parser='lalr', lexer='basic',
+                          postlex=PostLex(), cache='postlex-iterator-cache')
+            self.assertEqual(parser.parse('ba'), Tree('start', []))
+
+    def test_postlex_iterator_lexer_only(self):
+        class PostLex:
+            always_accept = iter(['B'])
+
+            def process(self, stream):
+                ignored = set(self.always_accept)
+                return (token for token in stream if token.type not in ignored)
+
+        parser = Lark('start: "a"\nB: "b"', parser=None,
+                      lexer='basic', postlex=PostLex())
+        self.assertEqual(list(parser.lex('ba')), [Token('A', 'a')])
+
     def test_automatic_naming(self):
         assert len(self.mock_fs.files) == 0
         Lark(self.g, parser='lalr', cache=True)

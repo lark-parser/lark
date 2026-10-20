@@ -330,6 +330,10 @@ class Lark(Serialize, Generic[_Return_T]):
         else:
             grammar = read()
 
+        postlex_always_accept = (
+            tuple(self.options.postlex.always_accept)
+            if self.options.postlex is not None and self.options.parser is not None else ()
+        )
         cache_fn = None
         cache_sha256 = None
         if isinstance(grammar, str):
@@ -344,6 +348,9 @@ class Lark(Serialize, Generic[_Return_T]):
 
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals', '_plugins')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+                if self.options.postlex is not None:
+                    # These terminals affect grammar compilation, not only lexing.
+                    options_str += 'postlex_always_accept' + repr(sorted(postlex_always_accept))
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
                 cache_sha256 = sha256_digest(s)
@@ -436,7 +443,7 @@ class Lark(Serialize, Generic[_Return_T]):
         if self.options.parser is None:
             terminals_to_keep = '*'     # For lexer-only mode, keep all terminals
         elif self.options.postlex is not None:
-            terminals_to_keep = set(self.options.postlex.always_accept)
+            terminals_to_keep = set(postlex_always_accept)
         else:
             terminals_to_keep = set()
 

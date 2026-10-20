@@ -60,8 +60,12 @@ class _Decoratable:
             if not callable(value):
                 continue
 
-            # Skip if v_args already applied (at the function level)
-            if isinstance(cls.__dict__[name], _VArgsWrapper):
+            # Skip if v_args already applied (at the function level), including
+            # methods wrapped in staticmethod or classmethod descriptors.
+            raw = cls.__dict__[name]
+            if isinstance(raw, (staticmethod, classmethod)):
+                raw = raw.__func__
+            if isinstance(raw, _VArgsWrapper):
                 continue
 
             setattr(cls, name, _VArgsWrapper(cls.__dict__[name], visit_wrapper))

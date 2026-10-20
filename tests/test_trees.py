@@ -365,6 +365,38 @@ class TestTrees(TestCase):
         res = T().transform(t)
         self.assertEqual(res, 2.9)
 
+    def test_vargs_descriptor_override(self):
+        for descriptor in (staticmethod, classmethod):
+            for method_first in (False, True):
+                for options in ({}, {"meta": True}, {"tree": True}):
+                    with self.subTest(descriptor=descriptor, method_first=method_first,
+                                      options=options):
+                        def callback(*args):
+                            return args
+
+                        decorate = v_args(**options)
+                        if method_first:
+                            method = descriptor(decorate(callback))
+                        else:
+                            method = decorate(descriptor(callback))
+
+                        @v_args(inline=True)
+                        class T(Transformer):
+                            start = method
+
+                        tree = Tree("start", [1, 2])
+                        result = T().transform(tree)
+                        if descriptor is classmethod:
+                            self.assertIs(result[0], T)
+                            result = result[1:]
+                        if options.get("meta"):
+                            self.assertIs(result[0], tree.meta)
+                            self.assertEqual(result[1:], ([1, 2],))
+                        elif options.get("tree"):
+                            self.assertEqual(result, (tree,))
+                        else:
+                            self.assertEqual(result, ([1, 2],))
+
     def test_partial(self):
 
         tree = Tree("start", [Tree("a", ["test1"]), Tree("b", ["test2"])])

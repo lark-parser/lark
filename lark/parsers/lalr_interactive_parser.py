@@ -132,7 +132,10 @@ class ImmutableInteractiveParser(InteractiveParser):
     result = None
 
     def __hash__(self):
-        return hash((self.parser_state, self.lexer_thread))
+        # ParserState is mutable and unhashable; use the same components as
+        # its equality comparison without making mutable states hashable.
+        state = self.parser_state
+        return hash((len(state.state_stack), state.position, self.lexer_thread))
 
     def feed_token(self, token):
         c = copy(self)

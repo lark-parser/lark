@@ -47,6 +47,25 @@ class SerializeTestT(Transformer[Token, int]):
 
 
 class TestParsers(unittest.TestCase):
+    def test_immutable_interactive_parser_hash(self):
+        for debug in (False, True):
+            parser = Lark('start: "a"+', parser='lalr', debug=debug)
+            cursor = parser.parse_interactive().as_immutable()
+            original_hash = hash(cursor)
+            snapshots = {cursor: 'empty'}
+            advanced = cursor.feed_token(Token('A', 'a'))
+            snapshots[advanced] = 'one token'
+            self.assertEqual(hash(cursor), original_hash)
+            self.assertEqual(snapshots[cursor], 'empty')
+            self.assertEqual(snapshots[advanced], 'one token')
+
+            # Equality uses ParserState's stack length and position, not its
+            # identity. Preserve the same lexer thread to compare equal cursors.
+            equivalent = type(cursor)(cursor.parser, copy(cursor.parser_state), cursor.lexer_thread)
+            self.assertEqual(cursor, equivalent)
+            self.assertEqual(hash(cursor), hash(equivalent))
+            self.assertEqual(snapshots[equivalent], 'empty')
+
     def test_big_list(self):
         Lark(r"""
             start: {}

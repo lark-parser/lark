@@ -345,7 +345,12 @@ class Lark(Serialize, Generic[_Return_T]):
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals', '_plugins')
                 options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
                 from . import __version__
-                s = grammar + options_str + __version__ + str(sys.version_info[:2])
+                # File-like grammars infer their import location from .name,
+                # which is not necessarily present in the explicit options.
+                source_path = self.source_path
+                if isinstance(source_path, str) and source_path != '<string>':
+                    source_path = os.path.abspath(source_path)
+                s = grammar + options_str + repr(source_path) + __version__ + str(sys.version_info[:2])
                 cache_sha256 = sha256_digest(s)
 
                 if isinstance(self.options.cache, str):

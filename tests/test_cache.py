@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import logging
+import os
+import tempfile
 from unittest import TestCase, main, skipIf
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
@@ -147,6 +149,28 @@ class TestCache(TestCase):
         assert len(self.mock_fs.files) == 1
         res = parser.parse("ab")
         self.assertEqual(res, Tree('startab', [Tree('expr', ['a', 'b'])]))
+
+    def test_file_imports_use_separate_caches(self):
+        # Identical root grammars can import different files relative to their
+        # own locations. Validating the first grammar's imports is not enough.
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for value in ('a', 'b'):
+                folder = os.path.join(directory, value)
+                os.mkdir(folder)
+                path = os.path.join(folder, 'main.lark')
+                with open(path, 'w', encoding='utf8') as grammar:
+                    grammar.write('%import .value.VALUE\nstart: VALUE\n')
+                with open(os.path.join(folder, 'value.lark'), 'w', encoding='utf8') as imported:
+                    imported.write('VALUE: "%s"\n' % value)
+                paths.append(path)
+
+            for cache in (True, 'shared-cache'):
+                for path, value in zip(paths + paths, ('a', 'b', 'a', 'b')):
+                    parser = Lark.open(path, parser='lalr', cache=cache)
+                    self.assertEqual(parser.parse(value), Tree('start', [Token('VALUE', value)]))
+                    with self.assertRaises(UnexpectedInput):
+                        parser.parse('b' if value == 'a' else 'a')
 
     @skipIf(regex is None, "'regex' lib not installed")
     def test_recursive_pattern(self):

@@ -1808,6 +1808,16 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('abcdef')
             self.assertEqual(x.children, ['abcdef'])
 
+        def test_token_flags_leading_inline(self):
+            # Leading global flags act like Lark flags, and only apply to their own literal
+            l = _Lark(r"""!start: (A | B)+
+                          A: /(?i)def/ | "x"
+                          B: /(?s)(?i)q.e/
+                      """)
+            tree = l.parse('DeFq\nEx')
+            self.assertEqual(tree.children, ['DeF', 'q\nE', 'x'])
+            self.assertRaises(UnexpectedInput, l.parse, 'X')
+
         @unittest.skipIf(PARSER == 'cyk', "No empty rules")
         def test_twice_empty(self):
             g = """!start: ("A"?)?

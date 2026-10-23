@@ -124,6 +124,8 @@ SIGNED_INTEGER: /
 
 Supported flags are one of: `imslux`. See Python's regex documentation for more details on each one.
 
+Inline flags at the start of a regexp are treated the same way, so `/(?i)select/` is equivalent to `/select/i`.
+
 Regexps/strings of different flags can only be concatenated in Python 3.6+
 
 #### Notes for when using a lexer:

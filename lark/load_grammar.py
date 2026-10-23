@@ -2,6 +2,7 @@
 """
 
 import hashlib
+import re
 import os.path
 import sys
 from collections import namedtuple
@@ -30,6 +31,7 @@ IMPORT_PATHS = ['grammars']
 EXT = '.lark'
 
 _RE_FLAGS = 'imslux'
+_LEADING_RE_FLAGS = re.compile(r'(?:\(\?[%s]+\))+' % _RE_FLAGS)
 
 _EMPTY = Symbol('__empty__')
 
@@ -574,13 +576,22 @@ def _literal_to_pattern(literal):
     if literal.type == 'STRING' and '\n' in v:
         raise GrammarError('You cannot put newlines in string literals')
 
-    if literal.type == 'REGEXP' and '\n' in v and 'x' not in flags:
-        raise GrammarError('You can only use newlines in regular expressions '
-                           'with the `x` (verbose) flag')
-
     v = v[:flag_start]
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
+
+    if literal.type == 'REGEXP':
+        # Treat leading global flags, e.g. /(?i)abc/, the same as /abc/i.
+        # Since Python 3.11, global flags must be at the start of the expression,
+        # which stops being true once the pattern is wrapped or joined with others.
+        m = _LEADING_RE_FLAGS.match(x)
+        if m:
+            flags += ''.join(f for f in m.group() if f in _RE_FLAGS)
+            x = x[m.end():]
+
+    if literal.type == 'REGEXP' and '\n' in x and 'x' not in flags:
+        raise GrammarError('You can only use newlines in regular expressions '
+                           'with the `x` (verbose) flag')
 
     s = eval_escaping(x)
 

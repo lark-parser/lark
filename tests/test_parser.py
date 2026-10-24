@@ -94,6 +94,86 @@ class TestParsers(unittest.TestCase):
         r = g.parse('a')
         self.assertEqual( r.children[0].meta.line, 1 )
 
+    def test_lalr_eof_source_position(self):
+        grammar = 'start: WORD+ "!"\nWORD: /\\w+/\n%ignore /\\s+/'
+        cases = [
+            ('', (0, 1, 1)),
+            (' \t\n', (3, 2, 1)),
+            ('hello', (5, 1, 6)),
+            ('hello \t', (7, 1, 8)),
+            ('hello\n', (6, 2, 1)),
+            ('hello\n \t', (8, 2, 3)),
+            ('hello\nworld', (11, 2, 6)),
+            (TextSlice('ignored\nhello \nEND', 8, 15), (15, 3, 1)),
+            (TextSlice('ignored\nEND', 8, 8), (8, 2, 1)),
+        ]
+        for lexer in ('basic', 'contextual'):
+            for debug in (False, True):
+                for use_bytes in (False, True):
+                    parser = Lark(grammar, parser='lalr', lexer=lexer,
+                                  debug=debug, use_bytes=use_bytes)
+                    for text, expected in cases:
+                        if use_bytes:
+                            if isinstance(text, TextSlice):
+                                text = TextSlice(text.text.encode('ascii'), text.start, text.end)
+                            else:
+                                text = text.encode('ascii')
+                        for interactive in (False, True):
+                            with self.subTest(lexer=lexer, debug=debug, use_bytes=use_bytes,
+                                              text=text, interactive=interactive):
+                                with self.assertRaises(UnexpectedToken) as caught:
+                                    if interactive:
+                                        cursor = parser.parse_interactive(text)
+                                        cursor.exhaust_lexer()
+                                        cursor.resume_parse()
+                                    else:
+                                        parser.parse(text)
+                                error = caught.exception
+                                self.assertEqual(error.token.type, '$END')
+                                self.assertEqual((error.pos_in_stream, error.line, error.column), expected)
+                                self.assertEqual((error.token.end_pos, error.token.end_line,
+                                                  error.token.end_column), expected)
+                                if text in ('hello', b'hello'):
+                                    self.assertEqual(error.get_context(text), 'hello\n     ^\n')
+                                elif text in ('hello\n', b'hello\n'):
+                                    self.assertEqual(error.get_context(text), '\n^\n')
+
+    def test_lalr_custom_lexer_eof_without_end_positions(self):
+        class LegacyLexer(Lexer):
+            def __init__(self, lexer_conf):
+                pass
+            def lex(self, text):
+                yield Token('WORD', 'hello', 7, 2, 3)
+
+        class ModernLexer(LegacyLexer):
+            __future_interface__ = 2
+            def lex(self, lexer_state, parser_state):
+                return super().lex(lexer_state.text)
+
+        class OldLexer(ModernLexer):
+            __future_interface__ = 1
+
+        for lexer in (LegacyLexer, OldLexer, ModernLexer):
+            parser = Lark('start: WORD "!"\nWORD: "hello"', parser='lalr', lexer=lexer)
+            for text in ('hello', '', ['hello'], []):
+                with self.subTest(lexer=lexer, text=text):
+                    with self.assertRaises(UnexpectedToken) as caught:
+                        parser.parse(text)
+                    error = caught.exception
+                    self.assertEqual((error.pos_in_stream, error.line, error.column), (7, 2, 3))
+                    self.assertIsNone(error.token.end_pos)
+
+    def test_lalr_explicit_feed_eof_positions(self):
+        parser = Lark('start: WORD "!"\nWORD: "hello"', parser='lalr')
+        last_token = Token('WORD', 'hello', 7, 2, 3)
+        for explicit_last_token, expected in [(last_token, (7, 2, 3)), (None, (0, 1, 1))]:
+            cursor = parser.parse_interactive()
+            cursor.feed_token(last_token)
+            with self.assertRaises(UnexpectedToken) as caught:
+                cursor.feed_eof(explicit_last_token)
+            error = caught.exception
+            self.assertEqual((error.pos_in_stream, error.line, error.column), expected)
+
     def test_propagate_positions2(self):
         g = Lark("""start: a
                     a: b

@@ -4,7 +4,7 @@
 # Email : erezshin@gmail.com
 from typing import Dict, Any, Optional
 from ..lexer import Token, LexerThread
-from ..utils import Serialize
+from ..utils import Serialize, TextSlice
 from ..common import ParserConf, ParserCallbacks
 
 from .lalr_analysis import LALR_Analyzer, IntParseTable, ParseTableBase
@@ -101,7 +101,18 @@ class _Parser:
                 assert token is not None
                 state.feed_token(token)
 
-            end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
+            lexer_state = state.lexer.state
+            # Custom lexers may emit tokens without advancing the line counter.
+            if (lexer_state is not None and isinstance(lexer_state.text, TextSlice)
+                    and lexer_state.line_ctr is not None
+                    and lexer_state.line_ctr.char_pos == lexer_state.text.end
+                    and (token is None or lexer_state.line_ctr.char_pos > lexer_state.text.start)):
+                # Include ignored trailing text in the end-of-input position.
+                line_ctr = lexer_state.line_ctr
+                end_token = Token('$END', '', line_ctr.char_pos, line_ctr.line, line_ctr.column,
+                                  line_ctr.line, line_ctr.column, line_ctr.char_pos)
+            else:
+                end_token = Token.new_borrow_pos('$END', '', token) if token else Token('$END', '', 0, 1, 1)
             return state.feed_token(end_token, True)
         except UnexpectedInput as e:
             try:

@@ -51,6 +51,24 @@ class TestStandalone(TestCase):
         l = _Lark()
         x = l.parse('12 elephants')
 
+    def test_eof_source_position(self):
+        grammar = 'start: WORD "!"\nWORD: /\\w+/\n%ignore /\\s+/'
+        for compress in (False, True):
+            context = self._create_standalone(grammar, compress=compress)
+            parser = context['Lark_StandAlone']()
+            cases = [
+                ('hello', (5, 1, 6)),
+                ('hello\n \t', (8, 2, 3)),
+                (' \n', (2, 2, 1)),
+                (context['TextSlice']('ignored\nhello \nEND', 8, 15), (15, 3, 1)),
+            ]
+            for text, expected in cases:
+                with self.subTest(compress=compress, text=text):
+                    with self.assertRaises(context['UnexpectedToken']) as caught:
+                        parser.parse(text)
+                    error = caught.exception
+                    self.assertEqual((error.pos_in_stream, error.line, error.column), expected)
+
     def test_interactive(self):
         grammar = """
                 start: A+ B*

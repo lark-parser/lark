@@ -13,6 +13,7 @@ from ..utils import classify, classify_bool, bfs, fzset, Enumerator, logger
 from ..exceptions import GrammarError
 
 from .grammar_analysis import GrammarAnalyzer, Terminal, LR0ItemSet, RulePtr, State
+from .lalr_counterexamples import CounterexampleGenerator
 from ..grammar import Rule, Symbol
 from ..common import ParserConf
 
@@ -267,6 +268,17 @@ class LALR_Analyzer(GrammarAnalyzer):
     def compute_lalr1_states(self) -> None:
         m: Dict[LR0ItemSet, Dict[str, Tuple]] = {}
         reduce_reduce = []
+        examples = None
+
+        def explain(itemset, lookahead, rule, other_rule=None):
+            nonlocal examples
+            if examples is None:
+                examples = CounterexampleGenerator(self)
+            try:
+                return examples.explain(itemset, lookahead, rule, other_rule)
+            except RecursionError:
+                return ''
+
         for itemset in self.lr0_itemsets:
             actions: Dict[Symbol, Tuple] = {la: (Shift, next_state.closure)
                                                       for la, next_state in itemset.transitions.items()}
@@ -287,10 +299,14 @@ class LALR_Analyzer(GrammarAnalyzer):
                     if self.strict:
                         msg = f'Shift/Reduce conflict for terminal {la.name}. [strict-mode]\n' \
                               f' * {rule}\n'
+                        msg += explain(itemset, la, rule)
                         raise GrammarError(msg)
                     elif self.debug:
                         logger.warning('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
                         logger.warning(' * %s', rule)
+                        example = explain(itemset, la, rule)
+                        if example:
+                            logger.warning('%s', example)
                     else:
                         logger.debug('Shift/Reduce conflict for terminal %s: (resolving as shift)', la.name)
                         logger.debug(' * %s', rule)
@@ -304,6 +320,11 @@ class LALR_Analyzer(GrammarAnalyzer):
                 msg = 'Reduce/Reduce collision in %s between the following rules: %s' % (la, ''.join([ '\n\t- ' + str(r) for r in rules ]))
                 if self.debug:
                     msg += '\n    collision occurred in state: {%s\n    }' % ''.join(['\n\t' + str(x) for x in itemset.closure])
+                conflicting_rules = sorted(rules, key=lambda r: (
+                    -(r.options.priority or 0), CounterexampleGenerator._rule_key(r)))
+                example = explain(itemset, la, *conflicting_rules[:2])
+                if example:
+                    msg += '\n' + example
                 msgs.append(msg)
             raise GrammarError('\n\n'.join(msgs))
 

@@ -100,6 +100,16 @@ p = Lark(collision_grammar, parser='lalr', debug=True)
 #  * <as : __as_star_0>
 ```
 
+With `debug=True`, Lark also attempts to show an example and the two competing
+derivations. These examples are included in strict-mode Shift/Reduce errors and
+in Reduce/Reduce errors too. For example, an ambiguous expression grammar may
+report `Example: expr PLUS expr * PLUS expr`.
+
+Examples use terminal and rule names; `*` marks the next input position. Separate
+examples can indicate contexts that were merged by LALR analysis, rather than an
+ambiguous input. The search and derivation size are bounded, so the original
+conflict diagnostic is still reported when an example exceeds those limits.
+
 ### Strict-Mode
 
 Lark, by default, accepts grammars with unresolved Shift/Reduce collisions (which it always resolves to shift), and regex collisions.

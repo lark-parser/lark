@@ -437,6 +437,235 @@ class RuleTreeToText(Transformer):
         return expansion, alias.name
 
 
+_MAX_INLINE_EXPANSIONS = 256
+
+
+class _FactorExpansions:
+    """Share suffix states instead of enumerating every optional combination.
+
+    Small productions keep the existing expansion path. Larger productions are
+    represented as an epsilon-NFA, then determinized to avoid introducing extra
+    ambiguity for repeated symbols. Transparent helper rules flatten back into
+    the original tree; the NFA also records absent bracket placeholders.
+    """
+
+    def __init__(self, names):
+        self.names = set(names)
+        self.new_rules = []
+        self.counter = 0
+
+    @staticmethod
+    def _size(tree, limit=_MAX_INLINE_EXPANSIONS):
+        sizes = {}
+        for node in tree.iter_subtrees():
+            values = [sizes[id(c)] if isinstance(c, Tree) else 1 for c in node.children]
+            if node.data == 'expansions':
+                size = sum(values)
+            elif node.data == 'alias':
+                size = values[0]
+            else:
+                size = 1
+                for value in values:
+                    size *= value
+                    if size > limit:
+                        break
+            sizes[id(node)] = min(size, limit + 1)
+        return sizes[id(tree)]
+
+    def transform(self, name, tree, options):
+        if self._size(tree) <= _MAX_INLINE_EXPANSIONS:
+            return tree
+        if tree.data == 'expansions':
+            tree.children = [self.transform(name, child, options) for child in tree.children]
+            return tree
+        if tree.data == 'alias':
+            tree.children[0] = self.transform(name, tree.children[0], options)
+            return tree
+        edges = self._build_graph(tree)
+        states = self._determinize(edges)
+        names = [self._new_name(name) for _ in states]
+        helper_options = RuleOptions(keep_all_tokens=bool(options and options.keep_all_tokens))
+        helper_options.transparent = True
+        helper_options.priority = options.priority if options else None
+        root_options = copy(helper_options)
+        root_options.factor_graph = [
+            [(None, None, symbol is _EMPTY, target)
+             if symbol is None or symbol is _EMPTY else
+             (symbol.name, symbol.is_term, False, target)
+             for symbol, target in outgoing] for outgoing in edges
+        ]
+        for index, (transitions, _) in enumerate(states):
+            alternatives = []
+            for symbol, target in transitions:
+                following, accepts = states[target]
+                if following:
+                    alternatives.append(ST('expansion', [symbol, NonTerminal(names[target])]))
+                if accepts:
+                    # Keep helper rules non-nullable: CYK accepts nonempty source
+                    # productions but cannot remove empty helper productions.
+                    alternatives.append(ST('expansion', [symbol]))
+            if alternatives:
+                self.new_rules.append((names[index], ST('expansions', alternatives),
+                                       root_options if index == 0 else helper_options))
+        alternatives = [ST('expansion', [NonTerminal(names[0])])] if states[0][0] else []
+        if states[0][1]:
+            pending = [(0, 0)]
+            seen = set()
+            while pending:
+                node, empty = pending.pop()
+                if node == 1:
+                    alternatives.append(ST('expansion', [_EMPTY] * empty))
+                    break
+                if node in seen:
+                    continue
+                seen.add(node)
+                for symbol, target in reversed(edges[node]):
+                    if symbol is None or symbol is _EMPTY:
+                        pending.append((target, empty + (symbol is _EMPTY)))
+        return ST('expansions', alternatives)
+
+    def _new_name(self, prefix):
+        while True:
+            name = '__%s_choice_%d' % (prefix, self.counter)
+            self.counter += 1
+            if name not in self.names:
+                self.names.add(name)
+                return name
+
+    def validate(self, tree):
+        # Keep the existing error for duplicate expansions with different
+        # aliases or placeholder positions, without enumerating those rules.
+        if self._size(tree) <= _MAX_INLINE_EXPANSIONS:
+            return
+        branches = []
+        pending = [(tree, None)]
+        while pending:
+            expression, alias = pending.pop()
+            if expression.data == 'expansions':
+                pending.extend((child, alias) for child in expression.children)
+            elif expression.data == 'alias':
+                pending.append((expression.children[0], expression.children[1].name))
+            else:
+                branches.append((self._build_graph(expression), alias))
+        for index, (left, left_alias) in enumerate(branches):
+            for right, right_alias in branches[index:]:
+                if self._conflicting_outputs(left, right, left_alias != right_alias):
+                    raise GrammarError('Rules defined twice after expansion of optionals')
+
+    @staticmethod
+    def _weighted_closure(edges, start):
+        seen = set()
+        pending = [(start, 0)]
+        while pending:
+            node, empty = pending.pop()
+            if (node, empty) in seen:
+                continue
+            seen.add((node, empty))
+            for symbol, target in edges[node]:
+                if symbol is None or symbol is _EMPTY:
+                    pending.append((target, empty + (symbol is _EMPTY)))
+        return seen
+
+    def _conflicting_outputs(self, left, right, different_alias):
+        def observations(graph, node, cache):
+            if node not in cache:
+                transitions = {}
+                endings = set()
+                for position, empty in self._weighted_closure(graph, node):
+                    if position == 1:
+                        endings.add(empty)
+                    for symbol, target in graph[position]:
+                        if symbol is not None and symbol is not _EMPTY:
+                            transitions.setdefault(symbol, set()).add((target, empty))
+                cache[node] = transitions, endings
+            return cache[node]
+
+        left_cache, right_cache = {}, {}
+        pending = [(0, 0, different_alias, False)]
+        seen = set()
+        while pending:
+            state = pending.pop()
+            if state in seen:
+                continue
+            seen.add(state)
+            left_node, right_node, different, consumed = state
+            left_steps, left_end = observations(left, left_node, left_cache)
+            right_steps, right_end = observations(right, right_node, right_cache)
+            if consumed and left_end and right_end:
+                if different or len(left_end | right_end) > 1:
+                    return True
+            for symbol in left_steps.keys() & right_steps.keys():
+                for left_target, left_empty in left_steps[symbol]:
+                    for right_target, right_empty in right_steps[symbol]:
+                        pending.append((left_target, right_target,
+                                        different or left_empty != right_empty, True))
+        return False
+
+    @staticmethod
+    def _build_graph(tree):
+        # State 0 is the entry and state 1 the accepting state. None is an
+        # epsilon edge; _EMPTY also contributes one absent tree child.
+        edges = [[], []]
+        pending = [(tree, 0, 1)]
+        while pending:
+            expression, start, end = pending.pop()
+            if isinstance(expression, Symbol):
+                edges[start].append((expression, end))
+            elif expression.data == 'expansions':
+                pending.extend((child, start, end) for child in reversed(expression.children))
+            else:
+                assert expression.data == 'expansion'
+                children = expression.children
+                if not children:
+                    edges[start].append((None, end))
+                    continue
+                points = [start]
+                for _ in children[1:]:
+                    points.append(len(edges))
+                    edges.append([])
+                points.append(end)
+                pending.extend(reversed(list(zip(children, points, points[1:]))))
+        return edges
+
+    @staticmethod
+    def _closure(edges, seeds):
+        seen = set()
+        result = []
+        pending = list(reversed(seeds))
+        while pending:
+            node = pending.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            result.append(node)
+            for symbol, target in reversed(edges[node]):
+                if symbol is None or symbol is _EMPTY:
+                    pending.append(target)
+        return result
+
+    def _determinize(self, edges):
+        pending = [(0,)]
+        indices = {(0,): 0}
+        states = []
+        for seeds in pending:
+            transitions = {}
+            closure = self._closure(edges, seeds)
+            for node in closure:
+                for symbol, target in edges[node]:
+                    if symbol is None or symbol is _EMPTY:
+                        continue
+                    transitions.setdefault(symbol, set()).add(target)
+            outgoing = []
+            for symbol, targets in transitions.items():
+                key = tuple(sorted(targets))
+                if key not in indices:
+                    indices[key] = len(pending)
+                    pending.append(key)
+                outgoing.append((symbol, indices[key]))
+            states.append((outgoing, 1 in closure))
+        return states
+
+
 class PrepareAnonTerminals(Transformer_InPlace):
     """Create a unique list of anonymous terminals. Attempt to give meaningful names to them when we add them"""
 
@@ -744,6 +973,14 @@ class Grammar(Serialize):
             rules.append((name, res, options))
         rules += ebnf_to_bnf.new_rules
 
+        factoring = _FactorExpansions(name for name, _, _ in rules)
+        factored_rules = []
+        for name, tree, options in rules:
+            factoring.validate(tree)
+            factored_rules.append((name, factoring.transform(name, tree, options), options))
+        rules = factored_rules
+        rules += factoring.new_rules
+
         assert len(rules) == len({name for name, _t, _o in rules}), "Whoops, name collision"
 
         # 4. Compile tree to Rule objects
@@ -766,7 +1003,7 @@ class Grammar(Serialize):
                     exp_options.empty_indices = empty_indices
                     expansion = [x for x in expansion if x!=_EMPTY]
                 else:
-                    exp_options = options
+                    exp_options = copy(options) if options and options.transparent else options
 
                 for sym in expansion:
                     assert isinstance(sym, Symbol)

@@ -54,7 +54,7 @@ class PropagatePositions:
                 res_meta.container_column = getattr(first_meta, 'container_column', first_meta.column)
                 res_meta.container_start_pos = getattr(first_meta, 'container_start_pos', first_meta.start_pos)
 
-            last_meta = self._pp_get_meta(reversed(children))
+            last_meta = self._pp_get_meta(reversed(children), reverse=True)
             if last_meta is not None:
                 if not hasattr(res_meta, 'end_line'):
                     res_meta.end_line = getattr(last_meta, 'container_end_line', last_meta.end_line)
@@ -68,8 +68,18 @@ class PropagatePositions:
 
         return res
 
-    def _pp_get_meta(self, children):
-        for c in children:
+    def _pp_get_meta(self, children, reverse=False):
+        pending = [iter(children)]
+        while pending:
+            try:
+                c = next(pending[-1])
+            except StopIteration:
+                pending.pop()
+                continue
+            if isinstance(c, _FactoredTree):
+                values = [value for _, value in c.entries]
+                pending.append(iter(reversed(values) if reverse else values))
+                continue
             if self.node_filter is not None and not self.node_filter(c):
                 continue
             if isinstance(c, Tree):
@@ -185,6 +195,72 @@ def maybe_create_child_filter(expansion, keep_all_tokens, ambiguous, _empty_indi
         else:
             # LALR without placeholders
             return partial(ChildFilterLALR_NoPlaceholders, [(i, x) for i,x,_ in to_include])
+
+
+class _FactoredTree(Tree):
+    def __init__(self, name, children, entries):
+        super().__init__(name, children)
+        self.entries = entries
+
+
+class _BuildFactoredTree:
+    """Flatten helper rules while retaining symbols until the root filters them."""
+
+    def __init__(self, rule, placeholders, ambiguous):
+        self.rule = rule
+        self.placeholders = placeholders
+        self.ambiguous = ambiguous
+
+    @staticmethod
+    def _mask(graph, entries):
+        # Replay the recognized symbols through the original graph to recover
+        # the placement of absent bracket children, including filtered tokens.
+        def close(seeds):
+            seen = {}
+            pending = list(reversed(seeds))
+            while pending:
+                node, mask = pending.pop()
+                if node in seen:
+                    continue
+                seen[node] = mask
+                for name, _, empty, target in reversed(graph[node]):
+                    if name is None:
+                        pending.append((target, mask + ((True,) if empty else ())))
+            return seen
+
+        states = close([(0, ())])
+        for symbol, _ in entries:
+            following = []
+            for node, mask in states.items():
+                for name, is_term, _, target in graph[node]:
+                    if name == symbol.name and is_term == symbol.is_term:
+                        following.append((target, mask + (False,)))
+            states = close(following)
+        return states[1]
+
+    def __call__(self, children):
+        entries = []
+        for symbol, child in zip(self.rule.expansion, children):
+            if isinstance(child, _FactoredTree):
+                entries.extend(child.entries)
+            else:
+                entries.append((symbol, child))
+        values = [value for _, value in entries]
+        builder = lambda result: _FactoredTree(self.rule.origin.name, result, entries)
+        graph = self.rule.options.factor_graph
+        if graph is None:
+            return builder(values)
+        symbols = [symbol for symbol, _ in entries]
+        mask = self._mask(graph, entries) if self.placeholders else None
+        child_filter = maybe_create_child_filter(
+            symbols, self.rule.options.keep_all_tokens, self.ambiguous, mask)
+        if child_filter:
+            builder = child_filter(builder)
+        if self.ambiguous:
+            expander = maybe_create_ambiguous_expander(Tree, symbols, self.rule.options.keep_all_tokens)
+            if expander:
+                builder = expander(builder)
+        return builder(values)
 
 
 class AmbiguousExpander:
@@ -366,6 +442,16 @@ class ParseTreeBuilder:
             default_callback = self.tree_class
 
         for rule, wrapper_chain in self.rule_builders:
+
+            if rule.options.transparent:
+                f = _BuildFactoredTree(rule, self.maybe_placeholders, self.ambiguous)
+                if self.ambiguous:
+                    expand = maybe_create_ambiguous_expander(Tree, rule.expansion, rule.options.keep_all_tokens)
+                    if expand:
+                        f = expand(f)
+                    f = AmbiguousIntermediateExpander(Tree, f)
+                callbacks[rule] = f
+                continue
 
             user_callback_name = rule.alias or rule.options.template_source or rule.origin.name
             try:

@@ -442,6 +442,7 @@ class Lark(Serialize, Generic[_Return_T]):
 
         # Compile the EBNF grammar into BNF
         self.terminals, self.rules, self.ignore_tokens = self.grammar.compile(self.options.start, terminals_to_keep)
+        self.unused_terminals = self.grammar.unused_terminals
 
         if self.options.edit_terminals:
             for t in self.terminals:

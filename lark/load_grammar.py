@@ -686,6 +686,7 @@ class Grammar(Serialize):
         self.term_defs = term_defs
         self.rule_defs = rule_defs
         self.ignore = ignore
+        self.unused_terminals = []
 
     __serialize_fields__ = 'term_defs', 'rule_defs', 'ignore'
 
@@ -811,6 +812,7 @@ class Grammar(Serialize):
                                  for t in r.expansion
                                  if isinstance(t, Terminal)}
             terminals, unused = classify_bool(terminals, lambda t: t.name in used_terms or t.name in self.ignore or t.name in terminals_to_keep)
+            self.unused_terminals = [t.name for t in unused]
             if unused:
                 logger.debug("Unused terminals: %s", [t.name for t in unused])
 

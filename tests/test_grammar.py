@@ -342,6 +342,34 @@ class TestGrammar(TestCase):
 
         self.assertNotEqual(a, b)
 
+    def test_unused_terminals_reported(self):
+        grammar = """
+        start: NAME
+        NAME: /[a-z]+/
+        UNUSED: /xyz/
+        %ignore " "
+        """
+        parser = Lark(grammar)
+        self.assertEqual(parser.unused_terminals, ['UNUSED'])
+
+    def test_no_unused_terminals(self):
+        grammar = """
+        start: NAME
+        NAME: /[a-z]+/
+        """
+        parser = Lark(grammar)
+        self.assertEqual(parser.unused_terminals, [])
+
+    def test_ignored_terminal_not_reported(self):
+        grammar = """
+        start: NAME
+        NAME: /[a-z]+/
+        WS: /[ \\t]+/
+        %ignore WS
+        """
+        parser = Lark(grammar)
+        self.assertEqual(parser.unused_terminals, [])
+
 
 if __name__ == '__main__':
     main()

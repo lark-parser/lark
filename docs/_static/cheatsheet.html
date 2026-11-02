@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lark Cheatsheet</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --code-bg: #e9ecef;
+            --border: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--primary);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .section {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .section h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            background: var(--primary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: var(--code-bg);
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lark Cheatsheet</h1>
+        
+        <div class="grid">
+            <div class="section">
+                <h2>Basic Syntax</h2>
+                <ul>
+                    <li><code>rule_name: definition</code> - Define a rule</li>
+                    <li><code>TERMINAL: /regex/</code> - Define a terminal using regex</li>
+                    <li><code>?rule_name: ...</code> - Inline rule (keeps the tree flat)</li>
+                    <li><code>_rule_name: ...</code> - Ignore rule (hides from the tree)</li>
+                    <li><code>// comment</code> or <code># comment</code></li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>Operators</h2>
+                <ul>
+                    <li><code>a | b</code> - Match a OR b</li>
+                    <li><code>a?</code> - Optional (0 or 1)</li>
+                    <li><code>a*</code> - Zero or more</li>
+                    <li><code>a+</code> - One or more</li>
+                    <li><code>a ~ n</code> - Exactly n times</li>
+                    <li><code>a ~ n..m</code> - Between n and m times</li>
+                    <li><code>[a b]</code> - Maybe (optional) group</li>
+                    <li><code>(a b)</code> - Grouping</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section" style="margin-top: 20px;">
+            <h2>Common Terminals (from common.lark)</h2>
+            <p>You can import these directly: <code>%import common.INT</code></p>
+            
+            <div class="grid">
+                <div>
+                    <h3>Numbers</h3>
+                    <ul>
+                        <li><code>INT</code>: Integer (e.g., 42)</li>
+                        <li><code>SIGNED_INT</code>: Integer with optional sign (+42, -42)</li>
+                        <li><code>FLOAT</code>: Floating point number</li>
+                        <li><code>DECIMAL</code>: Decimal number</li>
+                        <li><code>NUMBER</code>: INT or FLOAT</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Strings & Names</h3>
+                    <ul>
+                        <li><code>ESCAPED_STRING</code>: "Double quoted string"</li>
+                        <li><code>CNAME</code>: Valid Python identifier (e.g., my_var)</li>
+                        <li><code>WORD</code>: Any sequence of letters</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Whitespace & Comments</h3>
+                    <ul>
+                        <li><code>WS</code>: Whitespace (spaces, tabs, newlines)</li>
+                        <li><code>WS_INLINE</code>: Inline whitespace (spaces, tabs)</li>
+                        <li><code>SH_COMMENT</code>: <code># Shell style comment</code></li>
+                        <li><code>C_COMMENT</code>: <code>/* C style comment */</code></li>
+                        <li><code>CPP_COMMENT</code>: <code>// C++ style comment</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

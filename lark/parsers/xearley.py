@@ -37,8 +37,49 @@ class Parser(BaseParser):
         self.ignore = [Terminal(t) for t in lexer_conf.ignore]
         self.complete_lex = complete_lex
 
-    def _parse(self, stream, columns, to_scan, start_symbol=None):
+    def _parse(self, lexer, columns, to_scan, start_symbol=None):
 
+        def scan_zero_width(i, to_scan, node_cache):
+            """Advance empty matches in this column, considering each item once to avoid cycles."""
+            matched = self.Set()
+            while True:
+                self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+                zero_width_items = []
+                for item in self.Set(to_scan):
+                    if item in matched:
+                        continue
+                    m = match(item.expect, lexer, i)
+                    if m:
+                        s = m.group(0)
+                        if m.end() == i:
+                            zero_width_items.append((item, m))
+                        elif self.complete_lex:
+                            for j in range(1, len(s) + 1):
+                                prefix = s[:-j]
+                                m_pref = match(item.expect, prefix)
+                                if m_pref and m_pref.end() == len(prefix) and len(prefix) == 0:
+                                    zero_width_items.append((item, m_pref))
+                    matched.add(item)
+
+                if not zero_width_items:
+                    return
+
+                for item, m in zero_width_items:
+                    token = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                    token.end_line = text_line
+                    token.end_column = text_column
+                    token.end_pos = i
+
+                    new_item = item.advance()
+                    label = (new_item.s, new_item.start, i)
+                    token_node = TokenNode(token, terminals[token.type])
+                    new_item.node = node_cache[label] if label in node_cache else node_cache.setdefault(label, self.SymbolNode(*label))
+                    new_item.node.add_family(new_item.s, item.rule, item.start, item.node, token_node)
+
+                    if new_item.expect in self.TERMINALS:
+                        to_scan.add(new_item)
+                    else:
+                        columns[i].add(new_item)
         def scan(i, to_scan):
             """The core Earley Scanner.
 
@@ -57,16 +98,18 @@ class Parser(BaseParser):
             # be held possibly for a later parse step when we reach the point in the
             # input stream at which they complete.
             for item in self.Set(to_scan):
-                m = match(item.expect, stream, i)
+                m = match(item.expect, lexer, i)
                 if m:
-                    t = Token(item.expect.name, m.group(0), i, text_line, text_column)
-                    delayed_matches[m.end()].append( (item, i, t) )
+                    if m.end() > i:
+                        t = Token(item.expect.name, m.group(0), i, text_line, text_column)
+                        delayed_matches[m.end()].append( (item, i, t) )
 
                     if self.complete_lex:
                         s = m.group(0)
-                        for j in range(1, len(s)):
+                        # Include range up to len(s) so that the empty prefix (s[:-len(s)] -> '') is also evaluated
+                        for j in range(1, len(s) + 1):
                             m = match(item.expect, s[:-j])
-                            if m:
+                            if m and m.end() > 0:
                                 t = Token(item.expect.name, m.group(0), i, text_line, text_column)
                                 delayed_matches[i+m.end()].append( (item, i, t) )
 
@@ -80,7 +123,7 @@ class Parser(BaseParser):
             # the ignore. This should allow us to use ignored symbols in non-terminals to implement
             # e.g. mandatory spacing.
             for x in self.ignore:
-                m = match(x, stream, i)
+                m = match(x, lexer, i)
                 if m:
                     # Carry over any items still in the scan buffer, to past the end of the ignored items.
                     delayed_matches[m.end()].extend([(item, i, None) for item in to_scan ])
@@ -130,7 +173,7 @@ class Parser(BaseParser):
 
             if not next_set and not delayed_matches and not next_to_scan:
                 considered_rules = list(sorted(to_scan, key=lambda key: key.rule.origin.name))
-                raise UnexpectedCharacters(stream, i, text_line, text_column, {item.expect.name for item in to_scan},
+                raise UnexpectedCharacters(lexer, i, text_line, text_column, {item.expect.name for item in to_scan},
                                            set(to_scan), state=frozenset(i.s for i in to_scan),
                                            considered_rules=considered_rules
                                            )
@@ -155,8 +198,8 @@ class Parser(BaseParser):
         # step.
         i = 0
         node_cache = {}
-        for token in stream:
-            self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+        for token in lexer:
+            scan_zero_width(i, to_scan, node_cache)
 
             to_scan, node_cache = scan(i, to_scan)
 
@@ -167,7 +210,7 @@ class Parser(BaseParser):
                 text_column += 1
             i += 1
 
-        self.predict_and_complete(i, to_scan, columns, transitives, node_cache)
+        scan_zero_width(i, to_scan, node_cache)
 
         ## Column is now the final column in the parse.
         assert i == len(columns)-1

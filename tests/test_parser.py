@@ -2632,7 +2632,11 @@ def _make_parser_test(LEXER, PARSER):
                 start: NAME NAME?
                 NAME: /(?(?=\d)\d+|\w*)/
             """
-            self.assertRaises((GrammarError, LexError, re.error), _Lark, g, regex=True)
+            if PARSER == 'earley' and LEXER in ('dynamic', 'dynamic_complete'):
+                p = _Lark(g, regex=True)
+                self.assertEqual(p.parse("").children, ["", ""])
+            else:
+                self.assertRaises((GrammarError, LexError, re.error), _Lark, g, regex=True)
 
         @unittest.skipIf(PARSER != 'lalr', "interactive_parser is only implemented for LALR at the moment")
         def test_parser_interactive_parser(self):

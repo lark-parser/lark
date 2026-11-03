@@ -1,6 +1,7 @@
 import unicodedata
 import os
 import errno
+import stat
 from itertools import product
 from collections import deque
 from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence, Iterable, AbstractSet
@@ -308,9 +309,9 @@ except ImportError:
 
 
 def _open_private(name, mode, **kwargs):
-    """Like open(), but refuses to follow a symlink, refuses a file that belongs to
-    another user, refuses to read a file that other users can write, and keeps the
-    file readable only by its owner.
+    """Like open(), but refuses to follow a symlink, refuses a hard link or anything
+    that isn't a regular file, refuses a file that belongs to another user, refuses to
+    read a file that other users can write, and keeps the file readable only by its owner.
 
     The parser cache is stored in a shared temporary directory under a name that is
     derived from the grammar, so another user on the same machine can predict it and
@@ -329,20 +330,33 @@ def _open_private(name, mode, **kwargs):
         flags = os.O_RDONLY
     if "b" in mode:
         flags |= getattr(os, "O_BINARY", 0)
+    # O_NONBLOCK so that a FIFO at the path can't block the open waiting for the other end.
+    # It has no effect on regular files, and anything else is refused below.
+    flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     try:
-        fd = os.open(name, flags | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        fd = os.open(name, flags, 0o600)
     except OSError as e:
-        # O_NOFOLLOW reports a symlink as ELOOP (EMLINK on some BSDs). Treat that as a
-        # refusal like the ownership/permission checks below, so the caller sees one
-        # kind of "won't use this cache" error rather than a raw traceback.
-        if e.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1)):
+        # Treat these as a refusal like the checks below, so the caller sees one kind of
+        # "won't use this cache" error rather than a raw traceback.
+        # O_NOFOLLOW reports a symlink as ELOOP (EMLINK on some BSDs, EFTYPE on NetBSD).
+        if e.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1), getattr(errno, "EFTYPE", -1)):
             raise PermissionError("Refusing to open %r: it is a symlink" % name) from e
+        # A directory opened for writing gives EISDIR. A socket gives ENXIO (EOPNOTSUPP on
+        # macOS), and so does a FIFO opened non-blocking for writing with no reader.
+        if e.errno in (errno.EISDIR, errno.ENXIO, getattr(errno, "EOPNOTSUPP", -1)):
+            raise PermissionError("Refusing to open %r: it is not a regular file" % name) from e
         raise
     try:
         st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise PermissionError("Refusing to use %r: it is not a regular file" % name)
         if hasattr(os, "geteuid"):
             if st.st_uid != os.geteuid():
                 raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+            # A hard link to one of our own files passes the ownership check, and writing
+            # through it would overwrite that file, just like a symlink.
+            if st.st_nlink != 1:
+                raise PermissionError("Refusing to use %r: it has other hard links" % name)
             # On read, don't trust a file that group or others can write, since it
             # could have been tampered with even though we own it. Only write bits let
             # another user do that, so read bits are fine to leave alone.

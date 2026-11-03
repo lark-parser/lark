@@ -108,8 +108,9 @@ class LarkOptions(Serialize):
             Useful for classes that require the ``Lark.grammar`` to be present (e.g. Reconstructor).
             (default= ``False``)
     unguarded_cache
-            For use with ``cache`` option. By default, Lark won't use a cache file that is a symlink, that belongs
-            to another user, or that other users can write to, and rebuilds the parser instead.
+            For use with ``cache`` option. By default, Lark won't use a cache file that is a symlink, a hard link
+            or not a regular file, that belongs to another user, or that other users can write to, and rebuilds
+            the parser instead.
             When ``True``, these checks are skipped. Useful when the cache file is shared on purpose, or lives on a
             filesystem that doesn't report ownership or permissions. The cache is a pickle, so loading it can run
             arbitrary code. Only set this when everyone who can write to the cache path is trusted.

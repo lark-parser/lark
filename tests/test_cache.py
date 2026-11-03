@@ -251,7 +251,7 @@ class TestCacheFile(TestCase):
 
     def test_load_does_not_follow_symlink(self):
         os.symlink(self.other_fn, self.cache_fn)
-        with self.assertRaises(OSError):
+        with self.assertRaises(PermissionError):
             FS.open(self.cache_fn, 'rb').close()
 
     def test_save_does_not_follow_symlink(self):
@@ -259,7 +259,7 @@ class TestCacheFile(TestCase):
         try:
             with FS.open(self.cache_fn, 'wb') as f:
                 f.write(b'overwritten')
-        except OSError:
+        except PermissionError:
             pass
         with open(self.other_fn, 'rb') as f:
             self.assertEqual(f.read(), b'original')
@@ -272,7 +272,7 @@ class TestCacheFile(TestCase):
             f.write(b'colleague-data')
         os.chmod(self.cache_fn, 0o600)
         with patch('os.geteuid', return_value=os.geteuid() + 1):
-            with self.assertRaises(OSError):
+            with self.assertRaises(PermissionError):
                 _open_private(self.cache_fn, 'wb')
         with open(self.cache_fn, 'rb') as f:
             self.assertEqual(f.read(), b'colleague-data')
@@ -300,7 +300,7 @@ class TestCacheFile(TestCase):
         with open(self.cache_fn, 'wb') as f:
             f.write(b'data')
         os.chmod(self.cache_fn, 0o666)
-        with self.assertRaises(OSError):
+        with self.assertRaises(PermissionError):
             FS.open(self.cache_fn, 'rb').close()
 
     def test_load_allows_group_readable(self):
@@ -311,6 +311,35 @@ class TestCacheFile(TestCase):
         os.chmod(self.cache_fn, 0o644)
         with FS.open(self.cache_fn, 'rb') as f:
             self.assertEqual(f.read(), b'data')
+
+    def test_save_does_not_write_through_hard_link(self):
+        # A hard link to one of our own files passes the ownership check, so writing
+        # through it would overwrite that file. Plain-open write path, as above.
+        os.link(self.other_fn, self.cache_fn)
+        with self.assertRaises(PermissionError):
+            _open_private(self.cache_fn, 'wb')
+        with open(self.other_fn, 'rb') as f:
+            self.assertEqual(f.read(), b'original')
+
+    def test_load_refuses_hard_link(self):
+        os.link(self.other_fn, self.cache_fn)
+        with self.assertRaises(PermissionError):
+            FS.open(self.cache_fn, 'rb').close()
+
+    def test_refuses_fifo(self):
+        # Without O_NONBLOCK the read would block forever waiting for a writer.
+        os.mkfifo(self.cache_fn)
+        with self.assertRaises(PermissionError):
+            FS.open(self.cache_fn, 'rb').close()
+        with self.assertRaises(PermissionError):
+            _open_private(self.cache_fn, 'wb')
+
+    def test_refuses_directory(self):
+        os.mkdir(self.cache_fn)
+        with self.assertRaises(PermissionError):
+            FS.open(self.cache_fn, 'rb').close()
+        with self.assertRaises(PermissionError):
+            _open_private(self.cache_fn, 'wb')
 
     def test_unguarded_cache(self):
         # The checks are on by default. unguarded_cache=True skips them, and since it
@@ -366,6 +395,19 @@ class TestCacheFilePortable(TestCase):
         with patch.object(lark_module, 'load_grammar', wraps=lark_module.load_grammar) as load_grammar:
             parser = Lark(g, parser='lalr', cache=self.cache_fn, unguarded_cache=True)
         self.assertEqual(load_grammar.call_count, 0)
+        self.assertEqual(parser.parse('a'), Tree('start', []))
+
+    def test_cache_true_miss_then_hit(self):
+        # cache=True uses a file in the temp dir; point that at our own directory.
+        g = 'start: "a"'
+        with patch('tempfile.gettempdir', return_value=self.tmpdir), \
+             patch.object(lark_module, 'load_grammar', wraps=lark_module.load_grammar) as load_grammar:
+            Lark(g, parser='lalr', cache=True)
+            self.assertEqual(load_grammar.call_count, 1)    # miss: built and saved
+            [cache_name] = os.listdir(self.tmpdir)
+            self.assertTrue(cache_name.startswith('.lark_cache_'))
+            parser = Lark(g, parser='lalr', cache=True)
+            self.assertEqual(load_grammar.call_count, 1)    # hit: loaded from the cache
         self.assertEqual(parser.parse('a'), Tree('start', []))
 
 

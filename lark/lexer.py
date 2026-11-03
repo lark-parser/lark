@@ -9,9 +9,9 @@ from typing import (
 from types import ModuleType
 import warnings
 try:
-    import interegular
+    import interegular  # type: ignore[reportMissingImports]
 except ImportError:
-    pass
+    interegular = None
 if TYPE_CHECKING:
     from .common import LexerConf
     from .parsers.lalr_parser_state import ParserState
@@ -30,6 +30,12 @@ try:  # For the standalone parser, we need to make sure that has_interegular is 
     has_interegular = bool(interegular)
 except NameError:
     has_interegular = False
+
+def _get_interegular() -> Optional[ModuleType]:
+    try:
+        return interegular
+    except NameError:
+        return None
 
 class Pattern(Serialize, ABC):
     "An abstraction over regular expressions."
@@ -176,7 +182,7 @@ class Token(str):
 
     @overload
     def __new__(
-            cls,
+            cls: Type[_T],
             type: str,
             value: Any,
             start_pos: Optional[int] = None,
@@ -185,12 +191,12 @@ class Token(str):
             end_line: Optional[int] = None,
             end_column: Optional[int] = None,
             end_pos: Optional[int] = None
-    ) -> 'Token':
+    ) -> _T:
         ...
 
     @overload
     def __new__(
-            cls,
+            cls: Type[_T],
             type_: str,
             value: Any,
             start_pos: Optional[int] = None,
@@ -199,9 +205,9 @@ class Token(str):
             end_line: Optional[int] = None,
             end_column: Optional[int] = None,
             end_pos: Optional[int] = None
-    ) -> 'Token':        ...
+    ) -> _T:        ...
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls: Type[_T], *args: Any, **kwargs: Any) -> _T:
         if "type_" in kwargs:
             warnings.warn("`type_` is deprecated use `type` instead", DeprecationWarning)
 
@@ -213,7 +219,7 @@ class Token(str):
 
 
     @classmethod
-    def _future_new(cls, type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None):
+    def _future_new(cls: Type[_T], type, value, start_pos=None, line=None, column=None, end_line=None, end_column=None, end_pos=None) -> _T:
         inst = super(Token, cls).__new__(cls, value)
 
         inst.type = type
@@ -539,7 +545,10 @@ class Lexer(ABC):
 
 def _check_regex_collisions(terminal_to_regexp: Dict[TerminalDef, str], comparator, strict_mode, max_collisions_to_show=8):
     if not comparator:
-        comparator = interegular.Comparator.from_regexes(terminal_to_regexp)
+        interegular_module = _get_interegular()
+        if interegular_module is None:
+            raise LexError("interegular must be installed for regex collision checks.")
+        comparator = interegular_module.Comparator.from_regexes(terminal_to_regexp)
 
     # When in strict mode, we only ever try to provide one example, so taking
     # a long time for that should be fine
@@ -580,10 +589,10 @@ class AbstractBasicLexer(Lexer):
     def next_token(self, lex_state: LexerState, parser_state: Any = None) -> Token:
         ...
 
-    def lex(self, state: LexerState, parser_state: Any) -> Iterator[Token]:
+    def lex(self, lexer_state: LexerState, parser_state: Any) -> Iterator[Token]:
         with suppress(EOFError):
             while True:
-                yield self.next_token(state, parser_state)
+                yield self.next_token(lexer_state, parser_state)
 
 
 class BasicLexer(AbstractBasicLexer):
@@ -618,7 +627,8 @@ class BasicLexer(AbstractBasicLexer):
             if not (set(conf.ignore) <= {t.name for t in terminals}):
                 raise LexError("Ignore terminals are not defined: %s" % (set(conf.ignore) - {t.name for t in terminals}))
 
-            if has_interegular:
+            interegular_module = _get_interegular()
+            if interegular_module is not None:
                 _check_regex_collisions(terminal_to_regexp, comparator, conf.strict)
             elif conf.strict:
                 raise LexError("interegular must be installed for strict mode. Use `pip install 'lark[interegular]'`.")
@@ -725,8 +735,9 @@ class ContextualLexer(Lexer):
         trad_conf = copy(conf)
         trad_conf.terminals = terminals
 
-        if has_interegular and not conf.skip_validation:
-            comparator = interegular.Comparator.from_regexes({t: t.pattern.to_regexp() for t in terminals})
+        interegular_module = _get_interegular()
+        if interegular_module is not None and not conf.skip_validation:
+            comparator = interegular_module.Comparator.from_regexes({t: t.pattern.to_regexp() for t in terminals})
         else:
             comparator = None
         lexer_by_tokens: Dict[FrozenSet[str], AbstractBasicLexer] = {}

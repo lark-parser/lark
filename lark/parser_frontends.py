@@ -62,9 +62,13 @@ def _wrap_lexer(lexer_class):
 
 def _deserialize_parsing_frontend(data, memo, lexer_conf, callbacks, options):
     parser_conf = ParserConf.deserialize(data['parser_conf'], memo)
-    cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
-    parser = cls.deserialize(data['parser'], memo, callbacks, options.debug)
     parser_conf.callbacks = callbacks
+    if parser_conf.parser_type == 'earley':
+        analysis = earley.Parser.deserialize_analysis(data['parser'], memo)
+        parser = create_earley_parser(lexer_conf, parser_conf, options, analysis)
+    else:
+        cls = (options and options._plugins.get('LALR_Parser')) or LALR_Parser
+        parser = cls.deserialize(data['parser'], memo, callbacks, options.debug)
     return ParsingFrontend(lexer_conf, parser_conf, options, parser=parser)
 
 
@@ -321,7 +325,7 @@ def _match_earley_basic(term, token):
 def create_earley_parser__basic(lexer_conf: LexerConf, parser_conf: ParserConf, **kw):
     return earley.Parser(lexer_conf, parser_conf, _match_earley_basic, **kw)
 
-def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options) -> earley.Parser:
+def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options, cached_analysis=None) -> earley.Parser:
     resolve_ambiguity = options.ambiguity == 'resolve'
     debug = options.debug if options else False
     tree_class = options.tree_class or Tree if options.ambiguity != 'forest' else None
@@ -336,7 +340,8 @@ def create_earley_parser(lexer_conf: LexerConf, parser_conf: ParserConf, options
         f = create_earley_parser__basic
 
     return f(lexer_conf, parser_conf, resolve_ambiguity=resolve_ambiguity,
-             debug=debug, tree_class=tree_class, ordered_sets=options.ordered_sets, **extra)
+             debug=debug, tree_class=tree_class, ordered_sets=options.ordered_sets,
+             cached_analysis=cached_analysis, **extra)
 
 
 

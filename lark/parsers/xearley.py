@@ -31,9 +31,10 @@ if TYPE_CHECKING:
 class Parser(BaseParser):
     def __init__(self, lexer_conf: 'LexerConf', parser_conf: 'ParserConf', term_matcher: Callable,
                  resolve_ambiguity: bool=True, complete_lex: bool=False, debug: bool=False,
-                 tree_class: Optional[Callable[[str, List], Any]]=Tree, ordered_sets: bool=True):
+                 tree_class: Optional[Callable[[str, List], Any]]=Tree, ordered_sets: bool=True,
+                 cached_analysis=None):
         BaseParser.__init__(self, lexer_conf, parser_conf, term_matcher, resolve_ambiguity,
-                            debug, tree_class, ordered_sets)
+                            debug, tree_class, ordered_sets, cached_analysis)
         self.ignore = [Terminal(t) for t in lexer_conf.ignore]
         self.complete_lex = complete_lex
 

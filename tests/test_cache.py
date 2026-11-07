@@ -1,13 +1,19 @@
 from __future__ import absolute_import
 
 import logging
+import os
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
 from unittest import TestCase, main, skipIf
+from unittest.mock import patch
 
 from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
 import lark.lark as lark_module
 from lark.reconstruct import Reconstructor
+from lark.parsers.earley_forest import TreeForestTransformer
 from . import test_reconstructor
 
 from io import BytesIO
@@ -80,6 +86,262 @@ class TestCache(TestCase):
     def tearDown(self):
         self.mock_fs.files = {}
         lark_module.FS = self.fs
+
+    def test_earley_cache(self):
+        grammar = 'start: item*\nitem: "a" ["b"]'
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            for cache in (True, 'earley-cache'):
+                with self.subTest(lexer=lexer, cache=cache):
+                    self.mock_fs.files.clear()
+                    original = Lark(grammar, lexer=lexer, cache=cache)
+                    expected = original.parse('aaba')
+                    with patch('lark.lark.load_grammar', side_effect=AssertionError('grammar reloaded')) as compile_grammar, \
+                            patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+                        restored = Lark(grammar, lexer=lexer, cache=cache)
+                        self.assertEqual(restored.parse('aaba'), expected)
+                        self.assertEqual(restored.parse(''), original.parse(''))
+                        compile_grammar.assert_not_called()
+                        analyze.assert_not_called()
+                    self.assertEqual(len(self.mock_fs.files), 1)
+
+    def test_earley_save_load(self):
+        grammar = '''
+            start: left | right
+            left.1: word+
+            right.2: word+
+            word: "a" ["b"]
+            empty:
+            %ignore " "
+        '''
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            for ambiguity in ('resolve', 'explicit', 'forest'):
+                for priority in ('normal', 'invert', None):
+                    for ordered_sets in (True, False):
+                        with self.subTest(lexer=lexer, ambiguity=ambiguity, priority=priority, ordered_sets=ordered_sets):
+                            original = Lark(grammar, lexer=lexer, ambiguity=ambiguity,
+                                            priority=priority, ordered_sets=ordered_sets,
+                                            start=['start', 'empty'], keep_all_tokens=True)
+                            data = BytesIO()
+                            original.save(data)
+                            data.seek(0)
+                            with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+                                restored = Lark.load(data)
+                                analyze.assert_not_called()
+                            for text, start in [('ab a', 'start'), ('', 'empty')]:
+                                expected = original.parse(text, start=start)
+                                actual = restored.parse(text, start=start)
+                                if ambiguity == 'forest':
+                                    expected = TreeForestTransformer(resolve_ambiguity=False).transform(expected)
+                                    actual = TreeForestTransformer(resolve_ambiguity=False).transform(actual)
+                                self.assertEqual(actual, expected)
+
+    def test_earley_dynamic_complete(self):
+        grammar = 'start: A A\nA: /a+/'
+        for cache in (False, True):
+            with self.subTest(cache=cache):
+                original = Lark(grammar, lexer='dynamic_complete', ambiguity='explicit', cache=cache)
+                expected = original.parse('aaa')
+                self.assertEqual(expected.data, '_ambig')
+                self.assertEqual(len(expected.children), 2)
+                data = BytesIO()
+                original.save(data)
+                data.seek(0)
+                self.assertEqual(Lark.load(data).parse('aaa'), expected)
+
+    def test_earley_cache_rebinds_tree_options(self):
+        class CustomTree(Tree):
+            def __reduce__(self):
+                raise TypeError('Tree instances must not be cached')
+
+        grammar = 'start: WORD+\nWORD: /[a-z]+/\n%ignore /\\s+/'
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            with self.subTest(lexer=lexer):
+                self.mock_fs.files.clear()
+                Lark(grammar, lexer=lexer, cache=True, tree_class=CustomTree,
+                     propagate_positions=True).parse('before')
+                with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+                    parser = Lark(grammar, lexer=lexer, cache=True,
+                                  tree_class=CustomTree, propagate_positions=True)
+                    tree = parser.parse('one\n two')
+                    self.assertIsInstance(tree, CustomTree)
+                    self.assertEqual((tree.meta.line, tree.meta.column, tree.meta.end_line,
+                                      tree.meta.end_column, tree.meta.start_pos, tree.meta.end_pos),
+                                     (1, 1, 2, 5, 0, 8))
+                    analyze.assert_not_called()
+
+    def test_earley_cache_rebinds_lexer_callbacks_and_postlex(self):
+        class AddSuffix:
+            always_accept = ()
+
+            def __init__(self, suffix):
+                self.suffix = suffix
+
+            def process(self, stream):
+                for token in stream:
+                    yield token.update(value=token.value + self.suffix)
+
+            def __reduce__(self):
+                raise TypeError('Postlex must be supplied again on cache load')
+
+        grammar = 'start: NUM\nNUM: /[0-9]+/'
+        Lark(grammar, lexer='basic', cache=True, postlex=AddSuffix('1'))
+        with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+            parser = Lark(grammar, lexer='basic', cache=True, postlex=AddSuffix('2'),
+                          lexer_callbacks={'NUM': append_zero})
+            self.assertEqual(parser.parse('3').children, ['302'])
+            analyze.assert_not_called()
+
+    def test_earley_cache_lexer_selection_with_postlex(self):
+        class IdentityPostLex:
+            always_accept = ()
+
+            def process(self, stream):
+                return stream
+
+        from lark.parsers.earley import GrammarAnalyzer
+
+        grammar = 'start: A | B\nA: "a"\nB: "a"'
+        for cache in (True, 'earley-cache'):
+            for lexer_options in ({}, {'lexer': 'auto'}, {'lexer': 'basic'}):
+                for first_postlex in (None, IdentityPostLex()):
+                    with self.subTest(cache=cache, lexer=lexer_options, postlex=first_postlex):
+                        self.mock_fs.files.clear()
+                        second_postlex = IdentityPostLex() if first_postlex is None else None
+                        Lark(grammar, ambiguity='explicit', cache=cache,
+                             postlex=first_postlex, **lexer_options)
+                        expected = Lark(grammar, ambiguity='explicit',
+                                        postlex=second_postlex, **lexer_options)
+                        with patch('lark.lark.load_grammar', wraps=lark_module.load_grammar) as compile_grammar, \
+                                patch('lark.parsers.earley.GrammarAnalyzer', wraps=GrammarAnalyzer) as analyze, \
+                                patch.object(lark_module.logger, 'exception') as log_error:
+                            restored = Lark(grammar, ambiguity='explicit', cache=cache,
+                                            postlex=second_postlex, **lexer_options)
+                            if lexer_options.get('lexer') == 'basic':
+                                compile_grammar.assert_not_called()
+                                analyze.assert_not_called()
+                            else:
+                                compile_grammar.assert_called_once()
+                                analyze.assert_called_once()
+                            log_error.assert_not_called()
+                        self.assertEqual(restored.options.lexer, expected.options.lexer)
+                        self.assertEqual(restored.parse('a'), expected.parse('a'))
+                        with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+                            cached = Lark(grammar, ambiguity='explicit', cache=cache,
+                                          postlex=second_postlex, **lexer_options)
+                            self.assertEqual(cached.parse('a'), expected.parse('a'))
+                            analyze.assert_not_called()
+
+    @skipIf(regex is None, "'regex' lib not installed")
+    def test_earley_cache_regex_and_bytes(self):
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            for use_bytes in (False, True):
+                with self.subTest(lexer=lexer, use_bytes=use_bytes):
+                    self.mock_fs.files.clear()
+                    grammar = r'start: /(?V1)[a-z&&[^b]]+/'
+                    options = dict(lexer=lexer, use_bytes=use_bytes, regex=True, cache=True)
+                    original = Lark(grammar, **options)
+                    text = b'ac' if use_bytes else 'ac'
+                    expected = original.parse(text)
+                    with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+                        restored = Lark(grammar, **options)
+                        self.assertEqual(restored.parse(text), expected)
+                        analyze.assert_not_called()
+
+    def test_earley_cache_invalidation(self):
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            with self.subTest(lexer=lexer):
+                self.mock_fs.files.clear()
+                Lark('start: "a"', lexer=lexer, cache='cache')
+                parser = Lark('start: "b"', lexer=lexer, cache='cache')
+                self.assertEqual(parser.parse('b'), Tree('start', []))
+                with self.assertRaises(UnexpectedInput):
+                    parser.parse('a')
+                parser = Lark('start: "b"', lexer=lexer, cache='cache', keep_all_tokens=True)
+                self.assertEqual(parser.parse('b').children, ['b'])
+
+    def test_earley_cache_errors_and_reconstruction(self):
+        grammar = 'start: "a" "b"\n%ignore " "'
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            with self.subTest(lexer=lexer):
+                self.mock_fs.files.clear()
+                options = dict(lexer=lexer, cache=True, cache_grammar=True, maybe_placeholders=False)
+                original = Lark(grammar, **options)
+                restored = Lark(grammar, **options)
+                self.assertEqual(Reconstructor(restored).reconstruct(restored.parse('a b')),
+                                 Reconstructor(original).reconstruct(original.parse('a b')))
+                for text in ('a', 'c'):
+                    with self.assertRaises(UnexpectedInput) as first:
+                        original.parse(text)
+                    with self.assertRaises(UnexpectedInput) as second:
+                        restored.parse(text)
+                    self.assertIs(type(second.exception), type(first.exception))
+                    self.assertEqual(str(second.exception), str(first.exception))
+
+    def test_earley_save_load_across_processes(self):
+        grammar = 'start: a+\na: "a" [a]'
+        script = '''
+import sys
+from lark import Lark
+from unittest.mock import patch
+filename, mode, lexer, grammar = sys.argv[1:]
+if mode == 'save':
+    parser = Lark(grammar, lexer=lexer, ambiguity='explicit')
+    with open(filename, 'wb') as stream:
+        parser.save(stream)
+else:
+    with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')):
+        with open(filename, 'rb') as stream:
+            parser = Lark.load(stream)
+print(parser.parse('aaa').pretty())
+'''
+        with TemporaryDirectory() as directory:
+            for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+                with self.subTest(lexer=lexer):
+                    outputs = []
+                    for mode, seed in [('save', '1'), ('load', '2')]:
+                        env = dict(os.environ, PYTHONHASHSEED=seed)
+                        outputs.append(subprocess.check_output(
+                            [sys.executable, '-c', script, os.path.join(directory, 'parser'), mode, lexer, grammar],
+                            env=env, universal_newlines=True))
+                    self.assertEqual(*outputs)
+
+    def test_earley_cache_custom_lexer(self):
+        grammar = 'start: A+\n%declare A'
+        Lark(grammar, lexer=CustomLexer, cache=True)
+        with patch('lark.parsers.earley.GrammarAnalyzer', side_effect=AssertionError('analysis repeated')) as analyze:
+            parser = Lark(grammar, lexer=CustomLexer, cache=True)
+            self.assertEqual([token.value for token in parser.parse([1, 2]).children], [1, 2])
+            analyze.assert_not_called()
+
+    def test_earley_cache_terminal_priority(self):
+        grammar = 'start: A | B\nA.1: "a"\nB.2: "a"'
+        for lexer in ('basic', 'dynamic', 'dynamic_complete'):
+            with self.subTest(lexer=lexer):
+                self.mock_fs.files.clear()
+                Lark(grammar, lexer=lexer, cache=True)
+                parser = Lark(grammar, lexer=lexer, cache=True)
+                self.assertEqual(parser.parse('a').children[0].type, 'B')
+
+    def test_earley_cache_imports_and_corrupt_data(self):
+        grammar = '%import .grammars.ab (startab, expr)'
+        options = dict(start='startab', cache='cache', source_path=__file__)
+        original = Lark(grammar, **options)
+        with patch('lark.lark.load_grammar', side_effect=AssertionError('grammar reloaded')) as compile_grammar:
+            restored = Lark(grammar, **options)
+            self.assertEqual(restored.parse('ab'), original.parse('ab'))
+            compile_grammar.assert_not_called()
+        self.mock_fs.files['cache'] = MockFile(b'invalid cache')
+        with self.assertLogs('lark', level='ERROR'):
+            rebuilt = Lark(grammar, **options)
+        self.assertEqual(rebuilt.parse('ab'), original.parse('ab'))
+
+    def test_unsupported_parser_cache(self):
+        for parser in ('cyk', None):
+            with self.subTest(parser=parser):
+                with self.assertRaises(ConfigurationError):
+                    Lark(self.g, parser=parser, cache=True)
+                with self.assertRaises(NotImplementedError):
+                    Lark(self.g, parser=parser, lexer='basic').save(BytesIO())
 
     def test_simple(self):
         fn = "bla"

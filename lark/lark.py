@@ -97,7 +97,7 @@ class LarkOptions(Serialize):
             When ``False``,  ``[]`` behaves like the ``?`` operator, and returns no value at all.
             (default= ``True``)
     cache
-            Cache the results of the Lark grammar analysis, for x2 to x3 faster loading. LALR only for now.
+            Cache the results of the Lark grammar analysis for faster loading. Supports LALR and Earley.
 
             - When ``False``, does nothing (default)
             - When ``True``, caches to a temporary file in the local directory
@@ -339,11 +339,15 @@ class Lark(Serialize, Generic[_Return_T]):
                     raise ConfigurationError("Grammar must be ascii only, when use_bytes=True")
 
             if self.options.cache:
-                if self.options.parser != 'lalr':
-                    raise ConfigurationError("cache only works with parser='lalr' for now")
+                if self.options.parser not in ('lalr', 'earley'):
+                    raise ConfigurationError("cache only works with parser='lalr' or parser='earley'")
 
                 unhashable = ('transformer', 'postlex', 'lexer_callbacks', 'edit_terminals', '_plugins')
-                options_str = ''.join(k+str(v) for k, v in options.items() if k not in unhashable)
+                cache_options = options
+                if self.options.parser == 'earley' and self.options.lexer == 'auto':
+                    # Postlex changes Earley's default lexer, but is not itself hashed.
+                    cache_options = dict(options, lexer='basic' if self.options.postlex is not None else 'dynamic')
+                options_str = ''.join(k+str(v) for k, v in cache_options.items() if k not in unhashable)
                 from . import __version__
                 s = grammar + options_str + __version__ + str(sys.version_info[:2])
                 cache_sha256 = sha256_digest(s)
@@ -530,8 +534,8 @@ class Lark(Serialize, Generic[_Return_T]):
 
         Useful for caching and multiprocessing.
         """
-        if self.options.parser != 'lalr':
-            raise NotImplementedError("Lark.save() is only implemented for the LALR(1) parser.")
+        if self.options.parser not in ('lalr', 'earley'):
+            raise NotImplementedError("Lark.save() is only implemented for the LALR(1) and Earley parsers.")
         data, m = self.memo_serialize([TerminalDef, Rule])
         if exclude_options:
             data["options"] = {n: v for n, v in data["options"].items() if n not in exclude_options}

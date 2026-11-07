@@ -9,30 +9,30 @@ The Earley parser outputs an SPPF-tree as per that document. The SPPF tree forma
 is explained here: https://lark-parser.readthedocs.io/en/latest/_static/sppf/sppf.html
 """
 
-from typing import TYPE_CHECKING, Callable, Optional, List, Any
+from typing import TYPE_CHECKING, Callable, Optional, List, Any, Dict
 from collections import deque
 
 from ..lexer import Token
 from ..tree import Tree
 from ..exceptions import UnexpectedEOF, UnexpectedToken
-from ..utils import logger, OrderedSet, dedup_list
+from ..utils import logger, OrderedSet, dedup_list, Serialize
 from .grammar_analysis import GrammarAnalyzer
-from ..grammar import NonTerminal
+from ..grammar import NonTerminal, Terminal, Rule
 from .earley_common import Item
 from .earley_forest import ForestSumVisitor, SymbolNode, StableSymbolNode, TokenNode, ForestToParseTree
 
 if TYPE_CHECKING:
     from ..common import LexerConf, ParserConf
 
-class Parser:
+class Parser(Serialize):
     lexer_conf: 'LexerConf'
     parser_conf: 'ParserConf'
     debug: bool
 
     def __init__(self, lexer_conf: 'LexerConf', parser_conf: 'ParserConf', term_matcher: Callable,
                  resolve_ambiguity: bool=True, debug: bool=False,
-                 tree_class: Optional[Callable[[str, List], Any]]=Tree, ordered_sets: bool=True):
-        analysis = GrammarAnalyzer(parser_conf)
+                 tree_class: Optional[Callable[[str, List], Any]]=Tree, ordered_sets: bool=True,
+                 cached_analysis=None):
         self.lexer_conf = lexer_conf
         self.parser_conf = parser_conf
         self.resolve_ambiguity = resolve_ambiguity
@@ -41,11 +41,17 @@ class Parser:
         self.Set = OrderedSet if ordered_sets else set
         self.SymbolNode = StableSymbolNode if ordered_sets else SymbolNode
 
-        self.FIRST = analysis.FIRST
-        self.NULLABLE = analysis.NULLABLE
         self.callbacks = parser_conf.callbacks
-        # TODO add typing info
-        self.predictions = {}   # type: ignore[var-annotated]
+        if cached_analysis is None:
+            analysis = GrammarAnalyzer(parser_conf)
+            self.FIRST = analysis.FIRST
+            self.NULLABLE = analysis.NULLABLE
+            self.predictions: Dict[NonTerminal, List[Rule]] = {}
+            for rule in parser_conf.rules:
+                if rule.origin not in self.predictions:
+                    self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
+        else:
+            self.FIRST, self.NULLABLE, self.predictions = cached_analysis
 
         ## These could be moved to the grammar analyzer. Pre-computing these is *much* faster than
         #  the slow 'isupper' in is_terminal.
@@ -54,9 +60,6 @@ class Parser:
 
         self.forest_sum_visitor = None
         for rule in parser_conf.rules:
-            if rule.origin not in self.predictions:
-                self.predictions[rule.origin] = [x.rule for x in analysis.expand_rule(rule.origin)]
-
             ## Detect if any rules/terminals have priorities set. If the user specified priority = None, then
             #  the priorities will be stripped from all rules/terminals before they reach us, allowing us to
             #  skip the extra tree walk. We'll also skip this if the user just didn't specify priorities
@@ -73,6 +76,28 @@ class Parser:
                     break
 
         self.term_matcher = term_matcher
+
+    def serialize(self, memo=None):
+        return {
+            'first': [[symbol.serialize(memo), [s.serialize(memo) for s in symbols]]
+                      for symbol, symbols in self.FIRST.items()],
+            'nullable': [symbol.serialize(memo) for symbol in self.NULLABLE],
+            'predictions': {str(symbol.name): [rule.serialize(memo) for rule in rules]
+                            for symbol, rules in self.predictions.items()},
+        }
+
+    @staticmethod
+    def deserialize_analysis(data, memo):
+        def deserialize_symbol(symbol):
+            cls = Terminal if symbol['__type__'] == 'Terminal' else NonTerminal
+            return cls.deserialize(symbol, memo)
+
+        first = {deserialize_symbol(symbol): {deserialize_symbol(s) for s in symbols}
+                 for symbol, symbols in data['first']}
+        nullable = {deserialize_symbol(symbol) for symbol in data['nullable']}
+        predictions = {NonTerminal(name): [Rule.deserialize(rule, memo) for rule in rules]
+                       for name, rules in data['predictions'].items()}
+        return first, nullable, predictions
 
 
     def predict_and_complete(self, i, to_scan, columns, transitives, node_cache):

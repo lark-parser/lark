@@ -29,7 +29,7 @@ IMPORT_PATHS = ['grammars']
 
 EXT = '.lark'
 
-_RE_FLAGS = 'imslux'
+_RE_FLAGS = 'imsluxaL'
 
 _EMPTY = Symbol('__empty__')
 
@@ -570,6 +570,10 @@ def _literal_to_pattern(literal):
     assert flag_start > 0
     flags = v[flag_start:]
     assert all(f in _RE_FLAGS for f in flags), flags
+
+    if 'L' in flags and literal.type == 'STRING':
+        raise GrammarError("The 'L' (locale) flag is not supported on string literals. "
+                           "It is only valid for bytes patterns (use_bytes=True).")
 
     if literal.type == 'STRING' and '\n' in v:
         raise GrammarError('You cannot put newlines in string literals')

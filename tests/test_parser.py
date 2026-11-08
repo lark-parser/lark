@@ -1711,6 +1711,26 @@ def _make_parser_test(LEXER, PARSER):
             self.assertRaises(UnexpectedCharacters, g.parse, "C")
 
 
+        def test_regex_a_flag(self):
+            """Test that the 'a' (ASCII) flag is supported in regexp terminals (issue #1527)."""
+            # 'a' flag: restricts \w, \d, \s etc. to ASCII-only matching
+            g = _Lark(r"""
+                start: ASCII_WORD
+                ASCII_WORD: /\w+/a
+            """)
+            self.assertEqual(g.parse("hello").children, ["hello"])
+            self.assertEqual(g.parse("hello123").children, ["hello123"])
+            # Non-ASCII word chars should NOT match with 'a' flag
+            self.assertRaises(UnexpectedCharacters, g.parse, "\u00e9l\u00e8ve")
+
+        def test_regex_L_flag_string_error(self):
+            """Test that the 'L' (locale) flag raises GrammarError on a string literal (issue #1527)."""
+            from lark.exceptions import GrammarError
+            self.assertRaises(GrammarError, _Lark, r"""
+                start: LOCALE_WORD
+                LOCALE_WORD: "word"L
+            """)
+
         def test_float_without_lexer(self):
             expected_error = UnexpectedCharacters if 'dynamic' in LEXER else UnexpectedToken
             if PARSER == 'cyk':

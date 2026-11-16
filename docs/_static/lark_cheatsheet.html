@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lark Cheatsheet</title>
+<!--
+  Lark cheatsheet - single page, A4 landscape.
+  Export: open in Chrome/Edge -> Print -> "Save as PDF", Layout: Landscape,
+  Margins: Default, enable "Background graphics".
+  Every item is taken from docs/grammar.md, docs/tree_construction.md,
+  docs/classes.rst, docs/visitors.rst, lark/lark.py, lark/tree.py,
+  lark/visitors.py and lark/grammars/common.lark.
+-->
+<style>
+  @page { size: A4 landscape; margin: 7mm; }
+
+  :root {
+    --ink: #1f2933;
+    --muted: #52606d;
+    --accent: #2b6cb0;
+    --accent-soft: #ebf4ff;
+    --rule: #d9e2ec;
+    --code-bg: #f5f7fa;
+    --code-ink: #102a43;
+    --kw: #9b2c2c;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; color: var(--ink); }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 6.7pt;
+    line-height: 1.27;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    width: 283mm;            /* 297mm - 2 x 7mm margins */
+    height: 196mm;           /* 210mm - 2 x 7mm margins */
+    margin: 0 auto;
+    overflow: hidden;
+  }
+
+  /* Fixed heights: multi-column with column-fill:auto needs a definite height.
+     header 10mm + columns 181mm + footer 5mm = 196mm */
+  header {
+    height: 10mm;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 1.2mm;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 15pt;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+  header h1 span { color: var(--ink); font-weight: 400; }
+  header p { margin: 0; color: var(--muted); font-size: 7pt; }
+
+  /* Four explicit columns: content is placed by hand so nothing is pushed off the page. */
+  .columns {
+    height: 181mm;
+    padding-top: 1.8mm;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 4mm;
+  }
+  .col { min-width: 0; overflow: hidden; }
+  .col + .col { border-left: 1px solid var(--rule); padding-left: 4mm; margin-left: -2mm; }
+
+  section { margin-bottom: 1.8mm; }
+
+  h2 {
+    margin: 0 0 1mm;
+    font-size: 8.4pt;
+    color: #fff;
+    background: var(--accent);
+    padding: 0.5mm 1.6mm;
+    border-radius: 1mm;
+    break-after: avoid-column;
+  }
+  h2 .n {
+    display: inline-block;
+    min-width: 3.4mm;
+    margin-right: 1mm;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+  h3 {
+    margin: 1.4mm 0 0.5mm;
+    font-size: 7.4pt;
+    color: var(--accent);
+    border-bottom: 1px solid var(--rule);
+    break-after: avoid-column;
+  }
+
+  p { margin: 0 0 0.8mm; }
+  .note { color: var(--muted); font-size: 6.6pt; }
+
+  code, pre {
+    font-family: Consolas, "SFMono-Regular", Menlo, "Liberation Mono", monospace;
+    font-size: 6.35pt;
+    color: var(--code-ink);
+  }
+  code {
+    background: var(--code-bg);
+    border-radius: 0.6mm;
+    padding: 0 0.6mm;
+    white-space: nowrap;
+  }
+  pre {
+    margin: 0.6mm 0 1mm;
+    padding: 0.9mm 1.4mm;
+    background: var(--code-bg);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 1mm 1mm 0;
+    line-height: 1.28;
+    white-space: pre;
+    overflow: hidden;
+    break-inside: avoid-column;
+  }
+  pre .c { color: #7b8794; }          /* comment */
+  pre .k { color: var(--kw); }        /* keyword / directive */
+  pre .s { color: #2f855a; }          /* string / regex */
+
+  table { width: 100%; border-collapse: collapse; margin: 0.4mm 0 1mm; }
+  td { padding: 0.25mm 0.8mm 0.25mm 0; vertical-align: top; border-bottom: 1px solid #eef2f6; }
+  tr:last-child td { border-bottom: 0; }
+  td:first-child { white-space: nowrap; width: 1%; padding-right: 1.6mm; }
+  /* Sections whose table is split in two (heading kept with the first rows): align columns. */
+  .s4 td:first-child { width: 31mm; }
+  .s6 td:first-child { width: 29mm; }
+  td code { background: none; padding: 0; color: var(--code-ink); font-weight: 600; }
+
+  .pill {
+    display: inline-block;
+    padding: 0 1mm;
+    border-radius: 0.8mm;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 6.4pt;
+  }
+
+  footer {
+    height: 5mm;
+    padding-top: 0.8mm;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 6.4pt;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* On screen: show the page as a sheet of paper. */
+  @media screen {
+    body { background: #e4e7eb; padding: 16px 0; }
+    .page { background: #fff; padding: 7mm; width: 297mm; height: 210mm; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+  }
+  @media print {
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Lark <span>Cheatsheet</span></h1>
+  <p>Parsing toolkit for Python &middot; <code>pip install lark</code> &middot; lark-parser.readthedocs.io</p>
+</header>
+
+<div class="columns">
+
+  <div class="col">
+  <!-- 1. Definitions -->
+  <section>
+    <h2><span class="n">1</span>Grammar definitions</h2>
+    <p>A <b>grammar</b> is a list of rules and terminals that together define a language. Terminals define the alphabet; rules define the structure.</p>
+    <table>
+      <tr><td><code>rule</code></td><td><b>lowercase</b> name. A list of terminals and rules; their nesting shapes the parse tree. Recursion allowed.</td></tr>
+      <tr><td><code>TERMINAL</code></td><td><b>UPPERCASE</b> name. A string, a regular expression, or a concatenation of these and other terminals. No recursion.</td></tr>
+    </table>
+<pre>rule: &lt;EBNF-EXPRESSION&gt;
+    | etc.
+TERM: &lt;EBNF-EXPRESSION&gt;   <span class="c">// rules aren't allowed</span></pre>
+    <p>Parsing begins at rule <code>start</code> (change with <code>start=</code>). Comments: <code>// ...</code> or <code># ...</code> (since 1.1.6).</p>
+  </section>
+
+  <!-- 2. Syntax -->
+  <section>
+    <h2><span class="n">2</span>Grammar syntax</h2>
+    <h3>Items &amp; operators</h3>
+    <table>
+      <tr><td><code>a b</code></td><td>sequence</td></tr>
+      <tr><td><code>a | b</code></td><td>alternative (may continue on the next line)</td></tr>
+      <tr><td><code>(a b)</code></td><td>group</td></tr>
+      <tr><td><code>[a b]</code></td><td>maybe; gives <code>None</code> when unmatched if <code>maybe_placeholders=True</code></td></tr>
+      <tr><td><code>a?</code></td><td>zero or one</td></tr>
+      <tr><td><code>a*</code> / <code>a+</code></td><td>zero or more / one or more</td></tr>
+      <tr><td><code>a ~ n</code></td><td>exactly <i>n</i> times</td></tr>
+      <tr><td><code>a ~ n..m</code></td><td>between <i>n</i> and <i>m</i> times (avoid wide ranges)</td></tr>
+    </table>
+    <p class="note">Operators apply to the item on their left: <code>a ~ 2 b ~ 3</code> = <code>(a ~ 2) (b ~ 3)</code>.</p>
+
+    <h3>Terminal literals</h3>
+    <table>
+      <tr><td><code>"string"</code></td><td>literal string</td></tr>
+      <tr><td><code>"string"i</code></td><td>case-insensitive string</td></tr>
+      <tr><td><code>/regex/</code></td><td>regular expression</td></tr>
+      <tr><td><code>/regex/imslux</code></td><td>regex with flags (any of <code>imslux</code>)</td></tr>
+      <tr><td><code>"a".."z"</code></td><td>literal range</td></tr>
+    </table>
+
+    <h3>Priorities</h3>
+<pre>DECIMAL.2: INT? "." INT  <span class="c">// lexed before INT</span>
+expr.1: ...              <span class="c">// rule priority</span></pre>
+    <p class="note">Signed integers, default 0. Terminals: highest priority is matched first. Rules: resolve LALR collisions / Earley ambiguity.</p>
+
+    <h3>Shaping the tree</h3>
+    <table>
+      <tr><td><code>_rule</code></td><td>always inlined: its children go into the parent</td></tr>
+      <tr><td><code>?rule</code></td><td>inlined if it has a single child (after filtering)</td></tr>
+      <tr><td><code>!rule</code></td><td>keeps all its terminals (none filtered)</td></tr>
+      <tr><td><code>... -&gt; name</code></td><td>alias: names the tree branch for this alternative</td></tr>
+      <tr><td><code>_TERM</code></td><td>filtered from the tree, like unnamed literals <code>"+"</code></td></tr>
+    </table>
+    <p class="note">Kept in the tree: named terminals (<code>NAME</code>) and unnamed regexps (<code>/[0-9]/</code>).</p>
+
+  </section>
+  </div>
+
+  <div class="col">
+  <section>
+    <!-- 2. Syntax (continued) -->
+    <h3>Directives</h3>
+<pre><span class="k">%import</span> common.NUMBER
+<span class="k">%import</span> common.CNAME -&gt; NAME  <span class="c">// rename</span>
+<span class="k">%import</span> common (INT, WORD)    <span class="c">// several</span>
+<span class="k">%import</span> .my_file.rule_a      <span class="c">// relative</span>
+<span class="k">%ignore</span> WS                    <span class="c">// skip it</span>
+<span class="k">%declare</span> INDENT DEDENT        <span class="c">// no body</span>
+<span class="k">%override</span> number: NUMBER | /0x\w+/
+<span class="k">%extend</span> NUMBER: /0x\w+/</pre>
+    <p class="note"><code>%override</code> replaces a definition everywhere, even inside imported grammars. <code>%extend</code> adds alternatives. <code>%ignore</code> is not imported.</p>
+
+    <h3>Templates</h3>
+<pre>_separated{x, sep}: x (sep x)*
+num_list: "[" _separated{NUMBER, ","} "]"</pre>
+  </section>
+
+  <!-- 3. Lark() -->
+  <section>
+    <h2><span class="n">3</span>The <code style="background:none;color:#fff">Lark()</code> constructor</h2>
+<pre><span class="k">from</span> lark <span class="k">import</span> Lark
+parser = Lark(grammar, parser=<span class="s">"lalr"</span>)
+parser = Lark.open(<span class="s">"my.lark"</span>, rel_to=__file__)
+tree = parser.parse(text)       <span class="c"># also: start=...</span></pre>
+    <table>
+      <tr><td><code>parser</code></td><td><span class="pill">"earley"</span> (default): any CFG, handles ambiguity<br><span class="pill">"lalr"</span>: much faster, LALR(1) grammars only</td></tr>
+      <tr><td><code>lexer</code></td><td><code>"auto"</code> (default): <code>contextual</code> for LALR, <code>dynamic</code> for Earley &middot; <code>"basic"</code> &middot; <code>"contextual"</code> (LALR only) &middot; <code>"dynamic"</code> / <code>"dynamic_complete"</code> (Earley only)</td></tr>
+      <tr><td><code>start</code></td><td>start rule name, or a list of names (default <code>"start"</code>)</td></tr>
+      <tr><td><code>ambiguity</code></td><td>Earley only. <code>"resolve"</code>: pick one &middot; <code>"explicit"</code>: keep all in <code>_ambig</code> nodes &middot; <code>"forest"</code>: return the SPPF</td></tr>
+      <tr><td><code>propagate_positions</code></td><td>fill <code>tree.meta</code> with <code>line</code>, <code>column</code>, <code>end_line</code>, <code>start_pos</code>, &hellip;</td></tr>
+      <tr><td><code>maybe_placeholders</code></td><td><code>[]</code> gives <code>None</code> when unmatched (default <code>True</code>)</td></tr>
+      <tr><td><code>transformer</code></td><td>apply a Transformer during parsing; LALR only (error with Earley). Faster, no tree built</td></tr>
+      <tr><td><code>keep_all_tokens</code></td><td>don't filter punctuation tokens</td></tr>
+      <tr><td><code>cache</code></td><td>cache grammar analysis (LALR only); 2&ndash;3&times; faster loading</td></tr>
+      <tr><td><code>debug</code> / <code>strict</code></td><td>extra warnings / raise on any potential ambiguity or collision</td></tr>
+    </table>
+  </section>
+
+  </div>
+  <div class="col">
+  <!-- 4. Trees -->
+  <section class="s4">
+    <div class="keep">
+    <h2><span class="n">4</span>Trees &amp; tokens</h2>
+    <table>
+      <tr><td><code>Tree(data, children)</code></td><td>a branch of the parse tree</td></tr>
+      <tr><td><code>.data</code></td><td>rule name or alias</td></tr>
+      <tr><td><code>.children</code></td><td>list of <code>Tree</code>s and <code>Token</code>s</td></tr>
+    </table>
+    </div>
+    <table>
+      <tr><td><code>.meta</code></td><td>positions (with <code>propagate_positions</code>)</td></tr>
+      <tr><td><code>.pretty()</code></td><td>indented string for printing</td></tr>
+      <tr><td><code>.iter_subtrees()</code></td><td>all subtrees, depth-first, bottom-up</td></tr>
+      <tr><td><code>.iter_subtrees_topdown()</code></td><td>all subtrees in <code>pretty()</code> order</td></tr>
+      <tr><td><code>.find_data("name")</code></td><td>subtrees whose <code>data == "name"</code></td></tr>
+      <tr><td><code>.find_pred(fn)</code></td><td>subtrees where <code>fn(tree)</code> is true</td></tr>
+      <tr><td><code>.find_token("TYPE")</code></td><td>tokens of that type</td></tr>
+      <tr><td><code>.scan_values(fn)</code></td><td>non-tree children where <code>fn</code> is true</td></tr>
+    </table>
+    <p><code>Token</code> is a <code>str</code> subclass with <code>.type</code>, <code>.value</code>, <code>.line</code>, <code>.column</code>, <code>.start_pos</code>, <code>.end_pos</code>.</p>
+<pre><span class="k">for</span> n <span class="k">in</span> tree.find_data(<span class="s">"number"</span>):
+    print(n.children[0])</pre>
+  </section>
+
+  <!-- 5. Transformers & visitors -->
+  <section>
+    <div class="keep">
+    <h2><span class="n">5</span>Transformers &amp; visitors</h2>
+    <p>Each method is named after a rule/alias (or a terminal, for transformers) and called for every matching node.</p>
+    </div>
+    <table>
+      <tr><td><code>Transformer</code></td><td>bottom-up; the return value replaces the node. Gets the children list. Call <code>.transform(tree)</code></td></tr>
+      <tr><td><code>Transformer_InPlace</code></td><td>like <code>Transformer</code>, but non-recursive and edits the tree in place</td></tr>
+      <tr><td><code>Visitor</code></td><td>bottom-up; gets the tree, return value ignored. <code>.visit(tree)</code>, <code>.visit_topdown(tree)</code></td></tr>
+      <tr><td><code>Interpreter</code></td><td>top-down; does <i>not</i> visit children automatically. Call <code>self.visit_children(tree)</code> or <code>self.visit(child)</code></td></tr>
+      <tr><td><code>@v_args(inline=True)</code></td><td>children passed as <code>*args</code>. Also <code>meta=True</code>, <code>tree=True</code>. On a class or a method</td></tr>
+      <tr><td><code>return Discard</code></td><td>remove the node from its parent (not in <code>transformer=</code> mode)</td></tr>
+      <tr><td><code>T1() * T2()</code></td><td>chain transformers: <code>T1</code> runs first</td></tr>
+    </table>
+<pre><span class="k">from</span> lark <span class="k">import</span> Transformer, Visitor, Discard
+<span class="k">class</span> <span class="s">T</span>(Transformer):
+    <span class="k">def</span> pair(self, children):    <span class="c"># rule</span>
+        <span class="k">return</span> tuple(children)
+    <span class="k">def</span> COMMENT(self, token):    <span class="c"># terminal</span>
+        <span class="k">return</span> Discard
+<span class="k">class</span> <span class="s">V</span>(Visitor):
+    <span class="k">def</span> pair(self, tree):
+        print(tree.children)</pre>
+  </section>
+
+  </div>
+  <div class="col">
+  <!-- 6. common.lark -->
+  <section class="s6">
+    <div class="keep">
+    <h2><span class="n">6</span>common.lark terminals</h2>
+    <table>
+      <tr><td><code>DIGIT</code> / <code>HEXDIGIT</code></td><td><code>0</code>&ndash;<code>9</code> / <code>0</code>&ndash;<code>9</code>, <code>a</code>&ndash;<code>f</code>, <code>A</code>&ndash;<code>F</code></td></tr>
+      <tr><td><code>INT</code> / <code>SIGNED_INT</code></td><td>digits: <code>42</code> / with <code>+</code>/<code>-</code> sign</td></tr>
+    </table>
+    </div>
+    <table>
+      <tr><td><code>DECIMAL</code></td><td><code>1.5</code>, <code>1.</code>, <code>.5</code></td></tr>
+      <tr><td><code>FLOAT</code> / <code>SIGNED_FLOAT</code></td><td><code>1.5</code>, <code>1e10</code>, <code>.5e-3</code> / with sign</td></tr>
+      <tr><td><code>NUMBER</code> / <code>SIGNED_NUMBER</code></td><td><code>FLOAT</code> or <code>INT</code> / with sign</td></tr>
+      <tr><td><code>ESCAPED_STRING</code></td><td><code>"text"</code> with <code>\</code> escapes, incl. quotes</td></tr>
+      <tr><td><code>LETTER</code></td><td>one ASCII letter (<code>LCASE_</code>/<code>UCASE_LETTER</code>)</td></tr>
+      <tr><td><code>WORD</code></td><td>one or more letters</td></tr>
+      <tr><td><code>CNAME</code></td><td>C-style identifier: <code>_my_var2</code></td></tr>
+      <tr><td><code>WS</code></td><td>spaces, tabs, <code>\f</code>, <code>\r</code>, <code>\n</code></td></tr>
+      <tr><td><code>WS_INLINE</code></td><td>spaces and tabs only</td></tr>
+      <tr><td><code>NEWLINE</code></td><td>one or more line breaks (<code>CR? LF</code>)</td></tr>
+      <tr><td><code>CR</code> / <code>LF</code></td><td><code>\r</code> / <code>\n</code></td></tr>
+      <tr><td><code>C_COMMENT</code></td><td><code>/* ... */</code>, may span lines</td></tr>
+      <tr><td><code>SH_</code> / <code>CPP_</code> / <code>SQL_COMMENT</code></td><td><code>#</code> / <code>//</code> / <code>--</code> to end of line</td></tr>
+    </table>
+  </section>
+
+  <!-- 7. Example -->
+  <section>
+    <div class="keep">
+    <h2><span class="n">7</span>Complete example: calculator</h2>
+<pre><span class="k">from</span> lark <span class="k">import</span> Lark, Transformer, v_args
+grammar = <span class="s">r"""</span>
+?start: sum
+?sum: product
+    | sum "+" product   -&gt; add
+    | sum "-" product   -&gt; sub
+?product: atom
+    | product "*" atom  -&gt; mul
+    | product "/" atom  -&gt; div
+?atom: NUMBER           -&gt; number
+     | "-" atom         -&gt; neg
+     | "(" sum ")"
+<span class="k">%import</span> common.NUMBER
+<span class="k">%import</span> common.WS_INLINE
+<span class="k">%ignore</span> WS_INLINE
+<span class="s">"""</span>
+@v_args(inline=True)
+<span class="k">class</span> <span class="s">Calc</span>(Transformer):
+    <span class="k">from</span> operator <span class="k">import</span> add, sub, mul, neg
+    <span class="k">from</span> operator <span class="k">import</span> truediv <span class="k">as</span> div
+    number = float
+parser = Lark(grammar, parser=<span class="s">"lalr"</span>)
+tree = parser.parse(<span class="s">"2 * (3 + 4)"</span>)
+print(tree.pretty())             <span class="c"># shown below</span>
+print(Calc().transform(tree))    <span class="c"># 14.0</span>
+<span class="c"># Faster (LALR only): transform while parsing</span>
+Lark(grammar, parser=<span class="s">"lalr"</span>,
+     transformer=Calc()).parse(<span class="s">"2*7"</span>)  <span class="c"># 14.0</span></pre>
+    </div>
+<pre>mul
+  number  2
+  add
+    number  3
+    number  4</pre>
+  </section>
+
+  </div>
+</div>
+
+<footer>
+  <span>Docs: lark-parser.readthedocs.io &middot; Grammar reference, tree construction, visitors &amp; transformers</span>
+  <span>Online IDE: lark-parser.org/ide &middot; github.com/lark-parser/lark</span>
+</footer>
+
+</div>
+</body>
+</html>

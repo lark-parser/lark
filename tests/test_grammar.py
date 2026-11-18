@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import os
+import tempfile
 from unittest import TestCase, main
 
 from lark import Lark, Token, Tree, ParseError, UnexpectedInput
@@ -25,6 +26,30 @@ class TestGrammar(TestCase):
     def test_empty_literal(self):
         # Issues #888
         self.assertRaises(GrammarError, Lark, "start: \"\"")
+
+    def test_bom(self):
+        # Issue #407: a leading UTF-8 BOM should be ignored in grammar text
+        p = Lark("\ufeffstart: \"a\"\n")
+        assert p.parse("a") == Tree("start", [])
+
+    def test_bom_in_file(self):
+        # Issue #407: grammars loaded from a file may start with a BOM
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "bom.lark")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\ufeffstart: \"a\"\n")
+            p = Lark.open(path)
+            assert p.parse("a") == Tree("start", [])
+
+    def test_bom_in_imported_grammar(self):
+        # Issue #407: imported grammars may also start with a BOM
+        with tempfile.TemporaryDirectory() as tmpdir:
+            child_path = os.path.join(tmpdir, "bom_child.lark")
+            with open(child_path, "w", encoding="utf-8") as f:
+                f.write("\ufeffstart_bom: \"b\"\n")
+            grammar = "%import .bom_child (start_bom)\nstart: start_bom\n"
+            p = Lark(grammar, import_paths=[tmpdir], source_path=os.path.join(tmpdir, "parent.lark"))
+            assert p.parse("b") == Tree("start", [Tree("start_bom", [])])
 
     def test_ignore_name(self):
         spaces = []

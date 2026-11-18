@@ -17,7 +17,10 @@ if TYPE_CHECKING:
 
 from .exceptions import ConfigurationError, assert_config, UnexpectedInput
 from .utils import Serialize, SerializeMemoizer, FS, logger, TextOrSlice, LarkInput
-from .load_grammar import load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource, sha256_digest
+from .load_grammar import (
+    load_grammar, FromPackageLoader, Grammar, verify_used_files, PackageResource,
+    sha256_digest, _strip_bom,
+)
 
 from .tree import Tree
 from .common import LexerConf, ParserConf, _ParserArgType, _LexerArgType
@@ -333,6 +336,7 @@ class Lark(Serialize, Generic[_Return_T]):
         cache_fn = None
         cache_sha256 = None
         if isinstance(grammar, str):
+            grammar = _strip_bom(grammar)
             self.source_grammar = grammar
             if self.options.use_bytes:
                 if not grammar.isascii():

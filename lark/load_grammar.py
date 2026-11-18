@@ -820,6 +820,11 @@ class Grammar(Serialize):
 PackageResource = namedtuple('PackageResource', 'pkg_name path')
 
 
+def _strip_bom(text: str) -> str:
+    """Remove a single leading Unicode byte order mark, if present."""
+    return text[1:] if text.startswith('\ufeff') else text
+
+
 class FromPackageLoader:
     """
     Provides a simple way of creating custom import loaders that load from packages via ``pkgutil.get_data`` instead of using `open`.
@@ -1240,6 +1245,7 @@ class GrammarBuilder:
 
 
     def load_grammar(self, grammar_text: str, grammar_name: str="<?>", mangle: Optional[Callable[[str], str]]=None) -> None:
+        grammar_text = _strip_bom(grammar_text)
         tree = _parse_grammar(grammar_text, grammar_name)
 
         imports: Dict[Tuple[str, ...], Tuple[Optional[str], Dict[str, str]]] = {}

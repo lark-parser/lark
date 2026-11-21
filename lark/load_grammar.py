@@ -537,7 +537,7 @@ def _rfind(s, choices):
     return max(s.rfind(c) for c in choices)
 
 
-def eval_escaping(s):
+def eval_escaping(s, keep_escapes=False):
     w = ''
     i = iter(s)
     for n in i:
@@ -549,7 +549,7 @@ def eval_escaping(s):
                 raise GrammarError("Literal ended unexpectedly (bad escaping): `%r`" % s)
             if n2 == '\\':
                 w += '\\\\'
-            elif n2 not in 'Uuxnftr':
+            elif keep_escapes or n2 not in 'Uuxnftr':
                 w += '\\'
             w += n2
     w = w.replace('\\"', '"').replace("'", "\\'")
@@ -582,7 +582,8 @@ def _literal_to_pattern(literal):
     assert v[0] == v[-1] and v[0] in '"/'
     x = v[1:-1]
 
-    s = eval_escaping(x)
+    # In verbose mode, evaluated escapes would become whitespace that the regexp ignores
+    s = eval_escaping(x, keep_escapes=literal.type == 'REGEXP' and 'x' in flags)
 
     if s == "":
         raise GrammarError("Empty terminals are not allowed (%s)" % literal)

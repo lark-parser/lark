@@ -1798,6 +1798,16 @@ def _make_parser_test(LEXER, PARSER):
             x = g.parse('a')
             self.assertEqual(x.children, ['a'])
 
+        def test_token_flags_verbose_escapes(self):
+            # Escapes like \t, \n and \x20 must not become (ignored) whitespace in verbose mode
+            g = _Lark(r"""start: (A | B | C)+
+                          A: /\t | \n/x
+                          B: /\x20/x
+                          C: /c/
+                      """)
+            x = g.parse('\t c\n')
+            self.assertEqual(x.children, ['\t', ' ', 'c', '\n'])
+
         def test_token_flags_verbose_multiline(self):
             g = _Lark(r"""start: ABC
                           ABC: /  a      b c

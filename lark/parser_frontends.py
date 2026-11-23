@@ -293,19 +293,18 @@ class EarleyRegexpMatcher:
         for t in lexer_conf.terminals:
             regexp = t.pattern.to_regexp()
             try:
-                width = get_regexp_width(regexp)[0]
+                get_regexp_width(regexp)
             except ValueError:
                 raise GrammarError("Bad regexp in token %s: %s" % (t.name, regexp))
-            else:
-                if width == 0:
-                    raise GrammarError("Dynamic Earley doesn't allow zero-width regexps", t)
             if lexer_conf.use_bytes:
                 regexp = regexp.encode('utf-8')
 
             self.regexps[t.name] = lexer_conf.re_module.compile(regexp, lexer_conf.g_regex_flags)
 
     def match(self, term, text, index=0):
-        return self.regexps[term.name].match(text, index)
+        m = self.regexps[term.name].match(text, index)
+        if m is not None and m.end() > index:
+            return m
 
 
 def create_earley_parser__dynamic(lexer_conf: LexerConf, parser_conf: ParserConf, **kw):

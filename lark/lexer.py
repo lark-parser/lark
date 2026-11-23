@@ -375,6 +375,8 @@ def _create_unless(terminals, g_regex_flags, re_, use_bytes):
     embedded_strs = set()
     callback = {}
     for retok in tokens_by_type.get(PatternRE, []):
+        if retok.pattern.min_width == 0:
+            continue
         unless = []
         for strtok in tokens_by_type.get(PatternStr, []):
             if strtok.priority != retok.priority:
@@ -401,6 +403,12 @@ class Scanner:
         self.allowed_types = {t.name for t in self.terminals}
 
         self._mres = self._build_mres(terminals, len(terminals))
+        self._terminal_mres = []
+        for terminal in terminals:
+            regexp = terminal.pattern.to_regexp()
+            if self.use_bytes:
+                regexp = regexp.encode('latin-1')
+            self._terminal_mres.append((terminal, self.re_.compile(regexp, self.g_regex_flags)))
 
     def _build_mres(self, terminals, max_size):
         # Python sets an unreasonable group limit (currently 100) in its re module
@@ -421,10 +429,22 @@ class Scanner:
         return mres
 
     def match(self, text: TextSlice, pos):
+        # Check terminals individually so a nullable terminal cannot hide a
+        # following non-empty terminal at the same position.
+        for pattern_type in (PatternStr, PatternRE):
+            for terminal, mre in self._terminal_mres:
+                if not isinstance(terminal.pattern, pattern_type):
+                    continue
+                m = mre.match(text.text, pos, text.end)
+                if m and m.end() > pos:
+                    return m.group(0), terminal.name
+
         for mre in self._mres:
             m = mre.match(text.text, pos, text.end)
             if m:
-                return m.group(0), m.lastgroup
+                value = m.group(0)
+                if value:
+                    return value, m.lastgroup
 
 
     def fullmatch(self, text: str) -> Optional[str]:
@@ -610,8 +630,6 @@ class BasicLexer(AbstractBasicLexer):
                 except self.re.error:
                     raise LexError("Cannot compile token %s: %s" % (t.name, t.pattern))
 
-                if t.pattern.min_width == 0:
-                    raise LexError("Lexer does not allow zero-width terminals. (%s: %s)" % (t.name, t.pattern))
                 if t.pattern.type == "re":
                     terminal_to_regexp[t] = regexp
 

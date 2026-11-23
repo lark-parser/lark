@@ -39,6 +39,22 @@ class TestLexer(TestCase):
         res = list(p.lex(TextSlice("aaaabc cba dddd", 3, -2)))
         assert res == list('abccbadd')
 
+    def test_nullable_regex_terminal_before_mandatory_terminal(self):
+        grammar = r"""
+        start: line+
+        line: "+" /(.*)/ LF
+        LF: /\n/
+        """
+
+        for parser, lexer in (
+            ("earley", "basic"),
+            ("earley", "dynamic_complete"),
+            ("lalr", "basic"),
+        ):
+            parser_obj = Lark(grammar, start="start", parser=parser, lexer=lexer)
+            tree = parser_obj.parse("+hello\n+world\n")
+            self.assertEqual(len(tree.children), 2)
+
 
 if __name__ == '__main__':
     main()

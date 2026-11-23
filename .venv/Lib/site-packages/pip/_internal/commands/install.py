@@ -1,0 +1,1089 @@
+from __future__ import annotations
+
+import contextlib
+import errno
+import functools
+import inspect
+import json
+import operator
+import os
+import shutil
+import site
+import sys
+import traceback
+import types
+from collections.abc import Iterable, Iterator, Sequence
+from optparse import SUPPRESS_HELP, Values
+from pathlib import Path
+from typing import Any
+
+from pip._vendor import pygments, rich
+from pip._vendor.packaging.requirements import InvalidRequirement, Requirement
+from pip._vendor.packaging.utils import canonicalize_name
+from pip._vendor.requests.exceptions import InvalidProxyURL
+from pip._vendor.rich.text import Text
+
+import pip
+
+# Eagerly import self_outdated_check to avoid crashes. Otherwise,
+# this module would be imported *after* pip was replaced, resulting
+# in crashes if the new self_outdated_check module was incompatible
+# with the rest of pip that's already imported, or allowing a
+# wheel to execute arbitrary code on install by replacing
+# self_outdated_check.
+import pip._internal.self_outdated_check
+from pip._internal.cache import WheelCache
+from pip._internal.cli import cmdoptions
+from pip._internal.cli.cmdoptions import make_target_python
+from pip._internal.cli.req_command import (
+    RequirementCommand,
+    with_cleanup,
+)
+from pip._internal.cli.status_codes import ERROR, SUCCESS
+from pip._internal.exceptions import (
+    BlockedImportError,
+    CommandError,
+    InstallationError,
+    InstallWheelBuildError,
+)
+from pip._internal.locations import get_scheme
+from pip._internal.metadata import BaseEnvironment, get_environment
+from pip._internal.models.installation_report import InstallationReport
+from pip._internal.operations.build.build_tracker import get_build_tracker
+from pip._internal.operations.check import ConflictDetails, check_install_conflicts
+from pip._internal.req import InstallationResult, install_given_reqs
+from pip._internal.req.req_install import (
+    InstallRequirement,
+)
+from pip._internal.utils.compat import WINDOWS
+from pip._internal.utils.filesystem import test_writable_dir
+from pip._internal.utils.logging import getLogger
+from pip._internal.utils.misc import (
+    check_externally_managed,
+    ensure_dir,
+    get_pip_version,
+    protect_pip_from_modification_on_windows,
+    warn_if_run_as_root,
+    write_output,
+)
+from pip._internal.utils.temp_dir import TempDirectory
+from pip._internal.utils.virtualenv import (
+    running_under_virtualenv,
+    virtualenv_no_global,
+)
+from pip._internal.wheel_builder import build
+
+logger = getLogger(__name__)
+
+
+_IMPORT_AUDIT_HOOK_INSTALLED = False
+_ACTIVE_INSTALLATIONS: set[object] = set()
+_WARNED_IMPORTS: set[str] = set()
+_IMPORT_ERRORS: dict[str, ImportError] = {}
+
+# Import dependencies directly where possible; otherwise list them here.
+_INTERNAL_EAGER_IMPORTS: tuple[str, ...] = (
+    "pip._internal.operations.install.wheel",
+    # Rich loads the Python lexer when rendering debug tracebacks.
+    f"{pygments.__name__}.lexers.python",
+    # Preload Python 3.13+ traceback helpers to preserve the original error.
+    "traceback",
+    "_colorize",
+    "_suggestions",
+    "ast",
+    "difflib",
+    "unicodedata",
+    # Preserve cmd's fallback when readline is unavailable.
+    "readline",
+    # weakref.finalize imports gc when running shutdown callbacks.
+    "gc",
+    # Requests imports netrc lazily when looking up credentials.
+    "netrc",
+    # Use Rich's actual namespace when pip has been de-vendored.
+    # The renderer is used for output to a legacy Windows console.
+    f"{rich.__name__}._windows_renderer",
+    # zipfile may import these backends when reading compressed wheel contents.
+    "_bz2",
+    "_lzma",
+    "_zstd",
+)
+
+
+def _warn_unsafe_import(module: str) -> None:
+    """Warn once per module without letting logging block the import."""
+    if module in _WARNED_IMPORTS:
+        return
+
+    # Mark before logging: a handler may itself import this module.
+    _WARNED_IMPORTS.add(module)
+    try:
+        logger.warning(
+            "Unsafe import of %r after pip install completed: packages may have "
+            "changed. Callers should import all required modules before running "
+            "pip install, or run pip in a subprocess. "
+            "See https://pip.pypa.io/en/stable/user_guide/"
+            "#using-pip-from-your-program",
+            module,
+        )
+    except Exception:
+        # The caller's logging handlers must not turn warnings into import errors.
+        pass
+
+
+def _prevent_import_hook(name: str, args: tuple[Any, ...]) -> None:
+    if name == "import":
+        _check_import(args[0])
+
+
+def _check_import(module: str) -> None:
+    """Apply the installation import policy to audit events and module lookups."""
+    if not _ACTIVE_INSTALLATIONS:
+        _warn_unsafe_import(module)
+        return
+
+    if module in _IMPORT_ERRORS:
+        raise _IMPORT_ERRORS[module].with_traceback(None)
+
+    raise BlockedImportError(
+        f"Blocked import of {module!r} after pip install started. Hook authors"
+        " must import required modules before installation starts."
+    )
+
+
+class _ImportBlocker:
+    """Cover module lookups, including reloads, without import audit events."""
+
+    def find_spec(
+        self,
+        fullname: str,
+        path: Sequence[str] | None = None,
+        target: types.ModuleType | None = None,
+    ) -> None:
+        _check_import(fullname)
+
+
+_IMPORT_BLOCKER = _ImportBlocker()
+
+
+def _eagerly_import_modules(module_names: Iterable[str]) -> None:
+    """Import selected dependencies before installation starts."""
+    # Load Rich's lazy emoji and width data before installation starts.
+    _ = Text.from_markup(":package:").cell_len
+
+    _IMPORT_ERRORS.clear()
+    for module in dict.fromkeys(module_names):
+        try:
+            __import__(module)
+        except ImportError as error:
+            _IMPORT_ERRORS[module] = error.with_traceback(None)
+
+
+def _referenced_modules(module: types.ModuleType) -> Iterator[types.ModuleType]:
+    """Find dependencies referenced by modules and callables."""
+    for value in tuple(vars(module).values()):
+        if isinstance(value, types.ModuleType):
+            yield value
+            continue
+
+        # Standard callable adapters keep dependency globals on their function.
+        while True:
+            if type(value) is functools.partial:
+                value = value.func
+            elif type(value) is types.MethodType:
+                value = value.__func__
+            else:
+                break
+
+        names: tuple[object, ...]
+        if type(value) is types.FunctionType:
+            # Decorators can preserve the original module while changing globals.
+            names = (value.__globals__.get("__name__"), value.__module__)
+        elif callable(value):
+            # Read callable metadata without invoking descriptors.
+            names = (inspect.getattr_static(value, "__module__", None),)
+        else:
+            continue
+
+        for name in names:
+            dependency = sys.modules.get(name) if isinstance(name, str) else None
+            if isinstance(dependency, types.ModuleType):
+                yield dependency
+
+
+def _cache_lazy_import_error(error: ImportError) -> None:
+    """Preserve failures for both a missing dependency and its failed importers."""
+    # Import machinery removes failed modules before propagating their error.
+    for frame, _ in traceback.walk_tb(error.__traceback__):
+        module_name = frame.f_globals.get("__name__")
+        if isinstance(module_name, str) and module_name not in sys.modules:
+            _IMPORT_ERRORS[module_name] = error
+
+    if error.name is not None:
+        _IMPORT_ERRORS[error.name] = error
+
+    # Avoid retaining the import traceback in the cache.
+    error.with_traceback(None)
+
+
+def _reify_lazy_imports(module_names: Iterable[str]) -> None:
+    """Resolve lazy bindings in installation dependencies before imports are blocked."""
+    if sys.version_info < (3, 15):
+        return
+
+    modules = {
+        name: module
+        for name in module_names
+        if isinstance(module := sys.modules.get(name), types.ModuleType)
+    }
+    attempted: set[object] = set()
+
+    while True:
+        # A from-import can already hold an object from a lazy dependency.
+        dependencies = {
+            dependency.__name__: dependency
+            for module in modules.values()
+            for dependency in _referenced_modules(module)
+            if dependency.__name__ not in modules
+        }
+        modules.update(dependencies)
+
+        # Resolving a binding can add lazy imports to modules already scanned.
+        pending = [
+            (module, name, value)
+            for module in modules.values()
+            for name, value in tuple(vars(module).items())
+            if type(value) is types.LazyImportType and value not in attempted
+        ]
+        if not pending and not dependencies:
+            break
+
+        for module, name, value in pending:
+            attempted.add(value)
+            before = set(sys.modules)
+
+            try:
+                resolved = getattr(module, name)
+
+                # The binding may resolve to an already-loaded module.
+                if isinstance(resolved, types.ModuleType):
+                    modules[resolved.__name__] = resolved
+            except ImportError as error:
+                _cache_lazy_import_error(error)
+            except Exception:
+                # Optional lazy imports need not succeed for installation to proceed.
+                pass
+
+            # Include dependencies loaded indirectly, even by a failed import.
+            for dependency in sys.modules.keys() - before:
+                imported = sys.modules[dependency]
+                if isinstance(imported, types.ModuleType):
+                    modules[dependency] = imported
+
+
+@contextlib.contextmanager
+def _prevent_further_imports(*, until_process_exit: bool = False) -> Iterator[None]:
+    """Block late imports until process exit or control returns to a caller."""
+    global _IMPORT_AUDIT_HOOK_INSTALLED
+    if not _IMPORT_AUDIT_HOOK_INSTALLED:
+        sys.addaudithook(_prevent_import_hook)
+        _IMPORT_AUDIT_HOOK_INSTALLED = True
+
+    # Callers may add finders between installations; reloads bypass audit events.
+    sys.meta_path[:] = [
+        _IMPORT_BLOCKER,
+        *(finder for finder in sys.meta_path if finder is not _IMPORT_BLOCKER),
+    ]
+
+    token = object()
+    _ACTIVE_INSTALLATIONS.add(token)
+    try:
+        yield
+    finally:
+        # CLI exception hooks and exit callbacks run after command cleanup.
+        if not until_process_exit:
+            _ACTIVE_INSTALLATIONS.discard(token)
+
+
+def _arg_refers_to_pip(arg: str) -> bool:
+    try:
+        req = Requirement(arg)
+    except InvalidRequirement:
+        return False
+    return canonicalize_name(req.name) == "pip"
+
+
+class InstallCommand(RequirementCommand):
+    """
+    Install packages from:
+
+    - PyPI (and other indexes) using requirement specifiers.
+    - VCS project urls.
+    - Local project directories.
+    - Local or remote source archives.
+
+    pip also supports installing from "requirements files", which provide
+    an easy way to specify a whole environment to be installed.
+    """
+
+    usage = """
+      %prog [options] <requirement specifier> [package-index-options] ...
+      %prog [options] -r <requirements file> [package-index-options] ...
+      %prog [options] [-e] <vcs project url> ...
+      %prog [options] [-e] <local project path> ...
+      %prog [options] <archive url/path> ..."""
+
+    def main(self, args: list[str]) -> int:
+        # Keep imports blocked through command cleanup and logging shutdown.
+        with contextlib.ExitStack() as self._import_guard:
+            return super().main(args)
+
+    def add_options(self) -> None:
+        self.cmd_opts.add_option(cmdoptions.requirements())
+        self.cmd_opts.add_option(cmdoptions.constraints())
+        self.cmd_opts.add_option(cmdoptions.build_constraints())
+        self.cmd_opts.add_option(cmdoptions.requirements_from_scripts())
+        self.cmd_opts.add_option(cmdoptions.no_deps())
+        self.cmd_opts.add_option(cmdoptions.only_deps())
+
+        self.cmd_opts.add_option(cmdoptions.editable())
+        self.cmd_opts.add_option(
+            "--dry-run",
+            action="store_true",
+            dest="dry_run",
+            default=False,
+            help=(
+                "Don't actually install anything, just print what would be. "
+                "Can be used in combination with --ignore-installed "
+                "to 'resolve' the requirements."
+            ),
+        )
+        self.cmd_opts.add_option(
+            "-t",
+            "--target",
+            dest="target_dir",
+            metavar="dir",
+            default=None,
+            help=(
+                "Install packages into <dir>. "
+                "By default this will not replace existing files/folders in "
+                "<dir>. Use --upgrade to replace existing packages in <dir> "
+                "with new versions."
+            ),
+        )
+        cmdoptions.add_target_python_options(self.cmd_opts)
+
+        self.cmd_opts.add_option(
+            "--user",
+            dest="use_user_site",
+            action="store_true",
+            help=(
+                "Install to the Python user install directory for your "
+                "platform. Typically ~/.local/, or %APPDATA%\\Python on "
+                "Windows. (See the Python documentation for site.USER_BASE "
+                "for full details.)"
+            ),
+        )
+        self.cmd_opts.add_option(
+            "--no-user",
+            dest="use_user_site",
+            action="store_false",
+            help=SUPPRESS_HELP,
+        )
+        self.cmd_opts.add_option(
+            "--root",
+            dest="root_path",
+            metavar="dir",
+            default=None,
+            help="Install everything relative to this alternate root directory.",
+        )
+        self.cmd_opts.add_option(
+            "--prefix",
+            dest="prefix_path",
+            metavar="dir",
+            default=None,
+            help=(
+                "Installation prefix where lib, bin and other top-level "
+                "folders are placed. Note that the resulting installation may "
+                "contain scripts and other resources which reference the "
+                "Python interpreter of pip, and not that of ``--prefix``. "
+                "See also the ``--python`` option if the intention is to "
+                "install packages into another (possibly pip-free) "
+                "environment."
+            ),
+        )
+
+        self.cmd_opts.add_option(cmdoptions.src())
+
+        self.cmd_opts.add_option(
+            "-U",
+            "--upgrade",
+            dest="upgrade",
+            action="store_true",
+            help=(
+                "Upgrade all specified packages to the newest available "
+                "version. The handling of dependencies depends on the "
+                "upgrade-strategy used."
+            ),
+        )
+
+        self.cmd_opts.add_option(
+            "--upgrade-strategy",
+            dest="upgrade_strategy",
+            default="only-if-needed",
+            choices=["only-if-needed", "eager"],
+            help=(
+                "Determines how dependency upgrading should be handled "
+                "[default: %default]. "
+                '"eager" - dependencies are upgraded regardless of '
+                "whether the currently installed version satisfies the "
+                "requirements of the upgraded package(s). "
+                '"only-if-needed" -  are upgraded only when they do not '
+                "satisfy the requirements of the upgraded package(s)."
+            ),
+        )
+
+        self.cmd_opts.add_option(
+            "--force-reinstall",
+            dest="force_reinstall",
+            action="store_true",
+            help="Reinstall all packages even if they are already up-to-date.",
+        )
+
+        self.cmd_opts.add_option(
+            "-I",
+            "--ignore-installed",
+            dest="ignore_installed",
+            action="store_true",
+            help=(
+                "Ignore the installed packages, overwriting them. "
+                "This can break your system if the existing package "
+                "is of a different version or was installed "
+                "with a different package manager!"
+            ),
+        )
+
+        self.cmd_opts.add_option(cmdoptions.ignore_requires_python())
+        self.cmd_opts.add_option(cmdoptions.no_build_isolation())
+        self.cmd_opts.add_option(cmdoptions.use_pep517())
+        self.cmd_opts.add_option(cmdoptions.check_build_deps())
+        self.cmd_opts.add_option(cmdoptions.override_externally_managed())
+
+        self.cmd_opts.add_option(cmdoptions.config_settings())
+
+        self.cmd_opts.add_option(
+            "--compile",
+            action="store_true",
+            dest="compile",
+            default=True,
+            help="Compile Python source files to bytecode",
+        )
+
+        self.cmd_opts.add_option(
+            "--no-compile",
+            action="store_false",
+            dest="compile",
+            help="Do not compile Python source files to bytecode",
+        )
+
+        self.cmd_opts.add_option(
+            "--no-warn-script-location",
+            action="store_false",
+            dest="warn_script_location",
+            default=True,
+            help="Do not warn when installing scripts outside PATH",
+        )
+        self.cmd_opts.add_option(
+            "--no-warn-conflicts",
+            action="store_false",
+            dest="warn_about_conflicts",
+            default=True,
+            help="Do not warn about broken dependencies",
+        )
+        self.cmd_opts.add_option(cmdoptions.require_hashes())
+        self.cmd_opts.add_option(cmdoptions.no_require_hashes())
+        self.cmd_opts.add_option(cmdoptions.progress_bar())
+        self.cmd_opts.add_option(cmdoptions.root_user_action())
+
+        index_opts = cmdoptions.make_option_group(
+            cmdoptions.index_group,
+            self.parser,
+        )
+
+        selection_opts = cmdoptions.make_option_group(
+            cmdoptions.package_selection_group,
+            self.parser,
+        )
+
+        self.parser.insert_option_group(0, index_opts)
+        self.parser.insert_option_group(0, selection_opts)
+        self.parser.insert_option_group(0, self.cmd_opts)
+
+        self.cmd_opts.add_option(
+            "--report",
+            dest="json_report_file",
+            metavar="file",
+            default=None,
+            help=(
+                "Generate a JSON file describing what pip did to install "
+                "the provided requirements. "
+                "Can be used in combination with --dry-run and --ignore-installed "
+                "to 'resolve' the requirements. "
+                "When - is used as file name it writes to stdout. "
+                "When writing to stdout, please combine with the --quiet option "
+                "to avoid mixing pip logging output with JSON output."
+            ),
+        )
+
+    @contextlib.contextmanager
+    def pip_version_check(self, options: Values, args: list[str]) -> Iterator[None]:
+        # Skip the self-version check when pip itself is a requirement. The
+        # running pip may be replaced mid-command, and the upgrade prompt
+        # is redundant.
+        if any(_arg_refers_to_pip(arg) for arg in args):
+            yield
+            return
+        with super().pip_version_check(options, args):
+            yield
+
+    @with_cleanup
+    def run(self, options: Values, args: list[str]) -> int:
+        if options.use_user_site and options.target_dir is not None:
+            raise CommandError("Can not combine '--user' and '--target'")
+
+        # Check whether the environment we're installing into is externally
+        # managed, as specified in PEP 668. Specifying --root, --target, or
+        # --prefix disables the check, since there's no reliable way to locate
+        # the EXTERNALLY-MANAGED file for those cases. An exception is also
+        # made specifically for "--dry-run --report" for convenience.
+        installing_into_current_environment = (
+            not (options.dry_run and options.json_report_file)
+            and options.root_path is None
+            and options.target_dir is None
+            and options.prefix_path is None
+        )
+        if (
+            installing_into_current_environment
+            and not options.override_externally_managed
+        ):
+            check_externally_managed()
+
+        upgrade_strategy = "to-satisfy-only"
+        if options.upgrade:
+            upgrade_strategy = options.upgrade_strategy
+
+        cmdoptions.check_only_deps_option_does_not_conflict(options)
+        self.check_build_constraints(options)
+        cmdoptions.check_dist_restriction(options, check_target=True)
+        cmdoptions.check_release_control_exclusive(options)
+
+        logger.verbose("Using %s", get_pip_version())
+        options.use_user_site = decide_user_install(
+            options.use_user_site,
+            prefix_path=options.prefix_path,
+            target_dir=options.target_dir,
+            root_path=options.root_path,
+            isolated_mode=options.isolated_mode,
+        )
+
+        target_temp_dir: TempDirectory | None = None
+        target_temp_dir_path: str | None = None
+        if options.target_dir:
+            options.ignore_installed = True
+            options.target_dir = os.path.abspath(options.target_dir)
+            if (
+                # fmt: off
+                os.path.exists(options.target_dir) and
+                not os.path.isdir(options.target_dir)
+                # fmt: on
+            ):
+                raise CommandError(
+                    "Target path exists but is not a directory, will not continue."
+                )
+
+            # Create a target directory for using with the target option
+            target_temp_dir = TempDirectory(kind="target")
+            target_temp_dir_path = target_temp_dir.path
+            self.enter_context(target_temp_dir)
+
+        session = self.get_default_session(options)
+
+        target_python = make_target_python(options)
+        finder = self._build_package_finder(
+            options=options,
+            session=session,
+            target_python=target_python,
+            ignore_requires_python=options.ignore_requires_python,
+        )
+        build_tracker = self.enter_context(get_build_tracker())
+
+        directory = TempDirectory(
+            delete=not options.no_clean,
+            kind="install",
+            globally_managed=True,
+        )
+
+        try:
+            reqs = self.get_requirements(args, options, finder, session)
+
+            wheel_cache = WheelCache(options.cache_dir)
+
+            preparer = self.make_requirement_preparer(
+                temp_build_dir=directory,
+                options=options,
+                build_tracker=build_tracker,
+                session=session,
+                finder=finder,
+                use_user_site=options.use_user_site,
+                verbosity=self.verbosity,
+                allow_editables=True,
+            )
+            resolver = self.make_resolver(
+                preparer=preparer,
+                finder=finder,
+                options=options,
+                wheel_cache=wheel_cache,
+                use_user_site=options.use_user_site,
+                ignore_installed=options.ignore_installed,
+                ignore_requires_python=options.ignore_requires_python,
+                force_reinstall=options.force_reinstall,
+                upgrade_strategy=upgrade_strategy,
+                py_version_info=options.python_version,
+            )
+
+            self.trace_basic_info(finder)
+
+            requirement_set = resolver.resolve(
+                reqs, check_supported_wheels=not options.target_dir
+            )
+
+            if options.json_report_file:
+                report = InstallationReport(requirement_set.requirements_to_install)
+                if options.json_report_file == "-":
+                    rich.print_json(data=report.to_dict())
+                else:
+                    with open(options.json_report_file, "w", encoding="utf-8") as f:
+                        json.dump(report.to_dict(), f, indent=2, ensure_ascii=False)
+
+            if options.dry_run:
+                would_install_items = sorted(
+                    (r.metadata["name"], r.metadata["version"])
+                    for r in requirement_set.requirements_to_install
+                )
+                if would_install_items:
+                    write_output(
+                        "Would install %s",
+                        " ".join("-".join(item) for item in would_install_items),
+                    )
+                return SUCCESS
+
+            # If there is any more preparation to do for the actual installation, do
+            # so now. This includes actually downloading the files in the case that
+            # we have been using PEP-658 metadata so far.
+            preparer.prepare_linked_requirements_more(
+                requirement_set.requirements.values()
+            )
+
+            try:
+                pip_req = requirement_set.get_requirement("pip")
+            except KeyError:
+                modifying_pip = False
+            else:
+                # If we're not replacing an already installed pip,
+                # we're not modifying it.
+                modifying_pip = pip_req.satisfied_by is None
+            protect_pip_from_modification_on_windows(modifying_pip=modifying_pip)
+
+            reqs_to_build = [
+                r for r in requirement_set.requirements_to_install if not r.is_wheel
+            ]
+
+            _, build_failures = build(
+                reqs_to_build,
+                wheel_cache=wheel_cache,
+                verify=True,
+                allow_editables=True,
+            )
+
+            if build_failures:
+                raise InstallWheelBuildError(build_failures)
+
+            to_install = resolver.get_installation_order(requirement_set)
+
+            # Check for conflicts in the package set we're installing.
+            conflicts: ConflictDetails | None = None
+            should_warn_about_conflicts = (
+                not options.ignore_dependencies and options.warn_about_conflicts
+            )
+            if should_warn_about_conflicts:
+                conflicts = self._determine_conflicts(to_install)
+
+            # Don't warn about script install locations if
+            # --target or --prefix has been specified
+            warn_script_location = options.warn_script_location
+            if options.target_dir or options.prefix_path:
+                warn_script_location = False
+
+            # Block late imports so we don't silently pick up a module
+            # from a distribution pip is about to install.
+            module_names = (*_INTERNAL_EAGER_IMPORTS, *pip._EAGER_IMPORTS)
+            _eagerly_import_modules(module_names)
+            _reify_lazy_imports(module_names)
+            self._import_guard.enter_context(
+                _prevent_further_imports(until_process_exit=self._cli)
+            )
+
+            installed = install_given_reqs(
+                to_install,
+                root=options.root_path,
+                home=target_temp_dir_path,
+                prefix=options.prefix_path,
+                warn_script_location=warn_script_location,
+                use_user_site=options.use_user_site,
+                pycompile=options.compile,
+                progress_bar=options.progress_bar,
+            )
+
+            lib_locations = get_lib_location_guesses(
+                user=options.use_user_site,
+                home=target_temp_dir_path,
+                root=options.root_path,
+                prefix=options.prefix_path,
+                isolated=options.isolated_mode,
+            )
+            env = get_environment(lib_locations)
+
+            if conflicts is not None:
+                self._warn_about_conflicts(
+                    conflicts,
+                    resolver_variant=self.determine_resolver_variant(options),
+                )
+            if summary := installed_packages_summary(installed, env):
+                write_output(summary)
+        except OSError as error:
+            show_traceback = self.verbosity >= 1
+
+            message = create_os_error_message(
+                error,
+                show_traceback,
+                options.use_user_site,
+            )
+            logger.error(message, exc_info=show_traceback)
+
+            return ERROR
+
+        if options.target_dir:
+            assert target_temp_dir
+            self._handle_target_dir(
+                options.target_dir, target_temp_dir, options.upgrade
+            )
+
+        if options.root_user_action == "warn":
+            warn_if_run_as_root()
+
+        return SUCCESS
+
+    def _handle_target_dir(
+        self, target_dir: str, target_temp_dir: TempDirectory, upgrade: bool
+    ) -> None:
+        ensure_dir(target_dir)
+
+        lib_dir_list = []
+
+        # Checking both purelib and platlib directories for installed
+        # packages to be moved to target directory
+        scheme = get_scheme("", home=target_temp_dir.path)
+        purelib_dir = scheme.purelib
+        platlib_dir = scheme.platlib
+        data_dir = scheme.data
+
+        if os.path.exists(purelib_dir):
+            lib_dir_list.append(purelib_dir)
+        if os.path.exists(platlib_dir) and platlib_dir != purelib_dir:
+            lib_dir_list.append(platlib_dir)
+        if os.path.exists(data_dir):
+            lib_dir_list.append(data_dir)
+
+        for lib_dir in lib_dir_list:
+            for item in os.listdir(lib_dir):
+                # Do not move library directories a second time as data.
+                if lib_dir == data_dir:
+                    ddir = os.path.join(data_dir, item)
+                    if any(s.startswith(ddir) for s in lib_dir_list[:-1]):
+                        continue
+
+                target_item_dir = os.path.join(target_dir, item)
+
+                # Keep dangling links subject to the same replacement policy.
+                if os.path.lexists(target_item_dir):
+                    if not upgrade:
+                        logger.warning(
+                            "Target directory %s already exists. Specify "
+                            "--upgrade to force replacement.",
+                            target_item_dir,
+                        )
+                        continue
+
+                    if os.path.islink(target_item_dir):
+                        logger.warning(
+                            "Target directory %s already exists and is "
+                            "a link. pip will not automatically replace "
+                            "links, please remove if replacement is "
+                            "desired.",
+                            target_item_dir,
+                        )
+                        continue
+
+                    if os.path.isdir(target_item_dir):
+                        shutil.rmtree(target_item_dir)
+                    else:
+                        os.remove(target_item_dir)
+
+                shutil.move(os.path.join(lib_dir, item), target_item_dir)
+
+    def _determine_conflicts(
+        self, to_install: list[InstallRequirement]
+    ) -> ConflictDetails | None:
+        try:
+            return check_install_conflicts(to_install)
+        except Exception:
+            logger.exception(
+                "Error while checking for conflicts. Please file an issue on "
+                "pip's issue tracker: https://github.com/pypa/pip/issues/new"
+            )
+            return None
+
+    def _warn_about_conflicts(
+        self, conflict_details: ConflictDetails, resolver_variant: str
+    ) -> None:
+        package_set, (missing, conflicting) = conflict_details
+        if not missing and not conflicting:
+            return
+
+        parts: list[str] = []
+        if resolver_variant == "legacy":
+            parts.append(
+                "pip's legacy dependency resolver does not consider dependency "
+                "conflicts when selecting packages. This behaviour is the "
+                "source of the following dependency conflicts."
+            )
+        else:
+            assert resolver_variant == "resolvelib"
+            parts.append(
+                "pip's dependency resolver does not currently take into account "
+                "all the packages that are installed. This behaviour is the "
+                "source of the following dependency conflicts."
+            )
+
+        # NOTE: There is some duplication here, with commands/check.py
+        for project_name in missing:
+            version = package_set[project_name][0]
+            for dependency in missing[project_name]:
+                message = (
+                    f"{project_name} {version} requires {dependency[1]}, "
+                    "which is not installed."
+                )
+                parts.append(message)
+
+        for project_name in conflicting:
+            version = package_set[project_name][0]
+            for dep_name, dep_version, req in conflicting[project_name]:
+                message = (
+                    "{name} {version} requires {requirement}, but {you} have "
+                    "{dep_name} {dep_version} which is incompatible."
+                ).format(
+                    name=project_name,
+                    version=version,
+                    requirement=req,
+                    dep_name=dep_name,
+                    dep_version=dep_version,
+                    you=("you" if resolver_variant == "resolvelib" else "you'll"),
+                )
+                parts.append(message)
+
+        logger.critical("\n".join(parts))
+
+
+def installed_packages_summary(
+    installed: list[InstallationResult], env: BaseEnvironment
+) -> str:
+    # Format a summary of installed packages, with extra care to
+    # display a package name as it was requested by the user.
+    installed.sort(key=operator.attrgetter("name"))
+    summary = []
+    installed_versions = {}
+    for distribution in env.iter_all_distributions():
+        installed_versions[distribution.canonical_name] = distribution.version
+    for package in installed:
+        display_name = package.name
+        version = installed_versions.get(canonicalize_name(display_name), None)
+        if version:
+            text = f"{display_name}-{version}"
+        else:
+            text = display_name
+        summary.append(text)
+
+    if not summary:
+        return ""
+    return f"Successfully installed {' '.join(summary)}"
+
+
+def get_lib_location_guesses(
+    user: bool = False,
+    home: str | None = None,
+    root: str | None = None,
+    isolated: bool = False,
+    prefix: str | None = None,
+) -> list[str]:
+    scheme = get_scheme(
+        "",
+        user=user,
+        home=home,
+        root=root,
+        isolated=isolated,
+        prefix=prefix,
+    )
+    return [scheme.purelib, scheme.platlib]
+
+
+def site_packages_writable(root: str | None, isolated: bool) -> bool:
+    return all(
+        test_writable_dir(d)
+        for d in set(get_lib_location_guesses(root=root, isolated=isolated))
+    )
+
+
+def decide_user_install(
+    use_user_site: bool | None,
+    prefix_path: str | None = None,
+    target_dir: str | None = None,
+    root_path: str | None = None,
+    isolated_mode: bool = False,
+) -> bool:
+    """Determine whether to do a user install based on the input options.
+
+    If use_user_site is False, no additional checks are done.
+    If use_user_site is True, it is checked for compatibility with other
+    options.
+    If use_user_site is None, the default behaviour depends on the environment,
+    which is provided by the other arguments.
+    """
+    # In some cases (config from tox), use_user_site can be set to an integer
+    # rather than a bool, which 'use_user_site is False' wouldn't catch.
+    if (use_user_site is not None) and (not use_user_site):
+        logger.debug("Non-user install by explicit request")
+        return False
+
+    # If we have been asked for a user install explicitly, check compatibility.
+    if use_user_site:
+        if prefix_path:
+            raise CommandError(
+                "Can not combine '--user' and '--prefix' as they imply "
+                "different installation locations"
+            )
+        if virtualenv_no_global():
+            raise InstallationError(
+                "Can not perform a '--user' install. User site-packages "
+                "are not visible in this virtualenv."
+            )
+        # Catch all remaining cases which honour the site.ENABLE_USER_SITE
+        # value, such as a plain Python installation (e.g. no virtualenv).
+        if not site.ENABLE_USER_SITE:
+            raise InstallationError(
+                "Can not perform a '--user' install. User site-packages "
+                "are disabled for this Python."
+            )
+        logger.debug("User install by explicit request")
+        return True
+
+    # If we are here, user installs have not been explicitly requested/avoided
+    assert use_user_site is None
+
+    # user install incompatible with --prefix/--target
+    if prefix_path or target_dir:
+        logger.debug("Non-user install due to --prefix or --target option")
+        return False
+
+    # If user installs are not enabled, choose a non-user install
+    if not site.ENABLE_USER_SITE:
+        logger.debug("Non-user install because user site-packages disabled")
+        return False
+
+    # If we have permission for a non-user install, do that,
+    # otherwise do a user install.
+    if site_packages_writable(root=root_path, isolated=isolated_mode):
+        logger.debug("Non-user install because site-packages writeable")
+        return False
+
+    logger.info(
+        "Defaulting to user installation because normal site-packages "
+        "is not writeable"
+    )
+    return True
+
+
+def create_os_error_message(
+    error: OSError, show_traceback: bool, using_user_site: bool
+) -> str:
+    """Format an error message for an OSError
+
+    It may occur anytime during the execution of the install command.
+    """
+    parts = []
+
+    # Mention the error if we are not going to show a traceback
+    parts.append("Could not install packages due to an OSError")
+    if not show_traceback:
+        parts.append(": ")
+        parts.append(str(error))
+    else:
+        parts.append(".")
+
+    # Spilt the error indication from a helper message (if any)
+    parts[-1] += "\n"
+
+    # Suggest useful actions to the user:
+    #  (1) using user site-packages or (2) verifying the permissions
+    if error.errno == errno.EACCES:
+        user_option_part = "Consider using the `--user` option"
+        permissions_part = "Check the permissions"
+
+        if not running_under_virtualenv() and not using_user_site:
+            parts.extend(
+                [
+                    user_option_part,
+                    " or ",
+                    permissions_part.lower(),
+                ]
+            )
+        else:
+            parts.append(permissions_part)
+        parts.append(".\n")
+
+    # Suggest to check "pip config debug" in case of invalid proxy
+    if type(error) is InvalidProxyURL:
+        parts.append(
+            'Consider checking your local proxy configuration with "pip config debug"'
+        )
+        parts.append(".\n")
+
+    # On Windows, errors like EINVAL or ENOENT may occur
+    # if a file or folder name exceeds 255 characters,
+    # or if the full path exceeds 260 characters and long path support isn't enabled.
+    # This condition checks for such cases and adds a hint to the error output.
+
+    if WINDOWS and error.errno in (errno.EINVAL, errno.ENOENT) and error.filename:
+        if any(len(part) > 255 for part in Path(error.filename).parts):
+            parts.append(
+                "HINT: This error might be caused by a file or folder name exceeding "
+                "255 characters, which is a Windows limitation even if long paths "
+                "are enabled.\n "
+            )
+        if len(error.filename) > 260:
+            parts.append(
+                "HINT: This error might have occurred since "
+                "this system does not have Windows Long Path "
+                "support enabled. You can find information on "
+                "how to enable this at "
+                "https://pip.pypa.io/warnings/enable-long-paths\n"
+            )
+    return "".join(parts).strip() + "\n"

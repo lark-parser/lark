@@ -1,0 +1,2 @@
+[pytest11]
+platformdirs = platformdirs.pytest_plugin

@@ -1,5 +1,9 @@
 import unicodedata
 import os
+import errno
+import stat
+import tempfile
+from contextlib import contextmanager
 from itertools import product
 from collections import deque
 from typing import Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union, Dict, Any, Sequence, Iterable, AbstractSet
@@ -299,21 +303,110 @@ def combine_alternatives(lists):
     assert all(l for l in lists), lists
     return list(product(*lists))
 
-try:
-    import atomicwrites
-    _has_atomicwrites = True
-except ImportError:
-    _has_atomicwrites = False
+
+def _open_private(name, mode, **kwargs):
+    """Open an existing file for reading, but refuse to follow a symlink, refuse a hard
+    link or anything that isn't a regular file, refuse a file that belongs to another
+    user, and refuse a file that other users can write.
+
+    The parser cache is stored in a shared temporary directory under a name that is
+    derived from the grammar, so another user on the same machine can predict it and
+    get there first.
+
+    A refused file raises ``PermissionError``, which the cache loader turns into a
+    warning and a normal rebuild rather than a failure.
+    """
+    flags = os.O_RDONLY
+    if "b" in mode:
+        flags |= getattr(os, "O_BINARY", 0)
+    # O_NONBLOCK so that a FIFO at the path can't block the open waiting for the other end.
+    # It has no effect on regular files, and anything else is refused below.
+    flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    try:
+        fd = os.open(name, flags)
+    except OSError as e:
+        # Treat these as a refusal like the checks below, so the caller sees one kind of
+        # "won't use this cache" error rather than a raw traceback.
+        # O_NOFOLLOW reports a symlink as ELOOP (EMLINK on some BSDs, EFTYPE on NetBSD).
+        if e.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1), getattr(errno, "EFTYPE", -1)):
+            raise PermissionError("Refusing to open %r: it is a symlink" % name) from e
+        # A socket gives ENXIO (EOPNOTSUPP on macOS), and a directory gives EISDIR on
+        # the platforms that don't allow opening one for reading.
+        if e.errno in (errno.EISDIR, errno.ENXIO, getattr(errno, "EOPNOTSUPP", -1)):
+            raise PermissionError("Refusing to open %r: it is not a regular file" % name) from e
+        raise
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise PermissionError("Refusing to use %r: it is not a regular file" % name)
+        if hasattr(os, "geteuid"):
+            if st.st_uid != os.geteuid():
+                raise PermissionError("Refusing to use %r: it belongs to another user" % name)
+            # A hard link to one of our own files passes the ownership check, and the
+            # file it points at may not be a cache at all.
+            if st.st_nlink != 1:
+                raise PermissionError("Refusing to use %r: it has other hard links" % name)
+            # Don't trust a file that group or others can write, since it could have been
+            # tampered with even though we own it. Only write bits let another user do
+            # that, so read bits are fine to leave alone.
+            if st.st_mode & 0o022:
+                raise PermissionError("Refusing to read %r: other users can write to it" % name)
+        return os.fdopen(fd, mode, **kwargs)
+    except Exception:
+        os.close(fd)
+        raise
+
+
+@contextmanager
+def _atomic_write_private(name, mode, **kwargs):
+    """Write a new file next to ``name`` and rename it into place on success.
+
+    Nothing is written through whatever already sits at ``name``, so a symlink, a hard
+    link or a file that other users can write is replaced rather than followed or
+    modified in place. A writer holding a descriptor on the old file keeps the old
+    inode and can't touch what we wrote. ``mkstemp`` creates the new file at 0600, so
+    the cache ends up readable only by its owner.
+
+    A path we can't rename onto raises ``PermissionError``, which the cache saver turns
+    into a warning rather than a failure.
+    """
+    # Same directory, so the rename stays on one filesystem. A short fixed prefix keeps
+    # the name well clear of the length limit for a long cache path, and marks a
+    # leftover from an interrupted save as something other than a cache file.
+    fd, tmp_name = tempfile.mkstemp(dir=os.path.dirname(name) or os.curdir, prefix=".lark-tmp-")
+    try:
+        try:
+            f = os.fdopen(fd, mode, **kwargs)
+        except Exception:
+            os.close(fd)
+            raise
+        with f:
+            yield f
+        try:
+            os.replace(tmp_name, name)
+        except IsADirectoryError as e:
+            raise PermissionError("Refusing to save %r: it is a directory" % name) from e
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
 
 class FS:
     exists = staticmethod(os.path.exists)
 
     @staticmethod
-    def open(name, mode="r", **kwargs):
-        if _has_atomicwrites and "w" in mode:
-            return atomicwrites.atomic_write(name, mode=mode, overwrite=True, **kwargs)
-        else:
+    def open(name, mode="r", unguarded=False, **kwargs):
+        if unguarded:
+            # The caller opted out of the checks and of the rename (unguarded_cache=True),
+            # so a cache that is deliberately shared keeps its owner and permissions.
             return open(name, mode, **kwargs)
+        elif "w" in mode:
+            return _atomic_write_private(name, mode, **kwargs)
+        else:
+            return _open_private(name, mode, **kwargs)
 
 
 class fzset(frozenset):

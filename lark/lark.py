@@ -108,12 +108,14 @@ class LarkOptions(Serialize):
             Useful for classes that require the ``Lark.grammar`` to be present (e.g. Reconstructor).
             (default= ``False``)
     unguarded_cache
-            For use with ``cache`` option. By default, Lark won't use a cache file that is a symlink, a hard link
+            For use with ``cache`` option. By default, Lark won't read a cache file that is a symlink, a hard link
             or not a regular file, that belongs to another user, or that other users can write to, and rebuilds
-            the parser instead.
-            When ``True``, these checks are skipped. Useful when the cache file is shared on purpose, or lives on a
-            filesystem that doesn't report ownership or permissions. The cache is a pickle, so loading it can run
-            arbitrary code. Only set this when everyone who can write to the cache path is trusted.
+            the parser instead. Saving writes a new file next to the cache path and renames it into place, so
+            whatever was there is replaced rather than written through.
+            When ``True``, both are skipped and the cache file is opened directly. Useful when the cache file is
+            shared on purpose, or lives on a filesystem that doesn't report ownership or permissions. The cache is
+            a pickle, so loading it can run arbitrary code. Only set this when everyone who can write to the cache
+            path is trusted.
             (default= ``False``)
     regex
             When True, uses the ``regex`` module instead of the stdlib ``re``.
@@ -503,7 +505,7 @@ class Lark(Serialize, Generic[_Return_T]):
                     pickle.dump(used_files, f)
                     self.save(f, _LOAD_ALLOWED_OPTIONS)
             except PermissionError as e:
-                # FS.open refused the cache path (a symlink, or owned by another user).
+                # FS.open couldn't put the cache in place (e.g. a directory sits at the path).
                 logger.warning("Failed to save cache due to a permissions error: %s", e)
             except IOError as e:
                 logger.exception("Failed to save Lark to cache: %r. (%s)", cache_fn, e)

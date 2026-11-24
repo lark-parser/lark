@@ -11,8 +11,7 @@ from unittest.mock import patch
 from lark import Lark, Tree, Transformer, UnexpectedInput
 from lark.exceptions import ConfigurationError
 from lark.lexer import Lexer, Token
-from lark.utils import FS, _open_private
-import lark.utils as lark_utils
+from lark.utils import FS
 import lark.lark as lark_module
 from lark.reconstruct import Reconstructor
 from . import test_reconstructor
@@ -255,41 +254,58 @@ class TestCacheFile(TestCase):
             FS.open(self.cache_fn, 'rb').close()
 
     def test_save_does_not_follow_symlink(self):
+        # The save writes a new file and renames it onto the path, so a symlink is
+        # replaced rather than followed.
         os.symlink(self.other_fn, self.cache_fn)
-        try:
-            with FS.open(self.cache_fn, 'wb') as f:
-                f.write(b'overwritten')
-        except PermissionError:
-            pass
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'ours')
+        self.assertFalse(os.path.islink(self.cache_fn))
         with open(self.other_fn, 'rb') as f:
             self.assertEqual(f.read(), b'original')
 
-    def test_save_refuses_other_users_file_without_truncating(self):
-        # A refused file must be left intact, not emptied first. This is the plain-open
-        # write path (atomicwrites has its own mkstemp+rename), so exercise it directly.
-        # We can't chown to another user without privileges, so fake the mismatch.
+    def test_save_replaces_a_world_writable_cache(self):
+        # A cache we own that others can write may have another writer holding a
+        # descriptor on it. Rewriting it in place would let that writer overwrite the
+        # pickle afterwards, so the save lands on a new 0600 inode instead and leaves
+        # the old one alone.
         with open(self.cache_fn, 'wb') as f:
-            f.write(b'colleague-data')
-        os.chmod(self.cache_fn, 0o600)
-        with patch('os.geteuid', return_value=os.geteuid() + 1):
-            with self.assertRaises(PermissionError):
-                _open_private(self.cache_fn, 'wb')
+            f.write(b'planted')
+        os.chmod(self.cache_fn, 0o666)
+        old_ino = os.stat(self.cache_fn).st_ino
+        other_writer = open(self.cache_fn, 'rb')
+        self.addCleanup(other_writer.close)
+
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'ours')
+
+        st = os.stat(self.cache_fn)
+        self.assertNotEqual(st.st_ino, old_ino)
+        self.assertEqual(stat.S_IMODE(st.st_mode), 0o600)
         with open(self.cache_fn, 'rb') as f:
-            self.assertEqual(f.read(), b'colleague-data')
+            self.assertEqual(f.read(), b'ours')
+        self.assertEqual(other_writer.read(), b'planted')   # the old inode is untouched
 
     def test_lark_warns_on_refused_cache_without_traceback(self):
-        # A refused cache path must not break parser construction, and both the load
-        # and the save refusal should surface as one warning each, not an exception log.
+        # A refused cache path must not break parser construction, and the refusal
+        # should surface as a warning, not an exception log.
         os.symlink(self.other_fn, self.cache_fn)
         with self.assertLogs(lark_module.logger, level='WARNING') as cm:
-            Lark('start: "a"', parser='lalr', cache=self.cache_fn)
+            parser = Lark('start: "a"', parser='lalr', cache=self.cache_fn)
         self.assertEqual([r.levelname for r in cm.records], ['WARNING'] * len(cm.records))
         self.assertTrue(any('Failed to load cache' in r.getMessage() for r in cm.records))
-        if not lark_utils._has_atomicwrites:
-            # With atomicwrites the save replaces the symlink atomically instead of refusing.
-            self.assertTrue(any('Failed to save cache' in r.getMessage() for r in cm.records))
+        self.assertEqual(parser.parse('a'), Tree('start', []))
         with open(self.other_fn, 'rb') as f:
             self.assertEqual(f.read(), b'original')
+
+    def test_lark_warns_when_the_cache_cannot_be_saved(self):
+        # A directory can't be renamed onto, so the save is refused. Same deal: one
+        # warning each for the load and the save, and the parser still works.
+        os.mkdir(self.cache_fn)
+        with self.assertLogs(lark_module.logger, level='WARNING') as cm:
+            parser = Lark('start: "a"', parser='lalr', cache=self.cache_fn)
+        self.assertEqual([r.levelname for r in cm.records], ['WARNING'] * len(cm.records))
+        self.assertTrue(any('Failed to save cache' in r.getMessage() for r in cm.records))
+        self.assertEqual(parser.parse('a'), Tree('start', []))
 
     def test_save_keeps_cache_private(self):
         with FS.open(self.cache_fn, 'wb') as f:
@@ -313,11 +329,12 @@ class TestCacheFile(TestCase):
             self.assertEqual(f.read(), b'data')
 
     def test_save_does_not_write_through_hard_link(self):
-        # A hard link to one of our own files passes the ownership check, so writing
-        # through it would overwrite that file. Plain-open write path, as above.
+        # A hard link to one of our own files has our uid, so an ownership check alone
+        # wouldn't catch it. The rename replaces the link instead of writing through it.
         os.link(self.other_fn, self.cache_fn)
-        with self.assertRaises(PermissionError):
-            _open_private(self.cache_fn, 'wb')
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'ours')
+        self.assertFalse(os.path.samefile(self.cache_fn, self.other_fn))
         with open(self.other_fn, 'rb') as f:
             self.assertEqual(f.read(), b'original')
 
@@ -331,15 +348,20 @@ class TestCacheFile(TestCase):
         os.mkfifo(self.cache_fn)
         with self.assertRaises(PermissionError):
             FS.open(self.cache_fn, 'rb').close()
-        with self.assertRaises(PermissionError):
-            _open_private(self.cache_fn, 'wb')
+        with FS.open(self.cache_fn, 'wb') as f:
+            f.write(b'ours')
+        self.assertTrue(stat.S_ISREG(os.stat(self.cache_fn).st_mode))
 
     def test_refuses_directory(self):
         os.mkdir(self.cache_fn)
         with self.assertRaises(PermissionError):
             FS.open(self.cache_fn, 'rb').close()
         with self.assertRaises(PermissionError):
-            _open_private(self.cache_fn, 'wb')
+            with FS.open(self.cache_fn, 'wb') as f:
+                f.write(b'ours')
+        self.assertTrue(os.path.isdir(self.cache_fn))
+        # the file the save was building must not be left behind
+        self.assertEqual(sorted(os.listdir(self.tmpdir)), ['cache.tmp', 'other'])
 
     def test_unguarded_cache(self):
         # The checks are on by default. unguarded_cache=True skips them, and since it
@@ -368,7 +390,7 @@ class TestCacheFile(TestCase):
 
 class TestCacheFilePortable(TestCase):
     # Runs everywhere, including Windows, where the posix-only checks above are skipped:
-    # _open_private must still round-trip a normal read/write.
+    # FS.open must still round-trip a normal read/write.
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -381,13 +403,24 @@ class TestCacheFilePortable(TestCase):
         with FS.open(self.cache_fn, 'rb') as f:
             self.assertEqual(f.read(), b'roundtrip')
 
-    def test_open_truncates_existing_on_write(self):
+    def test_open_replaces_existing_on_write(self):
         with FS.open(self.cache_fn, 'wb') as f:
             f.write(b'longer original content')
         with FS.open(self.cache_fn, 'wb') as f:
             f.write(b'short')
         with FS.open(self.cache_fn, 'rb') as f:
             self.assertEqual(f.read(), b'short')
+        # the file the save was built in is renamed into place, not left next to it
+        self.assertEqual(os.listdir(self.tmpdir), ['cache.tmp'])
+
+    def test_write_leaves_nothing_behind_when_it_fails(self):
+        class Boom(Exception):
+            pass
+        with self.assertRaises(Boom):
+            with FS.open(self.cache_fn, 'wb') as f:
+                f.write(b'half')
+                raise Boom()
+        self.assertEqual(os.listdir(self.tmpdir), [])
 
     def test_unguarded_cache_roundtrip(self):
         g = 'start: "a"'

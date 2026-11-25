@@ -2853,6 +2853,23 @@ def _make_parser_test(LEXER, PARSER):
             assert t.line == 9
 
 
+        def test_textslice_getitem(self):
+            s = TextSlice("abcdef", 2, 5)
+            self.assertEqual(s[0], "c")
+            self.assertEqual(s[2], "e")
+            self.assertEqual(s[-1], "e")
+            self.assertEqual(s[:], "cde")
+            self.assertEqual(s[1:], "de")
+            self.assertEqual(s[:-1], "cd")
+            self.assertEqual(s[::-1], "edc")
+            with self.assertRaises(IndexError):
+                s[3]
+
+            b = TextSlice(b"abcdef", 2, 5)
+            self.assertEqual(b[0], ord("c"))
+            self.assertEqual(b[:], b"cde")
+
+
         @unittest.skipIf(LEXER not in ('dynamic', 'dynamic_complete', 'custom_old0', 'custom_old1'),
                          "start_pos and end_pos not compatible with old style custom/dynamic lexer ")
         def test_parse_textslice_fails(self):

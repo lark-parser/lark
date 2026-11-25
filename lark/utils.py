@@ -218,6 +218,19 @@ class TextSlice(Generic[AnyStr]):
     def __len__(self):
         return self.end - self.start
 
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            start, stop, step = index.indices(len(self))
+            if step == 1:
+                return self.text[self.start + start:self.start + stop]
+            return self.text[self.start:self.end][index]
+
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError("TextSlice index out of range")
+        return self.text[self.start + index]
+
     def count(self, substr: AnyStr):
         return self.text.count(substr, self.start, self.end)
 

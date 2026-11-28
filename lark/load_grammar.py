@@ -1400,7 +1400,15 @@ def verify_used_files(file_hashes):
         elif isinstance(path, PackageResource):
             with suppress(IOError):
                 text = pkgutil.get_data(*path).decode('utf-8')
-        if text is None: # We don't know how to load the path. ignore it.
+        if text is None:
+            if isinstance(path, (str, PackageResource)):
+                # The file was recorded when the cache was written, but it
+                # can no longer be loaded (e.g. it was deleted), so the
+                # cache cannot be verified against it. Treat the cache as
+                # stale and rebuild, instead of trusting it silently.
+                logger.info("File %r could not be loaded, rebuilding Parser" % (path,))
+                return False
+            # We don't know how to load the path. ignore it.
             continue
 
         current = sha256_digest(text)

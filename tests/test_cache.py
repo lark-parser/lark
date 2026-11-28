@@ -189,6 +189,81 @@ class TestCache(TestCase):
                 parser2.parse(text)
             self.assertEqual(str(cm1.exception), str(cm2.exception))
 
+    def test_cache_missing_import(self):
+        # A cached parser must not be trusted when an imported grammar file
+        # was deleted after the cache was written: verification of the used
+        # files fails, the grammar is rebuilt, and the rebuild raises the
+        # same FileNotFoundError as a fresh build.
+        import os
+        import shutil
+        import tempfile
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            sibling_path = os.path.join(tmpdir, 'sibling.lark')
+            with open(sibling_path, 'w') as f:
+                f.write('B: "b"\n')
+            main_path = os.path.join(tmpdir, 'main.lark')
+            with open(main_path, 'w') as f:
+                f.write('start: A B\nA: "a"\n%import .sibling.B\n')
+
+            g = 'start: A B\nA: "a"\n%import .sibling.B\n'
+            cache_fn = os.path.join(tmpdir, 'parser.cache')
+            parser = Lark(g, parser='lalr', cache=cache_fn, source_path=main_path)
+            expected = parser.parse('ab')
+            parser = Lark(g, parser='lalr', cache=cache_fn, source_path=main_path)
+            assert parser.parse('ab') == expected
+
+            os.remove(sibling_path)
+
+            with self.assertRaises(FileNotFoundError):
+                Lark(g, parser='lalr', cache=False, source_path=main_path)
+            with self.assertRaises(FileNotFoundError):
+                Lark(g, parser='lalr', cache=cache_fn, source_path=main_path)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_cache_changed_import(self):
+        # Changing an imported grammar file invalidates the cache: the
+        # parser is rebuilt from the new contents.
+        import os
+        import shutil
+        import tempfile
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            sibling_path = os.path.join(tmpdir, 'sibling.lark')
+            with open(sibling_path, 'w') as f:
+                f.write('B: "b"\n')
+            main_path = os.path.join(tmpdir, 'main.lark')
+            g = 'start: A B\nA: "a"\n%import .sibling.B\n'
+            cache_fn = os.path.join(tmpdir, 'parser.cache')
+            parser = Lark(g, parser='lalr', cache=cache_fn, source_path=main_path)
+            assert parser.parse('ab')
+
+            with open(sibling_path, 'w') as f:
+                f.write('B: "z"\n')
+            parser = Lark(g, parser='lalr', cache=cache_fn, source_path=main_path)
+            assert parser.parse('az')
+            with self.assertRaises(UnexpectedInput):
+                parser.parse('ab')
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_verify_used_files_missing(self):
+        # verify_used_files must fail (return False) for a recorded file
+        # that can no longer be loaded, for both path kinds it knows how
+        # to load; a silently-ignored missing file would leave a stale
+        # cache trusted.
+        import os
+
+        from lark.load_grammar import PackageResource, verify_used_files
+
+        missing_str = os.path.join('no_such_dir_217', 'missing.lark')
+        assert not verify_used_files({missing_str: '0' * 64})
+        missing_pkg = PackageResource('lark', 'grammars/no_such_file_217.lark')
+        assert not verify_used_files({missing_pkg: '0' * 64})
+
     def test_cache_grammar(self):
         with self.assertRaises(ConfigurationError):
             Lark(self.g, parser='lalr', cache=False, cache_grammar=True)
